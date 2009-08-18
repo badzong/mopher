@@ -1,0 +1,89 @@
+#ifndef _ACL_H_
+#define _ACL_H_
+
+#include <sys/types.h>
+
+#include "lib.h"
+
+typedef enum acl_result { ACL_RES_NONE, ACL_RES_CONTINUE, ACL_RES_PASS,
+	ACL_RES_BLOCK, ACL_RES_DELAY, ACL_RES_JUMP } acl_result_t;
+typedef enum acl_gate { ACL_GATE_NONE, ACL_GATE_AND, ACL_GATE_OR } acl_gate_t;
+typedef enum acl_not { ACL_NOT_NONE, ACL_NOT } acl_not_t;
+typedef enum acl_variable { ACL_VAR_INT, ACL_VAR_STRING, ACL_VAR_ADDR }
+	acl_variable_t;
+
+typedef struct acl_param {
+	acl_variable_t	   ap_var;
+	union {
+		char		  *string;
+		int			   integer;
+		addr_t		  *addr;
+	} ap_value;
+} acl_param_t;
+
+typedef struct acl_function {
+	char			  *af_name;
+	acl_param_t		*(*af_callback)(void *);
+} acl_function_t;
+
+typedef struct acl_action {
+	acl_result_t	   aa_result;
+	int				   aa_delay;
+	int				   aa_visa;
+	int				   aa_valid;
+	char			  *aa_jump;
+} acl_action_t;
+	
+typedef struct acl_condition {
+	char			  *ac_call;
+	acl_param_t		*(*ac_callback)(void *);
+	acl_gate_t		   ac_gate;
+	acl_not_t		   ac_not;
+	acl_param_t		  *ac_parameter;
+	char			   ac_comparator;
+} acl_condition_t;
+
+typedef struct acl_rule {
+	ll_t			  *ar_conditions;
+	acl_action_t	  *ar_action;
+} acl_rule_t;
+
+typedef struct acl_entry {
+	char			  *ae_name;
+	ll_t			  *ae_rules;
+	acl_action_t	  *ae_default;
+} acl_entry_t;
+
+
+/*
+ * Prototypes
+ */
+
+acl_action_t * acl_action_create(acl_result_t result, int delay, int visa, int valid, char *jump);
+void acl_action_delete(acl_action_t *aa);
+void acl_function_delete(acl_function_t *af);
+acl_function_t * acl_function_create(char *name, acl_param_t (*callback)(void));
+int8_t acl_function_register(char *name, acl_param_t (*callback)(void));
+void * acl_function_lookup(char *name);
+acl_condition_t * acl_condition_create(char *call, acl_gate_t gate, acl_not_t not, acl_param_t *parameter, char comparator);
+void acl_condition_delete(acl_condition_t *ac);
+acl_rule_t * acl_rule_create(ll_t *conditions, acl_action_t *action);
+void acl_rule_delete(acl_rule_t *ar);
+acl_entry_t * acl_entry_create(char *name, acl_action_t *action);
+void acl_entry_delete(acl_entry_t *ae);
+void acl_entry_add_rule(char *name, acl_rule_t *rule);
+u_int32_t acl_entry_hash(acl_entry_t *ae);
+int8_t acl_entry_match(acl_entry_t *ae1, acl_entry_t *ae2);
+void acl_param_delete(acl_param_t *ap);
+acl_param_t * acl_param_create(acl_variable_t variable, void *value);
+int8_t acl_param_compare(acl_param_t *ap1, acl_param_t *ap2, char comparator);
+int8_t acl_evaluate(acl_rule_t *ar, map_t *info);
+action_t acl_access_rule(char *acl, map_t *info, int rule);
+void acl_init(void);
+void acl_clear(void);
+
+#define acl_access(acl, info) acl_access_rule(acl, info, 0)
+#define acl_access_rcpt(map) acl_access("rcpt", map)
+#define acl_access_data(map) acl_access("data", map)
+
+#endif /* _ACL_H_ */
