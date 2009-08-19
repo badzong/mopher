@@ -428,8 +428,10 @@ var_true(const var_t * v)
 		}
 		return 0;
 
+	default:
+		break;
 		/*
-		 * TODO: V_ADDR
+		 * TODO: V_ADDR, V_LIST
 		 */
 	}
 

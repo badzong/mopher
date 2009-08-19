@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-shared -nostartfiles -fPIC -I../../../lib/include -I../../include
+CFLAGS=-shared -nostartfiles -fPIC -I../../include
 OBJECTS=test.so string.so
 
 all: $(OBJECTS)

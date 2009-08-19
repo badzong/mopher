@@ -1,6 +1,7 @@
 %option nomain
 %option noyywrap
 %option nounput
+%option noinput
 
 default		default
 jump		jump

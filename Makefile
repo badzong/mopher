@@ -1,4 +1,5 @@
-CFLAGS=-Wall -DDEBUG -Iinclude -I../lib/include -rdynamic
+CFLAGS=-Wall -DDEBUG -Iinclude
+LDFLAGS=-rdynamic
 CC=gcc
 LEX=flex
 YACC=bison -y
@@ -26,7 +27,10 @@ acl_lex.c: acl_lex.l
 	cd ../lib && $(MAKE)
 
 main: Makefile $(OBJECTS) $(LIBS)
-	$(CC) $(CFLAGS) -o main $(OBJECTS) $(LIBS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o main $(OBJECTS) $(LIBS)
+
+%.o: %.c include/%.h Makefile
+	$(CC) $(CFLAGS) -c $<
 
 $(DIRS):
 	cd $@ && $(MAKE)
