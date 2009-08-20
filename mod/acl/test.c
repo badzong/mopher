@@ -9,7 +9,7 @@ testfunc(ll_t *args)
 {
 	var_t *v;
 
-	while(v = ll_next(args)) {
+	while((v = ll_next(args))) {
 		log_debug("testfunc: arg@%p type=%d", v, v->v_type);
 	}
 

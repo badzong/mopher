@@ -1,3 +1,4 @@
+MAKEFLAGS=-C build
 CFLAGS=-Wall -DDEBUG -Iinclude
 LDFLAGS=-rdynamic
 CC=gcc
