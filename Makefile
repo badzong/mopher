@@ -1,12 +1,12 @@
 MAKEFLAGS=-C build
-CFLAGS=-Wall -DDEBUG -Iinclude
+CFLAGS=-Wall -DDEBUG -Iinclude -g
 LDFLAGS=-rdynamic
 CC=gcc
 LEX=flex
 YACC=bison -y
 YFLAGS=-d
 
-OBJECTS=main.o acl_yacc.o acl_lex.o acl.o milter.o modules.o ll.o ht.o var.o log.o cf.o parser.o hash.o
+OBJECTS=main.o acl_yacc.o acl_lex.o acl.o milter.o modules.o ll.o ht.o var.o log.o cf.o parser.o hash.o util.o
 GENSRC=acl_yacc.c acl_yacc.h acl_lex.c
 LIBS=-lpthread -lmilter -ldl
 DIRS=mod/acl

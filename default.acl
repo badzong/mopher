@@ -1,17 +1,2 @@
-envfrom default pass
-eom default block
-test default block
-
-connect not 0 jump test
-connect not 1 jump test
-connect not testfunc(1) jump test
-
-envfrom "" and 1 or "test" or 0 and "" jump test
-envfrom 5 >= 1 and 1 = 1 or 3 < 7 jump test
-envfrom ! not 1 jump test
-envfrom 3 or 2 = 2 jump test
-envrcpt 1 = 4 or 3 jump test
-test string_strlen("asdf") = 4 block
-test testfunc(3,4,5) pass
-test 1 = 8 block
-test 3 > 6 block
+connect test_symbol_2 = 1 block
+connect test_symbol_1 = 1 block

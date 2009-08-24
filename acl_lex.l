@@ -45,6 +45,7 @@ comment		#.*$
 
 #include "log.h"
 #include "acl.h"
+#include "util.h"
 
 #include "acl_yacc.h"
 
@@ -127,18 +128,9 @@ acl_error(const char *s)
 		}
 
 {ip4}		{
-			struct sockaddr_in *sin;
-
-			if((acl_lval.ss = (struct sockaddr_storage *)
-			    malloc(sizeof(struct sockaddr_storage))) == NULL) {
-				log_die(EX_CONFIG, "acl_lex.l: malloc");
-			}
-
-			sin = (struct sockaddr_in *) acl_lval.ss;
-
-			if(inet_pton(AF_INET, acl_text, &sin->sin_addr) != 1) {
-				log_die(EX_CONFIG,
-				    "acl_lex.l: inet_pton failed");
+			if((acl_lval.ss = util_strtoaddr(acl_text)) == NULL) {
+				log_die(EX_CONFIG, "acl_lex.l: util_strtoaddr"
+					" failed");
 			}
 
 			acl_lval.ss->ss_family = AF_INET;
@@ -147,22 +139,10 @@ acl_error(const char *s)
 		}
 
 {ip6}		{
-			struct sockaddr_in *sin;
-
-			if((acl_lval.ss = (struct sockaddr_storage *)
-			    malloc(sizeof(struct sockaddr_storage))) == NULL) {
-				log_die(EX_CONFIG, "acl_lex.l: malloc");
+			if((acl_lval.ss = util_strtoaddr(acl_text)) == NULL) {
+				log_die(EX_CONFIG, "acl_lex.l: util_strtoaddr"
+					" failed");
 			}
-
-			sin = (struct sockaddr_in *) acl_lval.ss;
-
-			if(inet_pton(AF_INET6, acl_text, &sin->sin_addr) != 1)
-			{
-				log_die(EX_CONFIG,
-				    "acl_lex.l: inet_pton failed");
-			}
-
-			acl_lval.ss->ss_family = AF_INET6;
 
 			return IP6;
 		}

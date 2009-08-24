@@ -42,7 +42,7 @@ int acl_error(char *);
 %type <ll>	conditions parameters
 %type <cm>	EQ NE LT LE GT GE comparator
 %type <ga>	AND OR gate
-%type <va>	value attribute function
+%type <va>	value symbol function
 %type <co>	condition
 %type <at>	PASS BLOCK DISCARD CONTINUE DELAY JUMP terminal
 %type <ad>	delay
@@ -168,25 +168,21 @@ comparator	: EQ
 
 value		: constant
 		  {
-			acl_value_data_t vd;
-
-			vd.vd_var = $1;
-
-			if (($$ = acl_value_create(AV_CONST, vd)) == NULL) {
+			if (($$ = acl_value_create(AV_CONST, $1)) == NULL) {
 				log_die(EX_CONFIG, "acl_yacc.y: "
 				    "acl_value_create_constant failed");
 			}
 		  }
 
-		| attribute
+		| symbol
 		| function
 		;
 
 
-attribute	: ID
+symbol	: ID
 		  {
-			if (($$ = acl_value_create_attribute($1)) == NULL) {
-				log_die(EX_CONFIG, "unknown attribute \"%s\" "
+			if (($$ = acl_value_create_symbol($1)) == NULL) {
+				log_die(EX_CONFIG, "unknown symbol \"%s\" "
 				    "on line: %d", $1, acl_line);
 			}
 
@@ -232,7 +228,7 @@ parameters	: parameters COMMA value
 
 constant	: STRING
 		  {
-			if (($$ = var_create_reference(VT_STRING, NULL, $1)) ==
+			if (($$ = var_create(VT_STRING, NULL, $1, VF_REF)) ==
 			    NULL) {
 				log_die(EX_CONFIG, "acl_yacc.y: "
 				    "var_create_reference failed"); 
@@ -241,8 +237,8 @@ constant	: STRING
 
 		| FLOAT
 		  {
-			if (($$ = var_create_copy(VT_FLOAT, NULL, &$1)) ==
-			    NULL) {
+			if (($$ = var_create(VT_FLOAT, NULL, &$1, VF_COPYDATA))
+				== NULL) {
 				log_die(EX_CONFIG, "acl_yacc.y: "
 				    "var_create_copy failed"); 
 			}
@@ -250,8 +246,8 @@ constant	: STRING
 
 		| integer
 		  {
-			if (($$ = var_create_copy(VT_INT, NULL, &$1)) ==
-			    NULL) {
+			if (($$ = var_create(VT_INT, NULL, &$1, VF_COPYDATA))
+				== NULL) {
 				log_die(EX_CONFIG, "acl_yacc.y: "
 				    "var_create_copy failed"); 
 			}
@@ -259,7 +255,7 @@ constant	: STRING
 
 		| addr
 		  {
-			if (($$ = var_create_reference(VT_ADDR, NULL, $1)) ==
+			if (($$ = var_create(VT_ADDR, NULL, $1, VF_REF)) ==
 			    NULL) {
 				log_die(EX_CONFIG, "acl_yacc.y: "
 				    "var_create_reference failed"); 

@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-Wall -shared -nostartfiles -fPIC -I../../include
-OBJECTS=test.so string.so
+OBJECTS=milter.so test.so string.so
 
 all: $(OBJECTS)
 

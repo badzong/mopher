@@ -11,7 +11,8 @@
 
 #define ADDR6_LEN 16
 
-void
+
+static void
 var_clear_data(var_t * v)
 {
 	switch (v->v_type) {
@@ -32,334 +33,156 @@ var_clear_data(var_t * v)
 void
 var_clear(var_t * v)
 {
-	if (v->v_name) {
+	if (v->v_name && !(v->v_flags & VF_KEEPNAME)) {
 		free(v->v_name);
 	}
 
-	if (v->v_data == NULL) {
-		v->v_type = VT_NULL;
-		return;
+	if (v->v_data && !(v->v_flags & VF_KEEPDATA)) {
+		var_clear_data(v);
 	}
 
-	var_clear_data(v);
-	v->v_type = VT_NULL;
+	memset(v, 0, sizeof(var_t));
 
 	return;
 }
 
-int
-var_set_reference(var_t * v, var_type_t type, void *data)
-{
-	if (v->v_data) {
-		var_clear_data(v);
-	}
-
-	v->v_type = type;
-	v->v_data = data;
-
-	return 0;
-}
-
-int
-var_set_copy(var_t * v, var_type_t type, const void *data)
-{
-	var_t *tmp, *new;
-
-	union {
-		void *v;
-		VAR_INT_T *i;
-		VAR_FLOAT_T *f;
-		char *s;
-		var_sockaddr_t *sa;
-		ll_t *ll;
-	} copy;
-
-	if (data == NULL) {
-		v->v_type = type;
-		v->v_data = NULL;
-		return 0;
-	}
-
-	switch (type) {
-
-	case VT_INT:
-		if ((copy.v = malloc(sizeof(VAR_INT_T))) == NULL) {
-			log_warning("var_set: malloc");
-			return -1;
-		}
-
-		*copy.i = *(VAR_INT_T *) data;
-		break;
-
-	case VT_FLOAT:
-		if ((copy.v = malloc(sizeof(VAR_FLOAT_T))) == NULL) {
-			log_warning("var_set: malloc");
-			return -1;
-		}
-
-		*copy.f = *(VAR_FLOAT_T *) data;
-		break;
-
-	case VT_STRING:
-		if ((copy.s = strdup(data)) == NULL) {
-			log_warning("var_set: strdup");
-			return -1;
-		}
-		break;
-
-	case VT_ADDR:
-		if ((copy.v = malloc(sizeof(var_sockaddr_t))) == NULL) {
-			log_warning("var_set: malloc");
-			return -1;
-		}
-
-		memcpy(copy.v, data, sizeof(var_sockaddr_t));
-		break;
-
-	case VT_LIST:
-		if ((copy.ll = ll_create()) == NULL) {
-			log_warning("var_set: ll_create failed");
-			return -1;
-		}
-
-		ll_rewind((ll_t *) data);
-		while ((tmp = ll_next((ll_t *) data))) {
-			if ((new = var_create_copy(tmp->v_type, tmp->v_name,
-						   tmp->v_data)) == NULL) {
-				log_warning
-				    ("var_set: var_create (recursive) failed");
-				ll_delete(copy.ll, (void *) var_delete);
-				return -1;
-			}
-
-			if (LL_INSERT(copy.ll, new)) {
-				log_warning("var_set: LL_INSERT failed");
-				ll_delete(copy.ll, (void *) var_delete);
-				return -1;
-			}
-		}
-		break;
-
-	default:
-		log_warning("var_set: bad type");
-		return -1;
-	}
-
-	return var_set_reference(v, type, copy.v);
-}
-
-int
-var_init_copy(var_t * v, var_type_t type, const char *name, const void *data)
-{
-	memset(v, 0, sizeof(var_t));
-
-	if (var_set_copy(v, type, data)) {
-		log_warning("var_init_copy: var_set_copy failed");
-		return -1;
-	}
-
-	if (name == NULL) {
-		return 0;
-	}
-
-	if ((v->v_name = strdup(name)) == NULL) {
-		log_warning("var_init_copy: strdup");
-		return -1;
-	}
-
-	return 0;
-}
-
-int
-var_init_reference(var_t * v, var_type_t type, const char *name, void *data)
-{
-	memset(v, 0, sizeof(var_t));
-
-	if (var_set_reference(v, type, data)) {
-		log_warning("var_init_reference: var_set_reference failed");
-		return -1;
-	}
-
-	if (name == NULL) {
-		return 0;
-	}
-
-	if ((v->v_name = strdup(name)) == NULL) {
-		log_warning("var_init_copy: strdup");
-		return -1;
-	}
-
-	return 0;
-}
-
-var_t *
-var_create_copy(var_type_t type, const char *name, const void *data)
-{
-	var_t *v = NULL;
-
-	if ((v = (var_t *) malloc(sizeof(var_t))) == NULL) {
-		log_warning("var_create_copy: malloc");
-		goto error;
-	}
-
-	if (var_init_copy(v, type, name, data)) {
-		log_warning("var_create_copy: var_init_copy failed");
-		goto error;
-	}
-
-	return v;
-
-error:
-
-	if (v) {
-		free(v);
-	}
-
-	return NULL;
-}
-
-var_t *
-var_create_reference(var_type_t type, const char *name, void *data)
-{
-	var_t *v = NULL;
-
-	if ((v = (var_t *) malloc(sizeof(var_t))) == NULL) {
-		log_warning("var_create_reference: malloc");
-		goto error;
-	}
-
-	if (var_init_reference(v, type, name, data)) {
-		log_warning("var_create_reference: var_init_reference failed");
-		goto error;
-	}
-
-	return v;
-
-error:
-
-	if (v) {
-		free(v);
-	}
-
-	return NULL;
-}
-
 void
-var_delete(var_t * v)
+var_delete(var_t *v)
 {
 	var_clear(v);
-
 	free(v);
 
 	return;
 }
 
-var_t *
-var_strtoi(const char *name, const char *str)
+static void *
+var_copy_list(ll_t *list)
 {
-	VAR_INT_T i;
+	ll_t *copy = NULL;
+	var_t *vo, *vc;
 
-	i = atoi(str);
-
-	return var_create_copy(VT_INT, name, &i);
-}
-
-var_t *
-var_strtof(const char *name, const char *str)
-{
-	VAR_FLOAT_T f;
-
-	errno = 0;
-	f = strtod(str, NULL);
-
-	if (errno) {
-		log_warning("var_create_float: strtod");
-		return NULL;
+	if ((copy = ll_create()) == NULL) {
+		log_warning("var_copy_list: ll_create failed");
+		goto error;
 	}
 
-	return var_create_copy(VT_FLOAT, name, &f);
-}
+	ll_rewind(list);
+	while ((vo = ll_next(list))) {
+		if ((vc = var_create(vo->v_type, vo->v_name, vo->v_data,
+			VF_COPYNAME | VF_COPYDATA))
+			== NULL) {
+			log_warning("var_copy_list: var_create failed");
+			goto error;
+		}
 
-int
-var_string_rencaps(const char *src, char **dst, const char *encaps)
-{
-	int len;
-
-	*dst = NULL;
-	len = strlen(src);
-
-	/*
-	 * No encapsulation found.
-	 */
-	if (!(src[0] == encaps[0] && src[len - 1] == encaps[1])) {
-		return 0;
+		if(LL_INSERT(copy, vc)) {
+			log_warning("var_copy_list: LL_INSERT failed");
+			goto error;
+		}
 	}
 
-	if ((*dst = strdup(src + 1)) == NULL) {
-		log_warning("var_string_encaps: strdup");
-		return -1;
-	}
+	return copy;
 
-	(*dst)[len - 2] = 0;
-
-	return 1;
-}
-
-var_t *
-var_strtostr(const char *name, const char *str)
-{
-	char *rencaps;
-
-	switch (var_string_rencaps(str, &rencaps, "\"\"")) {
-	case 0:
-		return var_create_copy(VT_STRING, name, str);
-
-	case 1:
-		return var_create_reference(VT_STRING, name, rencaps);
-
-	default:
-		log_warning("var_create_string: var_string_rencaps failed");
+error:
+	if(copy) {
+		ll_delete(copy, (void *) var_delete);
 	}
 
 	return NULL;
 }
 
-var_t *
-var_strtoa(const char *name, const char *str)
+static void *
+var_copy_data(var_type_t type, void *data)
 {
-	var_t *v = NULL;
-	struct sockaddr_storage ss;
-	struct sockaddr_in *sin = (struct sockaddr_in *) &ss;
-	struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *) &ss;
-	char *wc;
+	int size = 0;
+	void *copy;
 
-	if (var_string_rencaps(str, &wc, "[]") == -1) {
-		log_warning("var_create_addr: var_string_rencaps failed");
+	switch (type) {
+	/*
+	 * Lists deserve special treatment.
+	 */
+	case VT_LIST:
+		return var_copy_list(data);
+
+	case VT_INT:
+		size = sizeof(VAR_INT_T);
+		break;
+	case VT_FLOAT:
+		size = sizeof(VAR_FLOAT_T);
+		break;
+	case VT_STRING:
+		size = strlen((char *) data) + 1;
+		break;
+	case VT_ADDR:
+		size = sizeof(var_sockaddr_t);
+		break;
+	default:
+		log_warning("var_copy: bad type");
 		return NULL;
 	}
 
-	if (wc == NULL) {
-		wc = (char *) str;
+	if((copy = malloc(size)) == NULL) {
+		log_warning("var_copy_data: malloc");
+		return NULL;
 	}
 
-	if (inet_pton(AF_INET, wc, &sin->sin_addr) == 1) {
-		ss.ss_family = AF_INET;
-		v = var_create_copy(VT_ADDR, name, &ss);
-	}
-	else if (inet_pton(AF_INET6, wc, &sin6->sin6_addr) == 1) {
-		ss.ss_family = AF_INET6;
-		v = var_create_copy(VT_ADDR, name, &ss);
+	memcpy(copy, data, size);
+
+	return copy;
+}
+
+
+int
+var_init(var_t *v, var_type_t type, char *name, void *data, int flags)
+{
+	memset(v, 0, sizeof(var_t));
+
+	v->v_type = type;
+	v->v_flags = flags;
+
+	if(flags & VF_COPYNAME) {
+		if((v->v_name = strdup(name)) == NULL) {
+			log_warning("var_init: strdup");
+			return -1;
+		}
 	}
 	else {
-		log_warning("var_create_addr: bad address: %s", wc);
+		v->v_name = name;
 	}
 
-	if (wc != str) {
-		free(wc);
+	if(flags & VF_COPYDATA) {
+		if((v->v_data = var_copy_data(type, data)) == NULL) {
+			log_warning("var_init: var_copy_data failed");
+			return -1;
+		}
+	}
+	else {
+		v->v_data = data;
+	}
+
+	return 0;
+}
+
+
+var_t *
+var_create(var_type_t type, char *name, void *data, int flags)
+{
+	var_t *v;
+
+	if((v = (var_t *) malloc(sizeof(var_t))) == NULL) {
+		log_warning("var_create: malloc");
+		return NULL;
+	}
+
+	if(var_init(v, type, name, data, flags)) {
+		log_warning("var_create: var_init failed");
+		var_delete(v);
+		return NULL;
 	}
 
 	return v;
 }
+
 
 int
 var_compare_addr(struct sockaddr_storage *ss1, struct sockaddr_storage *ss2)
@@ -405,38 +228,6 @@ var_compare_addr(struct sockaddr_storage *ss1, struct sockaddr_storage *ss2)
 	return 0;
 }
 
-int
-var_true(const var_t * v)
-{
-	switch (v->v_type) {
-
-	case VT_INT:
-		if (*(VAR_INT_T *) v->v_data == 0) {
-			return 0;
-		}
-		return 1;
-
-	case VT_FLOAT:
-		if (*(VAR_FLOAT_T *) v->v_data == 0) {
-			return 0;
-		}
-		return 1;
-
-	case VT_STRING:
-		if (strlen(v->v_data)) {
-			return 1;
-		}
-		return 0;
-
-	default:
-		break;
-		/*
-		 * TODO: V_ADDR, V_LIST
-		 */
-	}
-
-	return 0;
-}
 
 int
 var_compare(const var_t * v1, const var_t * v2)
@@ -483,6 +274,63 @@ var_compare(const var_t * v1, const var_t * v2)
 		break;
 	}
 
+	return 0;
+}
+
+
+int
+var_true(const var_t * v)
+{
+	ll_t *ll;
+	struct sockaddr_storage ss, *pss;
+
+	switch (v->v_type) {
+
+	case VT_INT:
+		if (*(VAR_INT_T *) v->v_data == 0) {
+			return 0;
+		}
+		return 1;
+
+	case VT_FLOAT:
+		if (*(VAR_FLOAT_T *) v->v_data == 0) {
+			return 0;
+		}
+		return 1;
+
+	case VT_STRING:
+		if (strlen(v->v_data)) {
+			return 1;
+		}
+		return 0;
+
+	case VT_ADDR:
+		/*
+		 * XXX: Simple implementation
+		 */
+		pss = (struct sockaddr_storage *) v->v_data;
+		memset(&ss, 0, sizeof(ss));
+		ss.ss_family = pss->ss_family;
+
+		if(var_compare_addr(pss, &ss)) {
+			return 1;
+		}
+
+		return 0;
+
+	case VT_LIST:
+		ll = v->v_data;
+		if(ll->ll_size) {
+			return 1;
+		}
+
+		return 0;
+
+	case VT_NULL:
+		return 0;	
+	}
+
+	log_die(EX_SOFTWARE, "var_true: bad type");
 	return 0;
 }
 
@@ -591,128 +439,6 @@ var_dump(var_t * v, char *buffer, int size)
 	return var_dump_data(v, buffer + len + 1, size - len - 1);
 }
 
-// var_type_t
-// var_gettype(
-// char *str)
-// {
-// static char *signs = "+-";
-// static char *numbers = "0123456789";
-// char *p;
-// int len;
-// int period = 0;
-// 
-// if(!(len = strlen(str))) {
-// log_warning("var_gettype: empty string has no type");
-// return VT_NULL;
-// }
-// 
-// /*
-// * Addresses are enclosed with brackets.
-// */
-// if(str[0] == '[' && str[len - 1] == ']') {
-// return VT_ADDR;
-// }
-// 
-// /*
-// * Strings are enclosed with double quotes.
-// */
-// if(str[0] == '"' && str[len - 1] == '"') {
-// return VT_STRING;
-// }
-// 
-// /*
-// * Scan string for numeric types
-// */
-// for(p = signs; *p; ++p) {
-// if(*str == *p) {
-// ++str;
-// break;
-// }
-// }
-// 
-// for(;*str ; ++str) {
-// for(p = numbers; *p; ++p) {
-// if(*str == *p) {
-// break;
-// }
-// }
-// 
-// /*
-// * Allow 1 period
-// */
-// if(*str == '.' && period == 0) {
-// ++period;
-// continue;
-// }
-// 
-// if(!*p) {
-// break;
-// }
-// }
-// 
-// /*
-// * Illegal characters found. Fallback to string.
-// */
-// if(*str) {
-// return VT_STRING;
-// }
-// 
-// if(period) {
-// return VT_FLOAT;
-// }
-// 
-// return VT_INT;
-// }
-// 
-// 
-// var_t *
-// var_read(
-// const char *str)
-// {
-// char *wc, *p;
-// var_type_t type;
-// var_t *v = NULL;
-// 
-// if((wc = strdup(str)) == NULL) {
-// log_warning("var_read: strdup");
-// return NULL;
-// }
-// 
-// if((p = strchr(wc, '=')) == NULL) {
-// log_warning("var_read: assignment expected");
-// return NULL;
-// }
-// 
-// *p++ = 0;
-// 
-// type = var_gettype(p);
-// 
-// switch(type) {
-// 
-// case VT_INT:
-// v = var_create_int(wc, p);
-// break;
-// 
-// case VT_FLOAT:
-// v = var_create_float(wc, p);
-// break;
-// 
-// case VT_STRING:
-// v = var_create_string(wc, p);
-// break;
-// 
-// case VT_ADDR:
-// v = var_create_addr(wc, p);
-// break;
-// 
-// default:
-// log_warning("var_read: bad type");
-// }
-// 
-// free(wc);
-// 
-// return v;
-// }
 
 hash_t
 var_hash(var_t * v)
@@ -730,37 +456,51 @@ var_match(var_t * v1, var_t * v2)
 	return 0;
 }
 
-int
-var_table_unset(ht_t * ht, const char *name)
+ht_t *
+var_table_create(int buckets)
+{
+	ht_t *ht;
+
+	if ((ht = ht_create(buckets, (ht_hash_t) var_hash,
+		(ht_match_t) var_match, (ht_delete_t) var_delete)) == NULL) {
+		log_warning("var_table_create: ht_create failed");
+	}
+
+	return ht;
+}
+
+void
+var_table_delete(ht_t *table)
+{
+	ht_delete(table);
+
+	return;
+}
+
+
+void
+var_table_unset(ht_t * ht, char *name)
 {
 	var_t lookup, *v;
 
-	if (var_init_reference(&lookup, VT_NULL, name, NULL)) {
-		log_warning("var_table_unset: var_create failed");
-		return -1;
-	}
+	memset(&lookup, 0, sizeof(var_t));
+	lookup.v_name = name;
 
 	if ((v = ht_lookup(ht, &lookup))) {
 		ht_remove(ht, v);
-		var_delete(v);
 	}
 
-	var_clear(&lookup);
-
-	return 0;
+	return;
 }
 
 int
-var_table_save(ht_t * ht, var_type_t type, const char *name, const void *data)
+var_table_set(ht_t * ht, var_type_t type, char *name, void *data, int flags)
 {
 	var_t *v;
 
-	if (var_table_unset(ht, name)) {
-		log_warning("var_table_save: var_table_unset failed");
-		return -1;
-	}
+	var_table_unset(ht, name);
 
-	if ((v = var_create_copy(type, name, data)) == NULL) {
+	if ((v = var_create(type, name, data, flags)) == NULL) {
 		log_warning("var_table_save: var_create failed");
 		return -1;
 	}
@@ -773,17 +513,32 @@ var_table_save(ht_t * ht, var_type_t type, const char *name, const void *data)
 	return 0;
 }
 
+
+void *
+var_table_get(ht_t *ht, char *name)
+{
+	var_t lookup, *v;
+
+	lookup.v_type = VT_NULL;
+	lookup.v_name = name;
+
+	if((v = ht_lookup(ht, &lookup)) == NULL) {
+		return NULL;
+	}
+
+	return v->v_data;
+}
+
+
 int
-var_table_list_insert(ht_t * ht, var_type_t type, char *name, void *data)
+var_table_list_insert(ht_t * ht, var_type_t type, char *name, void *data, int flags)
 {
 	var_t lookup, *list;
 	var_t *entry = NULL;
 	ll_t *ll = NULL;
 
-	if (var_init_reference(&lookup, VT_LIST, name, NULL)) {
-		log_warning("var_table_list_append: var_init failed");
-		goto error;
-	}
+	lookup.v_type = VT_LIST;
+	lookup.v_name = name;
 
 	if ((list = ht_lookup(ht, &lookup)) == NULL) {
 		if ((ll = ll_create()) == NULL) {
@@ -791,9 +546,8 @@ var_table_list_insert(ht_t * ht, var_type_t type, char *name, void *data)
 			goto error;
 		}
 
-		if ((list = var_create_reference(VT_LIST, name, ll)) == NULL) {
+		if ((list = var_create(VT_LIST, name, ll, VF_COPYNAME)) == NULL) {
 			log_warning("var_table_list_append: var_create failed");
-			ll_delete(ll, (void *) var_delete);
 			goto error;
 		}
 
@@ -804,7 +558,7 @@ var_table_list_insert(ht_t * ht, var_type_t type, char *name, void *data)
 		}
 	}
 
-	if ((entry = var_create_copy(type, name, data)) == NULL) {
+	if ((entry = var_create(type, name, data, flags)) == NULL) {
 		log_warning("var_table_list_append: var_create failed");
 		goto error;
 	}
@@ -814,11 +568,13 @@ var_table_list_insert(ht_t * ht, var_type_t type, char *name, void *data)
 		goto error;
 	}
 
-	var_clear(&lookup);
-
 	return 0;
 
 error:
+
+	if(ll) {
+		ll_delete(ll, (void *) var_delete);
+	}
 
 	if (entry) {
 		var_delete(entry);

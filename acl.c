@@ -26,8 +26,32 @@ extern int acl_parse(void);
 /*
  * Globals
  */
-static ht_t *acl_tables;
 static ht_t *acl_symbols;
+static ht_t *acl_functions;
+static ht_t *acl_tables;
+
+
+static void
+acl_function_delete(acl_function_t *af)
+{
+	free(af);
+}
+
+static acl_function_t *
+acl_function_create(char *name, acl_fcallback_t callback)
+{
+	acl_function_t *af;
+
+	if((af = (acl_function_t *) malloc(sizeof(acl_function_t))) == NULL) {
+		log_warning("acl_function_create: malloc");
+		return NULL;
+	}
+
+	af->af_name = name;
+	af->af_callback = callback;
+
+	return af;
+}
 
 static void
 acl_symbol_delete(acl_symbol_t * as)
@@ -35,38 +59,42 @@ acl_symbol_delete(acl_symbol_t * as)
 	free(as);
 }
 
-static acl_symbol_t *
-acl_symbol_create(acl_symbol_type_t type, char *name, acl_callback_t callback)
+static int
+acl_function_match(acl_function_t *af1, acl_function_t *af2)
 {
-	acl_symbol_t *as = NULL;
+	if (strcmp(af1->af_name, af2->af_name)) {
+		return 0;
+	}
+
+	return 1;
+}
+
+static hash_t
+acl_function_hash(acl_function_t *af)
+{
+	return HASH(af->af_name, strlen(af->af_name));
+}
+
+static acl_symbol_t *
+acl_symbol_create(char *name, milter_stage_t stage, acl_scallback_t callback)
+{
+	acl_symbol_t *as;
 
 	if ((as = (acl_symbol_t *) malloc(sizeof(acl_symbol_t))) == NULL) {
 		log_warning("acl_symbol_create: malloc");
-		goto error;
+		return NULL;
 	}
 
-	as->as_type = type;
 	as->as_name = name;
+	as->as_stage = stage;
 	as->as_callback = callback;
 
 	return as;
-
-error:
-
-	if (as) {
-		acl_symbol_delete(as);
-	}
-
-	return NULL;
 }
 
 static int
 acl_symbol_match(acl_symbol_t * as1, acl_symbol_t * as2)
 {
-	if (as1->as_type != as2->as_type) {
-		return 0;
-	}
-
 	if (strcmp(as1->as_name, as2->as_name)) {
 		return 0;
 	}
@@ -74,41 +102,19 @@ acl_symbol_match(acl_symbol_t * as1, acl_symbol_t * as2)
 	return 1;
 }
 
-/*
- * acl_symbol_hash creates a hash value for the symbol name.
- *
- * THE CALCULATED HASH DOES NOT CONTAIN THE SYMBOL TYPE. IF A FUNCTION AND
- * AN ATTRIBUTE SHARE THE SAME NAME, THEY SHARE THE SAME BUCKET!
- */
-
 static hash_t
 acl_symbol_hash(acl_symbol_t * as)
 {
 	return HASH(as->as_name, strlen(as->as_name));
 }
 
-static acl_symbol_t *
-acl_symbol_lookup(acl_symbol_type_t type, char *name)
-{
-	acl_symbol_t lookup, *as;
-
-	lookup.as_type = type;
-	lookup.as_name = name;
-
-	if ((as = ht_lookup(acl_symbols, &lookup)) == NULL) {
-		log_warning("acl_symbol_lookup: ht_lookup failed");
-		return NULL;
-	}
-
-	return as;
-}
 
 int
-acl_symbol_register(acl_symbol_type_t type, char *name, acl_callback_t callback)
+acl_symbol_register(char *name, milter_stage_t stage, acl_scallback_t callback)
 {
-	acl_symbol_t *as = NULL;
+	acl_symbol_t *as;
 
-	if ((as = acl_symbol_create(type, name, callback)) == NULL) {
+	if ((as = acl_symbol_create(name, stage, callback)) == NULL) {
 		log_warning("acl_symbol_regeister: acl_symbol_create failed");
 		return -1;
 	}
@@ -119,7 +125,40 @@ acl_symbol_register(acl_symbol_type_t type, char *name, acl_callback_t callback)
 		return -1;
 	}
 
-	log_debug("acl_symbol_register: \"%s\" registered", name);
+	log_debug("acl_symbol_register: symbol \"%s\" registered", name);
+
+	return 0;
+}
+
+int
+acl_symbol_add(ht_t * attrs, var_type_t type, char *name, void *data, int flags)
+{
+	if (var_table_set(attrs, type, name, data, flags)) {
+		log_warning("acl_symbol_add: var_table_set failed");
+		return -1;
+	}
+
+	return 0;
+}
+
+int
+acl_function_register(char *name, acl_fcallback_t callback)
+{
+	acl_function_t *af;
+
+	if ((af = acl_function_create(name, callback)) == NULL) {
+		log_warning("acl_function_regeister: acl_function_create"
+				" failed");
+		return -1;
+	}
+
+	if (ht_insert(acl_functions, af)) {
+		log_warning("acl_function_register: ht_insert failed");
+		acl_function_delete(af);
+		return -1;
+	}
+
+	log_debug("acl_function_register: function \"%s\" registered", name);
 
 	return 0;
 }
@@ -137,7 +176,7 @@ acl_call_delete(acl_call_t * ac)
 }
 
 static acl_call_t *
-acl_call_create(acl_function_t function, ll_t * args)
+acl_call_create(acl_function_t * function, ll_t * args)
 {
 	acl_call_t *ac;
 
@@ -157,12 +196,17 @@ acl_value_delete(acl_value_t * av)
 {
 	switch (av->av_type) {
 	case AV_CONST:
-		var_delete(av->av_data.vd_var);
+		var_delete(av->av_data);
 		break;
 
-	case AV_FUNC:
-		acl_call_delete(av->av_data.vd_call);
+	case AV_FUNCTION:
+		acl_call_delete(av->av_data);
 		break;
+
+	/*
+	 * TODO: AV_SYMBOL
+	 */
+
 
 	default:
 		break;
@@ -174,7 +218,7 @@ acl_value_delete(acl_value_t * av)
 }
 
 acl_value_t *
-acl_value_create(acl_value_type_t type, acl_value_data_t data)
+acl_value_create(acl_value_type_t type, void * data)
 {
 	acl_value_t *av;
 
@@ -190,23 +234,22 @@ acl_value_create(acl_value_type_t type, acl_value_data_t data)
 }
 
 acl_value_t *
-acl_value_create_attribute(char *name)
+acl_value_create_symbol(char *name)
 {
-	acl_symbol_t *as;
+	acl_symbol_t lookup, *as;
 	acl_value_t *av;
-	acl_value_data_t vd;
 
-	if ((as = acl_symbol_lookup(AS_ATTR, name)) == NULL) {
-		log_warning
-		    ("acl_value_create_attribute: acl_symbol_lookup failed");
+	lookup.as_name = name;
+
+	if ((as = ht_lookup(acl_symbols, &lookup)) == NULL) {
+		log_warning ("acl_value_create_symbol: unknown symbol \"%s\"",
+			name);
 		return NULL;
 	}
 
-	vd.vd_attr = as->as_callback.ac_attribute;
-
-	if ((av = acl_value_create(AV_ATTR, vd)) == NULL) {
-		log_warning
-		    ("acl_value_create_attribute: acl_value_create failed");
+	if ((av = acl_value_create(AV_SYMBOL, as)) == NULL) {
+		log_warning("acl_value_create_attribute: acl_value_create"
+			" failed");
 		return NULL;
 	}
 
@@ -216,26 +259,25 @@ acl_value_create_attribute(char *name)
 acl_value_t *
 acl_value_create_function(char *name, ll_t * args)
 {
-	acl_symbol_t *as;
+	acl_function_t lookup, *af;
 	acl_call_t *ac = NULL;
 	acl_value_t *av = NULL;
-	acl_value_data_t vd;
 
-	if ((as = acl_symbol_lookup(AS_FUNC, name)) == NULL) {
-		log_warning
-		    ("acl_value_create_function: acl_symbol_lookup failed");
+	lookup.af_name = name;
+
+	if ((af = ht_lookup(acl_functions, &lookup)) == NULL) {
+		log_warning ("acl_value_create_function: unknown function "
+			"\"%s\"", name);
 		goto error;
 	}
 
-	if ((ac = acl_call_create(as->as_callback.ac_function, args)) == NULL) {
+	if ((ac = acl_call_create(af, args)) == NULL) {
 		log_warning
 		    ("acl_value_create_function: acl_call_create failed");
 		goto error;
 	}
 
-	vd.vd_call = ac;
-
-	if ((av = acl_value_create(AV_FUNC, vd)) == NULL) {
+	if ((av = acl_value_create(AV_FUNCTION, ac)) == NULL) {
 		log_warning
 		    ("acl_value_create_function: acl_value_create failed");
 		goto error;
@@ -256,24 +298,6 @@ error:
 	return NULL;
 }
 
-/*
- * acl_value_t * acl_const_register( var_t *var) { acl_value_t *av = NULL;
- * 
- * if((av = acl_value_create(AV_CONST, NULL, var)) == NULL) {
- * log_warning("acl_const_register: acl_value_create failed"); goto error; }
- * 
- * if(LL_INSERT(acl_constants, av) == -1) { log_warning("acl_const_register:
- * ll_insert failed"); goto error; }
- * 
- * return av;
- * 
- * 
- * error:
- * 
- * if(av) { acl_value_delete(av); }
- * 
- * return NULL; } 
- */
 
 void
 acl_condition_delete(acl_condition_t * ac)
@@ -299,8 +323,6 @@ acl_condition_create(acl_not_t not, acl_gate_t gate, acl_cmp_t cmp,
 		log_warning("acl_condition_create: malloc");
 		goto error;
 	}
-
-	memset(ac, 0, sizeof(acl_condition_t));
 
 	ac->ac_not = not;
 	ac->ac_gate = gate;
@@ -552,18 +574,24 @@ error:
 int
 acl_init(void)
 {
-	if ((acl_tables = HT_CREATE_STATIC(ACL_TABLE_BUCKETS,
-					   (void *) acl_table_hash,
-					   (void *) acl_table_match)) == NULL) {
-		log_warning("acl_init: HT_CREATE_STATIC failed");
+	if ((acl_tables = ht_create(ACL_TABLE_BUCKETS,
+		(ht_hash_t) acl_table_hash, (ht_match_t) acl_table_match,
+		(ht_delete_t) acl_table_delete)) == NULL) {
+		log_warning("acl_init: ht_create failed");
 		return -1;
 	}
 
-	if ((acl_symbols = HT_CREATE_STATIC(ACL_SYMBOL_BUCKETS,
-					    (void *) acl_symbol_hash,
-					    (void *) acl_symbol_match)) ==
-	    NULL) {
-		log_warning("acl_init: HT_CREATE_STATIC failed");
+	if ((acl_symbols = ht_create(ACL_SYMBOL_BUCKETS,
+		(ht_hash_t) acl_symbol_hash, (ht_match_t) acl_symbol_match,
+		(ht_delete_t) acl_symbol_delete)) == NULL) {
+		log_warning("acl_init: ht_create failed");
+		return -1;
+	}
+
+	if ((acl_functions = ht_create(ACL_FUNCTION_BUCKETS,
+		(ht_hash_t) acl_function_hash, (ht_match_t) acl_function_match,
+		(ht_delete_t) acl_function_delete)) == NULL) {
+		log_warning("acl_init: ht_create failed");
 		return -1;
 	}
 
@@ -583,44 +611,73 @@ acl_init(void)
 void
 acl_clear(void)
 {
-	ht_delete(acl_tables, (void *) acl_table_delete);
-	ht_delete(acl_symbols, (void *) acl_symbol_delete);
+	ht_delete(acl_tables);
+	ht_delete(acl_symbols);
+	ht_delete(acl_functions);
 
 	return;
 }
 
-/*
- * var_t * acl_function_eval(acl_value_t *func) { ll_t *args = NULL;
- * acl_value_t *av; var_t *v; acl_function_t callback;
- * 
- * callback = func->av_data->vd_call.ac_function;
- * 
- * if((args = ll_create()) == NULL) { log_error("acl_function_eval: ll_create
- * failed"); goto error; }
- * 
- * ll_rewind(ac->ac_args); while((av = ll_next(args))) { if((v =
- * acl_value_eval(av)) == NULL) { log_error("acl_function_eval: acl_value_eval
- * failed"); goto error; }
- * 
- * if(LL_INSERT(args, v) == -1) { log_error("acl_function_eval: LL_INSERT
- * failed"); goto error; } }
- * 
- * if((v = ac->ac_function(args)) == NULL) { log_error("acl_function_eval:
- * callback failed"); goto error; }
- * 
- * return v;
- * 
- * error:
- * 
- * if(args) { ll_delete(args, NULL); }
- * 
- * return NULL; } 
- */
 
 var_t *
-acl_function_eval(acl_value_t * av)
+acl_symbol_eval(acl_value_t * av, ht_t *attrs)
+{
+	var_t lookup, *v;
+	acl_symbol_t *as;
+	VAR_INT_T *ms;
+	char *sn;
+
+	as = av->av_data;
+	lookup.v_name = as->as_name;
+
+	if((v = ht_lookup(attrs, &lookup))) {
+		return v;
+	}
+
+	if((ms = var_table_get(attrs, "milter_stage")) == NULL) {
+		log_error("acl_symbol_eval: milter_stage not set");
+		return NULL;
+	}
+
+	if(!(*ms & as->as_stage)) {
+		if((sn = var_table_get(attrs, "milter_stagename")) == NULL) {
+			log_error("acl_symbol_eval: milter_stagename not set");
+			sn = "(unknown)";
+		}
+
+		log_error("acl_symbol_eval: symbol \"%s\" not available at %s",
+			as->as_name, sn);
+
+		return NULL;
+	}
+
+	if (as->as_callback == NULL) {
+		log_error("acl_symbol_eval: symbol \"%s\" is not defined and"
+			" has no callback", as->as_name);
+		return NULL;
+	}
+
+	if(as->as_callback(attrs)) {
+		log_error("acl_symbol_eval: callback for symbol \"%s\" failed",
+			as->as_name);
+		return NULL;
+	}
+
+	if((v = ht_lookup(attrs, &lookup)) == NULL) {
+		log_error("acl_symbol_eval: symbol \"%s\" is empty",
+			as->as_name);
+		return NULL;
+	}
+
+	return v;
+}
+
+
+var_t *
+acl_function_eval(acl_value_t * av, ht_t *attrs)
 {
 	ll_t *args = NULL;
+	acl_call_t *call;
 	acl_value_t *arg;
 	var_t *v;
 
@@ -635,9 +692,10 @@ acl_function_eval(acl_value_t * av)
 	/*
 	 * Build argument list
 	 */
-	ll_rewind(av->av_data.vd_call->ac_args);
-	while ((arg = ll_next(av->av_data.vd_call->ac_args))) {
-		if ((v = acl_value_eval(arg)) == NULL) {
+	call = av->av_data;
+	ll_rewind(call->ac_args);
+	while ((arg = ll_next(call->ac_args))) {
+		if ((v = acl_value_eval(arg, attrs)) == NULL) {
 			log_error("acl_function_eval: acl_value_eval failed");
 			goto error;
 		}
@@ -648,7 +706,7 @@ acl_function_eval(acl_value_t * av)
 		}
 	}
 
-	v = av->av_data.vd_call->ac_function(args);
+	v = call->ac_function->af_callback(args);
 
 	return v;
 
@@ -661,24 +719,19 @@ error:
 }
 
 var_t *
-acl_value_eval(acl_value_t * av)
+acl_value_eval(acl_value_t * av, ht_t *attrs)
 {
-	// ll_t *args;
-	// acl_value_t *arg;
-	// acl_value_t *rv;
-
 	switch (av->av_type) {
 
 	case AV_CONST:
-		return av->av_data.vd_var;
+		return av->av_data;
 
-	case AV_FUNC:
-		return acl_function_eval(av);
+	case AV_FUNCTION:
+		return acl_function_eval(av, attrs);
 
-	case AV_ATTR:
-		printf(">> attribute\n");
-		break;
-		// rv = acl_function_eval();
+	case AV_SYMBOL:
+		return acl_symbol_eval(av, attrs);
+
 	default:
 		log_die(EX_SOFTWARE, "acl_value_eval: bad acl value type");
 	}
@@ -721,11 +774,11 @@ acl_compare(var_t * v1, var_t * v2, acl_cmp_t ac)
 }
 
 int
-acl_conditions_eval(ll_t * conditions)
+acl_conditions_eval(ll_t * conditions, ht_t *attrs)
 {
 	acl_condition_t *ac;
 	var_t *left, *right;
-	int r, ax;
+	int r, ax = 0;
 
 	/*
 	 * Evaluation goes left to right. First condition as ac_gate == AG_NULL.
@@ -743,7 +796,7 @@ acl_conditions_eval(ll_t * conditions)
 		/*
 		 * Can't compare NULL.
 		 */
-		if ((left = acl_value_eval(ac->ac_left)) == NULL) {
+		if ((left = acl_value_eval(ac->ac_left, attrs)) == NULL) {
 			log_error("acl_conditions_eval: acl_value_eval returned"
 				  " null");
 			r = 0;
@@ -752,7 +805,7 @@ acl_conditions_eval(ll_t * conditions)
 			r = var_true(left) ^ ac->ac_not;
 		}
 		else {
-			if ((right = acl_value_eval(ac->ac_right)) == NULL) {
+			if ((right = acl_value_eval(ac->ac_right, attrs)) == NULL) {
 				log_error("acl_conditions_eval: acl_value_eval"
 					  " returned null");
 				r = 0;
@@ -807,7 +860,7 @@ acl(char *table, ht_t * attrs)
 	 */
 	ll_rewind(at->at_rules);
 	while ((ar = ll_next(at->at_rules))) {
-		r = acl_conditions_eval(ar->ar_conditions);
+		r = acl_conditions_eval(ar->ar_conditions, attrs);
 		if (r == 0) {
 			continue;
 		}

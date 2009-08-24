@@ -83,6 +83,8 @@ modules_load(const char *path)
 		}
 	}
 
+	globfree(&pglob);
+
 	return 0;
 }
 
@@ -121,6 +123,8 @@ modules_clear(void)
 
 		dlclose(handle);
 	}
+	
+	ll_delete(modules, NULL);
 
 	return;
 }

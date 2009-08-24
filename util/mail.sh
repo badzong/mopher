@@ -1,7 +1,17 @@
 RCPT=manuel@fredastaire.ch
+FIFO=mail.fifo
 
 if [ ! -z "$1" ]; then
 	RCPT=$1
+fi
+
+if [ ! -e "$FIFO" ]; then
+	mkfifo $FIFO
+fi
+
+if [ ! -p "$FIFO" ]; then
+	echo $FIFO is not a FIFO
+	exit 255
 fi
 
 sudo chmod 777 /var/spool/postfix/milter.sock
@@ -22,4 +32,6 @@ sudo chmod 777 /var/spool/postfix/milter.sock
     read
 	echo "quit"
 	read
-) < mail.fifo | netcat localhost 25 | tee mail.fifo
+) < $FIFO | netcat localhost 25 | tee $FIFO
+
+rm $FIFO

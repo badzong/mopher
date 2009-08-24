@@ -21,14 +21,14 @@ string_strlen(ll_t *args)
 
 	len = strlen(v->v_data);
 
-	return var_create_copy(VT_INT, NULL, &len);
+	return var_create(VT_INT, NULL, &len, VF_COPYDATA);
 }
 
 
 int
 init(void)
 {
-	acl_symbol_register(AS_FUNC, "string_strlen", (acl_callback_t) string_strlen);
+	acl_function_register("string_strlen", (acl_fcallback_t) string_strlen);
 
 	return 0;
 }
