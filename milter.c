@@ -267,7 +267,7 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 
 	if (var_table_list_insert
 	    (mp->mp_table, VT_STRING, "milter_recipient_list", envrcpt,
-	     VF_KEEPNAME)) {
+	     VF_KEEP)) {
 		log_error("milter_envrcpt: var_table_list_insert failed");
 		return SMFIS_TEMPFAIL;
 	}
@@ -345,6 +345,13 @@ milter_eoh(SMFICTX * ctx)
 	if (var_table_set(mp->mp_table, VT_STRING, "milter_stagename",
 	    MSN_EOH, VF_KEEP)) {
 		log_error("milter_eoh: var_table_set failed");
+		return SMFIS_TEMPFAIL;
+	}
+
+	if (var_table_set
+	    (mp->mp_table, VT_INT, "milter_recipients", &mp->mp_recipients,
+	     VF_KEEPNAME | VF_COPYDATA)) {
+		log_error("milter_eom: var_table_set failed");
 		return SMFIS_TEMPFAIL;
 	}
 
@@ -426,15 +433,14 @@ milter_eom(SMFICTX * ctx)
 		return SMFIS_TEMPFAIL;
 	}
 
-	if (var_table_set(mp->mp_table, VT_INT, "milter_size", &mp->mp_size,
-		VF_KEEPNAME | VF_COPYDATA)) {
+	if (var_table_set(mp->mp_table, VT_INT, "milter_message_size",
+		&mp->mp_size, VF_KEEPNAME | VF_COPYDATA)) {
 		log_error("milter_eom: var_table_set failed");
 		return SMFIS_TEMPFAIL;
 	}
 
-	if (var_table_set
-	    (mp->mp_table, VT_INT, "milter_recipients", &mp->mp_recipients,
-	     VF_KEEPNAME | VF_COPYDATA)) {
+	if (var_table_set(mp->mp_table, VT_INT, "milter_message",
+		&mp->mp_message, VF_KEEP)) {
 		log_error("milter_eom: var_table_set failed");
 		return SMFIS_TEMPFAIL;
 	}

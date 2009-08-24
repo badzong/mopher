@@ -1,2 +1,3 @@
-connect test_symbol_2 = 1 block
-connect test_symbol_1 = 1 block
+connect milter_hostaddr = 127.0.0.1 continue
+connect 1 block
+eom milter_message_size > 180 block

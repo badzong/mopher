@@ -1,5 +1,6 @@
 RCPT=manuel@fredastaire.ch
 FIFO=mail.fifo
+HOST=localhost
 
 if [ ! -z "$1" ]; then
 	RCPT=$1
@@ -32,6 +33,6 @@ sudo chmod 777 /var/spool/postfix/milter.sock
     read
 	echo "quit"
 	read
-) < $FIFO | netcat localhost 25 | tee $FIFO
+) < $FIFO | netcat $HOST 25 | tee $FIFO
 
 rm $FIFO

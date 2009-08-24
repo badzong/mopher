@@ -843,7 +843,7 @@ acl(char *table, ht_t * attrs)
 	acl_table_t *at;
 	acl_action_t *aa;
 	acl_rule_t *ar;
-	int r;
+	int i, r;
 
 	if ((at = acl_table_lookup(table)) == NULL) {
 		log_notice("acl: unknown table \"%s\": continue", table);
@@ -859,13 +859,14 @@ acl(char *table, ht_t * attrs)
 	 * If all conditions match, the rule matches.
 	 */
 	ll_rewind(at->at_rules);
-	while ((ar = ll_next(at->at_rules))) {
+	for (i = 1; (ar = ll_next(at->at_rules)); ++i) {
 		r = acl_conditions_eval(ar->ar_conditions, attrs);
 		if (r == 0) {
 			continue;
 		}
 
 		if (r == 1) {
+			log_info("rule %d in table \"%s\" matched", i, table);
 			aa = ar->ar_action;
 			break;
 		}
