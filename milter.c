@@ -86,8 +86,8 @@ milter_priv_create(void)
 
 	memset(mp, 0, sizeof(milter_priv_t));
 
-	if ((mp->mp_table = var_create(VT_TABLE, "mp_table", NULL, VF_CREATE))
-		== NULL) {
+	if ((mp->mp_table = var_create(VT_TABLE, "mp_table", NULL,
+		VF_CREATE | VF_KEEPNAME)) == NULL) {
 		log_error("milter_priv_create: var_create failed");
 		goto error;
 	}
