@@ -10,15 +10,36 @@
 #include "log.h"
 
 #define ADDR6_LEN 16
+#define BUCKETS 256
 
+
+static hash_t
+var_hash(var_t * v)
+{
+	return HASH(v->v_name, strlen(v->v_name));
+}
+
+static int
+var_match(var_t * v1, var_t * v2)
+{
+	if (strcmp(v1->v_name, v2->v_name) == 0) {
+		return 1;
+	}
+
+	return 0;
+}
 
 static void
-var_clear_data(var_t * v)
+var_data_clear(var_t * v)
 {
 	switch (v->v_type) {
 
 	case VT_LIST:
 		ll_delete(v->v_data, (void *) var_delete);
+		break;
+
+	case VT_TABLE:
+		ht_delete(v->v_data);
 		break;
 
 	default:
@@ -38,7 +59,7 @@ var_clear(var_t * v)
 	}
 
 	if (v->v_data && !(v->v_flags & VF_KEEPDATA)) {
-		var_clear_data(v);
+		var_data_clear(v);
 	}
 
 	memset(v, 0, sizeof(var_t));
@@ -56,27 +77,43 @@ var_delete(var_t *v)
 }
 
 static void *
-var_copy_list(ll_t *list)
+var_copy_list_or_table(var_type_t type, void *src)
 {
-	ll_t *copy = NULL;
-	var_t *vo, *vc;
+	int is_table, r;
+	void *copy = NULL;
+	ht_t *ht = src;
+	var_t *vo, *vc = NULL;
 
-	if ((copy = ll_create()) == NULL) {
-		log_warning("var_copy_list: ll_create failed");
+	is_table = (type == VT_TABLE);
+
+	copy = is_table ?  (void *) ht_create(ht->ht_buckets, ht->ht_hash,
+		ht->ht_match, ht->ht_delete) : (void *) ll_create();
+
+	if (copy == NULL) {
+		log_warning("var_list_copy: %s_create failed",
+			is_table ? "ht" : "ll");
 		goto error;
 	}
 
-	ll_rewind(list);
-	while ((vo = ll_next(list))) {
+	if(is_table) {
+		ht_rewind(copy);
+	}
+	else {
+		ll_rewind(copy);
+	}
+
+	while ((vo = is_table ? ht_next(copy) : ll_next(copy))) {
 		if ((vc = var_create(vo->v_type, vo->v_name, vo->v_data,
 			VF_COPYNAME | VF_COPYDATA))
 			== NULL) {
-			log_warning("var_copy_list: var_create failed");
+			log_warning("var_list_copy: var_create failed");
 			goto error;
 		}
 
-		if(LL_INSERT(copy, vc)) {
-			log_warning("var_copy_list: LL_INSERT failed");
+		r = is_table ? ht_insert(copy, vc) : LL_INSERT(copy, vc);
+		if(r == -1) {
+			log_warning("var_list_copy: %s failed",
+				is_table ? "ht_insert" : "LL_INSERT");
 			goto error;
 		}
 	}
@@ -85,7 +122,16 @@ var_copy_list(ll_t *list)
 
 error:
 	if(copy) {
-		ll_delete(copy, (void *) var_delete);
+		if(is_table) {
+			ht_delete(copy);
+		}
+		else {
+			ll_delete(copy, (void *) var_delete);
+		}
+	}
+
+	if(vc) {
+		var_delete(vc);
 	}
 
 	return NULL;
@@ -99,10 +145,11 @@ var_copy_data(var_type_t type, void *data)
 
 	switch (type) {
 	/*
-	 * Lists deserve special treatment.
+	 * Lists and tables deserve special treatment.
 	 */
 	case VT_LIST:
-		return var_copy_list(data);
+	case VT_TABLE:
+		return var_copy_list_or_table(type, data);
 
 	case VT_INT:
 		size = sizeof(VAR_INT_T);
@@ -131,6 +178,85 @@ var_copy_data(var_type_t type, void *data)
 	return copy;
 }
 
+static void *
+var_data_create(var_type_t type)
+{
+	void *p;
+
+	switch(type) {
+	case VT_LIST:
+		p = (void *) ll_create();
+		break;
+
+	case VT_TABLE:
+		p = (void *) ht_create(BUCKETS, (ht_hash_t) var_hash,
+			(ht_match_t) var_match, (ht_delete_t) var_delete);
+		break;
+
+	default:
+		log_warning("var_data_create: bad type");
+		return NULL;
+	}
+
+	if(p == NULL) {
+		log_warning("var_data_create: %s failed",
+			type == VT_LIST ? "ll_create" : "ht_create");
+	}
+
+	return p;
+}
+
+
+static char *
+var_name_init(char *name, int flags)
+{
+	char *copy;
+
+	if((flags & VF_COPYNAME) == 0) {
+		return name;
+	}
+
+	if ((copy = strdup(name)) == NULL) {
+		log_warning("var_name_init: strdup");
+	}
+
+	return copy;
+}
+
+
+static void *
+var_data_init(var_type_t type, void *data, int flags)
+{
+	void *p;
+
+	/*
+	 * Allocate and initialize data (lists and tables only).
+	 */
+	if(data == NULL && (flags & VF_CREATE)) {
+		if((p = var_data_create(type)) == NULL) {
+			log_warning("var_data_init: var_data_create failed");
+		}
+
+		return p;
+	}
+
+	/*
+	 * No copy needed.
+	 */
+	if((flags & VF_COPYDATA) == 0) {
+		return data;
+	}
+
+	/*
+	 * Return a copy
+	 */
+	if((p = var_copy_data(type, data)) == NULL) {
+		log_warning("var_init: var_copy_data failed");
+	}
+
+	return p;
+}
+
 
 int
 var_init(var_t *v, var_type_t type, char *name, void *data, int flags)
@@ -140,24 +266,22 @@ var_init(var_t *v, var_type_t type, char *name, void *data, int flags)
 	v->v_type = type;
 	v->v_flags = flags;
 
-	if(flags & VF_COPYNAME) {
-		if((v->v_name = strdup(name)) == NULL) {
-			log_warning("var_init: strdup");
-			return -1;
-		}
-	}
-	else {
-		v->v_name = name;
+	/*
+	 * If name is set var_name_init never returns NULL.
+	 */
+	v->v_name = var_name_init(name, flags);
+	if (name && v->v_name == NULL) {
+		log_warning("var_init: var_name_init failed");
+		return -1;
 	}
 
-	if(flags & VF_COPYDATA) {
-		if((v->v_data = var_copy_data(type, data)) == NULL) {
-			log_warning("var_init: var_copy_data failed");
-			return -1;
-		}
-	}
-	else {
-		v->v_data = data;
+	/*
+	 * If data is set var_data_init never returns NULL.
+	 */
+	v->v_data = var_data_init(type, data, flags);
+	if (data && v->v_data == NULL) {
+		log_warning("var_init: var_data_init failed");
+		return -1;
 	}
 
 	return 0;
@@ -234,7 +358,7 @@ var_compare(const var_t * v1, const var_t * v2)
 {
 
 	if (v1->v_type != v2->v_type) {
-		log_error("var_compare: comparing differnt types");
+		log_warning("var_compare: comparing differnt types");
 
 		if (v1->v_type < v2->v_type) {
 			return -1;
@@ -270,7 +394,7 @@ var_compare(const var_t * v1, const var_t * v2)
 		return var_compare_addr(v1->v_data, v2->v_data);
 
 	default:
-		log_error("var_compare: bad type");
+		log_warning("var_compare: bad type");
 		break;
 	}
 
@@ -282,6 +406,7 @@ int
 var_true(const var_t * v)
 {
 	ll_t *ll;
+	ht_t *ht;
 	struct sockaddr_storage ss, *pss;
 
 	switch (v->v_type) {
@@ -326,6 +451,14 @@ var_true(const var_t * v)
 
 		return 0;
 
+	case VT_TABLE:
+		ht = v->v_data;
+		if(ht->ht_records) {
+			return 1;
+		}
+
+		return 0;
+
 	case VT_NULL:
 		return 0;	
 	}
@@ -334,14 +467,72 @@ var_true(const var_t * v)
 	return 0;
 }
 
+static int
+var_dump_list_or_table(var_t * v, char *buffer, int size)
+{
+	int len, n, is_table;
+	var_t *tmp;
+
+	is_table = (v->v_type == VT_TABLE);
+
+	if (size > 1) {
+		buffer[0] = is_table ? '{' : '(';
+	}
+	len = 1;
+
+	if(is_table) {
+		ht_rewind(v->v_data);
+	}
+	else {
+		ll_rewind(v->v_data);
+	}
+
+	while ((tmp = (is_table ? ht_next(v->v_data) : ll_next(v->v_data)))
+		&& len < size) {
+
+		if(len > 1 && size > len + 1) {
+			buffer[len] = ',';
+			buffer[++len] = 0;
+		}
+
+		if(is_table) {
+			n = var_dump(tmp, buffer + len, size - len);
+		}
+		else {
+			n = var_dump_data(tmp, buffer + len, size - len);
+		}
+
+		if(n == -1) {
+			log_warning
+			    ("var_dump_data: var_dump_data failed");
+			return -1;
+		}
+
+		len += n;
+
+	}
+
+	if (size > len + 1) {
+		buffer[len] = is_table ? '}' : ')';
+		buffer[++len] = 0;
+	}
+
+	return len;
+}
+
 int
 var_dump_data(var_t * v, char *buffer, int size)
 {
-	int len, n;
-	sa_family_t saf;
-	void *sin;
+	int len;
 	char addrstr[INET6_ADDRSTRLEN];
-	var_t *tmp;
+	struct sockaddr_storage *ss = v->v_data;
+	struct sockaddr_in *sin = v->v_data;
+	struct sockaddr_in6 *sin6 = v->v_data;
+	void *p;
+
+	if(v->v_data == NULL) {
+		return snprintf(buffer, size, "(null)");
+	}
 
 	switch (v->v_type) {
 
@@ -359,52 +550,21 @@ var_dump_data(var_t * v, char *buffer, int size)
 		break;
 
 	case VT_ADDR:
-		saf = ((struct sockaddr_storage *) v->v_data)->ss_family;
-		if (saf == AF_INET6) {
-			sin =
-			    (void *) &((struct sockaddr_in6 *) v->
-				       v_data)->sin6_addr;
-		}
-		else {
-			sin =
-			    (void *) &((struct sockaddr_in *) v->
-				       v_data)->sin_addr;
-		}
+		p = (ss->ss_family == AF_INET6 ? (void *) &sin6->sin6_addr :
+			(void *) &sin->sin_addr);
 
-		if (inet_ntop(saf, sin, addrstr, sizeof(addrstr)) == NULL) {
+		if (inet_ntop(ss->ss_family, p, addrstr, sizeof(addrstr))
+			== NULL) {
 			log_warning("var_dump_data: inet_ntop failed");
 			return -1;
 		}
+
 		len = snprintf(buffer, size, "[%s]", addrstr);
 		break;
 
 	case VT_LIST:
-		if (size > 1) {
-			buffer[0] = '(';
-		}
-		len = 1;
-
-		ll_rewind(v->v_data);
-		while ((tmp = ll_next(v->v_data)) && len < size) {
-			if ((n =
-			     var_dump_data(tmp, buffer + len,
-					   size - len)) == -1) {
-				log_warning
-				    ("var_dump_data: var_dump_data failed");
-				return -1;
-			}
-			len += n;
-
-			if (size > len + 1) {
-				buffer[len] = ',';
-				buffer[++len] = 0;
-			}
-		}
-
-		if (size > len + 1) {
-			buffer[len] = ')';
-			buffer[++len] = 0;
-		}
+	case VT_TABLE:
+		len = var_dump_list_or_table(v, buffer, size);
 		break;
 
 	default:
@@ -435,118 +595,112 @@ var_dump(var_t * v, char *buffer, int size)
 	strncpy(buffer, v->v_name, len);
 
 	buffer[len] = '=';
+	buffer[++len] = 0;
 
-	return var_dump_data(v, buffer + len + 1, size - len - 1);
+	len += var_dump_data(v, buffer + len, size - len);
+
+	return len;
 }
 
 
-hash_t
-var_hash(var_t * v)
+var_t *
+var_table_lookup(var_t *table, char *name)
 {
-	return HASH(v->v_name, strlen(v->v_name));
-}
-
-int
-var_match(var_t * v1, var_t * v2)
-{
-	if (strcmp(v1->v_name, v2->v_name) == 0) {
-		return 1;
-	}
-
-	return 0;
-}
-
-ht_t *
-var_table_create(int buckets)
-{
-	ht_t *ht;
-
-	if ((ht = ht_create(buckets, (ht_hash_t) var_hash,
-		(ht_match_t) var_match, (ht_delete_t) var_delete)) == NULL) {
-		log_warning("var_table_create: ht_create failed");
-	}
-
-	return ht;
-}
-
-void
-var_table_delete(ht_t *table)
-{
-	ht_delete(table);
-
-	return;
-}
-
-
-void
-var_table_unset(ht_t * ht, char *name)
-{
-	var_t lookup, *v;
+	var_t lookup;
+	ht_t *ht = table->v_data;
 
 	memset(&lookup, 0, sizeof(var_t));
 	lookup.v_name = name;
 
-	if ((v = ht_lookup(ht, &lookup))) {
-		ht_remove(ht, v);
-	}
-
-	return;
+	return ht_lookup(ht, &lookup);
 }
 
-int
-var_table_set(ht_t * ht, var_type_t type, char *name, void *data, int flags)
+void *
+var_table_get(var_t * table, char *name)
 {
 	var_t *v;
 
-	var_table_unset(ht, name);
-
-	if ((v = var_create(type, name, data, flags)) == NULL) {
-		log_warning("var_table_save: var_create failed");
-		return -1;
-	}
-
-	if (ht_insert(ht, v)) {
-		log_warning("var_table_save: ht_insert failed");
-		return -1;
-	}
-
-	return 0;
-}
-
-
-void *
-var_table_get(ht_t *ht, char *name)
-{
-	var_t lookup, *v;
-
-	lookup.v_type = VT_NULL;
-	lookup.v_name = name;
-
-	if((v = ht_lookup(ht, &lookup)) == NULL) {
+	if((v = var_table_lookup(table, name)) == NULL) {
 		return NULL;
 	}
 
 	return v->v_data;
 }
 
+int
+var_table_insert(var_t *table, var_t *v)
+{
+	ht_t *ht = table->v_data;
+
+	if (ht_insert(ht, v)) {
+		log_warning("var_table_insert: ht_insert failed");
+		return -1;
+	}
+
+	return 0;
+}
 
 int
-var_table_list_insert(ht_t * ht, var_type_t type, char *name, void *data, int flags)
+var_table_set(var_t *table, var_t *v)
 {
-	var_t lookup, *list;
+	ht_t *ht = table->v_data;
+
+	if (ht_lookup(ht, v) != NULL) {
+		ht_remove(ht, v);
+	}
+
+	if (ht_insert(ht, v)) {
+		log_warning("var_table_set: ht_insert failed");
+		return -1;
+	}
+
+	return 0;
+}
+
+int
+var_table_setv(var_t *table, var_type_t type, char *name, void *data, int flags)
+{
+	var_t *v;
+
+	if (table->v_type != VT_TABLE) {
+		log_warning("var_table_set: need table");
+		return -1;
+	}
+
+	if ((v = var_create(type, name, data, flags)) == NULL) {
+		log_warning("var_table_save: var_create failed");
+		return -1;
+	}
+
+	return var_table_set(table, v);
+}
+
+
+int
+var_list_append(var_t *list, var_t *item)
+{
+	ll_t *ll = list->v_data;
+
+	if((LL_INSERT(ll, item)) == -1) {
+		log_warning("var_list_append: LL_INSERT failed");
+		return -1;
+	}
+
+	return 0;
+}
+
+
+int
+var_table_list_insert(var_t *table, var_type_t type, char *name, void *data, int flags)
+{
+	var_t *list;
 	var_t *entry = NULL;
-	ll_t *ll = NULL;
+	ht_t *ht = table->v_data;
 
-	lookup.v_type = VT_LIST;
-	lookup.v_name = name;
-
-	if ((list = ht_lookup(ht, &lookup)) == NULL) {
-		if ((ll = ll_create()) == NULL) {
-			log_warning("var_table_list_append: ll_create failed");
-			goto error;
-		}
-
-		if ((list = var_create(VT_LIST, name, ll, VF_COPYNAME)) == NULL) {
+	if ((list = var_table_lookup(table, name)) == NULL) {
+		if ((list = var_create(VT_LIST, name, NULL,
+		    VF_COPYNAME | VF_CREATE)) == NULL)
+		{
 			log_warning("var_table_list_append: var_create failed");
 			goto error;
 		}
@@ -571,10 +725,6 @@ var_table_list_insert(ht_t * ht, var_type_t type, char *name, void *data, int fl
 	return 0;
 
 error:
-
-	if(ll) {
-		ll_delete(ll, (void *) var_delete);
-	}
 
 	if (entry) {
 		var_delete(entry);

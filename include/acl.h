@@ -28,7 +28,7 @@ typedef enum acl_action_type { AA_ERROR = -1, AA_NULL = 0, AA_PASS, AA_BLOCK,
  * Function pointer types for functions and symbols
  */
 typedef var_t *(*acl_fcallback_t) (ll_t * args);
-typedef int (*acl_scallback_t) (ht_t * attrs);
+typedef int (*acl_scallback_t) (var_t * attrs);
 
 typedef struct acl_symbol {
 	char		*as_name;
@@ -94,7 +94,7 @@ typedef struct acl_rule {
  */
 
 int acl_symbol_register(char *name, milter_stage_t stage, acl_scallback_t callback);
-int acl_symbol_add(ht_t * attrs, var_type_t type, char *name, void *data, int flags);
+int acl_symbol_add(var_t * attrs, var_type_t type, char *name, void *data, int flags);
 int acl_function_register(char *name, acl_fcallback_t callback);
 void acl_value_delete(acl_value_t * av);
 acl_value_t * acl_value_create(acl_value_type_t type, void * data);
@@ -113,11 +113,10 @@ acl_table_t * acl_table_register(char *name, acl_action_t * target);
 int acl_rule_register(acl_table_t * at, ll_t * conditions, acl_action_t * action);
 int acl_init(void);
 void acl_clear(void);
-var_t * acl_symbol_eval(acl_value_t * av, ht_t *attrs);
-var_t * acl_function_eval(acl_value_t * av, ht_t *attrs);
-var_t * acl_value_eval(acl_value_t * av, ht_t *attrs);
+var_t * acl_symbol_eval(acl_value_t * av, var_t *attrs);
+var_t * acl_function_eval(acl_value_t * av, var_t *attrs);
+var_t * acl_value_eval(acl_value_t * av, var_t *attrs);
 int acl_compare(var_t * v1, var_t * v2, acl_cmp_t ac);
-int acl_conditions_eval(ll_t * conditions, ht_t *attrs);
-acl_action_type_t acl(char *table, ht_t * attrs);
-
+int acl_conditions_eval(ll_t * conditions, var_t *attrs);
+acl_action_type_t acl(char *table, var_t *attrs);
 #endif				/* _ACL_H_ */

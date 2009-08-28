@@ -3,6 +3,7 @@
 #include "acl.h"
 #include "milter.h"
 #include "log.h"
+#include "var.h"
 
 
 var_t *
@@ -18,7 +19,7 @@ testfunc(ll_t *args)
 }
 
 int
-test_symbol(ht_t *attrs)
+test_symbol(var_t *attrs)
 {
 	VAR_INT_T i;
 

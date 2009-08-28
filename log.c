@@ -10,12 +10,16 @@
 
 #define BUFLEN 1024
 
+static int log_level;
+
 void
-log_init(char *name)
+log_init(char *name, int level, int foreground)
 {
 	int option;
 
-	option = cf_foreground ? LOG_PID | LOG_PERROR : LOG_PID;
+	log_level = level;
+
+	option = foreground ? LOG_PID | LOG_PERROR : LOG_PID;
 
 	openlog(name, option, LOG_MAIL);
 
@@ -52,7 +56,7 @@ log_log(int type, char *f, ...)
 	char buffer[BUFLEN];
 	va_list ap;
 
-	if (type > cf_log_level) {
+	if (type > log_level) {
 		return;
 	}
 

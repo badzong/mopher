@@ -1,149 +1,261 @@
-#include <unistd.h>
-#include <stdlib.h>
+#include <malloc.h>
 #include <stdio.h>
 #include <string.h>
-#include <libgen.h>
-#include <sysexits.h>
-#define _GNU_SOURCE
-#include <getopt.h>
 
+#include "log.h"
+#include "var.h"
 #include "ll.h"
+#include "cf.h"
+#include "util.h"
+
+#include "cf_yacc.h"
+
+#define BUCKETS 256
 
 /*
- * Macros
+ * Configuration table
  */
-#define err(...) fprintf(stderr, __VA_ARGS__)
-#define die(...) fprintf(stderr, __VA_ARGS__); _exit(EX_OSERR)
+static var_t *cf_config;
 
 /*
- * Global configuration variables
+ * Yacc Parser
  */
+extern int cf_parse(void);
 
-char *cf_file = "/etc/listkeeper";
-int cf_log_level = 15;
-int cf_foreground = 1;
-
-ll_t *cf_master_processes;
-
-char *cf_judge_socket = "unix:/tmp/lk/judge.sock";
-int cf_judge_dump_interval = 600;
-
-char *cf_acl_path = "default.acl";
-
-int cf_greylist_valid = 8 * 60 * 60;
-
-char *cf_milter_socket = "unix:/var/spool/postfix/milter.sock";
-ll_t *cf_milter_dnsrbl;
-char *cf_milter_spamd_socket = "inet:127.0.0.1:783";
-int cf_milter_socket_timeout = 60;
-
-int cf_greylist_default_delay = 3600;
-int cf_greylist_default_visa = 86400;
-int cf_greylist_default_valid = 0;
-
-int cf_greylist_dynamic_factor = 1800;
-int cf_greylist_dynamic_divisor = 1;
-
-char *cf_acl_mod_path = "mod/acl";
+int cf_line;
 
 /*
- * cf.c globals
+ * Default Configuration cf_defaults.conf is compiled in.
  */
+extern char _binary_cf_defaults_conf_start;
+extern char _binary_cf_defaults_conf_end;
 
-static struct option cf_options[] = {
-	{"log-level", 1, NULL, 'l'},
-	{"config", 1, NULL, 'c'},
-	{"foreground", 0, NULL, 'f'}
+static char *cf_file_start = &_binary_cf_defaults_conf_start;
+static char *cf_file_end = &_binary_cf_defaults_conf_end;
+static char *cf_file_pos;
+
+/*
+ * Configuration file buffer
+ */
+static char *cf_file;
+
+/*
+ * Extern configuration symbols
+ */
+VAR_INT_T	 cf_greylist_default_delay;
+VAR_INT_T	 cf_greylist_default_visa;
+VAR_INT_T	 cf_greylist_default_valid;
+char		*cf_acl_path;
+char		*cf_acl_mod_path;
+char		*cf_milter_socket;
+VAR_INT_T	 cf_milter_socket_timeout;
+VAR_INT_T	 cf_log_level;
+VAR_INT_T	 cf_foreground;
+
+/*
+ * Symbol table
+ */
+static cf_symbol_t cf_symbols[] = {
+	{ VT_INT, "greylist_default_delay", &cf_greylist_default_delay },
+	{ VT_INT, "greylist_default_visa", &cf_greylist_default_visa },
+	{ VT_INT, "greylist_default_valid", &cf_greylist_default_valid },
+	{ VT_STRING, "acl_path", &cf_acl_path },
+	{ VT_STRING, "acl_mod_path", &cf_acl_mod_path },
+	{ VT_STRING, "milter_socket", &cf_milter_socket },
+	{ VT_INT, "milter_socket_timeout", &cf_milter_socket_timeout },
+	{ VT_NULL, NULL, NULL }
 };
 
-static void
-cf_defaults(void)
-{
-	if ((cf_master_processes = ll_create()) == NULL) {
-		die("cf_defaults: ll_create failed\n");
-	}
-	/*
-	 * ll_insert has to be called with strdup as ll_delete will be called with
-	 * free. See cf_clear below.
-	 */
-	LL_INSERT(cf_master_processes, strdup("judge/judge"));
-	LL_INSERT(cf_master_processes, strdup("milter/milter"));
 
-	if ((cf_milter_dnsrbl = ll_create()) == NULL) {
-		die("cf_defaults: ll_create failed\n");
+static void
+cf_load_symbols(void)
+{
+	cf_symbol_t *symbol = cf_symbols;
+	void *p;
+
+	while(symbol->cs_type) {
+
+		if((p = var_table_get(cf_config, symbol->cs_name)) == NULL) {
+			continue;
+		}
+
+		switch(symbol->cs_type) {
+		case VT_INT:
+			*(VAR_INT_T *) symbol->cs_ptr = *(VAR_INT_T *) p;
+			 break;
+
+		case VT_FLOAT:
+			*(VAR_FLOAT_T *) symbol->cs_ptr = *(VAR_FLOAT_T *) p;
+			 break;
+
+		case VT_STRING:
+			*((char **) symbol->cs_ptr) = (char *) p;
+			break;
+
+		default:
+			log_die(EX_CONFIG, "cf_symbols_load: bad type");
+		}
+
+		++symbol;
 	}
-	LL_INSERT(cf_milter_dnsrbl, strdup("zen.spamhaus.org"));
-	LL_INSERT(cf_milter_dnsrbl, strdup("bl.spamcop.net"));
 
 	return;
 }
 
-static void
-cf_load(void)
+void
+cf_run_parser(void)
 {
-	err("cf_load: not implemented yet.\n");
+	cf_line = 1;
+	cf_parse();
 
 	return;
 }
+
+int
+cf_yyinput(char *buffer, int size)
+{
+	int n, avail;
+
+	if(cf_file_pos == NULL) {
+		cf_file_pos = cf_file_start;
+	}
+
+	avail = cf_file_end - cf_file_pos;
+	n = avail >= size ? size : avail;
+
+	memcpy(buffer, cf_file_pos, n);
+
+	cf_file_pos += n;
+
+	return n;
+}
+
+
+static void
+cf_load_file(char *file)
+{
+	int exists, size;
+
+	exists = util_file_exists(file);
+	if (exists == -1) {
+		log_die(EX_CONFIG, "cf_load_file: util_file_exists failed");
+	}
+
+	if (exists == 0) {
+		log_warning("cf_load_file: \"%s\" does not exist. Using defaults",
+			file);
+		return;
+	}
+
+	log_info("cf_load_file: loading configiration file \"%s\"", file);
+
+	size = util_file(file, &cf_file);
+	if (size == -1) {
+		log_die(EX_CONFIG, "cf_load_file: util_file failed");
+	}
+
+	if(size == 0) {
+		log_warning("cf_load_file: \"%s\" is empty. Using defaults",
+			file);
+		return;
+	}
+
+	cf_file_pos = cf_file_start = cf_file;
+	cf_file_end = cf_file_start + size;
+
+	cf_run_parser();
+
+	free(cf_file);
+	
+	return;
+}
+
+
 
 void
 cf_clear(void)
 {
-	ll_delete(cf_master_processes, free);
-	ll_delete(cf_milter_dnsrbl, free);
+	var_delete(cf_config);
 
 	return;
 }
 
 void
-cf_init(int argc, char **argv)
+cf_init(char *file)
 {
-	int foreground = 0;
-	int log_level = 0;
-	int index = 0;
-	int c;
+	//char buffer[4096];
 
-	for (;;) {
+	if ((cf_config = var_create(VT_TABLE, "config", NULL,
+		VF_KEEPNAME | VF_CREATE)) == NULL) {
+		log_die(EX_CONFIG, "cf_init: var_table_create failed");
+	}
 
-		if ((c =
-		     getopt_long(argc, argv, "c:fl:", cf_options,
-				 &index)) == -1) {
-			break;
+	log_debug("cf_init: load default configuration");
+
+	cf_run_parser();
+
+	//var_dump(cf_config, buffer, sizeof(buffer));
+	
+	cf_load_file(file);
+
+	cf_load_symbols();
+
+	return;
+}
+
+void
+cf_set(var_t *table, ll_t *keys, var_t *v)
+{
+	char *key;
+	var_t *sub;
+
+	if (table == NULL) {
+		table = cf_config;
+	}
+
+	/*
+	 * Last key queued belongs to var_t *v itself.
+	 */
+	key = LL_DEQUEUE(keys);
+	if(keys->ll_size == 0) {
+
+		/*
+		 * keys is created in cf_yacc.y and no longer needed.
+		 */
+		ll_delete(keys, NULL);
+
+		if(v->v_name == NULL) {
+			v->v_name = key;
 		}
 
-		switch (c) {
-
-		case 'c':
-			cf_file = optarg;
-			break;
-
-		case 'f':
-			foreground = 1;
-			break;
-
-		case 'l':
-			log_level = atoi(optarg);
-			break;
-
-		default:
-			err("Usage: %s [options]\n", basename(argv[0]));
-			err("  -c, --config FILE\tLoad configuration from FILE\n");
-			err("  -f, --foreground\tDon't fork into background\n");
-			err("  -l, --log-level LEVEL\tSet log-level to LEVEL\n");
-			_exit(EX_CONFIG);
+		if(var_table_set(table, v) == -1) {
+			log_die(EX_CONFIG, "cf_set: var_table_set failed");
 		}
+
+		return;
 	}
 
-	cf_defaults();
-	cf_load();
+	if((sub = var_table_lookup(table, key))) {
+		cf_set(sub, keys, v);
 
-	if (foreground) {
-		cf_foreground = foreground;
+		/*
+		 * key is strdupd in cf_yacc.y and no longer needed.
+		 */
+		free(key);
+
+		return;
 	}
 
-	if (log_level) {
-		cf_log_level = log_level;
+	if ((sub = var_create(VT_TABLE, key, NULL, VF_CREATE)) == NULL) {
+		log_die(EX_CONFIG, "cf_setr: var_create failed");
 	}
+
+	if(var_table_set(table, sub) == -1) {
+		log_die(EX_CONFIG, "cf_set: var_table_set failed");
+	}
+
+	cf_set(sub, keys, v);
+
 
 	return;
 }

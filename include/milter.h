@@ -3,7 +3,7 @@
 
 #include <libmilter/mfapi.h>
 
-#include "ht.h"
+#include "var.h"
 
 //typedef enum milter_stage { MS_NONE = 0, MS_CONNECT, MS_HELO, MS_FROM,
 //    MS_RCPT, MS_HEADER, MS_EOH, MS_BODY, MS_EOM } milter_stage_t;
@@ -13,7 +13,7 @@ typedef enum milter_stage { MS_NULL = 0, MS_CONNECT = 1<<0, MS_HELO = 1<<1,
 	    1<<5, MS_BODY = 1<<6, MS_EOM = 1<<7 } milter_stage_t;
 
 typedef struct milter_priv {
-    ht_t    *mp_table;
+    var_t    *mp_table;
     int      mp_recipients;
     char    *mp_message;
     int      mp_size;

@@ -12,12 +12,13 @@
 #define VF_COPYDATA	1<<1
 #define VF_KEEPNAME	1<<2
 #define VF_KEEPDATA	1<<3
+#define VF_CREATE	1<<4
 #define VF_KEEP		VF_KEEPNAME | VF_KEEPDATA
 
 typedef struct sockaddr_storage var_sockaddr_t;
 
 typedef enum var_type { VT_NULL = 0, VT_INT, VT_FLOAT, VT_STRING, VT_ADDR,
-    VT_LIST } var_type_t;
+    VT_LIST, VT_TABLE } var_type_t;
 
 typedef struct var {
     var_type_t   v_type;
@@ -40,13 +41,11 @@ int var_compare(const var_t * v1, const var_t * v2);
 int var_true(const var_t * v);
 int var_dump_data(var_t * v, char *buffer, int size);
 int var_dump(var_t * v, char *buffer, int size);
-hash_t var_hash(var_t * v);
-int var_match(var_t * v1, var_t * v2);
-ht_t * var_table_create(int buckets);
-void var_table_delete(ht_t *table);
-void var_table_unset(ht_t * ht, char *name);
-int var_table_set(ht_t * ht, var_type_t type, char *name, void *data, int flags);
-void * var_table_get(ht_t *ht, char *name);
-int var_table_list_insert(ht_t * ht, var_type_t type, char *name, void *data, int flags);
-
+var_t * var_table_lookup(var_t *table, char *name);
+void * var_table_get(var_t * table, char *name);
+int var_table_insert(var_t *table, var_t *v);
+int var_table_set(var_t *table, var_t *v);
+int var_table_setv(var_t *table, var_type_t type, char *name, void *data, int flags);
+int var_list_append(var_t *list, var_t *item);
+int var_table_list_insert(var_t *table, var_type_t type, char *name, void *data, int flags);
 #endif /* _VAR_H_ */

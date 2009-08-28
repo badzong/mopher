@@ -1,6 +1,12 @@
 #include <malloc.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include <sys/types.h>
+#include <stdio.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "log.h"
 
@@ -58,3 +64,58 @@ util_strtoaddr(const char *str)
 	return ss;
 }
 
+int
+util_file_exists(char *path)
+{
+	struct stat fs;
+
+	if (stat(path, &fs) == 0) {
+		return 1;
+	}
+
+	if(errno == ENOENT) {
+		log_notice("util_file_exists: stat");
+		return 0;
+	}
+
+	log_warning("util_file_exists: stat");
+
+	return -1;
+}
+
+int
+util_file(char *path, char **buffer)
+{
+	struct stat fs;
+	int fd, n;
+
+	if (stat(path, &fs) == -1) {
+		log_warning("parser: stat '%s'", path);
+		return -1;
+	}
+
+	if (fs.st_size == 0) {
+		log_notice("parser: '%s' is empty", path);
+		return 0;
+	}
+
+	if((*buffer = (char *) malloc(fs.st_size)) == NULL) {
+		log_warning("parser: malloc");
+		return -1;
+
+	}
+
+	if ((fd = open(path, O_RDONLY)) == -1) {
+		log_warning("util_file: open '%s'", path);
+		return -1;
+	}
+
+	if ((n = read(fd, *buffer, fs.st_size)) == -1) {
+		log_warning("util_file: read '%s'", path);
+		return -1;
+	}
+
+	close(fd);
+
+	return n;
+}

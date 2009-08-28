@@ -131,9 +131,9 @@ acl_symbol_register(char *name, milter_stage_t stage, acl_scallback_t callback)
 }
 
 int
-acl_symbol_add(ht_t * attrs, var_type_t type, char *name, void *data, int flags)
+acl_symbol_add(var_t * attrs, var_type_t type, char *name, void *data, int flags)
 {
-	if (var_table_set(attrs, type, name, data, flags)) {
+	if (var_table_setv(attrs, type, name, data, flags)) {
 		log_warning("acl_symbol_add: var_table_set failed");
 		return -1;
 	}
@@ -620,17 +620,16 @@ acl_clear(void)
 
 
 var_t *
-acl_symbol_eval(acl_value_t * av, ht_t *attrs)
+acl_symbol_eval(acl_value_t * av, var_t *attrs)
 {
-	var_t lookup, *v;
+	var_t *v;
 	acl_symbol_t *as;
 	VAR_INT_T *ms;
 	char *sn;
 
 	as = av->av_data;
-	lookup.v_name = as->as_name;
 
-	if((v = ht_lookup(attrs, &lookup))) {
+	if((v = var_table_lookup(attrs, as->as_name))) {
 		return v;
 	}
 
@@ -663,7 +662,10 @@ acl_symbol_eval(acl_value_t * av, ht_t *attrs)
 		return NULL;
 	}
 
-	if((v = ht_lookup(attrs, &lookup)) == NULL) {
+	/*
+	 * Check if callback entred the requested symbol
+	 */
+	if((v = var_table_lookup(attrs, as->as_name)) == NULL) {
 		log_error("acl_symbol_eval: symbol \"%s\" is empty",
 			as->as_name);
 		return NULL;
@@ -674,7 +676,7 @@ acl_symbol_eval(acl_value_t * av, ht_t *attrs)
 
 
 var_t *
-acl_function_eval(acl_value_t * av, ht_t *attrs)
+acl_function_eval(acl_value_t * av, var_t *attrs)
 {
 	ll_t *args = NULL;
 	acl_call_t *call;
@@ -719,7 +721,7 @@ error:
 }
 
 var_t *
-acl_value_eval(acl_value_t * av, ht_t *attrs)
+acl_value_eval(acl_value_t * av, var_t *attrs)
 {
 	switch (av->av_type) {
 
@@ -774,7 +776,7 @@ acl_compare(var_t * v1, var_t * v2, acl_cmp_t ac)
 }
 
 int
-acl_conditions_eval(ll_t * conditions, ht_t *attrs)
+acl_conditions_eval(ll_t * conditions, var_t *attrs)
 {
 	acl_condition_t *ac;
 	var_t *left, *right;
@@ -838,7 +840,7 @@ acl_conditions_eval(ll_t * conditions, ht_t *attrs)
 }
 
 acl_action_type_t
-acl(char *table, ht_t * attrs)
+acl(char *table, var_t *attrs)
 {
 	acl_table_t *at;
 	acl_action_t *aa;
