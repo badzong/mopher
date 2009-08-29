@@ -1,12 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <libgen.h>
 
 #include "log.h"
 #include "acl.h"
 #include "modules.h"
 #include "milter.h"
 #include "cf.h"
+
+#define BINNAME "mopher"
 
 int
 main(int argc, char **argv)
@@ -18,7 +21,7 @@ main(int argc, char **argv)
 	loglevel = LOG_WARNING;
 	config = "/etc/mopher.conf";
 
-	while ((opt = getopt(argc, argv, "fd:c:")) != -1) {
+	while ((opt = getopt(argc, argv, "fhd:c:")) != -1) {
 		switch(opt) {
 		case 'f':
 			foreground = 1;
@@ -31,10 +34,22 @@ main(int argc, char **argv)
 		case 'c':
 			config = optarg;
 			break;
+		default:
+			fprintf(stderr, "Usage: %s [-c file] [-d N] [-f] [-h]\n", 
+				BINNAME);
+			fprintf(stderr, "Start the %s mail filter system.\n\n", 
+				BINNAME);
+			fprintf(stderr, "  -c file  Read configuration from file\n");
+			fprintf(stderr, "  -d N     Set log verbosity level\n");
+			fprintf(stderr, "  -f       Don't detach into background\n");
+			fprintf(stderr, "  -h       Show this message\n");
+			fprintf(stderr, "\nTry man %s (1) for more information.\n", BINNAME);
+
+			exit(EX_USAGE);
 		}
 	}
 
-	log_init("mopher", loglevel, foreground);
+	log_init(BINNAME, loglevel, foreground);
 
 	cf_init(config);
 
