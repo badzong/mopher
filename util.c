@@ -11,6 +11,37 @@
 #include "log.h"
 
 
+int
+util_parser(char *path, FILE ** input, int (*parser) (void))
+{
+	struct stat fs;
+
+	if (stat(path, &fs) == -1) {
+		log_error("util_parser: stat '%s'", path);
+		return -1;
+	}
+
+	if (fs.st_size == 0) {
+		log_notice("util_parser: '%s' is empty", path);
+		return -1;
+	}
+
+	if ((*input = fopen(path, "r")) == NULL) {
+		log_error("util_parser: fopen '%s'", path);
+		return -1;
+	}
+
+	if (parser()) {
+		log_error("util_parser: supplied parser failed");
+		return -1;
+	}
+
+	fclose(*input);
+
+	return 0;
+}
+
+
 char *
 util_strdupenc(const char *src, const char *encaps)
 {
@@ -74,7 +105,7 @@ util_file_exists(char *path)
 	}
 
 	if(errno == ENOENT) {
-		log_notice("util_file_exists: stat");
+		log_notice("util_file_exists: stat \"%s\"", path);
 		return 0;
 	}
 

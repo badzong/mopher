@@ -6,7 +6,7 @@ LEX=flex
 YACC=bison -y
 YFLAGS=-d
 
-OBJECTS=main.o cf_yacc.o cf_lex.o cf.o cf_defaults.o acl_yacc.o acl_lex.o acl.o milter.o modules.o ll.o ht.o var.o log.o parser.o hash.o util.o
+OBJECTS=main.o cf_yacc.o cf_lex.o cf.o cf_defaults.o acl_yacc.o acl_lex.o acl.o milter.o modules.o ll.o ht.o var.o log.o hash.o util.o
 GENSRC=cf_yacc.c cf_yacc.h cf_lex.c acl_yacc.c acl_yacc.h acl_lex.c
 LIBS=-lpthread -lmilter -ldl
 DIRS=mod/acl

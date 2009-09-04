@@ -9,7 +9,7 @@
 #include "ll.h"
 #include "log.h"
 #include "cf.h"
-#include "parser.h"
+#include "util.h"
 #include "modules.h"
 #include "acl.h"
 #include "acl_yacc.h"
@@ -603,7 +603,7 @@ acl_init(void)
 	/*
 	 * Run parser
 	 */
-	parser(cf_acl_path, &acl_in, acl_parse);
+	util_parser(cf_acl_path, &acl_in, acl_parse);
 
 	return 0;
 }
