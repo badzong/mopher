@@ -8,6 +8,7 @@
 #include "modules.h"
 #include "milter.h"
 #include "cf.h"
+#include "dbt.h"
 
 #define BINNAME "mopher"
 
@@ -50,17 +51,18 @@ main(int argc, char **argv)
 	}
 
 	log_init(BINNAME, loglevel, foreground);
-
 	cf_init(config);
-
 	modules_init();
+	dbt_init();
+	table_init();
+	greylist_init();
 
 	r = milter();
 
+	table_clear();
+	dbt_clear();
 	modules_clear();
-
 	cf_clear();
-
 	log_close();
 
 	return r;

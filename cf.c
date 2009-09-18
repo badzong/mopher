@@ -1,6 +1,7 @@
 #include <malloc.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include "log.h"
 #include "var.h"
@@ -51,6 +52,8 @@ char		*cf_milter_socket;
 VAR_INT_T	 cf_milter_socket_timeout;
 VAR_INT_T	 cf_log_level;
 VAR_INT_T	 cf_foreground;
+char		*cf_dbt_mod_path;
+char		*cf_tables_mod_path;
 
 /*
  * Symbol table
@@ -63,6 +66,8 @@ static cf_symbol_t cf_symbols[] = {
 	{ VT_STRING, "acl_mod_path", &cf_acl_mod_path },
 	{ VT_STRING, "milter_socket", &cf_milter_socket },
 	{ VT_INT, "milter_socket_timeout", &cf_milter_socket_timeout },
+	{ VT_STRING, "dbt_mod_path", &cf_dbt_mod_path },
+	{ VT_STRING, "tables_mod_path", &cf_tables_mod_path },
 	{ VT_NULL, NULL, NULL }
 };
 
@@ -70,10 +75,10 @@ static cf_symbol_t cf_symbols[] = {
 static void
 cf_load_symbols(void)
 {
-	cf_symbol_t *symbol = cf_symbols;
+	cf_symbol_t *symbol;
 	void *p;
 
-	while(symbol->cs_type) {
+	for(symbol = cf_symbols; symbol->cs_type; ++symbol) {
 
 		if((p = var_table_get(cf_config, symbol->cs_name)) == NULL) {
 			continue;
@@ -95,8 +100,6 @@ cf_load_symbols(void)
 		default:
 			log_die(EX_CONFIG, "cf_symbols_load: bad type");
 		}
-
-		++symbol;
 	}
 
 	return;
@@ -195,6 +198,7 @@ cf_init(char *file)
 	cf_run_parser();
 
 	//var_dump(cf_config, buffer, sizeof(buffer));
+	//printf(buffer);
 	
 	cf_load_file(file);
 
@@ -259,3 +263,62 @@ cf_set(var_t *table, ll_t *keys, var_t *v)
 
 	return;
 }
+
+
+var_t *
+cf_get(var_type_t type, ...)
+{
+	va_list ap;
+	var_t *v;
+
+	va_start(ap, type);
+
+	v = var_table_getva(type, cf_config, ap);
+
+	va_end(ap);
+
+	return v;
+}
+
+/*
+var_t *
+cf_get(var_type_t type, ...)
+{
+	va_list ap;
+	char *key;
+	var_t *v = cf_config;
+	var_t lookup;
+
+	memset(&lookup, 0, sizeof(lookup));
+
+	va_start(ap, type);
+	for(;;) {
+		key = va_arg(ap, char *);
+		if (key == NULL) {
+			break;
+		}
+
+		if (v->v_type != VT_TABLE) {
+			log_warning("cf_get: key \"%s\" is not a table", key);
+			return NULL;
+		}
+
+		lookup.v_name = key;
+
+		v = ht_lookup(v->v_data, &lookup);
+		if (v == NULL) {
+			log_debug("cf_get: no data for key \"%s\"", key);
+			return NULL;
+		}
+	}
+
+	va_end(ap);
+
+	if (v->v_type != type) {
+		log_warning("cf_get: type mismatch for key \"%s\"", key);
+		return NULL;
+	}
+
+	return v;
+}
+*/

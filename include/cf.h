@@ -23,34 +23,18 @@ extern char		*cf_milter_socket;
 extern VAR_INT_T	 cf_milter_socket_timeout;
 extern VAR_INT_T	 cf_log_level;
 extern VAR_INT_T	 cf_foreground;
-
-//extern char	*cf_file;
-//extern int	 cf_foreground;
-//extern int	 cf_log_level;
-//extern ll_t	*cf_master_processes;
-//extern char	*cf_judge_socket;
-//extern int	 cf_judge_dump_interval;
-//extern char	*cf_acl_path;
-//extern int	 cf_greylist_valid;
-//extern char	*cf_milter_socket;
-//extern ll_t	*cf_milter_dnsrbl;
-//extern char	*cf_milter_spamd_socket;
-//extern int	 cf_milter_socket_timeout;
-//extern int	 cf_greylist_default_delay;
-//extern int	 cf_greylist_default_visa;
-//extern int	 cf_greylist_default_valid;
-//extern int	 cf_greylist_dynamic_factor;
-//extern int	 cf_greylist_dynamic_divisor;
-//extern char	*cf_acl_mod_path;
-
+extern char		*cf_dbt_mod_path;
+extern char		*cf_tables_mod_path;
 
 /*
  * Prototypes
  */
 
-void cf_clear(void);
-void cf_init(char *cf_file);
-void cf_set(var_t *table, ll_t *keys, var_t *v);
+void cf_run_parser(void);
 int cf_yyinput(char *buffer, int size);
+void cf_clear(void);
+void cf_init(char *file);
+void cf_set(var_t *table, ll_t *keys, var_t *v);
+var_t * cf_get(var_type_t type, ...);
 
 #endif /* _CF_H_ */

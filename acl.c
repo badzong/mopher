@@ -13,6 +13,7 @@
 #include "modules.h"
 #include "acl.h"
 #include "acl_yacc.h"
+#include "greylist.h"
 
 #define BUFLEN 1024
 
@@ -846,6 +847,8 @@ acl(char *table, var_t *attrs)
 	acl_action_t *aa;
 	acl_rule_t *ar;
 	int i, r;
+	greylist_response_t glr;
+
 
 	if ((at = acl_table_lookup(table)) == NULL) {
 		log_notice("acl: unknown table \"%s\": continue", table);
@@ -870,6 +873,20 @@ acl(char *table, var_t *attrs)
 		if (r == 1) {
 			log_info("rule %d in table \"%s\" matched", i, table);
 			aa = ar->ar_action;
+
+			if (aa->aa_type != AA_DELAY) {
+				break;
+			}
+
+			glr = greylist(attrs, aa->aa_delay);
+
+			if(glr == GL_PASS) {
+				log_info("acl: greylisting passed");
+				aa = NULL;
+				continue;
+			}
+
+			log_info("acl: greylisting in action");
 			break;
 		}
 
@@ -894,6 +911,7 @@ acl(char *table, var_t *attrs)
 	case AA_BLOCK:
 	case AA_CONTINUE:
 	case AA_DISCARD:
+	case AA_DELAY:
 		return aa->aa_type;
 
 	case AA_JUMP:

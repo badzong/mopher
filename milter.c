@@ -109,6 +109,7 @@ milter_connect(SMFICTX * ctx, char *hostname, _SOCK_ADDR * hostaddr)
 	milter_priv_t *mp;
 	time_t now;
 	VAR_INT_T ms;
+	struct sockaddr_storage *ssclean;
 
 	if ((mp = milter_priv_create()) == NULL) {
 		log_error("milter_connect: milter_priv_create failed");
@@ -148,8 +149,14 @@ milter_connect(SMFICTX * ctx, char *hostname, _SOCK_ADDR * hostaddr)
 		return SMFIS_TEMPFAIL;
 	}
 
-	if (var_table_setv(mp->mp_table, VT_ADDR, "milter_hostaddr", hostaddr,
-		VF_KEEPNAME | VF_COPYDATA)) {
+	ssclean = var_addr_clean(hostaddr);
+	if (ssclean == NULL) {
+		log_error("milter_conect: var_addr_clean failed");
+		return SMFIS_TEMPFAIL;
+	}
+
+	if (var_table_setv(mp->mp_table, VT_ADDR, "milter_hostaddr", ssclean,
+		VF_KEEPNAME)) {
 		log_error("milter_conect: var_table_set failed");
 		return SMFIS_TEMPFAIL;
 	}

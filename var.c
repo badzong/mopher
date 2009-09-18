@@ -4,6 +4,7 @@
 #include <string.h>
 #include <errno.h>
 #include <arpa/inet.h>
+#include <stdarg.h>
 
 #include "var.h"
 #include "ll.h"
@@ -32,6 +33,7 @@ var_match(var_t * v1, var_t * v2)
 static void
 var_data_clear(var_t * v)
 {
+
 	switch (v->v_type) {
 
 	case VT_LIST:
@@ -54,6 +56,8 @@ var_data_clear(var_t * v)
 void
 var_clear(var_t * v)
 {
+	//printf("%p\n", v);
+	//printf("NAME %s @ %p\n", v->v_name, v->v_name);
 	if (v->v_name && !(v->v_flags & VF_KEEPNAME)) {
 		free(v->v_name);
 	}
@@ -137,6 +141,30 @@ error:
 	return NULL;
 }
 
+
+static int
+var_data_size(var_t *v)
+{
+	if(v->v_type == VT_STRING) {
+		return strlen((char *) v->v_data) + 1;
+	}
+
+	if(v->v_type == VT_INT) {
+		return sizeof(VAR_INT_T);
+	}
+
+	if(v->v_type == VT_FLOAT) {
+		return sizeof(VAR_FLOAT_T);
+	}
+
+	if(v->v_type == VT_ADDR) {
+		return sizeof(var_sockaddr_t);
+	}
+
+	log_warning("var_data_size: bad type");
+	return 0;
+}
+
 static void *
 var_copy_data(var_type_t type, void *data)
 {
@@ -212,6 +240,7 @@ var_name_init(char *name, int flags)
 {
 	char *copy;
 
+
 	if((flags & VF_COPYNAME) == 0) {
 		return name;
 	}
@@ -221,6 +250,44 @@ var_name_init(char *name, int flags)
 	}
 
 	return copy;
+}
+
+
+struct sockaddr_storage *
+var_addr_clean(struct sockaddr_storage *ss)
+{
+	struct sockaddr_storage *cleancopy;
+	struct sockaddr_in *sin, *sin_copy;
+	struct sockaddr_in6 *sin6, *sin6_copy;
+
+	cleancopy = (struct sockaddr_storage *)
+		malloc(sizeof(struct sockaddr_storage));
+
+	if (cleancopy == NULL) {
+		log_warning("var_addr_clean: malloc");
+		return NULL;
+	}
+
+	memset(cleancopy, 0, sizeof(struct sockaddr_storage));
+
+	cleancopy->ss_family = ss->ss_family;
+
+	if (ss->ss_family == AF_INET) {
+		sin = (struct sockaddr_in *) ss;
+		sin_copy = (struct sockaddr_in *) cleancopy;
+
+		sin_copy->sin_addr = sin->sin_addr;
+
+		return cleancopy;
+	}
+
+	sin6 = (struct sockaddr_in6 *) ss;
+	sin6_copy = (struct sockaddr_in6 *) cleancopy;
+
+	memcpy(&sin6_copy->sin6_addr, &sin6->sin6_addr,
+		sizeof(sin6->sin6_addr));
+
+	return cleancopy;
 }
 
 
@@ -262,6 +329,17 @@ int
 var_init(var_t *v, var_type_t type, char *name, void *data, int flags)
 {
 	memset(v, 0, sizeof(var_t));
+
+	/*
+	 * Sanitize flags
+	 */
+	if (flags & VF_COPYNAME && flags & VF_KEEPNAME) {
+		flags ^= VF_KEEPNAME;
+	}
+
+	if (flags & VF_COPYDATA && flags & VF_KEEPDATA) {
+		flags ^= VF_KEEPDATA;
+	}
 
 	v->v_type = type;
 	v->v_flags = flags;
@@ -627,6 +705,56 @@ var_table_get(var_t * table, char *name)
 	return v->v_data;
 }
 
+var_t *
+var_table_getva(var_type_t type, var_t *table, va_list ap)
+{
+	char *key;
+	var_t *v = table;
+
+	for(;;) {
+		key = va_arg(ap, char *);
+
+		if (key == NULL) {
+			break;
+		}
+
+		if (v->v_type != VT_TABLE) {
+			log_warning("var_table_getv: key \"%s\" is not a"
+				" table", key);
+			return NULL;
+		}
+
+		v = var_table_lookup(v, key);
+		if (v == NULL) {
+			log_debug("var_table_getv: no data for key \"%s\"",
+				key);
+			return NULL;
+		}
+	}
+
+	if (v->v_type != type) {
+		log_warning("var_table_getv: type mismatch for key \"%s\"", key);
+		return NULL;
+	}
+
+	return v;
+}
+
+var_t *
+var_table_getv(var_type_t type, var_t *table, ...)
+{
+	va_list ap;
+	var_t *v;
+
+	va_start(ap, table);
+
+	v = var_table_getva(type, table, ap);
+	
+	va_end(ap);
+
+	return v;
+}
+
 int
 var_table_insert(var_t *table, var_t *v)
 {
@@ -731,4 +859,433 @@ error:
 	}
 
 	return -1;
+}
+
+
+var_record_t *
+var_record_create(void)
+{
+	var_record_t *vr;
+
+	vr = (var_record_t *) malloc(sizeof(var_record_t));
+	if (vr == NULL) {
+		log_warning("var_record_create: malloc");
+		return NULL;
+	}
+
+	memset(vr, 0, sizeof(var_record_t));
+
+	return vr;
+}
+
+void
+var_record_delete(var_record_t *vr)
+{
+	if (vr->vr_key) {
+		free(vr->vr_key);
+	}
+
+	if (vr->vr_data) {
+		free(vr->vr_data);
+	}
+
+	free(vr);
+
+	return;
+}
+
+
+static int
+var_record_append(char **buffer, int *len, var_t *v)
+{
+	char *p;
+	int n;
+
+	/*
+	char dump[2048];
+
+	var_dump_data(v, dump, sizeof(dump));
+	n = strlen(dump) + 1;
+	p = realloc(*buffer, *len + n);
+	memcpy(p + *len, dump, n);
+	*buffer = p;
+	*len += n;
+	return *len;
+	*/
+
+
+	n = var_data_size(v);
+
+	p = realloc(*buffer, *len + n);
+	if (p == NULL) {
+		log_warning("var_record_append: realloc");
+		return -1;
+	}
+
+	memcpy(p + *len, v->v_data, n);
+
+	*buffer = p;
+	*len += n;
+
+	return *len;
+}
+
+var_record_t *
+var_record_pack(var_t *v)
+{
+	var_record_t *vr = NULL;
+	ll_t *ll;
+	var_t *item;
+	char **p;
+	int *i;
+
+	if(v->v_type != VT_LIST) {
+		log_warning("var_record_pack: bad type");
+		return NULL;
+	}
+
+	ll = v->v_data;
+	ll_rewind(ll);
+
+	vr = var_record_create();
+	if (vr == NULL) {
+		log_warning("var_record_pack: var_record_create failed");
+		goto error;
+	}
+
+	/*
+	 * Build two buffers for keys and values.
+	 */
+	while ((item = ll_next(ll))) {
+		if (item->v_data == NULL) {
+			continue;
+		}
+
+		p = item->v_flags & VF_KEY ? &vr->vr_key : &vr->vr_data;
+		i = item->v_flags & VF_KEY ? &vr->vr_klen : &vr->vr_dlen;
+
+		if (var_record_append(p, i, item) == -1) {
+			log_warning("var_record_pack: var_record_append"
+				" failed");
+			goto error;
+		}
+	}
+
+	return vr;
+
+
+error:
+
+	if(vr) {
+		free(vr);
+	}
+
+	return NULL;
+}
+
+
+var_t *
+var_record_unpack(var_record_t *vr, var_t *schema)
+{
+	ll_t *ll, *new = NULL;
+	var_t *v, *item;
+	void *p;
+	int k = 0, d = 0;
+	int *i;
+
+	if(schema->v_type != VT_LIST) {
+		log_warning("var_record_unpack: bad type");
+		goto error;
+	}
+
+	ll = schema->v_data;
+	ll_rewind(ll);
+
+	new = ll_create();
+	if (new == NULL) {
+		log_warning("var_record_unpack: ll_create failed");
+		goto error;
+	}
+
+	while ((item = ll_next(ll))) {
+		p = item->v_flags & VF_KEY ? vr->vr_key : vr->vr_data;
+		i = item->v_flags & VF_KEY ? &k : &d;
+
+		v = var_create(item->v_type, item->v_name, p + *i,
+			VF_COPYNAME | VF_COPYDATA | item->v_flags);
+
+		if(v == NULL) {
+			log_warning("var_record_unpack: var_create failed");
+			goto error;
+		}
+
+		*i += var_data_size(v);
+
+		if(LL_INSERT(new, v) == -1) {
+			log_warning("var_record_unpack: LL_INSERT failed");
+			goto error;
+		}
+	}
+
+	v = var_create(VT_LIST, schema->v_name, new, VF_COPYNAME);
+	if(v == NULL) {
+		log_warning("var_record_unpack: var_create failed");
+		goto error;
+	}
+
+	return v;
+
+
+error:
+
+	if (new) {
+		ll_delete(new, (void *) var_delete);
+	}
+
+	return NULL;
+}
+
+
+var_t *
+var_schema_create(char *name, ...)
+{
+	va_list ap;
+	ll_t *ll = NULL;
+	var_t *v = NULL;
+	var_type_t type;
+	int flags;
+
+	va_start(ap, name);
+
+	ll = ll_create();
+	if (ll == NULL) {
+		log_warning("var_create_schema: ll_create failed");
+		goto error;
+	}
+
+	do {
+		type = va_arg(ap, var_type_t);
+		flags = va_arg(ap, int);
+
+		v = var_create(type, name, NULL, flags);
+		if (v == NULL) {
+			log_warning("var_create_schema: var_create failed");
+			goto error;
+		}
+
+		if (LL_INSERT(ll, v) == -1) {
+			log_warning("var_create_schema: LL_INSERT failed");
+			goto error;
+		}
+	} while ((name = va_arg(ap, char *)));
+
+	va_end(ap);
+
+	v = var_create(VT_LIST, "schema", ll, VF_KEEPNAME);
+	if (v == NULL) {
+		log_warning("var_create_schema: var_create failed");
+		goto error;
+	}
+
+	return v;
+
+
+error:
+	if(v) {
+		var_delete(v);
+	}
+
+	if(ll) {
+		ll_delete(ll, (void *) var_delete);
+	}
+
+	return NULL;
+}
+
+var_t *
+var_record_build(var_t *schema, ...)
+{
+	va_list ap;
+	var_t *item, *new = NULL;
+	ll_t *ll, *record = NULL;
+	int flags;
+	void *data;
+
+	va_start(ap, schema);
+
+	record = ll_create();
+	if (record == NULL) {
+		log_warning("var_record_assemble: ll_create failed");
+		goto error;
+	}
+
+	ll = schema->v_data;
+	ll_rewind(ll);
+	while ((item = ll_next(ll))) {
+
+		flags = item->v_flags;
+		flags |= VF_KEEPDATA | VF_KEEPNAME;
+		flags &= ~(VF_COPYNAME | VF_COPYDATA);
+
+		data = va_arg(ap, void *);
+
+		new = var_create(item->v_type, item->v_name, data, flags);
+
+		if (new == NULL) {
+			log_warning("var_record_assemble: var_create failed");
+			goto error;
+		}
+
+		if (LL_INSERT(record, new) == -1) {
+			log_warning("var_record_assemble: LL_INSERT failed");
+			goto error;
+		}
+	}
+
+	new = var_create(VT_LIST, schema->v_name, record, VF_KEEPNAME);
+	if (new == NULL) {
+		log_warning("var_record_assemble: var_create_failed");
+		goto error;
+	}
+
+	va_end(ap);
+
+	return new;
+
+
+error:
+
+	va_end(ap);
+
+	if (new) {
+		var_delete(new);
+	}
+
+	if (record) {
+		ll_delete(record, (void *) var_delete);
+	}
+
+	return NULL;
+}
+
+
+int
+var_list_dereference(var_t *list, ...)
+{
+	va_list ap;
+	ll_t *ll = list->v_data;
+	var_t *v;
+	void **p;
+
+	if (list->v_type != VT_LIST) {
+		log_warning("var_list_dereference: bad type");
+		return -1;
+	}
+
+	va_start(ap, list);
+
+	ll_rewind(ll);
+	while ((v = ll_next(ll))) {
+		p = va_arg(ap, void **);
+
+		/*
+		 * Skip NULL Pointers.
+		 */
+		if (p == NULL) {
+			continue;
+		}
+
+		*p = v->v_data;
+	}
+
+	va_end(ap);
+
+	return 0;
+}
+
+int
+var_table_dereference(var_t *table, ...)
+{
+	va_list ap;
+	char *name;
+	void **p;
+
+	if (table->v_type != VT_TABLE) {
+		log_warning("var_table_dereference: bad type");
+		return -1;
+	}
+
+	va_start(ap, table);
+
+	while ((name = va_arg(ap, char *))) {
+		p = va_arg(ap, void **);
+		*p = var_table_get(table, name);
+	}
+
+	va_end(ap);
+
+	return 0;
+}
+
+var_t *
+var_record_refcopy(var_t *schema, ...)
+{
+	va_list ap;
+	var_t *item, *arg, *new = NULL;
+	ll_t *ll, *record = NULL;
+	int flags;
+
+	va_start(ap, schema);
+
+	record = ll_create();
+	if (record == NULL) {
+		log_warning("var_record_refcopy: ll_create failed");
+		goto error;
+	}
+
+	ll = schema->v_data;
+	ll_rewind(ll);
+	while ((item = ll_next(ll))) {
+
+		flags = item->v_flags;
+		flags |= VF_KEEPDATA | VF_KEEPNAME;
+		flags ^= VF_COPYNAME | VF_COPYDATA;
+
+		arg = va_arg(ap, void *);
+
+		new = var_create(item->v_type, item->v_name, arg, flags);
+
+		if (new == NULL) {
+			log_warning("var_record_refcopy: var_create failed");
+			goto error;
+		}
+
+		if (LL_INSERT(record, new) == -1) {
+			log_warning("var_record_refcopy: LL_INSERT failed");
+			goto error;
+		}
+	}
+
+	new = var_create(VT_LIST, schema->v_name, record,
+		VF_KEEPNAME | VF_KEEPDATA);
+
+	if (new == NULL) {
+		log_warning("var_record_refcopy: var_create_failed");
+		goto error;
+	}
+
+	return new;
+
+
+error:
+
+	if (new) {
+		var_delete(new);
+	}
+
+	if (record) {
+		ll_delete(record, (void *) var_delete);
+	}
+
+	return NULL;
 }
