@@ -10,7 +10,6 @@
 #include "ll.h"
 #include "log.h"
 
-#define ADDR6_LEN 16
 #define BUCKETS 256
 
 
@@ -165,6 +164,7 @@ var_data_size(var_t *v)
 	return 0;
 }
 
+
 static void *
 var_copy_data(var_type_t type, void *data)
 {
@@ -250,44 +250,6 @@ var_name_init(char *name, int flags)
 	}
 
 	return copy;
-}
-
-
-struct sockaddr_storage *
-var_addr_clean(struct sockaddr_storage *ss)
-{
-	struct sockaddr_storage *cleancopy;
-	struct sockaddr_in *sin, *sin_copy;
-	struct sockaddr_in6 *sin6, *sin6_copy;
-
-	cleancopy = (struct sockaddr_storage *)
-		malloc(sizeof(struct sockaddr_storage));
-
-	if (cleancopy == NULL) {
-		log_warning("var_addr_clean: malloc");
-		return NULL;
-	}
-
-	memset(cleancopy, 0, sizeof(struct sockaddr_storage));
-
-	cleancopy->ss_family = ss->ss_family;
-
-	if (ss->ss_family == AF_INET) {
-		sin = (struct sockaddr_in *) ss;
-		sin_copy = (struct sockaddr_in *) cleancopy;
-
-		sin_copy->sin_addr = sin->sin_addr;
-
-		return cleancopy;
-	}
-
-	sin6 = (struct sockaddr_in6 *) ss;
-	sin6_copy = (struct sockaddr_in6 *) cleancopy;
-
-	memcpy(&sin6_copy->sin6_addr, &sin6->sin6_addr,
-		sizeof(sin6->sin6_addr));
-
-	return cleancopy;
 }
 
 
@@ -387,51 +349,6 @@ var_create(var_type_t type, char *name, void *data, int flags)
 
 
 int
-var_compare_addr(struct sockaddr_storage *ss1, struct sockaddr_storage *ss2)
-{
-	unsigned long inaddr1, inaddr2;
-
-	if (ss1->ss_family < ss2->ss_family) {
-		return -1;
-	}
-
-	if (ss1->ss_family > ss2->ss_family) {
-		return 1;
-	}
-
-	switch (ss1->ss_family) {
-
-	case AF_INET:
-		inaddr1 = ntohl(((struct sockaddr_in *) ss1)->sin_addr.s_addr);
-		inaddr2 = ntohl(((struct sockaddr_in *) ss2)->sin_addr.s_addr);
-
-		if (inaddr1 < inaddr2) {
-			return -1;
-		}
-
-		if (inaddr1 > inaddr2) {
-			return 1;
-		}
-
-		return 0;
-
-	case AF_INET6:
-		/*
-		 * XXX: Simple implementation.
-		 */
-		return memcmp(&((struct sockaddr_in6 *) ss1)->sin6_addr.s6_addr,
-			      &((struct sockaddr_in6 *) ss2)->sin6_addr.s6_addr,
-			      ADDR6_LEN);
-
-	default:
-		log_warning("var_compare_addr: bad address family");
-	}
-
-	return 0;
-}
-
-
-int
 var_compare(const var_t * v1, const var_t * v2)
 {
 
@@ -469,7 +386,7 @@ var_compare(const var_t * v1, const var_t * v2)
 		return strcmp(v1->v_data, v2->v_data);
 
 	case VT_ADDR:
-		return var_compare_addr(v1->v_data, v2->v_data);
+		return util_addrcmp(v1->v_data, v2->v_data);
 
 	default:
 		log_warning("var_compare: bad type");
@@ -515,7 +432,7 @@ var_true(const var_t * v)
 		memset(&ss, 0, sizeof(ss));
 		ss.ss_family = pss->ss_family;
 
-		if(var_compare_addr(pss, &ss)) {
+		if(util_addrcmp(pss, &ss)) {
 			return 1;
 		}
 
@@ -693,6 +610,7 @@ var_table_lookup(var_t *table, char *name)
 	return ht_lookup(ht, &lookup);
 }
 
+
 void *
 var_table_get(var_t * table, char *name)
 {
@@ -704,6 +622,7 @@ var_table_get(var_t * table, char *name)
 
 	return v->v_data;
 }
+
 
 var_t *
 var_table_getva(var_type_t type, var_t *table, va_list ap)
@@ -740,6 +659,7 @@ var_table_getva(var_type_t type, var_t *table, va_list ap)
 	return v;
 }
 
+
 var_t *
 var_table_getv(var_type_t type, var_t *table, ...)
 {
@@ -755,6 +675,7 @@ var_table_getv(var_type_t type, var_t *table, ...)
 	return v;
 }
 
+
 int
 var_table_insert(var_t *table, var_t *v)
 {
@@ -767,6 +688,7 @@ var_table_insert(var_t *table, var_t *v)
 
 	return 0;
 }
+
 
 int
 var_table_set(var_t *table, var_t *v)
@@ -784,6 +706,7 @@ var_table_set(var_t *table, var_t *v)
 
 	return 0;
 }
+
 
 int
 var_table_setv(var_t *table, var_type_t type, char *name, void *data, int flags)
@@ -862,204 +785,19 @@ error:
 }
 
 
-var_record_t *
-var_record_create(void)
-{
-	var_record_t *vr;
-
-	vr = (var_record_t *) malloc(sizeof(var_record_t));
-	if (vr == NULL) {
-		log_warning("var_record_create: malloc");
-		return NULL;
-	}
-
-	memset(vr, 0, sizeof(var_record_t));
-
-	return vr;
-}
-
-void
-var_record_delete(var_record_t *vr)
-{
-	if (vr->vr_key) {
-		free(vr->vr_key);
-	}
-
-	if (vr->vr_data) {
-		free(vr->vr_data);
-	}
-
-	free(vr);
-
-	return;
-}
-
-
-static int
-var_record_append(char **buffer, int *len, var_t *v)
-{
-	char *p;
-	int n;
-
-	/*
-	char dump[2048];
-
-	var_dump_data(v, dump, sizeof(dump));
-	n = strlen(dump) + 1;
-	p = realloc(*buffer, *len + n);
-	memcpy(p + *len, dump, n);
-	*buffer = p;
-	*len += n;
-	return *len;
-	*/
-
-
-	n = var_data_size(v);
-
-	p = realloc(*buffer, *len + n);
-	if (p == NULL) {
-		log_warning("var_record_append: realloc");
-		return -1;
-	}
-
-	memcpy(p + *len, v->v_data, n);
-
-	*buffer = p;
-	*len += n;
-
-	return *len;
-}
-
-var_record_t *
-var_record_pack(var_t *v)
-{
-	var_record_t *vr = NULL;
-	ll_t *ll;
-	var_t *item;
-	char **p;
-	int *i;
-
-	if(v->v_type != VT_LIST) {
-		log_warning("var_record_pack: bad type");
-		return NULL;
-	}
-
-	ll = v->v_data;
-	ll_rewind(ll);
-
-	vr = var_record_create();
-	if (vr == NULL) {
-		log_warning("var_record_pack: var_record_create failed");
-		goto error;
-	}
-
-	/*
-	 * Build two buffers for keys and values.
-	 */
-	while ((item = ll_next(ll))) {
-		if (item->v_data == NULL) {
-			continue;
-		}
-
-		p = item->v_flags & VF_KEY ? &vr->vr_key : &vr->vr_data;
-		i = item->v_flags & VF_KEY ? &vr->vr_klen : &vr->vr_dlen;
-
-		if (var_record_append(p, i, item) == -1) {
-			log_warning("var_record_pack: var_record_append"
-				" failed");
-			goto error;
-		}
-	}
-
-	return vr;
-
-
-error:
-
-	if(vr) {
-		free(vr);
-	}
-
-	return NULL;
-}
-
-
-var_t *
-var_record_unpack(var_record_t *vr, var_t *schema)
-{
-	ll_t *ll, *new = NULL;
-	var_t *v, *item;
-	void *p;
-	int k = 0, d = 0;
-	int *i;
-
-	if(schema->v_type != VT_LIST) {
-		log_warning("var_record_unpack: bad type");
-		goto error;
-	}
-
-	ll = schema->v_data;
-	ll_rewind(ll);
-
-	new = ll_create();
-	if (new == NULL) {
-		log_warning("var_record_unpack: ll_create failed");
-		goto error;
-	}
-
-	while ((item = ll_next(ll))) {
-		p = item->v_flags & VF_KEY ? vr->vr_key : vr->vr_data;
-		i = item->v_flags & VF_KEY ? &k : &d;
-
-		v = var_create(item->v_type, item->v_name, p + *i,
-			VF_COPYNAME | VF_COPYDATA | item->v_flags);
-
-		if(v == NULL) {
-			log_warning("var_record_unpack: var_create failed");
-			goto error;
-		}
-
-		*i += var_data_size(v);
-
-		if(LL_INSERT(new, v) == -1) {
-			log_warning("var_record_unpack: LL_INSERT failed");
-			goto error;
-		}
-	}
-
-	v = var_create(VT_LIST, schema->v_name, new, VF_COPYNAME);
-	if(v == NULL) {
-		log_warning("var_record_unpack: var_create failed");
-		goto error;
-	}
-
-	return v;
-
-
-error:
-
-	if (new) {
-		ll_delete(new, (void *) var_delete);
-	}
-
-	return NULL;
-}
-
-
 var_t *
 var_schema_create(char *name, ...)
 {
 	va_list ap;
-	ll_t *ll = NULL;
-	var_t *v = NULL;
+	var_t *v = NULL, *list = NULL;
 	var_type_t type;
 	int flags;
 
 	va_start(ap, name);
 
-	ll = ll_create();
-	if (ll == NULL) {
-		log_warning("var_create_schema: ll_create failed");
+	list = var_create(VT_LIST, "schema", NULL, VF_KEEPNAME | VF_CREATE);
+	if (list == NULL) {
+		log_warning("var_list_schema: var_create failed");
 		goto error;
 	}
 
@@ -1069,59 +807,56 @@ var_schema_create(char *name, ...)
 
 		v = var_create(type, name, NULL, flags);
 		if (v == NULL) {
-			log_warning("var_create_schema: var_create failed");
+			log_warning("var_list_schema: var_create failed");
 			goto error;
 		}
 
-		if (LL_INSERT(ll, v) == -1) {
-			log_warning("var_create_schema: LL_INSERT failed");
+		if (var_list_append(list, v) == -1) {
+			log_warning("var_list_schema: var_list_append failed");
 			goto error;
 		}
 	} while ((name = va_arg(ap, char *)));
 
 	va_end(ap);
 
-	v = var_create(VT_LIST, "schema", ll, VF_KEEPNAME);
-	if (v == NULL) {
-		log_warning("var_create_schema: var_create failed");
-		goto error;
-	}
-
-	return v;
+	return list;
 
 
 error:
+	va_end(ap);
+
 	if(v) {
 		var_delete(v);
 	}
 
-	if(ll) {
-		ll_delete(ll, (void *) var_delete);
+	if(list) {
+		var_delete(list);
 	}
 
 	return NULL;
 }
 
+
 var_t *
-var_record_build(var_t *schema, ...)
+var_list_schema(var_t *schema, ...)
 {
 	va_list ap;
-	var_t *item, *new = NULL;
-	ll_t *ll, *record = NULL;
+	var_t *item, *new = NULL, *list = NULL;
 	int flags;
 	void *data;
 
 	va_start(ap, schema);
 
-	record = ll_create();
-	if (record == NULL) {
-		log_warning("var_record_assemble: ll_create failed");
+	list = var_create(VT_LIST, schema->v_name, NULL,
+		VF_KEEPNAME | VF_CREATE);
+
+	if (list == NULL) {
+		log_warning("var_list_schema: var_create_failed");
 		goto error;
 	}
 
-	ll = schema->v_data;
-	ll_rewind(ll);
-	while ((item = ll_next(ll))) {
+	ll_rewind(schema->v_data);
+	while ((item = ll_next(schema->v_data))) {
 
 		flags = item->v_flags;
 		flags |= VF_KEEPDATA | VF_KEEPNAME;
@@ -1132,25 +867,19 @@ var_record_build(var_t *schema, ...)
 		new = var_create(item->v_type, item->v_name, data, flags);
 
 		if (new == NULL) {
-			log_warning("var_record_assemble: var_create failed");
+			log_warning("var_list_schema: var_create failed");
 			goto error;
 		}
 
-		if (LL_INSERT(record, new) == -1) {
-			log_warning("var_record_assemble: LL_INSERT failed");
+		if (var_list_append(list, new) == -1) {
+			log_warning("var_list_schema: var_list_append failed");
 			goto error;
 		}
-	}
-
-	new = var_create(VT_LIST, schema->v_name, record, VF_KEEPNAME);
-	if (new == NULL) {
-		log_warning("var_record_assemble: var_create_failed");
-		goto error;
 	}
 
 	va_end(ap);
 
-	return new;
+	return list;
 
 
 error:
@@ -1161,8 +890,8 @@ error:
 		var_delete(new);
 	}
 
-	if (record) {
-		ll_delete(record, (void *) var_delete);
+	if (list) {
+		var_delete(list);
 	}
 
 	return NULL;
@@ -1173,7 +902,6 @@ int
 var_list_dereference(var_t *list, ...)
 {
 	va_list ap;
-	ll_t *ll = list->v_data;
 	var_t *v;
 	void **p;
 
@@ -1184,8 +912,8 @@ var_list_dereference(var_t *list, ...)
 
 	va_start(ap, list);
 
-	ll_rewind(ll);
-	while ((v = ll_next(ll))) {
+	ll_rewind(list->v_data);
+	while ((v = ll_next(list->v_data))) {
 		p = va_arg(ap, void **);
 
 		/*
@@ -1228,63 +956,224 @@ var_table_dereference(var_t *table, ...)
 }
 
 var_t *
-var_record_refcopy(var_t *schema, ...)
+var_schema_refcopy(var_t *schema, ...)
 {
 	va_list ap;
-	var_t *item, *arg, *new = NULL;
-	ll_t *ll, *record = NULL;
+	var_t *item, *arg, *new = NULL, *list = NULL;
 	int flags;
 
 	va_start(ap, schema);
 
-	record = ll_create();
-	if (record == NULL) {
-		log_warning("var_record_refcopy: ll_create failed");
+	list = var_create(VT_LIST, schema->v_name, NULL,
+		VF_KEEPNAME | VF_CREATE);
+
+	if (list == NULL) {
+		log_warning("var_schema_refcopy: var_create_failed");
 		goto error;
 	}
 
-	ll = schema->v_data;
-	ll_rewind(ll);
-	while ((item = ll_next(ll))) {
+	ll_rewind(schema->v_data);
+	while ((item = ll_next(schema->v_data))) {
 
 		flags = item->v_flags;
 		flags |= VF_KEEPDATA | VF_KEEPNAME;
-		flags ^= VF_COPYNAME | VF_COPYDATA;
+		flags &= ~(VF_COPYNAME | VF_COPYDATA);
 
 		arg = va_arg(ap, void *);
 
 		new = var_create(item->v_type, item->v_name, arg, flags);
 
 		if (new == NULL) {
-			log_warning("var_record_refcopy: var_create failed");
+			log_warning("var_schema_refcopy: var_create failed");
 			goto error;
 		}
 
-		if (LL_INSERT(record, new) == -1) {
-			log_warning("var_record_refcopy: LL_INSERT failed");
+		if (var_list_append(list, new) == -1) {
+			log_warning("var_schema_refcopy: var_list_append failed");
 			goto error;
 		}
 	}
 
-	new = var_create(VT_LIST, schema->v_name, record,
-		VF_KEEPNAME | VF_KEEPDATA);
+	va_end(ap);
 
-	if (new == NULL) {
-		log_warning("var_record_refcopy: var_create_failed");
-		goto error;
-	}
-
-	return new;
+	return list;
 
 
 error:
+
+	va_end(ap);
 
 	if (new) {
 		var_delete(new);
 	}
 
-	if (record) {
-		ll_delete(record, (void *) var_delete);
+	if (list) {
+		var_delete(list);
+	}
+
+	return NULL;
+}
+
+
+static var_compact_t *
+var_compact_create(void)
+{
+	var_compact_t *vc;
+
+	vc = (var_compact_t *) malloc(sizeof(var_compact_t));
+	if (vc == NULL) {
+		log_warning("var_compact_create: malloc");
+		return NULL;
+	}
+
+	memset(vc, 0, sizeof(var_compact_t));
+
+	return vc;
+}
+
+void
+var_compact_delete(var_compact_t *vc)
+{
+	if (vc->vc_key) {
+		free(vc->vc_key);
+	}
+
+	if (vc->vc_data) {
+		free(vc->vc_data);
+	}
+
+	free(vc);
+
+	return;
+}
+
+
+static int
+var_compress_data(char **buffer, int *len, var_t *v)
+{
+	char *p;
+	int n;
+
+	n = var_data_size(v);
+
+	p = realloc(*buffer, *len + n);
+	if (p == NULL) {
+		log_warning("var_compress_data: realloc");
+		return -1;
+	}
+
+	memcpy(p + *len, v->v_data, n);
+
+	*buffer = p;
+	*len += n;
+
+	return *len;
+}
+
+var_compact_t *
+var_compress(var_t *v)
+{
+	var_compact_t *vc = NULL;
+	var_t *item;
+	char **p;
+	int *i;
+
+	if(v->v_type != VT_LIST) {
+		log_warning("var_compress: bad type");
+		return NULL;
+	}
+
+	vc = var_compact_create();
+	if (vc == NULL) {
+		log_warning("var_compress: var_compact_create failed");
+		goto error;
+	}
+
+	/*
+	 * Build two buffers for keys and values.
+	 */
+	ll_rewind(v->v_data);
+	while ((item = ll_next(v->v_data))) {
+		if (item->v_data == NULL) {
+			continue;
+		}
+
+		p = item->v_flags & VF_KEY ? &vc->vc_key : &vc->vc_data;
+		i = item->v_flags & VF_KEY ? &vc->vc_klen : &vc->vc_dlen;
+
+		if (var_compress_data(p, i, item) == -1) {
+			log_warning("var_record_pack: var_compress_data"
+				" failed");
+			goto error;
+		}
+	}
+
+	return vc;
+
+
+error:
+
+	if(vc) {
+		free(vc);
+	}
+
+	return NULL;
+}
+
+
+var_t *
+var_decompress(var_compact_t *vc, var_t *schema)
+{
+	var_t *v, *item = NULL, *list = NULL;
+	void *p;
+	int k = 0, d = 0;
+	int *i;
+
+	if(schema->v_type != VT_LIST) {
+		log_warning("var_decompress: bad type");
+		goto error;
+	}
+
+	list = var_create(VT_LIST, schema->v_name, NULL,
+		VF_COPYNAME | VF_CREATE);
+
+	if(list == NULL) {
+		log_warning("var_decompress: var_create failed");
+		goto error;
+	}
+
+	ll_rewind(schema->v_data);
+	while ((item = ll_next(schema->v_data))) {
+		p = item->v_flags & VF_KEY ? vc->vc_key : vc->vc_data;
+		i = item->v_flags & VF_KEY ? &k : &d;
+
+		v = var_create(item->v_type, item->v_name, p + *i,
+			VF_COPYNAME | VF_COPYDATA | item->v_flags);
+
+		if(v == NULL) {
+			log_warning("var_decompress: var_create failed");
+			goto error;
+		}
+
+		*i += var_data_size(v);
+
+		if(var_list_append(list, v) == -1) {
+			log_warning("var_decompress: var_list_append failed");
+			goto error;
+		}
+	}
+
+	return list;
+
+
+error:
+
+	if (v) {
+		var_delete(v);
+	}
+
+	if (list) {
+		var_delete(list);
 	}
 
 	return NULL;

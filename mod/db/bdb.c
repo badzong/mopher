@@ -98,21 +98,21 @@ static var_t *
 bdb_get(bdb_t *bdb, var_t *v)
 {
 	var_t *record;
-	var_record_t *vr = NULL;
+	var_compact_t *vc = NULL;
 	DBT k, d;
 	int r;
 
-	vr = var_record_pack(v);
-	if (vr == NULL) {
-		log_warning("bdb_get: var_record_pack failed");
+	vc = var_compress(v);
+	if (vc == NULL) {
+		log_warning("bdb_get: var_compress failed");
 		goto error;
 	}
 
 	memset(&k, 0, sizeof(k));
 	memset(&d, 0, sizeof(d));
 
-	k.data = vr->vr_key;
-	k.size = vr->vr_klen;
+	k.data = vc->vc_key;
+	k.size = vc->vc_klen;
 	d.flags = DB_DBT_MALLOC;
 
 	r = bdb->bdb_db->get(bdb->bdb_db, NULL, &k, &d, 0);
@@ -127,23 +127,23 @@ bdb_get(bdb_t *bdb, var_t *v)
 		goto error;
 	}
 
-	vr->vr_data = d.data;
-	vr->vr_dlen = d.size;
+	vc->vc_data = d.data;
+	vc->vc_dlen = d.size;
 
-	record = var_record_unpack(vr, bdb->bdb_schema);
+	record = var_decompress(vc, bdb->bdb_schema);
 	if (record == NULL) {
-		log_warning("bdb_get: var_record_unpack failed");
+		log_warning("bdb_get: var_decompress failed");
 		goto error;
 	}
 
-	var_record_delete(vr);
+	var_compact_delete(vc);
 
 	return record;
 
 error:
 
-	if (vr) {
-		var_record_delete(vr);
+	if (vc) {
+		var_compact_delete(vc);
 	}
 
 	return NULL;
@@ -153,23 +153,23 @@ error:
 static int
 bdb_set(bdb_t *bdb, var_t *v)
 {
-	var_record_t *vr = NULL;
+	var_compact_t *vc = NULL;
 	DBT k, d;
 	int r;
 
-	vr = var_record_pack(v);
-	if (vr == NULL) {
-		log_warning("bdb_set: var_record_pack failed");
+	vc = var_compress(v);
+	if (vc == NULL) {
+		log_warning("bdb_set: var_compress failed");
 		goto error;
 	}
 
 	memset(&k, 0, sizeof(k));
 	memset(&d, 0, sizeof(d));
 
-	k.data = vr->vr_key;
-	k.size = vr->vr_klen;
-	d.data = vr->vr_data;
-	d.size = vr->vr_dlen;
+	k.data = vc->vc_key;
+	k.size = vc->vc_klen;
+	d.data = vc->vc_data;
+	d.size = vc->vc_dlen;
 
 	r = bdb->bdb_db->put(bdb->bdb_db, NULL, &k, &d, 0);
 	if (r) {
@@ -177,13 +177,13 @@ bdb_set(bdb_t *bdb, var_t *v)
 		goto error;
 	}
 
-	var_record_delete(vr);
+	var_compact_delete(vc);
 
 	return 0;
 
 error:
-	if (vr) {
-		var_record_delete(vr);
+	if (vc) {
+		var_compact_delete(vc);
 	}
 
 	return -1;
@@ -193,23 +193,23 @@ error:
 static int
 bdb_del(bdb_t *bdb, var_t *v)
 {
-	var_record_t *vr;
+	var_compact_t *vc;
 	DBT k, d;
 	int r;
 
-	vr = var_record_pack(v);
-	if (vr == NULL) {
-		log_warning("bdb_del: var_record_pack failed");
+	vc = var_compress(v);
+	if (vc == NULL) {
+		log_warning("bdb_del: var_compress failed");
 		return -1;
 	}
 
 	memset(&k, 0, sizeof(k));
 	memset(&d, 0, sizeof(d));
 
-	k.data = vr->vr_key;
-	k.size = vr->vr_klen;
-	d.data = vr->vr_data;
-	d.size = vr->vr_dlen;
+	k.data = vc->vc_key;
+	k.size = vc->vc_klen;
+	d.data = vc->vc_data;
+	d.size = vc->vc_dlen;
 
 	r = bdb->bdb_db->del(bdb->bdb_db, NULL, &k, 0);
 	if (r) {

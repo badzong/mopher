@@ -31,12 +31,12 @@ typedef struct var {
 } var_t;
 
 
-typedef struct var_record {
-	char	*vr_data;
-	int	 vr_dlen;
-	char	*vr_key;
-	int	 vr_klen;
-} var_record_t;
+typedef struct var_compact {
+	char	*vc_data;
+	int	 vc_dlen;
+	char	*vc_key;
+	int	 vc_klen;
+} var_compact_t;
 
 /*
  * Prototypes
@@ -60,8 +60,8 @@ int var_table_set(var_t *table, var_t *v);
 int var_table_setv(var_t *table, var_type_t type, char *name, void *data, int flags);
 int var_list_append(var_t *list, var_t *item);
 int var_table_list_insert(var_t *table, var_type_t type, char *name, void *data, int flags);
-var_record_t * var_record_pack(var_t *v);
-var_t * var_record_unpack(var_record_t *vr, var_t *schema);
+var_compact_t * var_compress(var_t *v);
+var_t * var_decompress(var_compact_t *vc, var_t *schema);
 var_t * var_schema_create(char *name, ...);
 var_t * var_record_build(var_t *schema, ...);
 int var_list_dereference(var_t *list, ...);

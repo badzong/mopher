@@ -36,7 +36,7 @@ greylist_lookup(var_t *attrs)
 		return NULL;
 	}
 
-	lookup = var_record_build(greylist_table->t_schema, hostaddr, envfrom,
+	lookup = var_list_schema(greylist_table->t_schema, hostaddr, envfrom,
 		envrcpt, NULL, NULL, NULL, NULL, NULL, NULL);
 
 	if (lookup == NULL) {
@@ -89,12 +89,12 @@ greylist_add(var_t *attrs, acl_delay_t *ad)
 	retries = 1;
 	delivered = 0;
 
-	record = var_record_refcopy(greylist_table->t_schema, hostaddr,
+	record = var_schema_refcopy(greylist_table->t_schema, hostaddr,
 		envfrom, envrcpt, &created, &delay, &retries, &visa,
 		&delivered, &valid);
 
 	if (record == NULL) {
-		log_warning("greylist_add: var_record_refcopy failed");
+		log_warning("greylist_add: var_schema_refcopy failed");
 		return -1;
 	}
 

@@ -149,7 +149,7 @@ milter_connect(SMFICTX * ctx, char *hostname, _SOCK_ADDR * hostaddr)
 		return SMFIS_TEMPFAIL;
 	}
 
-	ssclean = var_addr_clean(hostaddr);
+	ssclean = util_hostaddr(hostaddr);
 	if (ssclean == NULL) {
 		log_error("milter_conect: var_addr_clean failed");
 		return SMFIS_TEMPFAIL;

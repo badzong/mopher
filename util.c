@@ -10,6 +10,7 @@
 
 #include "log.h"
 
+#define ADDR6_LEN 16
 
 int
 util_parser(char *path, FILE ** input, int (*parser) (void))
@@ -121,17 +122,17 @@ util_file(char *path, char **buffer)
 	int fd, n;
 
 	if (stat(path, &fs) == -1) {
-		log_warning("parser: stat '%s'", path);
+		log_warning("util_file: stat '%s'", path);
 		return -1;
 	}
 
 	if (fs.st_size == 0) {
-		log_notice("parser: '%s' is empty", path);
+		log_notice("util_file: '%s' is empty", path);
 		return 0;
 	}
 
 	if((*buffer = (char *) malloc(fs.st_size)) == NULL) {
-		log_warning("parser: malloc");
+		log_warning("util_file: malloc");
 		return -1;
 
 	}
@@ -149,4 +150,85 @@ util_file(char *path, char **buffer)
 	close(fd);
 
 	return n;
+}
+
+struct sockaddr_storage *
+util_hostaddr(struct sockaddr_storage *ss)
+{
+	struct sockaddr_storage *cleancopy;
+	struct sockaddr_in *sin, *sin_copy;
+	struct sockaddr_in6 *sin6, *sin6_copy;
+
+	cleancopy = (struct sockaddr_storage *)
+		malloc(sizeof(struct sockaddr_storage));
+
+	if (cleancopy == NULL) {
+		log_warning("util_hostaddr: malloc");
+		return NULL;
+	}
+
+	memset(cleancopy, 0, sizeof(struct sockaddr_storage));
+
+	cleancopy->ss_family = ss->ss_family;
+
+	if (ss->ss_family == AF_INET) {
+		sin = (struct sockaddr_in *) ss;
+		sin_copy = (struct sockaddr_in *) cleancopy;
+
+		sin_copy->sin_addr = sin->sin_addr;
+
+		return cleancopy;
+	}
+
+	sin6 = (struct sockaddr_in6 *) ss;
+	sin6_copy = (struct sockaddr_in6 *) cleancopy;
+
+	memcpy(&sin6_copy->sin6_addr, &sin6->sin6_addr,
+		sizeof(sin6->sin6_addr));
+
+	return cleancopy;
+}
+
+int
+util_addrcmp(struct sockaddr_storage *ss1, struct sockaddr_storage *ss2)
+{
+	unsigned long inaddr1, inaddr2;
+
+	if (ss1->ss_family < ss2->ss_family) {
+		return -1;
+	}
+
+	if (ss1->ss_family > ss2->ss_family) {
+		return 1;
+	}
+
+	switch (ss1->ss_family) {
+
+	case AF_INET:
+		inaddr1 = ntohl(((struct sockaddr_in *) ss1)->sin_addr.s_addr);
+		inaddr2 = ntohl(((struct sockaddr_in *) ss2)->sin_addr.s_addr);
+
+		if (inaddr1 < inaddr2) {
+			return -1;
+		}
+
+		if (inaddr1 > inaddr2) {
+			return 1;
+		}
+
+		return 0;
+
+	case AF_INET6:
+		/*
+		 * XXX: Simple implementation.
+		 */
+		return memcmp(&((struct sockaddr_in6 *) ss1)->sin6_addr.s6_addr,
+			      &((struct sockaddr_in6 *) ss2)->sin6_addr.s6_addr,
+			      ADDR6_LEN);
+
+	default:
+		log_warning("util_addrcmp: bad address family");
+	}
+
+	return 0;
 }
