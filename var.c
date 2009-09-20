@@ -7,6 +7,7 @@
 #include <stdarg.h>
 
 #include "var.h"
+#include "util.h"
 #include "ll.h"
 #include "log.h"
 

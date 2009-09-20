@@ -54,6 +54,7 @@ VAR_INT_T	 cf_log_level;
 VAR_INT_T	 cf_foreground;
 char		*cf_dbt_mod_path;
 char		*cf_tables_mod_path;
+VAR_INT_T	 cf_table_cleanup_interval;
 
 /*
  * Symbol table
@@ -68,6 +69,7 @@ static cf_symbol_t cf_symbols[] = {
 	{ VT_INT, "milter_socket_timeout", &cf_milter_socket_timeout },
 	{ VT_STRING, "dbt_mod_path", &cf_dbt_mod_path },
 	{ VT_STRING, "tables_mod_path", &cf_tables_mod_path },
+	{ VT_INT, "table_cleanup_interval", &cf_table_cleanup_interval },
 	{ VT_NULL, NULL, NULL }
 };
 

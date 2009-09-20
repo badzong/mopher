@@ -19,6 +19,8 @@ typedef struct milter_priv {
     int      mp_size;
 } milter_priv_t;
 
+extern int milter_running;
+
 int8_t
 milter(void);
 

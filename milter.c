@@ -15,6 +15,7 @@
 #include "cf.h"
 #include "acl.h"
 #include "util.h"
+#include "table.h"
 
 #define LOGNAME "milter"
 #define TIMELEN 16
@@ -29,6 +30,10 @@
 #define MSN_EOH		"eoh"
 #define MSN_BODY	"body"
 #define MSN_EOM		"eom"
+
+
+int milter_running = 1;
+
 
 static sfsistat
 milter_acl(char *stage, milter_priv_t * mp)
@@ -149,7 +154,7 @@ milter_connect(SMFICTX * ctx, char *hostname, _SOCK_ADDR * hostaddr)
 		return SMFIS_TEMPFAIL;
 	}
 
-	ssclean = util_hostaddr(hostaddr);
+	ssclean = util_hostaddr((struct sockaddr_storage *) hostaddr);
 	if (ssclean == NULL) {
 		log_error("milter_conect: var_addr_clean failed");
 		return SMFIS_TEMPFAIL;
@@ -475,6 +480,11 @@ milter_close(SMFICTX * ctx)
 
 	log_debug("milter_close: connection closed");
 
+	/*
+	 * Use this thread do cleanup the tables.
+	 */
+	table_janitor(0);
+
 	return SMFIS_CONTINUE;
 }
 
@@ -512,6 +522,8 @@ milter(void)
 	acl_init();
 
 	r = smfi_main();
+
+	milter_running = 0;
 
 	acl_clear();
 

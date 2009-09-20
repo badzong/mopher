@@ -25,6 +25,7 @@ extern VAR_INT_T	 cf_log_level;
 extern VAR_INT_T	 cf_foreground;
 extern char		*cf_dbt_mod_path;
 extern char		*cf_tables_mod_path;
+extern VAR_INT_T	 cf_table_cleanup_interval;
 
 /*
  * Prototypes

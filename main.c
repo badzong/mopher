@@ -9,6 +9,8 @@
 #include "milter.h"
 #include "cf.h"
 #include "dbt.h"
+#include "table.h"
+#include "greylist.h"
 
 #define BINNAME "mopher"
 

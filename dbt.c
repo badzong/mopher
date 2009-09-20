@@ -152,3 +152,25 @@ dbt_set(dbt_t *dbt, var_t *record)
 {
 	return dbt->dbt_driver->dd_set(dbt->dbt_handle, record);
 }
+
+int
+dbt_del(dbt_t *dbt, var_t *record)
+{
+	return dbt->dbt_driver->dd_del(dbt->dbt_handle, record);
+}
+
+int
+dbt_walk(dbt_t *dbt, dbt_callback_t callback, void *data)
+{
+	return dbt->dbt_driver->dd_walk(dbt->dbt_handle, callback, data);
+}
+
+int
+dbt_sync(dbt_t *dbt)
+{
+	if (dbt->dbt_driver->dd_sync == NULL) {
+		return 0;
+	}
+
+	return dbt->dbt_driver->dd_sync(dbt->dbt_handle);
+}

@@ -200,7 +200,7 @@ bdb_del(bdb_t *bdb, var_t *v)
 	vc = var_compress(v);
 	if (vc == NULL) {
 		log_warning("bdb_del: var_compress failed");
-		return -1;
+		goto error;
 	}
 
 	memset(&k, 0, sizeof(k));
@@ -214,6 +214,83 @@ bdb_del(bdb_t *bdb, var_t *v)
 	r = bdb->bdb_db->del(bdb->bdb_db, NULL, &k, 0);
 	if (r) {
 		log_warning("bdb_del: DB->del failed");
+		goto error;
+	}
+
+	var_compact_delete(vc);
+
+	return 0;
+
+
+error:
+	if (vc) {
+		var_compact_delete(vc);
+	}
+
+	return -1;
+}
+
+
+int
+bdb_walk(bdb_t *bdb, dbt_callback_t callback, void *data)
+{
+	DBC *cursor = NULL;
+	DBT k, d;
+	int r;
+	var_compact_t vc;
+	var_t *record;
+
+	if (bdb->bdb_db->cursor(bdb->bdb_db, NULL, &cursor, 0)) {
+		log_warning("bdb_walk: DB->cursor failed");
+		goto error;
+	}
+
+	memset(&k, 0, sizeof(k));
+	memset(&d, 0, sizeof(d));
+
+	while((r = cursor->get(cursor, &k, &d, DB_NEXT)) == 0) {
+		vc.vc_key = k.data;
+		vc.vc_klen = k.size;
+		vc.vc_data = d.data;
+		vc.vc_dlen = d.size;
+
+		record = var_decompress(&vc, bdb->bdb_schema);
+		if (record == NULL) {
+			log_warning("bdb_walk: var_decompress failed");
+			goto error;
+		}
+
+		if(callback(data, record)) {
+			log_warning("bdb_walk: callback failed");
+		}
+
+		var_delete(record);
+	}
+	if(r != DB_NOTFOUND) {
+		log_warning("bdb_walk: DBC->get failed");
+		goto error;
+	}
+
+	cursor->close(cursor);
+
+	return 0;
+
+
+error:
+
+	if (cursor) {
+		cursor->close(cursor);
+	}
+
+	return -1;
+}
+
+
+static int
+bdb_sync(bdb_t *bdb)
+{
+	if (bdb->bdb_db->sync(bdb->bdb_db, 0)) {
+		log_warning("bdb_sync: DB->sync failed");
 		return -1;
 	}
 
@@ -233,6 +310,8 @@ init(void)
 	dbt_driver.dd_get = (dbt_get_t) bdb_get;
 	dbt_driver.dd_set = (dbt_set_t) bdb_set;
 	dbt_driver.dd_del = (dbt_del_t) bdb_del;
+	dbt_driver.dd_walk = (dbt_walk_t) bdb_walk;
+	dbt_driver.dd_sync = (dbt_sync_t) bdb_sync;
 
 	dbt_driver_register(&dbt_driver);
 

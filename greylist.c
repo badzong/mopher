@@ -66,7 +66,7 @@ greylist_add(var_t *attrs, acl_delay_t *ad)
 	char *envfrom;
 	char *envrcpt;
 	time_t now;
-	VAR_INT_T created, delay, visa, valid, retries, delivered;
+	VAR_INT_T created, delay, visa, valid, retries, passed;
 	int r;
 	
 	if (var_table_dereference(attrs, "milter_hostaddr", &hostaddr,
@@ -87,11 +87,11 @@ greylist_add(var_t *attrs, acl_delay_t *ad)
 	visa = 0;
 	valid = ad->ad_valid;
 	retries = 1;
-	delivered = 0;
+	passed = 0;
 
 	record = var_schema_refcopy(greylist_table->t_schema, hostaddr,
-		envfrom, envrcpt, &created, &delay, &retries, &visa,
-		&delivered, &valid);
+		envfrom, envrcpt, &created, &valid, &delay, &retries, &visa,
+		&passed);
 
 	if (record == NULL) {
 		log_warning("greylist_add: var_schema_refcopy failed");
@@ -114,7 +114,7 @@ greylist(var_t *attrs, acl_delay_t *ad)
 	VAR_INT_T *delay;
 	VAR_INT_T *retries;
 	VAR_INT_T *visa;
-	VAR_INT_T *delivered;
+	VAR_INT_T *passed;
 	VAR_INT_T *valid;
 	greylist_response_t glr = GL_DELAY;
 
@@ -124,8 +124,8 @@ greylist(var_t *attrs, acl_delay_t *ad)
 		goto add;
 	}
 
-	if (var_list_dereference(record, NULL, NULL, NULL, &created, &delay,
-		&retries, &visa, &delivered, &valid)) {
+	if (var_list_dereference(record, NULL, NULL, NULL, &created, &valid,
+		&delay, &retries, &visa, &passed)) {
 		log_warning("greylist: var_list_unpack failed");
 		goto error;
 	}
@@ -140,7 +140,8 @@ greylist(var_t *attrs, acl_delay_t *ad)
 	 * Record expired.
 	 */
 	if (*created + *valid < now) {
-		log_info("greylist: record expired");
+		log_info("greylist: record expired %d seconds ago",
+			now - *created - *valid);
 		goto add;
 	}
 
@@ -148,17 +149,22 @@ greylist(var_t *attrs, acl_delay_t *ad)
 	 * Delay smaller than requested.
 	 */
 	if (*delay < ad->ad_delay) {
-		log_info("greylist: record delay too small");
+		log_info("greylist: record delay too small. Extension: %d"
+			" seconds", ad->ad_delay);
 		*delay = ad->ad_delay;
+		*valid = now - *created + *valid;
+		*visa = 0;
 		goto update;
 	}
 
 	/*
 	 * Valid visa
 	 */
-	if (*visa) {
-		log_info("greylist: valid visa found");
-		*delivered += 1;
+	if (*created + *visa > now) {
+		log_info("greylist: valid visa found. expiry: %d seconds",
+			*created + *visa - now);
+		*passed += 1;
+		*visa = now - *created + ad->ad_visa;
 		glr = GL_PASS;
 		goto update;
 	}
@@ -167,9 +173,10 @@ greylist(var_t *attrs, acl_delay_t *ad)
 	 * Delay passed
 	 */
 	if (*created + *delay < now) {
-		log_info("greylist: delay passed. create visa");
-		*visa = 1;
-		*delivered = 1;
+		log_info("greylist: delay passed. create visa for %d seconds",
+			ad->ad_visa);
+		*visa = now - *created + ad->ad_visa;
+		*passed = 1;
 		glr = GL_PASS;
 		goto update;
 	}
@@ -178,6 +185,7 @@ greylist(var_t *attrs, acl_delay_t *ad)
 		*created + *delay - now, *retries);
 
 	*retries += 1;
+	*valid = now - *created + *valid;
 
 
 update:

@@ -1,4 +1,5 @@
 connect milter_hostaddr = 127.0.0.1 continue
 connect 1 block
-envrcpt milter_hostaddr = 127.0.0.1 delay 60 valid 300 visa 900
+envrcpt milter_hostaddr = 127.0.0.1 delay 5 valid 10 visa 30
+envrcpt milter_hostaddr = 127.0.0.1 delay 20 valid 10 visa 30
 eom milter_message_size > 180 block

@@ -1,5 +1,7 @@
 #include <malloc.h>
 #include <string.h>
+#include <pthread.h>
+#include <errno.h>
 
 #include "log.h"
 #include "cf.h"
@@ -7,15 +9,18 @@
 #include "dbt.h"
 #include "modules.h"
 #include "table.h"
+#include "milter.h"
 
 #define TABLES_BUCKETS 32
 
 static ht_t *table_tables;
+time_t table_cleanup_cycle;
+static pthread_mutex_t table_janitor_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 table_t *
 table_create(char *name, var_t *schema, table_update_t update,
-	table_cleanup_t cleanup, dbt_t *dbt)
+	table_validate_t validate, dbt_t *dbt)
 {
 	table_t *table;
 
@@ -28,7 +33,7 @@ table_create(char *name, var_t *schema, table_update_t update,
 	table->t_name = strdup(name);
 	table->t_schema = schema;
 	table->t_update = update;
-	table->t_cleanup = cleanup;
+	table->t_validate = validate;
 	table->t_dbt = dbt;
 
 	return table;
@@ -73,7 +78,7 @@ table_match(table_t *t1, table_t *t2)
 
 int
 table_register(char *name, var_t *schema, table_update_t update,
-	table_cleanup_t cleanup)
+	table_validate_t validate)
 {
 	dbt_t *dbt = NULL;
 	table_t *table = NULL;
@@ -140,7 +145,7 @@ table_register(char *name, var_t *schema, table_update_t update,
 		goto error;
 	}
 
-	table = table_create(name, schema, update, cleanup, dbt);
+	table = table_create(name, schema, update, validate, dbt);
 	if (table == NULL) {
 		log_warning("table_register: table create failed");
 		goto error;
@@ -167,8 +172,108 @@ error:
 	return -1;
 }
 
+
+int
+table_cleanup(table_t *table, var_t *record)
+{
+	int valid;
+
+	valid = table->t_validate(record);
+	if (valid == -1) {
+		log_warning("table_cleanup: table->t_validate returned non-zero");
+		return -1;
+	}
+	if (valid) {
+		return 0;
+	}
+	if (dbt_del(table->t_dbt, record)) {
+		log_warning("table_cleanup: dbt_del failed");
+		return -1;
+	}
+
+	++table->t_cleanup_deleted;
+
+	return 0;
+}
+
+
 void
-table_init()
+table_janitor(int force)
+{
+	time_t now;
+	table_t *table;
+	int mutex;
+
+	/*
+	 * Check if someone else is doing the dirty work.
+	 */
+	mutex = pthread_mutex_trylock(&table_janitor_mutex);
+	if (mutex == EBUSY) {
+		return;
+	}
+	else if (mutex) {
+		log_error("table_janitor: pthread_mutex_trylock");
+		return;
+	}
+
+	if ((now = time(NULL)) == -1) {
+		log_error("table_janitor: time");
+		goto exit_unlock;
+	}
+
+	/*
+	 * Not yet time to cleanup.
+	 */
+	if (force == 0 && now < table_cleanup_cycle) {
+		goto exit_unlock;
+	}
+
+	table_cleanup_cycle = now + cf_table_cleanup_interval;
+
+	if (table_cleanup_cycle) {
+		log_info("table_janitor: cleanup cycle started");
+	}
+	else {
+		log_info("table_janitor: initial cleanup");
+	}
+
+	ht_rewind(table_tables);
+	while((table = ht_next(table_tables))) {
+		if (table->t_validate == NULL) {
+			continue;
+		}
+
+		table->t_cleanup_deleted = 0;
+
+		if (dbt_walk(table->t_dbt, (dbt_callback_t) table_cleanup,
+			table)) {
+			log_warning("table_janitor: dbt_walk failed");
+			continue;
+		}
+		
+		log_debug("table_janitor: deleted %d records in \"%s\"",
+			table->t_cleanup_deleted, table->t_name);
+
+		if (dbt_sync(table->t_dbt)) {
+			log_warning("table_janitor: dbt_sync failed");
+		}
+	}
+
+	log_debug("table_janitor: terminated");
+
+
+exit_unlock:
+
+	if (pthread_mutex_unlock(&table_janitor_mutex)) {
+		log_warning("table_janitor: pthread_mutex_unlock");
+	}
+
+	return;
+}
+
+
+void
+table_init(void)
 {
 	table_tables = ht_create(TABLES_BUCKETS, (ht_hash_t) table_hash,
 		(ht_match_t) table_match, (ht_delete_t) table_delete);
@@ -179,6 +284,8 @@ table_init()
 
 	modules_load(cf_tables_mod_path);
 
+	table_janitor(1);
+
 	return;
 }
 
@@ -186,6 +293,8 @@ table_init()
 void
 table_clear()
 {
+	table_janitor(1);
+
 	ht_delete(table_tables);
 
 	return;
