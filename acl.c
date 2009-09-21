@@ -57,6 +57,10 @@ acl_function_create(char *name, acl_fcallback_t callback)
 static void
 acl_symbol_delete(acl_symbol_t * as)
 {
+	if (as->as_type == AS_STATIC) {
+		var_delete(as->as_data);
+	}
+
 	free(as);
 }
 
@@ -77,7 +81,8 @@ acl_function_hash(acl_function_t *af)
 }
 
 static acl_symbol_t *
-acl_symbol_create(char *name, milter_stage_t stage, acl_scallback_t callback)
+acl_symbol_create(acl_symbol_type_t type, char *name, milter_stage_t stage,
+	void *data)
 {
 	acl_symbol_t *as;
 
@@ -86,9 +91,10 @@ acl_symbol_create(char *name, milter_stage_t stage, acl_scallback_t callback)
 		return NULL;
 	}
 
+	as->as_type = type;
 	as->as_name = name;
 	as->as_stage = stage;
-	as->as_callback = callback;
+	as->as_data = data;
 
 	return as;
 }
@@ -111,11 +117,13 @@ acl_symbol_hash(acl_symbol_t * as)
 
 
 int
-acl_symbol_register(char *name, milter_stage_t stage, acl_scallback_t callback)
+acl_symbol_register(acl_symbol_type_t type, char *name, milter_stage_t stage,
+	void *data)
 {
 	acl_symbol_t *as;
 
-	if ((as = acl_symbol_create(name, stage, callback)) == NULL) {
+	as = acl_symbol_create(type, name, stage, data);
+	if (as  == NULL) {
 		log_warning("acl_symbol_regeister: acl_symbol_create failed");
 		return -1;
 	}
@@ -127,6 +135,28 @@ acl_symbol_register(char *name, milter_stage_t stage, acl_scallback_t callback)
 	}
 
 	log_debug("acl_symbol_register: symbol \"%s\" registered", name);
+
+	return 0;
+}
+
+
+int
+acl_static_register(var_type_t type, char *name, void *data, int flags)
+{
+	var_t *v;
+
+	v = var_create(type, name, data, flags);
+	if (v == NULL) {
+		log_warning("acl_static_register: var_create failed");
+		return -1;
+	}
+
+	if(acl_symbol_register(AS_STATIC, name, MS_CONNECT | MS_HELO |
+		MS_ENVFROM | MS_ENVRCPT | MS_HEADER | MS_EOH | MS_BODY |
+		MS_EOM, v)) {
+		log_warning("acl_static_register: acl_symbol_register failed");
+		return -1;
+	}
 
 	return 0;
 }
@@ -627,20 +657,28 @@ acl_symbol_eval(acl_value_t * av, var_t *attrs)
 	acl_symbol_t *as;
 	VAR_INT_T *ms;
 	char *sn;
+	acl_scallback_t callback;
 
 	as = av->av_data;
 
-	if((v = var_table_lookup(attrs, as->as_name))) {
+	if (as->as_type == AS_STATIC) {
+		return as->as_data;
+	}
+
+	v = var_table_lookup(attrs, as->as_name);
+	if (v) {
 		return v;
 	}
 
-	if((ms = var_table_get(attrs, "milter_stage")) == NULL) {
+	ms = var_table_get(attrs, "milter_stage");
+	if (ms == NULL) {
 		log_error("acl_symbol_eval: milter_stage not set");
 		return NULL;
 	}
 
-	if(!(*ms & as->as_stage)) {
-		if((sn = var_table_get(attrs, "milter_stagename")) == NULL) {
+	if (!(*ms & as->as_stage)) {
+		sn = var_table_get(attrs, "milter_stagename");
+		if (sn == NULL) {
 			log_error("acl_symbol_eval: milter_stagename not set");
 			sn = "(unknown)";
 		}
@@ -651,13 +689,20 @@ acl_symbol_eval(acl_value_t * av, var_t *attrs)
 		return NULL;
 	}
 
-	if (as->as_callback == NULL) {
+	if (as->as_type == AS_NULL) {
+		log_error("acl_symbol_eval: \"%s\" is not callable",
+			as->as_name);
+		return as->as_data;
+	}
+
+	if (as->as_data == NULL) {
 		log_error("acl_symbol_eval: symbol \"%s\" is not defined and"
 			" has no callback", as->as_name);
 		return NULL;
 	}
 
-	if(as->as_callback(attrs)) {
+	callback = as->as_data;
+	if (callback(attrs)) {
 		log_error("acl_symbol_eval: callback for symbol \"%s\" failed",
 			as->as_name);
 		return NULL;
@@ -666,7 +711,8 @@ acl_symbol_eval(acl_value_t * av, var_t *attrs)
 	/*
 	 * Check if callback entred the requested symbol
 	 */
-	if((v = var_table_lookup(attrs, as->as_name)) == NULL) {
+	v = var_table_lookup(attrs, as->as_name);
+	if (v == NULL) {
 		log_error("acl_symbol_eval: symbol \"%s\" is empty",
 			as->as_name);
 		return NULL;

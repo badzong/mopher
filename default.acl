@@ -1,5 +1,6 @@
 connect milter_hostaddr = 127.0.0.1 continue
-connect 1 block
+envrcpt spf = SPF_PASS pass
+envrcpt spf = SPF_NEUTRAL block
 envrcpt milter_hostaddr = 127.0.0.1 delay 5 valid 10 visa 30
 envrcpt milter_hostaddr = 127.0.0.1 delay 20 valid 10 visa 30
 eom milter_message_size > 180 block

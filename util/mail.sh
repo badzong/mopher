@@ -1,6 +1,7 @@
 RCPT=manuel@fredastaire.ch
+FROM=roth.daniela@gmail.com
 FIFO=mail.fifo
-HOST=localhost
+HOST=10.0.0.1
 
 if [ ! -z "$1" ]; then
 	RCPT=$1
@@ -20,7 +21,7 @@ sudo chmod 777 /var/spool/postfix/milter.sock
 (
 	echo "helo localhost"
 	read
-	echo "mail from: <test@milter>"
+	echo "mail from: <$FROM>"
 	read
 	echo "rcpt to: <$RCPT>"
 	read

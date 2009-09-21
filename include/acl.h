@@ -24,6 +24,9 @@ typedef enum acl_action_type { AA_ERROR = -1, AA_NULL = 0, AA_PASS, AA_BLOCK,
 	AA_DISCARD, AA_CONTINUE, AA_DELAY, AA_JUMP
 } acl_action_type_t;
 
+typedef enum acl_symbol_type { AS_NULL = 0, AS_CALLBACK, AS_STATIC }
+	acl_symbol_type_t;
+
 /*
  * Function pointer types for functions and symbols
  */
@@ -31,9 +34,10 @@ typedef var_t *(*acl_fcallback_t) (ll_t * args);
 typedef int (*acl_scallback_t) (var_t * attrs);
 
 typedef struct acl_symbol {
-	char		*as_name;
-	acl_scallback_t	 as_callback;
-	milter_stage_t	 as_stage;
+	char			*as_name;
+	acl_symbol_type_t	 as_type;
+	milter_stage_t		 as_stage;
+	void			*as_data;
 } acl_symbol_t;
 
 /*
@@ -88,12 +92,12 @@ typedef struct acl_rule {
 	acl_action_t *ar_action;
 } acl_rule_t;
 
-
 /*
  * Prototypes
  */
 
-int acl_symbol_register(char *name, milter_stage_t stage, acl_scallback_t callback);
+int acl_symbol_register(acl_symbol_type_t type, char *name, milter_stage_t stage,void *data);
+int acl_static_register(var_type_t type, char *name, void *data, int flags);
 int acl_symbol_add(var_t * attrs, var_type_t type, char *name, void *data, int flags);
 int acl_function_register(char *name, acl_fcallback_t callback);
 void acl_value_delete(acl_value_t * av);
@@ -119,4 +123,5 @@ var_t * acl_value_eval(acl_value_t * av, var_t *attrs);
 int acl_compare(var_t * v1, var_t * v2, acl_cmp_t ac);
 int acl_conditions_eval(ll_t * conditions, var_t *attrs);
 acl_action_type_t acl(char *table, var_t *attrs);
+
 #endif				/* _ACL_H_ */
