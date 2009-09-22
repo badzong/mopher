@@ -5,10 +5,18 @@
 #include "var.h"
 
 typedef struct cf_symbol {
-	var_type_t	 cs_type;
 	char		*cs_name;
 	void		*cs_ptr;
 } cf_symbol_t;
+
+typedef void (*cf_callback_t)(void **data);
+
+typedef struct cf_function {
+	var_type_t	 cf_type;
+	char		*cf_name;
+	cf_callback_t	 cf_callback;
+} cf_function_t;
+
 
 /*
  * Global configuration variables

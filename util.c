@@ -11,6 +11,7 @@
 #include "log.h"
 
 #define ADDR6_LEN 16
+#define ADDR6_STRLEN 40
 
 int
 util_parser(char *path, FILE ** input, int (*parser) (void))
@@ -94,6 +95,46 @@ util_strtoaddr(const char *str)
 	}
 
 	return ss;
+}
+
+char *
+util_addrtostr(struct sockaddr_storage *ss)
+{
+	char addr[ADDR6_STRLEN], *paddr;
+	struct sockaddr_in *sin = (struct sockaddr_in *) ss;
+	struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *) ss;
+	const char *p;
+
+	if((ss = (struct sockaddr_storage *)
+		malloc(sizeof(struct sockaddr_storage))) == NULL) {
+		return NULL;
+	}
+
+	sin = (struct sockaddr_in *) ss;
+	sin6 = (struct sockaddr_in6 *) ss;
+
+	if (ss->ss_family == AF_INET6) {
+		p = inet_ntop(AF_INET6, &sin6->sin6_addr, addr, sizeof(addr));
+	}
+	else if (ss->ss_family == AF_INET) {
+		p = inet_ntop(AF_INET, &sin->sin_addr, addr, sizeof(addr));
+	}
+	else {
+		log_error("util_addrtostr: bad address family");
+		return NULL;
+	}
+
+	if (p == NULL) {
+		log_error("util_addrtostr: inet_ntop");
+		return NULL;
+	}
+
+	paddr = strdup(addr);
+	if (paddr == NULL) {
+		log_error("util_addrtostr: strdup");
+	}
+
+	return paddr;
 }
 
 int

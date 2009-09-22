@@ -166,6 +166,12 @@ milter_connect(SMFICTX * ctx, char *hostname, _SOCK_ADDR * hostaddr)
 		return SMFIS_TEMPFAIL;
 	}
 
+	if (var_table_setv(mp->mp_table, VT_STRING, "milter_addrstr",
+		util_addrtostr(ssclean), VF_KEEPNAME)) {
+		log_error("milter_conect: var_table_set failed");
+		return SMFIS_TEMPFAIL;
+	}
+
 	// log_debug("milter_connect: connection from: %s
 	// (%s)", hostname, addr);
 

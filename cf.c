@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
+#include <unistd.h>
 
 #include "log.h"
 #include "var.h"
@@ -55,48 +56,120 @@ VAR_INT_T	 cf_foreground;
 char		*cf_dbt_mod_path;
 char		*cf_tables_mod_path;
 VAR_INT_T	 cf_table_cleanup_interval;
+char		*cf_hostname;
 
 /*
  * Symbol table
  */
 static cf_symbol_t cf_symbols[] = {
-	{ VT_INT, "greylist_default_delay", &cf_greylist_default_delay },
-	{ VT_INT, "greylist_default_visa", &cf_greylist_default_visa },
-	{ VT_INT, "greylist_default_valid", &cf_greylist_default_valid },
-	{ VT_STRING, "acl_path", &cf_acl_path },
-	{ VT_STRING, "acl_mod_path", &cf_acl_mod_path },
-	{ VT_STRING, "milter_socket", &cf_milter_socket },
-	{ VT_INT, "milter_socket_timeout", &cf_milter_socket_timeout },
-	{ VT_STRING, "dbt_mod_path", &cf_dbt_mod_path },
-	{ VT_STRING, "tables_mod_path", &cf_tables_mod_path },
-	{ VT_INT, "table_cleanup_interval", &cf_table_cleanup_interval },
+	{ "greylist_default_delay", &cf_greylist_default_delay },
+	{ "greylist_default_visa", &cf_greylist_default_visa },
+	{ "greylist_default_valid", &cf_greylist_default_valid },
+	{ "acl_path", &cf_acl_path },
+	{ "acl_mod_path", &cf_acl_mod_path },
+	{ "milter_socket", &cf_milter_socket },
+	{ "milter_socket_timeout", &cf_milter_socket_timeout },
+	{ "dbt_mod_path", &cf_dbt_mod_path },
+	{ "tables_mod_path", &cf_tables_mod_path },
+	{ "table_cleanup_interval", &cf_table_cleanup_interval },
+	{ "hostname", &cf_hostname },
+	{ NULL, NULL }
+};
+
+
+/*
+ * Prototypes for cf_functions
+ */
+
+static void cf_setup_hostname(void **data);
+
+
+static cf_function_t cf_functions[] = {
+	{ VT_STRING, "hostname", cf_setup_hostname },
 	{ VT_NULL, NULL, NULL }
 };
+
+
+static void
+cf_setup_hostname(void **data)
+{
+	char buffer[1024];
+
+	if (gethostname(buffer, sizeof(buffer))) {
+		log_error("cf_setup_hostname: gethostname failed");
+		strcpy(buffer, "unknown");
+	}
+
+	*data = strdup(buffer);
+	if (*data == NULL) {
+		log_die(EX_CONFIG, "cf_setup_hostname: strdup");
+	}
+
+	return;
+}
+
+static void
+cf_load_functions(void)
+{
+	cf_function_t *function;
+	var_t *v;
+	void *data;
+
+	for(function = cf_functions; function->cf_type; ++function) {
+
+		if(var_table_get(cf_config, function->cf_name)) {
+			continue;
+		}
+
+		function->cf_callback(&data);
+		if (data == NULL) {
+			log_die(EX_CONFIG, "cf_load_functions: callback for "
+				"\"%s\" failed", function->cf_name);
+		}
+
+		v = var_create(function->cf_type, function->cf_name, data,
+			VF_KEEPNAME);
+		if (v == NULL) {
+			log_die(EX_CONFIG, "cf_load_functions: var_create "
+				"failed");
+		}
+
+		if(var_table_set(cf_config, v) == -1) {
+			log_die(EX_CONFIG, "cf_load_functions: var_table_set "
+				"failed");
+		}
+	}
+
+	return;
+}
 
 
 static void
 cf_load_symbols(void)
 {
 	cf_symbol_t *symbol;
-	void *p;
+	var_t *v;
 
-	for(symbol = cf_symbols; symbol->cs_type; ++symbol) {
+	for(symbol = cf_symbols; symbol->cs_name; ++symbol) {
 
-		if((p = var_table_get(cf_config, symbol->cs_name)) == NULL) {
+		v = var_table_lookup(cf_config, symbol->cs_name);
+		if(v == NULL) {
 			continue;
 		}
 
-		switch(symbol->cs_type) {
+		switch(v->v_type) {
 		case VT_INT:
-			*(VAR_INT_T *) symbol->cs_ptr = *(VAR_INT_T *) p;
+			*(VAR_INT_T *) symbol->cs_ptr =
+				*(VAR_INT_T *) v->v_data;
 			 break;
 
 		case VT_FLOAT:
-			*(VAR_FLOAT_T *) symbol->cs_ptr = *(VAR_FLOAT_T *) p;
+			*(VAR_FLOAT_T *) symbol->cs_ptr =
+				*(VAR_FLOAT_T *) v->v_data;
 			 break;
 
 		case VT_STRING:
-			*((char **) symbol->cs_ptr) = (char *) p;
+			*((char **) symbol->cs_ptr) = (char *) v->v_data;
 			break;
 
 		default:
@@ -203,7 +276,7 @@ cf_init(char *file)
 	//printf(buffer);
 	
 	cf_load_file(file);
-
+	cf_load_functions();
 	cf_load_symbols();
 
 	return;
