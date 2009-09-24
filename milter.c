@@ -349,6 +349,7 @@ milter_eoh(SMFICTX * ctx)
 {
 	milter_priv_t *mp;
 	VAR_INT_T ms;
+	char *queueid;
 	int32_t len;
 
 	mp = ((milter_priv_t *) smfi_getpriv(ctx));
@@ -369,6 +370,20 @@ milter_eoh(SMFICTX * ctx)
 
 	if (var_table_setv
 	    (mp->mp_table, VT_INT, "milter_recipients", &mp->mp_recipients,
+	     VF_KEEPNAME | VF_COPYDATA)) {
+		log_error("milter_eom: var_table_set failed");
+		return SMFIS_TEMPFAIL;
+	}
+
+	queueid = smfi_getsymval(ctx, "{i}");
+	if (queueid == NULL)
+	{
+		log_error("milter_eom: smfi_getsymval failed");
+		return SMFIS_TEMPFAIL;
+	}
+
+	if (var_table_setv
+	    (mp->mp_table, VT_STRING, "milter_queueid", queueid,
 	     VF_KEEPNAME | VF_COPYDATA)) {
 		log_error("milter_eom: var_table_set failed");
 		return SMFIS_TEMPFAIL;

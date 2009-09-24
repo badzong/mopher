@@ -38,6 +38,9 @@ init(void)
 	acl_symbol_register(AS_NULL, "milter_recipient_list", MS_EOH | MS_BODY | MS_EOM,
 		NULL);
 
+	acl_symbol_register(AS_NULL, "milter_queueid", MS_EOH | MS_BODY | MS_EOM,
+		NULL);
+
 	acl_symbol_register(AS_NULL, "milter_message", MS_EOM, NULL);
 
 	acl_symbol_register(AS_NULL, "milter_message_size", MS_EOM, NULL);
