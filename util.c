@@ -105,10 +105,12 @@ util_addrtostr(struct sockaddr_storage *ss)
 	struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *) ss;
 	const char *p;
 
+	/*
 	if((ss = (struct sockaddr_storage *)
 		malloc(sizeof(struct sockaddr_storage))) == NULL) {
 		return NULL;
 	}
+	*/
 
 	sin = (struct sockaddr_in *) ss;
 	sin6 = (struct sockaddr_in6 *) ss;

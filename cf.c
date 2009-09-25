@@ -57,6 +57,7 @@ char		*cf_dbt_mod_path;
 char		*cf_tables_mod_path;
 VAR_INT_T	 cf_table_cleanup_interval;
 char		*cf_hostname;
+char		*cf_spamd_socket;
 
 /*
  * Symbol table
@@ -73,6 +74,7 @@ static cf_symbol_t cf_symbols[] = {
 	{ "tables_mod_path", &cf_tables_mod_path },
 	{ "table_cleanup_interval", &cf_table_cleanup_interval },
 	{ "hostname", &cf_hostname },
+	{ "spamd_socket", &cf_spamd_socket },
 	{ NULL, NULL }
 };
 

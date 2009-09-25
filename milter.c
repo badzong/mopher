@@ -17,11 +17,6 @@
 #include "util.h"
 #include "table.h"
 
-#define LOGNAME "milter"
-#define TIMELEN 16
-#define INTLEN 10
-#define BUCKETS 256
-
 #define MSN_CONNECT	"connect"
 #define MSN_HELO	"helo"
 #define MSN_ENVFROM	"envfrom"
@@ -124,13 +119,13 @@ milter_connect(SMFICTX * ctx, char *hostname, _SOCK_ADDR * hostaddr)
 	smfi_setpriv(ctx, mp);
 
 	ms = MS_CONNECT;
-	if (var_table_setv(mp->mp_table, VT_INT, "milter_stage", &ms,
+	if (var_table_set_new(mp->mp_table, VT_INT, "milter_stage", &ms,
 		VF_KEEPNAME | VF_COPYDATA)) {
 		log_error("milter_connect: var_table_set failed");
 		return SMFIS_TEMPFAIL;
 	}
 
-	if (var_table_setv
+	if (var_table_set_new
 	    (mp->mp_table, VT_STRING, "milter_stagename", MSN_CONNECT, VF_KEEP)) {
 		log_error("milter_connect: var_table_set failed");
 		return SMFIS_TEMPFAIL;
@@ -141,13 +136,13 @@ milter_connect(SMFICTX * ctx, char *hostname, _SOCK_ADDR * hostaddr)
 		return SMFIS_TEMPFAIL;
 	}
 
-	if (var_table_setv(mp->mp_table, VT_INT, "milter_received", &now,
+	if (var_table_set_new(mp->mp_table, VT_INT, "milter_received", &now,
 		VF_KEEPNAME | VF_COPYDATA)) {
 		log_error("milter_conect: var_table_set failed");
 		return SMFIS_TEMPFAIL;
 	}
 
-	if (var_table_setv
+	if (var_table_set_new
 	    (mp->mp_table, VT_STRING, "milter_hostname", hostname,
 	     VF_KEEPNAME | VF_COPYDATA)) {
 		log_error("milter_conect: var_table_set failed");
@@ -160,13 +155,13 @@ milter_connect(SMFICTX * ctx, char *hostname, _SOCK_ADDR * hostaddr)
 		return SMFIS_TEMPFAIL;
 	}
 
-	if (var_table_setv(mp->mp_table, VT_ADDR, "milter_hostaddr", ssclean,
+	if (var_table_set_new(mp->mp_table, VT_ADDR, "milter_hostaddr", ssclean,
 		VF_KEEPNAME)) {
 		log_error("milter_conect: var_table_set failed");
 		return SMFIS_TEMPFAIL;
 	}
 
-	if (var_table_setv(mp->mp_table, VT_STRING, "milter_addrstr",
+	if (var_table_set_new(mp->mp_table, VT_STRING, "milter_addrstr",
 		util_addrtostr(ssclean), VF_KEEPNAME)) {
 		log_error("milter_conect: var_table_set failed");
 		return SMFIS_TEMPFAIL;
@@ -187,19 +182,19 @@ milter_helo(SMFICTX * ctx, char *helostr)
 	mp = ((milter_priv_t *) smfi_getpriv(ctx));
 
 	ms = MS_HELO;
-	if (var_table_setv(mp->mp_table, VT_INT, "milter_stage", &ms,
+	if (var_table_set_new(mp->mp_table, VT_INT, "milter_stage", &ms,
 		VF_KEEPNAME | VF_COPYDATA)) {
 		log_error("milter_connect: var_table_set failed");
 		return SMFIS_TEMPFAIL;
 	}
 
-	if (var_table_setv(mp->mp_table, VT_STRING, "milter_stagename",
+	if (var_table_set_new(mp->mp_table, VT_STRING, "milter_stagename",
 	    MSN_HELO, VF_KEEP)) {
 		log_error("milter_helo: var_table_set failed");
 		return SMFIS_TEMPFAIL;
 	}
 
-	if (var_table_setv(mp->mp_table, VT_STRING, "milter_helo", helostr, 
+	if (var_table_set_new(mp->mp_table, VT_STRING, "milter_helo", helostr, 
 		VF_KEEPNAME | VF_COPYDATA)) {
 		log_error("milter_helo: var_table_set failed");
 		return SMFIS_TEMPFAIL;
@@ -220,14 +215,14 @@ milter_envfrom(SMFICTX * ctx, char **argv)
 	mp = ((milter_priv_t *) smfi_getpriv(ctx));
 
 	ms = MS_ENVFROM;
-	if (var_table_setv(mp->mp_table, VT_INT, "milter_stage", &ms,
+	if (var_table_set_new(mp->mp_table, VT_INT, "milter_stage", &ms,
 		VF_KEEPNAME | VF_COPYDATA)) {
 		log_error("milter_connect: var_table_set failed");
 		return SMFIS_TEMPFAIL;
 	}
 
 
-	if (var_table_setv
+	if (var_table_set_new
 	    (mp->mp_table, VT_STRING, "milter_stagename", MSN_ENVFROM, 
 	     VF_KEEP)) {
 		log_error("milter_envfrom: var_table_set failed");
@@ -241,7 +236,7 @@ milter_envfrom(SMFICTX * ctx, char **argv)
 
 	log_debug("milter_envfrom: envelope from: %s", envfrom);
 
-	if (var_table_setv(mp->mp_table, VT_STRING, "milter_envfrom", envfrom,
+	if (var_table_set_new(mp->mp_table, VT_STRING, "milter_envfrom", envfrom,
 		VF_KEEPNAME)) {
 		log_error("milter_envfrom: var_table_set failed");
 		return SMFIS_TEMPFAIL;
@@ -260,13 +255,13 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 	mp = ((milter_priv_t *) smfi_getpriv(ctx));
 
 	ms = MS_ENVRCPT;
-	if (var_table_setv(mp->mp_table, VT_INT, "milter_stage", &ms,
+	if (var_table_set_new(mp->mp_table, VT_INT, "milter_stage", &ms,
 		VF_KEEPNAME | VF_COPYDATA)) {
 		log_error("milter_connect: var_table_set failed");
 		return SMFIS_TEMPFAIL;
 	}
 
-	if (var_table_setv
+	if (var_table_set_new
 	    (mp->mp_table, VT_STRING, "milter_stagename", MSN_ENVRCPT,
 	    VF_KEEP)) {
 		log_error("milter_envrcpt: var_table_set failed");
@@ -278,7 +273,7 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 		return SMFIS_TEMPFAIL;
 	}
 
-	if (var_table_setv(mp->mp_table, VT_STRING, "milter_envrcpt", envrcpt,
+	if (var_table_set_new(mp->mp_table, VT_STRING, "milter_envrcpt", envrcpt,
 		VF_KEEPNAME)) {
 		log_error("milter_envrcpt: var_table_set failed");
 		return SMFIS_TEMPFAIL;
@@ -308,14 +303,14 @@ milter_header(SMFICTX * ctx, char *headerf, char *headerv)
 	mp = ((milter_priv_t *) smfi_getpriv(ctx));
 
 	ms = MS_HEADER;
-	if (var_table_setv(mp->mp_table, VT_INT, "milter_stage", &ms,
+	if (var_table_set_new(mp->mp_table, VT_INT, "milter_stage", &ms,
 		VF_KEEPNAME | VF_COPYDATA)) {
 		log_error("milter_connect: var_table_set failed");
 		return SMFIS_TEMPFAIL;
 	}
 
 
-	if (var_table_setv
+	if (var_table_set_new
 	    (mp->mp_table, VT_STRING, "milter_stagename", MSN_HEADER, VF_KEEP)) {
 		log_error("milter_header: var_table_set failed");
 		return SMFIS_TEMPFAIL;
@@ -355,20 +350,20 @@ milter_eoh(SMFICTX * ctx)
 	mp = ((milter_priv_t *) smfi_getpriv(ctx));
 
 	ms = MS_EOH;
-	if (var_table_setv(mp->mp_table, VT_INT, "milter_stage", &ms,
+	if (var_table_set_new(mp->mp_table, VT_INT, "milter_stage", &ms,
 		VF_KEEPNAME | VF_COPYDATA)) {
 		log_error("milter_connect: var_table_set failed");
 		return SMFIS_TEMPFAIL;
 	}
 
 
-	if (var_table_setv(mp->mp_table, VT_STRING, "milter_stagename",
+	if (var_table_set_new(mp->mp_table, VT_STRING, "milter_stagename",
 	    MSN_EOH, VF_KEEP)) {
 		log_error("milter_eoh: var_table_set failed");
 		return SMFIS_TEMPFAIL;
 	}
 
-	if (var_table_setv
+	if (var_table_set_new
 	    (mp->mp_table, VT_INT, "milter_recipients", &mp->mp_recipients,
 	     VF_KEEPNAME | VF_COPYDATA)) {
 		log_error("milter_eom: var_table_set failed");
@@ -382,7 +377,7 @@ milter_eoh(SMFICTX * ctx)
 		return SMFIS_TEMPFAIL;
 	}
 
-	if (var_table_setv
+	if (var_table_set_new
 	    (mp->mp_table, VT_STRING, "milter_queueid", queueid,
 	     VF_KEEPNAME | VF_COPYDATA)) {
 		log_error("milter_eom: var_table_set failed");
@@ -417,14 +412,14 @@ milter_body(SMFICTX * ctx, unsigned char *body, size_t len)
 	mp = ((milter_priv_t *) smfi_getpriv(ctx));
 
 	ms = MS_BODY;
-	if (var_table_setv(mp->mp_table, VT_INT, "milter_stage", &ms,
+	if (var_table_set_new(mp->mp_table, VT_INT, "milter_stage", &ms,
 		VF_KEEPNAME | VF_COPYDATA)) {
 		log_error("milter_connect: var_table_set failed");
 		return SMFIS_TEMPFAIL;
 	}
 
 
-	if (var_table_setv(mp->mp_table, VT_STRING, "milter_stagename",
+	if (var_table_set_new(mp->mp_table, VT_STRING, "milter_stagename",
 	    MSN_BODY, VF_KEEP)) {
 		log_error("milter_body: var_table_set failed");
 		return SMFIS_TEMPFAIL;
@@ -454,26 +449,26 @@ milter_eom(SMFICTX * ctx)
 	mp = ((milter_priv_t *) smfi_getpriv(ctx));
 
 	ms = MS_EOM;
-	if (var_table_setv(mp->mp_table, VT_INT, "milter_stage", &ms,
+	if (var_table_set_new(mp->mp_table, VT_INT, "milter_stage", &ms,
 		VF_KEEPNAME | VF_COPYDATA)) {
 		log_error("milter_connect: var_table_set failed");
 		return SMFIS_TEMPFAIL;
 	}
 
 
-	if (var_table_setv(mp->mp_table, VT_STRING, "milter_stagename",
+	if (var_table_set_new(mp->mp_table, VT_STRING, "milter_stagename",
 	    MSN_EOM, VF_KEEP)) {
 		log_error("milter_eom: var_table_set failed");
 		return SMFIS_TEMPFAIL;
 	}
 
-	if (var_table_setv(mp->mp_table, VT_INT, "milter_message_size",
+	if (var_table_set_new(mp->mp_table, VT_INT, "milter_message_size",
 		&mp->mp_size, VF_KEEPNAME | VF_COPYDATA)) {
 		log_error("milter_eom: var_table_set failed");
 		return SMFIS_TEMPFAIL;
 	}
 
-	if (var_table_setv(mp->mp_table, VT_INT, "milter_message",
+	if (var_table_set_new(mp->mp_table, VT_INT, "milter_message",
 		&mp->mp_message, VF_KEEP)) {
 		log_error("milter_eom: var_table_set failed");
 		return SMFIS_TEMPFAIL;

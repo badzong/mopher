@@ -710,7 +710,8 @@ var_table_set(var_t *table, var_t *v)
 
 
 int
-var_table_setv(var_t *table, var_type_t type, char *name, void *data, int flags)
+var_table_set_new(var_t *table, var_type_t type, char *name, void *data,
+	int flags)
 {
 	var_t *v;
 
@@ -729,6 +730,32 @@ var_table_setv(var_t *table, var_type_t type, char *name, void *data, int flags)
 
 
 int
+var_table_setv(var_t *table, ...)
+{
+	va_list ap;
+	var_type_t type;
+	char *name;
+	void *data;
+	int flags;
+
+	va_start(ap, table);
+
+	while ((type = va_arg(ap, var_type_t))) {
+		name = va_arg(ap, char *);
+		data = va_arg(ap, void *);
+		flags = va_arg(ap, int);
+
+		if (var_table_set_new(table, type, name, data, flags)) {
+			log_warning("var_table_setv: var_table_set_new failed");
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+
+int
 var_list_append(var_t *list, var_t *item)
 {
 	ll_t *ll = list->v_data;
@@ -743,7 +770,24 @@ var_list_append(var_t *list, var_t *item)
 
 
 int
-var_table_list_insert(var_t *table, var_type_t type, char *name, void *data, int flags)
+var_list_append_new(var_t *list, var_type_t type, char *name, void *data,
+	int flags)
+{
+	var_t *v;
+
+	v = var_create(type, name, data, flags);
+	if (v == NULL) {
+		log_warning("var_list_append_new: var_create failed");
+		return -1;
+	}
+
+	return var_list_append(list, v);
+}
+
+
+int
+var_table_list_insert(var_t *table, var_type_t type, char *name, void *data,
+	int flags)
 {
 	var_t *list;
 	var_t *entry = NULL;

@@ -3,9 +3,9 @@
 #include <time.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
-#include "lib.h"
-#include "milter.h"
+#include "mopher.h"
 
 #define BUFLEN 1024
 
@@ -33,7 +33,7 @@ spamd_header(var_t *attrs, char *header, int len)
 	char *addrstr;
 	char *helo;
 	char *envfrom;
-	VAR_INT_T *recipients;
+	VAR_INT_T recipients;
 	char *envrcpt;
 	char *queueid;
 	time_t t;
@@ -47,7 +47,7 @@ spamd_header(var_t *attrs, char *header, int len)
 		"milter_addrstr", &addrstr, NULL));
 	{
 		log_error("spamd_header: var_table_dereference failed");
-		goto error;
+		return -1;
 	}
 
 	if (gmtime_r(&t, &tm) == NULL) {
@@ -62,16 +62,16 @@ spamd_header(var_t *attrs, char *header, int len)
 		timestamp[0] = '\0';
 	}
 
-	if(mp->mp_recipients == 1) {
+	if(recipients == 1) {
 		snprintf(header, len, "Received: from %s (%s [%s])\r\n"
 			"\tby %s (envelope-sender <%s>) (%s) with SMTP id %s\r"
-			"\n\tfor <%s>; %s\r\n", helo, hostname, address,
+			"\n\tfor <%s>; %s\r\n", helo, hostname, addrstr,
 			cf_hostname, envfrom, BINNAME, queueid, envrcpt,
 			timestamp);
 	} else {
 		snprintf(header, len, "Received: from %s (%s [%s])\r\n"
 			"\tby %s (envelope-sender <%s>) (%s) with SMTP id %s;"
-			"\r\n\t%s\r\n", helo, hostname, address, cf_hostname,
+			"\r\n\t%s\r\n", helo, hostname, addrstr, cf_hostname,
 			envfrom, BINNAME, queueid, timestamp);
 	}
 
@@ -82,65 +82,68 @@ spamd_header(var_t *attrs, char *header, int len)
 int
 spamd_query(var_t *attrs)
 {
-	int sock;
+	int sock = 0;
+	var_t *symbols = NULL;
 	int n;
 	char header[BUFLEN];
 	char buffer[BUFLEN];
 	char *p, *q;
 	VAR_INT_T size;
+	char *message;
+	VAR_INT_T spam;
+	VAR_FLOAT_T score;
 
-	if (var_table_dereference(attrs, "milter_size", &size, NULL));
-	{
+	if (var_table_dereference(attrs, "milter_size", &size,
+		"milter_message", &message, NULL)) {
 		log_error("spamd_header: var_table_dereference failed");
 		goto error;
 	}
 
-	if(spamd_header(mp, header, sizeof(header))) {
+	if (spamd_header(attrs, header, sizeof(header))) {
 		log_error("spamd_query: spamd_header failed");
-		return -1;
+		goto error;
 	}
 
 	snprintf(buffer, sizeof(buffer), "SYMBOLS SPAMC/1.2\r\n"
-		"Content-length: %d\r\n\r\n", size + strlen(header));
+		"Content-length: %ld\r\n\r\n", size + strlen(header));
 
-	/*
-	 * HERE!
-	 */
-	if((sock = socket_connect(config("spamd_socket"))) == -1) {
-		log_error("spamd_query: socket_connect failed");
-		return -1;
+	sock = sock_connect(cf_spamd_socket);
+	if (sock == -1) {
+		log_error("spamd_query: sock_connect failed");
+		goto error;
 	}
 	 
 	 /*
 	  * Write spamassassin request
 	  */
-	if(write(sock, buffer, strlen(buffer)) == -1) {
+	if (write(sock, buffer, strlen(buffer)) == -1) {
 		log_error("spamd_query: write");
-		return -1;
+		goto error;
 	}
 
 	/*
 	 * Write header
 	 */
-	if(write(sock, header, strlen(header)) == -1) {
+	if (write(sock, header, strlen(header)) == -1) {
 		log_error("spamd_query: write");
-		return -1;
+		goto error;
 	}
 
 	/*
 	 * Write message
 	 */
-	if(write(sock, mp->mp_message, mp->mp_size) == -1) {
+	if (write(sock, message, size) == -1) {
 		log_error("spamd_query: write");
-		return -1;
+		goto error;
 	}
 
 	/*
 	 * Read response
 	 */
-	if((n = read(sock, buffer, sizeof buffer - 1)) == -1) {
+	n = read(sock, buffer, sizeof buffer - 1);
+	if (n == -1) {
 		log_error("spamd_query: read");
-		return -1;
+		goto error;
 	}
 	buffer[n] = 0;
 
@@ -148,9 +151,9 @@ spamd_query(var_t *attrs)
 	 * Parse response
 	 */
 	p = buffer;
-	if(strncmp(p, SPAMD_SPAMD, SPAMD_SPAMDLEN)) {
+	if (strncmp(p, SPAMD_SPAMD, SPAMD_SPAMDLEN)) {
 		log_error("spamd_query: protocol error");
-		return -1;
+		goto error;
 	}
 
 	p += SPAMD_SPAMDLEN;
@@ -159,9 +162,10 @@ spamd_query(var_t *attrs)
 	}
 
 	p += SPAMD_VERSIONLEN;
-	if((p = strstr(p, SPAMD_EX_OK)) == NULL) {
+	p = strstr(p, SPAMD_EX_OK);
+	if(p == NULL) {
 		log_error("spamd_query: spamd returned non EX_OK");
-		return -1;
+		goto error;
 	}
 
 	/*
@@ -169,10 +173,13 @@ spamd_query(var_t *attrs)
 	 */
 	p += SPAMD_EX_OKLEN;
 	if(strlen(p) <= 2) {  /* '\r\n' */
-		if((n = read(sock, buffer, sizeof buffer)) == -1) {
+
+		n = read(sock, buffer, sizeof(buffer));
+		if (n == -1) {
 			log_error("spamd_query: read");
-			return -1;
+			goto error;
 		}
+
 		buffer[n] = 0;
 		p = buffer;
 	}
@@ -185,54 +192,102 @@ spamd_query(var_t *attrs)
 	 */
 	if(strncmp(p, SPAMD_SPAM, SPAMD_SPAMLEN)) {
 		log_error("spamd_query: protocol error");
-		return -1;
+		goto error;
 	}
 
 	p += SPAMD_SPAMLEN;
 	if(!strncmp(p, SPAMD_TRUE, SPAMD_TRUELEN)) {
-		map_set(&mp->mp_info, "spamd_status", "spam");
+		spam = 1;
 		p += SPAMD_TRUELEN;
 	}
 	else if(!strncmp(p, SPAMD_FALSE, SPAMD_FALSELEN)) {
-		map_set(&mp->mp_info, "spamd_status", "ham");
+		spam = 0;
 		p += SPAMD_FALSELEN;
 	}
 	else
 	{
 		log_error("spamd_query: protocol error");
-		return -1;
+		goto error;
 	}
 
 	/*
 	 * Cut score.
 	 */
-	if((q = strchr(p, ' ')) == NULL) {
+	q = strchr(p, ' ');
+	if (q == NULL) {
 		log_error("spamd_query: protocol error");
-		return -1;
+		goto error;
 	}
 	*q++ = 0;
 
-	map_set(&mp->mp_info, "spamd_score", p);
+	score = (VAR_FLOAT_T) strtod(p, NULL);
 
 	/*
 	 * Set SYMBOLS
 	 */
-	if((p = strchr(q, '\r')) == NULL) {
+	p = strchr(q, '\r');
+	if (p == NULL) {
 		log_error("spamd_query: protocol error");
-		return -1;
+		goto error;
 	}
 	p += 4; /* \r\n\r\n */
-	if((q = strchr(p, '\r')) == NULL) {
+
+	q = strchr(p, '\r');
+	if (q == NULL) {
 		log_error("spamd_query: protocol error");
-		return -1;
+		goto error;
 	}
 	*q = 0;
 
-	map_set_str(&mp->mp_info, "spamd_symbols", p, ',');
+	symbols = var_create(VT_LIST, "spamd_symbols", NULL,
+		VF_KEEPNAME | VF_CREATE);
+	if (symbols == NULL) {
+		log_error("spamd_query: var_create failed");
+		goto error;
+	}
+
+	q = strchr(p, '\r');
+	*q = 0;
+
+	printf("SYMBOLS: %s\n", q);
+
+	while ((q = strchr(p, ','))) {
+		*q = 0;
+
+		if (var_list_append_new(symbols, VT_STRING, NULL, p,
+			VF_COPYDATA) == -1) {
+			log_error("spamd_query: var_list_append failed");
+			goto error;
+		}
+
+		printf("SYM: %s\n", p);
+
+		p = q + 1;
+	}
+
+	if (var_table_setv(attrs, VT_INT, "spamd_spam", &spam,
+		VF_KEEPNAME | VF_COPYDATA, VT_FLOAT, "spamd_score", &score,
+		VF_KEEPNAME | VF_COPYDATA, VT_LIST, "spamd_symbols", symbols,
+		VF_KEEPNAME, VT_NULL)) {
+		log_error("spamd_query: var_table_setv failed");
+		goto error;
+	}
 
 	close(sock);
 
 	return 0;
+
+error:
+
+	if (sock > 0) {
+		close(sock);
+	}
+
+	if (symbols) {
+		var_delete(symbols);
+	}
+
+	return -1;
 }
 
 
@@ -240,14 +295,15 @@ int
 init(void)
 {
 	char **p;
-	int r;
 
 	for (p = spamd_symbols; *p; ++p) {
-		if (!acl_symbol_register(AS_CALLBACK, *p, spamd)) {
+		if (!acl_symbol_register(AS_CALLBACK, *p, MS_EOM, spamd_query)) {
 			continue;
 		}
 
 		log_error("spamd: init: acl_symbol_register failed");
 		return -1;
 	}
+
+	return 0;
 }

@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-Wall -g -shared -nostartfiles -fPIC -I../../include
-OBJECTS=milter.so string.so spf.so
+OBJECTS=milter.so string.so spf.so spamd.so
 
 all: $(OBJECTS)
 

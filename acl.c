@@ -164,8 +164,8 @@ acl_static_register(var_type_t type, char *name, void *data, int flags)
 int
 acl_symbol_add(var_t * attrs, var_type_t type, char *name, void *data, int flags)
 {
-	if (var_table_setv(attrs, type, name, data, flags)) {
-		log_warning("acl_symbol_add: var_table_set failed");
+	if (var_table_set_new(attrs, type, name, data, flags)) {
+		log_warning("acl_symbol_add: var_table_set_new failed");
 		return -1;
 	}
 

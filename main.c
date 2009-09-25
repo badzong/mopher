@@ -3,16 +3,7 @@
 #include <unistd.h>
 #include <libgen.h>
 
-#include "log.h"
-#include "acl.h"
-#include "modules.h"
-#include "milter.h"
-#include "cf.h"
-#include "dbt.h"
-#include "table.h"
-#include "greylist.h"
-
-#define BINNAME "mopher"
+#include "mopher.h"
 
 int
 main(int argc, char **argv)
