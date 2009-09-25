@@ -42,7 +42,7 @@ typedef struct var_compact {
  * Prototypes
  */
 
-void var_clear(var_t * v);
+void var_clear(var_t *v);
 void var_delete(var_t *v);
 int var_init(var_t *v, var_type_t type, char *name, void *data, int flags);
 var_t * var_create(var_type_t type, char *name, void *data, int flags);
@@ -60,7 +60,7 @@ int var_table_set_new(var_t *table, var_type_t type, char *name, void *data,int 
 int var_table_setv(var_t *table, ...);
 int var_list_append(var_t *list, var_t *item);
 int var_list_append_new(var_t *list, var_type_t type, char *name, void *data,int flags);
-int var_table_list_insert(var_t *table, var_type_t type, char *name, void *data,int flags);
+int var_table_list_append(var_t *table, var_type_t type, char *name, void *data,int flags);
 var_t * var_schema_create(char *name, ...);
 var_t * var_list_schema(var_t *schema, ...);
 int var_list_dereference(var_t *list, ...);

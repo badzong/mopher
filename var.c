@@ -33,7 +33,6 @@ var_match(var_t * v1, var_t * v2)
 static void
 var_data_clear(var_t * v)
 {
-
 	switch (v->v_type) {
 
 	case VT_LIST:
@@ -54,10 +53,15 @@ var_data_clear(var_t * v)
 }
 
 void
-var_clear(var_t * v)
+var_clear(var_t *v)
 {
-	//printf("%p\n", v);
-	//printf("NAME %s @ %p\n", v->v_name, v->v_name);
+	/*
+	printf("DELETE %d@%p ", v->v_type, v);
+	if (v) {
+		printf("NAME=%s @ %p\n", v->v_name, v->v_name);
+	}
+	*/
+
 	if (v->v_name && !(v->v_flags & VF_KEEPNAME)) {
 		free(v->v_name);
 	}
@@ -786,11 +790,10 @@ var_list_append_new(var_t *list, var_type_t type, char *name, void *data,
 
 
 int
-var_table_list_insert(var_t *table, var_type_t type, char *name, void *data,
+var_table_list_append(var_t *table, var_type_t type, char *name, void *data,
 	int flags)
 {
 	var_t *list;
-	var_t *entry = NULL;
 	ht_t *ht = table->v_data;
 
 	if ((list = var_table_lookup(table, name)) == NULL) {
@@ -798,35 +801,22 @@ var_table_list_insert(var_t *table, var_type_t type, char *name, void *data,
 		    VF_COPYNAME | VF_CREATE)) == NULL)
 		{
 			log_warning("var_table_list_append: var_create failed");
-			goto error;
+			return -1;
 		}
 
 		if (ht_insert(ht, list)) {
 			log_warning("var_table_list_append: ht_insert failed");
 			var_delete(list);
-			goto error;
+			return -1;
 		}
 	}
 
-	if ((entry = var_create(type, name, data, flags)) == NULL) {
-		log_warning("var_table_list_append: var_create failed");
-		goto error;
-	}
-
-	if (LL_INSERT(list->v_data, entry) == -1) {
-		log_warning("var_table_list_append: LL_INSERT failed");
-		goto error;
+	if (var_list_append_new(list, type, name, data, flags)) {
+		log_warning("var_table_list_append: var_list_append_new failed");
+		return -1;
 	}
 
 	return 0;
-
-error:
-
-	if (entry) {
-		var_delete(entry);
-	}
-
-	return -1;
 }
 
 

@@ -122,13 +122,13 @@ spf(var_t *attrs)
 
 
 result:
-	spfstr = SPF_strresult(SPF_response_result(res));
+	spfstr = (char *) SPF_strresult(SPF_response_result(res));
 	if (spfstr == NULL) {
 		log_error("spf: SPF_strresult failed");
 		goto error;
 	}
 
-	log_debug("spf: helo: %s envfrom: %s spf: %s", helo,
+	log_debug("spf: helo:%s envfrom:%s spf:%s", helo,
 		envfrom, spfstr);
 
 	if(acl_symbol_add(attrs, VT_STRING, "spf", spfstr,

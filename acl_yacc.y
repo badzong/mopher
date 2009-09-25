@@ -13,9 +13,9 @@ int acl_error(char *);
 
 %}
 
-%token DEFAULT JUMP PASS BLOCK DELAY CONTINUE DISCARD VISA VALID ANY COMMA OB
-%token CB AND OR NOT INTEGER FLOAT IP4 IP6 MULTIPLIER STRING ID EQ NE LT GT LE
-%token GE
+%token DEFAULT JUMP PASS BLOCK DELAY CONTINUE DISCARD VISA VALID LOG FACILITY
+%token LEVEL ANY COMMA OB CB AND OR NOT INTEGER FLOAT IP4 IP6 MULTIPLIER STRING
+%token ID EQ NE LT GT LE GE
 
 %union {
 	char			 c;
@@ -31,6 +31,7 @@ int acl_error(char *);
 	acl_action_type_t	 at;
 	acl_action_t		*ac;
 	acl_delay_t		*ad;
+	acl_log_t		*al;
 	struct sockaddr_storage *ss;
 }
 
@@ -45,8 +46,9 @@ int acl_error(char *);
 %type <va>	value symbol function
 %type <co>	condition
 %type <at>	PASS BLOCK DISCARD CONTINUE DELAY JUMP terminal
-%type <ad>	delay
 %type <ac>	action
+%type <ad>	delay
+%type <al>	log
 %type <ss>	IP6 IP4 addr
 
 %%
@@ -65,7 +67,8 @@ setting		: ID DEFAULT action
 		  { 
 			acl_table_t *at;
 
-			if ((at = acl_table_lookup($1))) {
+			at = acl_table_lookup($1);
+			if (at) {
 				at->at_default = $3;
 				free($1);
 			}
@@ -83,9 +86,10 @@ rule		: ID conditions action
 		  {
 			acl_table_t *at;
 
-			if ((at = acl_table_lookup($1)) == NULL) {
-				if ((at = acl_table_register($1, NULL)) ==
-				   NULL) {
+			at = acl_table_lookup($1);
+			if (at == NULL) {
+				at = acl_table_register($1, NULL);
+				if (at == NULL) {
 					log_die(EX_CONFIG, "acl_yacc.y: "
 					    "acl_table_register failed");
 				}
@@ -114,7 +118,8 @@ conditions	: conditions gate condition
 
 		| condition
 		  {
-			if (($$ = ll_create()) == NULL) {
+			$$ = ll_create();
+			if ($$ == NULL) {
 				log_die(EX_CONFIG, "acl_yacc.y: ll_create "
 				    "failed");
 			}
@@ -139,8 +144,9 @@ condition	: NOT condition
 
 		| value comparator value
 		  {
-			if (($$ = acl_condition_create(AN_NULL, AG_NULL, $2,
-			    $1, $3)) == NULL) {
+			$$ = acl_condition_create(AN_NULL, AG_NULL, $2, $1,
+				$3);
+			if ($$ == NULL) {
 				log_die(EX_CONFIG, "acl_yacc.y: "
 				    "acl_condition_create failed");
 			}
@@ -148,8 +154,9 @@ condition	: NOT condition
 
 		| value
 		  {
-			if (($$ = acl_condition_create(AN_NULL, AG_NULL,
-			    AC_NULL, $1, NULL)) == NULL) {
+			$$ = acl_condition_create(AN_NULL, AG_NULL, AC_NULL,
+				$1, NULL);
+			if ($$ == NULL) {
 				log_die(EX_CONFIG, "acl_yacc.y: "
 				    "acl_condition_create failed");
 			}
@@ -168,7 +175,8 @@ comparator	: EQ
 
 value		: constant
 		  {
-			if (($$ = acl_value_create(AV_CONST, $1)) == NULL) {
+			$$ = acl_value_create(AV_CONST, $1);
+			if ($$ == NULL) {
 				log_die(EX_CONFIG, "acl_yacc.y: "
 				    "acl_value_create_constant failed");
 			}
@@ -181,7 +189,8 @@ value		: constant
 
 symbol	: ID
 		  {
-			if (($$ = acl_value_create_symbol($1)) == NULL) {
+			$$ = acl_value_create_symbol($1);
+			if ($$ == NULL) {
 				log_die(EX_CONFIG, "unknown symbol \"%s\" "
 				    "on line: %d", $1, acl_line);
 			}
@@ -193,7 +202,8 @@ symbol	: ID
 
 function	: ID OB parameters CB
 		  {
-			if (($$ = acl_value_create_function($1, $3)) == NULL) {
+			$$ = acl_value_create_function($1, $3);
+			if ($$ == NULL) {
 				log_die(EX_CONFIG, "unknown function \"%s\" "
 				    "on line: %d", $1, acl_line);
 			}
@@ -213,7 +223,8 @@ parameters	: parameters COMMA value
 
 		| value
 		  {
-			if (($$ = ll_create()) == NULL) {
+			$$ = ll_create();
+			if ($$ == NULL) {
 				log_die(EX_CONFIG, "acl_yacc.y: ll_create "
 				    "failed");
 			}
@@ -228,8 +239,8 @@ parameters	: parameters COMMA value
 
 constant	: STRING
 		  {
-			if (($$ = var_create(VT_STRING, NULL, $1, VF_REF)) ==
-			    NULL) {
+			$$ = var_create(VT_STRING, NULL, $1, VF_REF);
+			if ($$ == NULL) {
 				log_die(EX_CONFIG, "acl_yacc.y: "
 				    "var_create_reference failed"); 
 			}
@@ -237,8 +248,8 @@ constant	: STRING
 
 		| FLOAT
 		  {
-			if (($$ = var_create(VT_FLOAT, NULL, &$1, VF_COPYDATA))
-				== NULL) {
+			$$ = var_create(VT_FLOAT, NULL, &$1, VF_COPYDATA);
+			if ($$ == NULL) {
 				log_die(EX_CONFIG, "acl_yacc.y: "
 				    "var_create_copy failed"); 
 			}
@@ -246,8 +257,8 @@ constant	: STRING
 
 		| integer
 		  {
-			if (($$ = var_create(VT_INT, NULL, &$1, VF_COPYDATA))
-				== NULL) {
+			$$ = var_create(VT_INT, NULL, &$1, VF_COPYDATA);
+			if ($$ == NULL) {
 				log_die(EX_CONFIG, "acl_yacc.y: "
 				    "var_create_copy failed"); 
 			}
@@ -255,8 +266,8 @@ constant	: STRING
 
 		| addr
 		  {
-			if (($$ = var_create(VT_ADDR, NULL, $1, VF_REF)) ==
-			    NULL) {
+			$$ = var_create(VT_ADDR, NULL, $1, VF_REF);
+			if ($$ == NULL) {
 				log_die(EX_CONFIG, "acl_yacc.y: "
 				    "var_create_reference failed"); 
 			}
@@ -301,8 +312,17 @@ addr		: IP4
 
 action		: delay
 		  {
-			if (($$ = acl_action_create(AA_DELAY, NULL, $1)) ==
-			    NULL) {
+			$$ = acl_action_create(AA_DELAY, NULL, (void *) $1);
+			if ($$ == NULL) {
+				log_die(EX_CONFIG, "acl_yacc.y: "
+				    "acl_action_create failed");
+			}
+		  }
+
+		| log
+		  {
+			$$ = acl_action_create(AA_LOG, NULL, (void *) $1);
+			if ($$ == NULL) {
 				log_die(EX_CONFIG, "acl_yacc.y: "
 				    "acl_action_create failed");
 			}
@@ -310,8 +330,8 @@ action		: delay
 
 		| jump
 		  {
-			if (($$ = acl_action_create(AA_JUMP, $1, NULL)) ==
-			    NULL) {
+			$$ = acl_action_create(AA_JUMP, $1, NULL);
+			if ($$ == NULL) {
 				log_die(EX_CONFIG, "acl_yacc.y: "
 				    "acl_action_create failed");
 			}
@@ -319,12 +339,13 @@ action		: delay
 
 		| terminal
 		  {
-			if (($$ = acl_action_create($1, NULL, NULL)) == NULL) {
+			$$ = acl_action_create($1, NULL, NULL);
+			if ($$ == NULL) {
 				log_die(EX_CONFIG, "acl_yacc.y: "
 				    "acl_action_create failed");
 			}
 		  }
-			;
+		;
 
 terminal	: PASS
 		| BLOCK
@@ -356,11 +377,30 @@ delay		: delay VALID period
 
 		| DELAY
 		  {
-			if (($$ = acl_delay_create(cf_greylist_default_delay,
+			$$ = acl_delay_create(cf_greylist_default_delay,
 			    cf_greylist_default_valid,
-			    cf_greylist_default_visa)) == NULL) {
+			    cf_greylist_default_visa);
+
+			if ($$ == NULL) {
 				log_die(EX_CONFIG, "acl_yacc.y: "
 				    "acl_delay_create failed");
+			}
+		  }
+		;
+
+
+log		: log LEVEL INTEGER
+		  {
+			$$->al_level = $3;
+		  }
+
+		| LOG STRING
+		  {
+			$$ = acl_log_create($2);
+
+			if ($$ == NULL) {
+				log_die(EX_CONFIG, "acl_yacc.y: acl_log_create"
+					" failed");
 			}
 		  }
 		;

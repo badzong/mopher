@@ -23,7 +23,7 @@
 #define SPAMD_FALSELEN 8
 
 
-static char *spamd_symbols[] = { "spamd_status", "spamd_score",
+static char *spamd_symbols[] = { "spamd_spam", "spamd_score",
 	"spamd_symbols", NULL};
 
 static int
@@ -39,12 +39,14 @@ spamd_header(var_t *attrs, char *header, int len)
 	time_t t;
 	char timestamp[BUFLEN];
 	struct tm tm;
+	int r;
 
-	if (var_table_dereference(attrs, "milter_received", &t,
+	r = var_table_dereference(attrs, "milter_received", &t,
 		"milter_hostname", &hostname, "milter_helo", &helo,
 		"milter_envfrom", &envfrom, "milter_envrcpt", &envrcpt,
 		"milter_recipients", &recipients, "milter_queueid", &queueid,
-		"milter_addrstr", &addrstr, NULL));
+		"milter_addrstr", &addrstr, NULL);
+	if (r)
 	{
 		log_error("spamd_header: var_table_dereference failed");
 		return -1;
@@ -95,7 +97,7 @@ spamd_query(var_t *attrs)
 
 	if (var_table_dereference(attrs, "milter_size", &size,
 		"milter_message", &message, NULL)) {
-		log_error("spamd_header: var_table_dereference failed");
+		log_error("spamd_query: var_table_dereference failed");
 		goto error;
 	}
 
@@ -239,6 +241,9 @@ spamd_query(var_t *attrs)
 	}
 	*q = 0;
 
+	log_debug("spamd_query: spam:%d score:%.1f symbols:%s", spam, score,
+		p);
+
 	symbols = var_create(VT_LIST, "spamd_symbols", NULL,
 		VF_KEEPNAME | VF_CREATE);
 	if (symbols == NULL) {
@@ -246,13 +251,11 @@ spamd_query(var_t *attrs)
 		goto error;
 	}
 
-	q = strchr(p, '\r');
-	*q = 0;
-
-	printf("SYMBOLS: %s\n", q);
-
-	while ((q = strchr(p, ','))) {
-		*q = 0;
+	do {
+		q = strchr(p, ',');
+		if (q) {
+			*q = 0;
+		}
 
 		if (var_list_append_new(symbols, VT_STRING, NULL, p,
 			VF_COPYDATA) == -1) {
@@ -260,16 +263,17 @@ spamd_query(var_t *attrs)
 			goto error;
 		}
 
-		printf("SYM: %s\n", p);
-
 		p = q + 1;
-	}
+	} while (q);
 
 	if (var_table_setv(attrs, VT_INT, "spamd_spam", &spam,
 		VF_KEEPNAME | VF_COPYDATA, VT_FLOAT, "spamd_score", &score,
-		VF_KEEPNAME | VF_COPYDATA, VT_LIST, "spamd_symbols", symbols,
-		VF_KEEPNAME, VT_NULL)) {
+		VF_KEEPNAME | VF_COPYDATA, VT_NULL)) {
 		log_error("spamd_query: var_table_setv failed");
+		goto error;
+	}
+	if (var_table_set(attrs, symbols)) {
+		log_error("spamd_query: var_table_set failed");
 		goto error;
 	}
 

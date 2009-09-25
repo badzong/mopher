@@ -279,10 +279,10 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 		return SMFIS_TEMPFAIL;
 	}
 
-	if (var_table_list_insert
+	if (var_table_list_append
 	    (mp->mp_table, VT_STRING, "milter_recipient_list", envrcpt,
 	     VF_KEEP)) {
-		log_error("milter_envrcpt: var_table_list_insert failed");
+		log_error("milter_envrcpt: var_table_list_append failed");
 		return SMFIS_TEMPFAIL;
 	}
 

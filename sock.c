@@ -158,13 +158,10 @@ sock_inet_connect(char *host, char *port)
 	hints.ai_flags = AI_ADDRCONFIG;
 
 	if((e = getaddrinfo(host, port, &hints, &res))) {
-		free(host);
-		log_error("sock_inet_connect: getaddrinfo: %s",
-			gai_strerror(e));
+		log_error("sock_inet_connect: getaddrinfo %s:%s: %s",
+			host, port, gai_strerror(e));
 		return -1;
 	}
-
-	free(host);
 
 	for(;res != NULL; res = res->ai_next) {
 		fd = socket(res->ai_family, res->ai_socktype,
@@ -244,7 +241,7 @@ sock_connect(char *uri)
 	/*
 	 * TCP sockets
 	 */
-	if((host = strdup(uri)) == NULL) {
+	if((host = strdup(uri + 5)) == NULL) {
 		log_error("sock_connect: strdup");
 		return -1;
 	}

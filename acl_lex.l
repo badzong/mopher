@@ -9,6 +9,9 @@ pass		pass
 block		block
 discard		discard
 delay		delay
+log		log
+facility	facility
+level		level
 continue	continue
 visa		visa
 valid		valid
@@ -63,6 +66,9 @@ acl_error(const char *s)
 {jump}		return JUMP;
 {visa}		return VISA;
 {valid}		return VALID;
+{log}		return LOG;
+{facility}	return FACILITY;
+{level}		return LEVEL;
 {any}		return ANY;
 {not}		return NOT;
 {comma}		return COMMA;

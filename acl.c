@@ -379,16 +379,21 @@ acl_action_delete(acl_action_t * aa)
 		free(aa->aa_jump);
 	}
 
-	if (aa->aa_delay) {
-		acl_delay_delete(aa->aa_delay);
+	if (aa->aa_type == AA_DELAY && aa->aa_data) {
+		acl_delay_delete(aa->aa_data);
 	}
+
+	if (aa->aa_type == AA_LOG && aa->aa_data) {
+		acl_log_delete(aa->aa_data);
+	}
+
 	free(aa);
 
 	return;
 }
 
 acl_action_t *
-acl_action_create(acl_action_type_t type, char *jump, acl_delay_t * delay)
+acl_action_create(acl_action_type_t type, char *jump, void *data)
 {
 	acl_action_t *aa = NULL;
 
@@ -399,7 +404,7 @@ acl_action_create(acl_action_type_t type, char *jump, acl_delay_t * delay)
 
 	aa->aa_type = type;
 	aa->aa_jump = jump;
-	aa->aa_delay = delay;
+	aa->aa_data = data;
 
 	return aa;
 
@@ -425,7 +430,8 @@ acl_delay_create(int delay, int valid, int visa)
 {
 	acl_delay_t *ad;
 
-	if ((ad = (acl_delay_t *) malloc(sizeof(acl_delay_t))) == NULL) {
+	ad = (acl_delay_t *) malloc(sizeof(acl_delay_t));
+	if (ad == NULL) {
 		log_warning("acl_delay_create: malloc");
 		return NULL;
 	}
@@ -436,6 +442,38 @@ acl_delay_create(int delay, int valid, int visa)
 
 	return ad;
 }
+
+
+void
+acl_log_delete(acl_log_t *al)
+{
+	if (al->al_format) {
+		free(al->al_format);
+	}
+
+	free(al);
+
+	return;
+}
+
+
+acl_log_t *
+acl_log_create(char *format)
+{
+	acl_log_t *al;
+
+	al = (acl_log_t *) malloc(sizeof(acl_log_t));
+	if (al == NULL) {
+		log_warning("acl_delay_create: malloc");
+		return NULL;
+	}
+
+	al->al_format = format;
+	al->al_level = LOG_ERR;
+
+	return al;
+}
+
 
 static void
 acl_table_delete(acl_table_t * at)
@@ -886,6 +924,60 @@ acl_conditions_eval(ll_t * conditions, var_t *attrs)
 	return ax;
 }
 
+
+static void
+acl_log(var_t *attrs, acl_log_t *al)
+{
+	static const char *braces = "{}";
+	char *p, *q;
+	int i, len;
+	char buffer[BUFLEN];
+	var_t *v;
+
+	p = strdup(al->al_format);
+	if (p == NULL) {
+		log_error("acl_log: strdup");
+		return;
+	}
+
+	buffer[0] = 0;
+	for (i = 0;; ++i, p = q + 1) {
+		q = strchr(p, braces[i % 2]);
+
+		if (q == NULL) {
+			if (i % 2 == 0) {
+				strncat(buffer, p, sizeof(buffer));
+				break;
+			}
+
+			log_error("acl_log: unmatched \"{\" in format string");
+			return;
+		}
+
+		*q = 0;
+
+		if (i % 2 == 0) {
+			strncat(buffer, p, sizeof(buffer));
+			continue;
+		}
+
+		len = strlen(buffer);
+		v = var_table_lookup(attrs, p);
+		if (v == NULL) {
+			log_error("acl_log: symbol \"%s\" not available", p);
+			snprintf(buffer + len, sizeof(buffer) - len, "{%s}", p);
+			continue;
+		}
+
+		var_dump_data(v, buffer + len, sizeof(buffer) - len);
+	}
+
+	log_log(al->al_level, buffer);
+
+	return;
+}
+
+
 acl_action_type_t
 acl(char *table, var_t *attrs)
 {
@@ -920,23 +1012,27 @@ acl(char *table, var_t *attrs)
 			log_info("rule %d in table \"%s\" matched", i, table);
 			aa = ar->ar_action;
 
-			if (aa->aa_type != AA_DELAY) {
+			if (aa->aa_type == AA_DELAY) {
+				glr = greylist(attrs, aa->aa_data);
+
+				if(glr == GL_PASS) {
+					log_info("acl: greylisting passed");
+					aa = NULL;
+					continue;
+				}
+
+				log_info("acl: greylisting in action");
 				break;
 			}
 
-			glr = greylist(attrs, aa->aa_delay);
-
-			if(glr == GL_PASS) {
-				log_info("acl: greylisting passed");
+			if (aa->aa_type == AA_LOG) {
+				acl_log(attrs, aa->aa_data);
 				aa = NULL;
 				continue;
 			}
 
-			log_info("acl: greylisting in action");
 			break;
 		}
-
-		printf("r == %d\n", r);
 
 		log_error("acl: acl_conditions_eval failed");
 		return AA_ERROR;
@@ -949,6 +1045,27 @@ acl(char *table, var_t *attrs)
 	if (aa == NULL) {
 		log_error("acl: \"%s\" has no default action: continue", table);
 		return AA_CONTINUE;
+	}
+	else if (ar == NULL) {
+
+		/*
+		 * Default Action is delay or log
+		 */
+		if (aa->aa_type == AA_DELAY) {
+			glr = greylist(attrs, aa->aa_data);
+
+			if(glr == GL_PASS) {
+				log_info("acl: greylisting passed");
+				return AA_CONTINUE;
+			}
+
+			return AA_DELAY;
+		}
+
+		if (aa->aa_type == AA_LOG) {
+			acl_log(attrs, aa->aa_data);
+			return AA_CONTINUE;
+		}
 	}
 
 	switch (aa->aa_type) {
