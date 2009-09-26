@@ -740,7 +740,7 @@ acl_symbol_eval(acl_value_t * av, var_t *attrs)
 	}
 
 	callback = as->as_data;
-	if (callback(attrs)) {
+	if (callback(*ms, as->as_name, attrs)) {
 		log_error("acl_symbol_eval: callback for symbol \"%s\" failed",
 			as->as_name);
 		return NULL;

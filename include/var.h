@@ -21,7 +21,7 @@
 typedef struct sockaddr_storage var_sockaddr_t;
 
 typedef enum var_type { VT_NULL = 0, VT_INT, VT_FLOAT, VT_STRING, VT_ADDR,
-    VT_LIST, VT_TABLE } var_type_t;
+    VT_LIST, VT_TABLE, VT_POINTER } var_type_t;
 
 typedef struct var {
     var_type_t   v_type;

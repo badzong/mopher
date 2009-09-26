@@ -32,7 +32,7 @@ static char *spf_static_values[] = { "neutral", "pass", "fail", "softfail",
 	NULL };
 
 int
-spf(var_t *attrs)
+spf(milter_stage_t stage, char *name, var_t *attrs)
 {
 	SPF_request_t *req = NULL;
 	SPF_response_t *res = NULL;

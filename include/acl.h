@@ -30,8 +30,8 @@ typedef enum acl_symbol_type { AS_NULL = 0, AS_CALLBACK, AS_STATIC }
 /*
  * Function pointer types for functions and symbols
  */
-typedef var_t *(*acl_fcallback_t) (ll_t * args);
-typedef int (*acl_scallback_t) (var_t * attrs);
+typedef var_t *(*acl_fcallback_t) (ll_t *args);
+typedef int (*acl_scallback_t) (milter_stage_t stage, char *name, var_t *attrs);
 
 typedef struct acl_symbol {
 	char			*as_name;

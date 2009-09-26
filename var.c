@@ -459,6 +459,13 @@ var_true(const var_t * v)
 
 		return 0;
 
+	case VT_POINTER:
+		if(v->v_data) {
+			return 1;
+		}
+
+		return 0;
+
 	case VT_NULL:
 		return 0;	
 	}
@@ -565,6 +572,9 @@ var_dump_data(var_t * v, char *buffer, int size)
 	case VT_LIST:
 	case VT_TABLE:
 		len = var_dump_list_or_table(v, buffer, size);
+		break;
+
+	case VT_POINTER:
 		break;
 
 	default:

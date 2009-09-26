@@ -8,6 +8,8 @@ body default log "STAGE:{milter_stagename}" level 7
 eom default log "STAGE:{milter_stagename}" level 1
 
 connect milter_hostaddr = 127.0.0.1 continue
+connect milter_myhostname log "MYHOSTNAME: {milter_myhostname}"
+envrcpt milter_client_ptr log "CLIENT_PTR: {milter_client_ptr}"
 envrcpt spf = SPF_PASS pass
 envrcpt spf = SPF_NEUTRAL continue
 eom spamd_spam delay 10 valid 20 visa 60

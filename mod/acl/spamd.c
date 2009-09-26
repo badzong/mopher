@@ -82,7 +82,7 @@ spamd_header(var_t *attrs, char *header, int len)
 
 
 int
-spamd_query(var_t *attrs)
+spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 {
 	int sock = 0;
 	var_t *symbols = NULL;
