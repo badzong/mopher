@@ -929,19 +929,19 @@ static void
 acl_log(var_t *attrs, acl_log_t *al)
 {
 	static const char *braces = "{}";
-	char *p, *q;
+	char *p, *q, *format = NULL;
 	int i, len;
 	char buffer[BUFLEN];
 	var_t *v;
 
-	p = strdup(al->al_format);
-	if (p == NULL) {
+	format = strdup(al->al_format);
+	if (format == NULL) {
 		log_error("acl_log: strdup");
-		return;
+		goto error;
 	}
 
 	buffer[0] = 0;
-	for (i = 0;; ++i, p = q + 1) {
+	for (i = 0, p = format;; ++i, p = q + 1) {
 		q = strchr(p, braces[i % 2]);
 
 		if (q == NULL) {
@@ -951,7 +951,7 @@ acl_log(var_t *attrs, acl_log_t *al)
 			}
 
 			log_error("acl_log: unmatched \"{\" in format string");
-			return;
+			goto error;
 		}
 
 		*q = 0;
@@ -974,7 +974,16 @@ acl_log(var_t *attrs, acl_log_t *al)
 
 	log_log(al->al_level, buffer);
 
+	free(format);
+
 	return;
+
+error:
+	if (format) {
+		free(format);
+	}
+
+	return -1;
 }
 
 

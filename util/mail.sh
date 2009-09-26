@@ -21,6 +21,8 @@ sudo chmod 777 /var/spool/postfix/milter.sock
 (
 	echo "helo localhost"
 	read
+	echo "check this command!"
+	read
 	echo "mail from: <$FROM>"
 	read
 	echo "rcpt to: <$RCPT>"

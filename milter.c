@@ -192,7 +192,7 @@ milter_unknown(SMFICTX * ctx, const char *cmd)
 		return SMFIS_TEMPFAIL;
 	}
 
-	log_debug("milter_unknown: unknown command: %s", cmd);
+	log_debug("milter_unknown: unknown command: \"%s\"", cmd);
 
 	return milter_acl(MSN_UNKNOWN, mp);
 }
@@ -305,6 +305,8 @@ milter_data(SMFICTX * ctx)
 	    VT_POINTER, "milter_ctx", ctx, VF_KEEP,
 	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "milter_stagename", MSN_DATA, VF_KEEP,
+	    VT_INT, "milter_recipients", &mp->mp_recipients,
+		VF_KEEPNAME | VF_COPYDATA,
 	    VT_NULL))
 	{
 		log_error("milter_data: var_table_setv failed");
@@ -371,9 +373,9 @@ milter_eoh(SMFICTX * ctx)
 	    VT_POINTER, "milter_ctx", ctx, VF_KEEPNAME | VF_KEEPDATA,
 	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "milter_stagename", MSN_EOH, VF_KEEP,
-	    VT_INT, "milter_recipients", &mp->mp_recipients,
-		VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "milter_header", mp->mp_header, VF_KEEP,
+	    VT_INT, "milter_header_size", &mp->mp_headerlen,
+		VF_KEEPNAME | VF_COPYDATA,
 	    VT_NULL))
 	{
 		log_error("milter_eoh: var_table_setv failed");
