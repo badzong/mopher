@@ -58,6 +58,7 @@ int var_table_insert(var_t *table, var_t *v);
 int var_table_set(var_t *table, var_t *v);
 int var_table_set_new(var_t *table, var_type_t type, char *name, void *data,int flags);
 int var_table_setv(var_t *table, ...);
+int var_table_printstr(var_t *table, char *buffer, int len, char *format);
 int var_list_append(var_t *list, var_t *item);
 int var_list_append_new(var_t *list, var_type_t type, char *name, void *data,int flags);
 int var_table_list_append(var_t *table, var_type_t type, char *name, void *data,int flags);

@@ -8,9 +8,16 @@ eoh default log "STAGE:{milter_stagename}" level 6
 body default log "STAGE:{milter_stagename}" level 7
 eom default log "STAGE:{milter_stagename}" level 1
 unknown default log "UNKNOWN COMMAND {milter_unknown_command}" level 3
+
+
+envfrom string_strlen(milter_envfrom) > 10 log "{milter_envfrom} laenger als 10!!!"
+connect log "EMPTY RULE IN CONNECT"
 connect milter_hostaddr = 127.0.0.1 continue
 connect milter_myhostname log "MYHOSTNAME: {milter_myhostname}"
 envrcpt milter_client_ptr log "CLIENT_PTR: {milter_client_ptr}"
+envrcpt spf and milter_client_addr and milter_client_name log "SPF RESULT FOR: {milter_helo} ({milter_client_addr} {milter_client_name}) {milter_envrcpt} {spf}" level 1
 envrcpt spf = SPF_PASS pass
 envrcpt spf = SPF_NEUTRAL continue
 eom spamd_spam delay 10 valid 20 visa 60
+eom log "SPAMD SKIPPED"
+eom spamd_score > 7.0 delay 20 valid 40 visa 60

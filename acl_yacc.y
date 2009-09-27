@@ -103,6 +103,27 @@ rule		: ID conditions action
 				    "acl_rule_register failed");
 			}
 		  }
+		| ID action
+		  {
+			acl_table_t *at;
+
+			at = acl_table_lookup($1);
+			if (at == NULL) {
+				at = acl_table_register($1, NULL);
+				if (at == NULL) {
+					log_die(EX_CONFIG, "acl_yacc.y: "
+					    "acl_table_register failed");
+				}
+			}
+			else {
+				free($1);
+			}
+
+			if (acl_rule_register(at, NULL, $2)) {
+				log_die(EX_CONFIG, "acl_yacc.y: "
+				    "acl_rule_register failed");
+			}
+		  }
 		;
 
 

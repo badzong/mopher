@@ -868,6 +868,13 @@ acl_conditions_eval(ll_t * conditions, var_t *attrs)
 	int r, ax = 0;
 
 	/*
+	 * Empty rules always match
+	 */
+	if (conditions == NULL) {
+		return 1;
+	}
+
+	/*
 	 * Evaluation goes left to right. First condition as ac_gate == AG_NULL.
 	 */
 	ll_rewind(conditions);
@@ -928,60 +935,14 @@ acl_conditions_eval(ll_t * conditions, var_t *attrs)
 static void
 acl_log(var_t *attrs, acl_log_t *al)
 {
-	static const char *braces = "{}";
-	char *p, *q, *format = NULL;
-	int i, len;
 	char buffer[BUFLEN];
-	var_t *v;
 
-	format = strdup(al->al_format);
-	if (format == NULL) {
-		log_error("acl_log: strdup");
-		goto error;
-	}
-
-	buffer[0] = 0;
-	for (i = 0, p = format;; ++i, p = q + 1) {
-		q = strchr(p, braces[i % 2]);
-
-		if (q == NULL) {
-			if (i % 2 == 0) {
-				strncat(buffer, p, sizeof(buffer));
-				break;
-			}
-
-			log_error("acl_log: unmatched \"{\" in format string");
-			goto error;
-		}
-
-		*q = 0;
-
-		if (i % 2 == 0) {
-			strncat(buffer, p, sizeof(buffer));
-			continue;
-		}
-
-		len = strlen(buffer);
-		v = var_table_lookup(attrs, p);
-		if (v == NULL) {
-			log_error("acl_log: symbol \"%s\" not available", p);
-			snprintf(buffer + len, sizeof(buffer) - len, "{%s}", p);
-			continue;
-		}
-
-		var_dump_data(v, buffer + len, sizeof(buffer) - len);
+	if (var_table_printstr(attrs, buffer, sizeof(buffer), al->al_format)) {
+		log_error("acl_log: var_table_printstr failed");
+		return;
 	}
 
 	log_log(al->al_level, buffer);
-
-	free(format);
-
-	return;
-
-error:
-	if (format) {
-		free(format);
-	}
 
 	return;
 }

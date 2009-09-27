@@ -770,6 +770,88 @@ var_table_setv(var_t *table, ...)
 
 
 int
+var_table_printstr(var_t *table, char *buffer, int len, char *format)
+{
+	static const char *braces = "{}";
+	char *p, *q;
+	int i, pos;
+	var_t *v;
+
+	/*
+	 * Check len
+	 */
+	if (len <= 0) {
+		goto error;
+	}
+
+	/*
+	 * Get a copy of format
+	 */
+	format = strdup(format);
+	if (format == NULL) {
+		log_warning("var_table_printstr: strdup");
+		goto error;
+	}
+
+	/*
+	 * We use strncat. Make sure buffer starts and ends terminated.
+	 */
+	buffer[0] = 0;
+	buffer[--len] = 0;
+
+	for (i = 0, p = format;; ++i, p = q + 1) {
+		q = strchr(p, braces[i % 2]);
+
+		if (q == NULL) {
+			/*
+			 * No more opening braces
+			 */
+			if (i % 2 == 0) {
+				strncat(buffer, p, len);
+				break;
+			}
+
+			log_error("var_table_printstr: unmatched \"{\" in"
+				" format string");
+			goto error;
+		}
+
+		*q = 0;
+
+		/*
+		 * Inline Text
+		 */
+		if (i % 2 == 0) {
+			strncat(buffer, p, len);
+			continue;
+		}
+
+		pos = strlen(buffer);
+		v = var_table_lookup(table, p);
+		if (v == NULL) {
+			log_notice("var_table_printstr: no entry for \"%s\"",
+				p);
+			snprintf(buffer + pos, len - pos, "{%s}", p);
+			continue;
+		}
+
+		var_dump_data(v, buffer + pos, len - pos);
+	}
+
+	free(format);
+
+	return 0;
+
+error:
+	if (format) {
+		free(format);
+	}
+
+	return -1;
+}
+
+
+int
 var_list_append(var_t *list, var_t *item)
 {
 	ll_t *ll = list->v_data;

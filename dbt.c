@@ -106,7 +106,7 @@ dbt_clear(void)
 }
 
 dbt_t *
-dbt_open(var_t *schema, char *driver, char *path, char *host, char *user,
+dbt_open(var_t *scheme, char *driver, char *path, char *host, char *user,
 	char *pass, char *name, char *table)
 {
 	dbt_t *dbt;
@@ -124,7 +124,7 @@ dbt_open(var_t *schema, char *driver, char *path, char *host, char *user,
 		return NULL;
 	}
 
-	handle = dd->dd_open(schema, path, host, user, pass, name, table);
+	handle = dd->dd_open(scheme, path, host, user, pass, name, table);
 	if (handle == NULL) {
 		log_warning("dbt_open: can't open database");
 		return NULL;

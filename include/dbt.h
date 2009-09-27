@@ -3,7 +3,7 @@
 
 #include "var.h"
 
-typedef void *(*dbt_open_t)(var_t *schema, char *path, char *host, char *user,
+typedef void *(*dbt_open_t)(var_t *scheme, char *path, char *host, char *user,
 	char *pass, char *name, char *table);
 typedef void (*dbt_close_t)(void *handle);
 typedef int (*dbt_ping_t)(void *handle);
@@ -50,7 +50,7 @@ void dbt_delete(dbt_t *dbt);
 void dbt_driver_register(dbt_driver_t *dd);
 void dbt_init(void);
 void dbt_clear(void);
-dbt_t * dbt_open(var_t *schema, char *driver, char *path, char *host, char *user,char *pass, char *name, char *table);
+dbt_t * dbt_open(var_t *scheme, char *driver, char *path, char *host, char *user,char *pass, char *name, char *table);
 var_t * dbt_get(dbt_t *dbt, var_t *record);
 int dbt_set(dbt_t *dbt, var_t *record);
 int dbt_del(dbt_t *dbt, var_t *record);

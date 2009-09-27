@@ -9,7 +9,7 @@
 
 
 typedef struct bdb {
-	var_t	*bdb_schema;
+	var_t	*bdb_scheme;
 	DB	*bdb_db;
 } bdb_t;
 
@@ -27,7 +27,7 @@ bdb_delete(bdb_t *bdb)
 
 
 static bdb_t*
-bdb_create(var_t *schema)
+bdb_create(var_t *scheme)
 {
 	bdb_t *bdb = NULL;
 
@@ -44,7 +44,7 @@ bdb_create(var_t *schema)
 		goto error;
 	}
 
-	bdb->bdb_schema = schema;
+	bdb->bdb_scheme = scheme;
 
 	return bdb;
 
@@ -60,13 +60,13 @@ error:
 
 
 static void*
-bdb_open(var_t *schema, char *path, char *host, char *user, char *pass,
+bdb_open(var_t *scheme, char *path, char *host, char *user, char *pass,
 	char *name, char *table)
 {
 	bdb_t *bdb;
 	int r;
 
-	bdb = bdb_create(schema);
+	bdb = bdb_create(scheme);
 	if (bdb == NULL) {
 		log_error("bdb_open: bdb_create failed");
 		return NULL;
@@ -130,7 +130,7 @@ bdb_get(bdb_t *bdb, var_t *v)
 	vc->vc_data = d.data;
 	vc->vc_dlen = d.size;
 
-	record = var_decompress(vc, bdb->bdb_schema);
+	record = var_decompress(vc, bdb->bdb_scheme);
 	if (record == NULL) {
 		log_warning("bdb_get: var_decompress failed");
 		goto error;
@@ -254,7 +254,7 @@ bdb_walk(bdb_t *bdb, dbt_callback_t callback, void *data)
 		vc.vc_data = d.data;
 		vc.vc_dlen = d.size;
 
-		record = var_decompress(&vc, bdb->bdb_schema);
+		record = var_decompress(&vc, bdb->bdb_scheme);
 		if (record == NULL) {
 			log_warning("bdb_walk: var_decompress failed");
 			goto error;
