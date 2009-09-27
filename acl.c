@@ -983,7 +983,7 @@ error:
 		free(format);
 	}
 
-	return -1;
+	return;
 }
 
 

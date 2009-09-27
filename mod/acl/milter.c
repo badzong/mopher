@@ -26,6 +26,9 @@ typedef struct milter_symbol {
 	milter_stage_t	 ms_stage;
 } milter_symbol_t;
 
+/*
+ * Symbols without callback set by milter.c (the other one)
+ */
 static milter_symbol_t milter_symbols[] = {
 	{ "milter_stage", MS_ANY },
 	{ "milter_stagename", MS_ANY }, 
@@ -47,6 +50,10 @@ static milter_symbol_t milter_symbols[] = {
 	{ NULL, 0 }
 };
 
+
+/*
+ * List of all available macros Postfix and Sendmail
+ */
 static char *milter_macros[] = {
 	"milter_queueid", "milter_myhostname", "milter_client",
 	"milter_auth_athen", "milter_auth_author", "milter_auth_type",
@@ -56,7 +63,9 @@ static char *milter_macros[] = {
 	"milter_cipher", "milter_daemon_name", "milter_mail_addr",
 	"milter_mail_host", "milter_mail_mailer", "milter_rcpt_addr",
 	"milter_rcpt_host", "milter_rcpt_mailer", "milter_tls_version",
-	NULL };
+	NULL
+};
+
 
 /*
  * http://www.postfix.org/MILTER_README.html (2009-09-26)
@@ -119,8 +128,13 @@ static milter_macro_t milter_sendmail_macros[] = {
 	{ NULL, NULL, 0 }
 };
 
+
+/*
+ * Macros are loaded into hash tables
+ */
 static ht_t *milter_postfix_macros_ht;
 static ht_t *milter_sendmail_macros_ht;
+
 
 static hash_t 
 milter_macro_hash(milter_macro_t *mm)
@@ -151,7 +165,7 @@ milter_macro_lookup(milter_stage_t stage, char *name, var_t *attrs)
 	int r;
 
 	r = var_table_dereference(attrs, "milter_ctx", &ctx,
-		"milter_version", &version, "milter_stagename", &stagename,
+		"milter_mta_version", &version, "milter_stagename", &stagename,
 		NULL);
 	if (r)
 	{
@@ -166,7 +180,7 @@ milter_macro_lookup(milter_stage_t stage, char *name, var_t *attrs)
 		macro_table = milter_postfix_macros_ht;
 	}
 	else {
-		log_error("milter_macro_lookup: unkown client \"%s\"",
+		log_error("milter_macro_lookup: unkown MTA \"%s\"",
 			version);
 		return -1;
 	}
@@ -214,7 +228,7 @@ init(void)
 
 
 	/*
-	 * Symbols without callbacks set by milter.c
+	 * Symbols without callbacks set by milter.c (the other one)
 	 */
 	for (ms = milter_symbols; ms->ms_name; ++ms) {
 		if (acl_symbol_register(AS_NULL, ms->ms_name, ms->ms_stage,

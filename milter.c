@@ -115,7 +115,7 @@ milter_connect(SMFICTX * ctx, char *hostname, _SOCK_ADDR * hostaddr)
 	milter_priv_t *mp;
 	VAR_INT_T now;
 	VAR_INT_T stage = MS_CONNECT;
-	char *version;
+	char *mta_version;
 	struct sockaddr_storage *ha_clean;
 	char *addrstr;
 
@@ -131,10 +131,10 @@ milter_connect(SMFICTX * ctx, char *hostname, _SOCK_ADDR * hostaddr)
 		return SMFIS_TEMPFAIL;
 	}
 
-	version = smfi_getsymval(ctx, "v");
-	if (version == NULL)
+	mta_version = smfi_getsymval(ctx, "v");
+	if (mta_version == NULL)
 	{
-		log_error("milter_connect: smfi_getsymval failed");
+		log_error("milter_connect: smfi_getsymval for \"v\" failed");
 		return SMFIS_TEMPFAIL;
 	}
 
@@ -156,7 +156,8 @@ milter_connect(SMFICTX * ctx, char *hostname, _SOCK_ADDR * hostaddr)
 	    VT_STRING, "milter_stagename", MSN_CONNECT,
 		VF_KEEPNAME | VF_KEEPDATA,
 	    VT_INT, "milter_received", &now, VF_KEEPNAME | VF_COPYDATA,
-	    VT_STRING, "milter_version", version, VF_KEEPNAME | VF_COPYDATA,
+	    VT_STRING, "milter_mta_version", mta_version,
+		VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "milter_hostname", hostname, VF_KEEPNAME | VF_COPYDATA,
 	    VT_ADDR, "milter_hostaddr", ha_clean, VF_KEEPNAME,
 	    VT_STRING, "milter_addrstr", addrstr, VF_KEEPNAME,
