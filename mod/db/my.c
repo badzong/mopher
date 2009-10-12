@@ -1129,6 +1129,7 @@ my_load_storage(ht_t *storage, var_t *record)
 
 		size = var_data_size(item);
 		dst = mb->mb_buffer;
+		mb->mb_length = size;
 
 		memcpy(dst, src, size);
 	}
@@ -1192,7 +1193,6 @@ my_get(dbt_t *dbt, var_t *record, var_t **result)
 	my_handle_t *mh = dbt->dbt_handle;
 	MYSQL_STMT *stmt = mh->my_query[MY_SELECT]->my_stmt;
 	ht_t *storage = mh->my_storage;
-	var_t *copy;
 	int r;
 
 	if (my_load_storage(storage, record))
@@ -1214,6 +1214,10 @@ my_get(dbt_t *dbt, var_t *record, var_t **result)
 	case 0:
 		break;
 
+	case MYSQL_NO_DATA:
+		log_debug("my_get: no record found");
+		goto exit;
+
 	default:
 		log_error("my_get: mysql_stmt_fetch: %s",
 		    mysql_stmt_error(stmt));
@@ -1221,19 +1225,20 @@ my_get(dbt_t *dbt, var_t *record, var_t **result)
 		return -1;
 	}
 
+	*result = my_unload_storage(dbt, storage);
+	if (*result == NULL)
+	{
+		log_error("my_get: my_uload_record failed");
+		return -1;
+	}
+
+exit:	
 	mysql_stmt_free_result(stmt);
 
 	if (mysql_stmt_reset(stmt))
 	{
 		log_error("my_get: mysql_stmt_reset: %s",
 		    mysql_stmt_error(stmt));
-	}
-	
-	*result = my_unload_storage(dbt, storage);
-	if (*result == NULL)
-	{
-		log_error("my_get: my_uload_record failed");
-		return -1;
 	}
 	
 	return 0;

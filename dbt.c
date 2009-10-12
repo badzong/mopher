@@ -118,6 +118,8 @@ dbt_db_get(dbt_t *dbt, var_t *record, var_t **result)
 {
 	int r;
 
+	*result = NULL;
+
 	if (dbt_db_lock(dbt))
 	{
 		return -1;

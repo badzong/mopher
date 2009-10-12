@@ -866,7 +866,7 @@ int
 acl_conditions_eval(ll_t * conditions, var_t *attrs)
 {
 	acl_condition_t *ac;
-	var_t *left, *right;
+	var_t *left = NULL, *right = NULL;
 	int r, ax = 0;
 
 	/*
@@ -928,6 +928,21 @@ acl_conditions_eval(ll_t * conditions, var_t *attrs)
 		default:
 			ax = r;
 		}
+
+		/*
+		 * Functions create new variables. Free buffers
+		 */
+		if (left && ac->ac_left->av_type == AV_FUNCTION)
+		{
+			var_delete(left);
+			left = NULL;
+		}
+
+		if (right && ac->ac_right->av_type == AV_FUNCTION)
+		{
+			var_delete(right);
+			left = NULL;
+		}
 	}
 
 	return ax;
@@ -984,13 +999,23 @@ acl(char *table, var_t *attrs)
 			log_info("rule %d in table \"%s\" matched", i, table);
 			aa = ar->ar_action;
 
-			if (aa->aa_type == AA_DELAY) {
+			if (aa->aa_type == AA_DELAY)
+			{
 				glr = greylist(attrs, aa->aa_data);
 
-				if(glr == GL_PASS) {
+				switch(glr)
+				{
+				case GL_PASS:
 					log_info("acl: greylisting passed");
 					aa = NULL;
 					continue;
+
+				case GL_ERROR:
+					log_info("acl: greylisting failed");
+					return AA_ERROR;
+
+				default:
+					break;
 				}
 
 				log_info("acl: greylisting in action");

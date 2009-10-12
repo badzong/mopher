@@ -36,13 +36,13 @@ greylist_lookup(var_t *attrs, var_t **record)
 		envrcpt, NULL, NULL, NULL, NULL, NULL, NULL);
 
 	if (lookup == NULL) {
-		log_warning("greylist_lookup: var_record_build failed");
+		log_warning("greylist_lookup: var_list_scheme failed");
 		goto error;
 	}
 
 	if (dbt_db_get(greylist_dbt, lookup, record))
 	{
-		log_warning("greylist_lookup: var_record_build failed");
+		log_warning("greylist_lookup: var_db_get failed");
 		goto error;
 	}
 
@@ -69,7 +69,6 @@ greylist_add(var_t *attrs, acl_delay_t *ad)
 	char *envrcpt;
 	time_t now;
 	VAR_INT_T created, delay, visa, valid, retries, passed;
-	int r;
 	
 	if (var_table_dereference(attrs, "milter_hostaddr", &hostaddr,
 		"milter_envfrom", &envfrom, "milter_envrcpt", &envrcpt, NULL))
