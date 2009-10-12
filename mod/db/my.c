@@ -6,16 +6,23 @@
 
 #include "mopher.h"
 
-#define BUFLEN 2048
-#define QLEN 2048
-#define MY_ADDR_LEN 40
+#define MY_QUERY_LEN 2048
 #define MY_STRING_LEN 320
 #define MY_BUCKETS 64
 
 
+/*
+ * my_query_type is used to loop over my_prepare_xxx callbacks.
+ * See my_prepare()
+ */
 typedef enum my_query_type_t { MY_SELECT, MY_UPDATE, MY_INSERT, MY_DELETE,
 	MY_CLEANUP, MY_MAX } my_query_type_t;
 
+
+/*
+ * Buffers are bound to a query by mysql_bind_params/results.
+ * See my_query_create()
+ */
 typedef struct my_buffer {
 	char		*mb_name;
 	int		 mb_type;
@@ -25,37 +32,67 @@ typedef struct my_buffer {
 	my_bool		 mb_error;
 } my_buffer_t;
 
+/*
+ * A query consists of the prepared statement, bound params (optional) and
+ * bound results (optional).
+ */
 typedef struct my_query {
 	MYSQL_STMT		*my_stmt;
-	MYSQL_BIND		*my_bind_params;
-	MYSQL_BIND		*my_bind_results;
+	MYSQL_BIND		*my_params;
+	MYSQL_BIND		*my_results;
 } my_query_t;
 
+/*
+ * The MySQL handle stores the MYSQL * and an array of all prepared queries.
+ * The storage table holds my_buffers for the record (see dbt->dbt_scheme).
+ */
 typedef struct my_handle {
 	MYSQL		*my_db;
 	my_query_t	*my_query[MY_MAX];
 	ht_t		*my_storage;
 } my_handle_t;
 
-
+/*
+ * struct sockaddr_storage may vary on different systems ???
+ * my_addr_type is set to VARBINARY(sizeof (struct sockaddr_storage) by init.
+ */
 static char my_addr_type[15];
 
-static char *my_types[] = { NULL, "INT", "DOUBLE", "VARCHAR(320)", \
-	my_addr_type, NULL, NULL, NULL };
-
+/*
+ * Datatype storage requirements (allocated for my_buffer_t)
+ */
 static unsigned long my_buffer_length[] = { 0, sizeof (VAR_INT_T),
     sizeof (VAR_FLOAT_T), MY_STRING_LEN, sizeof (struct sockaddr_storage), 0,
     0, 0 };
 
+/*
+ * Datatype conversions (var.c <-> MySQL) for mysql_bind_params/results.
+ */
 static int my_buffer_types[] = { 0, MYSQL_TYPE_LONG, MYSQL_TYPE_DOUBLE,
 	MYSQL_TYPE_STRING, MYSQL_TYPE_BLOB, 0, 0, 0 };
 
+/*
+ * Datatype conversions (var.c <-> MySQL) for create database statement
+ */
+static char *my_types[] = { NULL, "INT", "DOUBLE", "VARCHAR(320)", \
+	my_addr_type, NULL, NULL, NULL };
 
+
+/*
+ * my_prepare_xxx callbacks
+ */
 typedef my_query_t *(*my_prepare_callback_t)(dbt_t *dbt, ht_t *storage);
 
+/*
+ * dbt_driver storage for dbt_driver_register
+ */
 static dbt_driver_t dbt_driver;
 
+/*
+ * Enum for my_record_split(). See below.
+ */
 typedef enum my_record_split { RS_FULL, RS_KEYS, RS_VALUES } my_record_split_t;
+
 
 static void
 my_buffer_delete(my_buffer_t *mb)
@@ -129,12 +166,12 @@ my_query_delete(my_query_t *mq)
 		mysql_stmt_close(mq->my_stmt);
 	}
 
-	if (mq->my_bind_params) {
-		free(mq->my_bind_params);
+	if (mq->my_params) {
+		free(mq->my_params);
 	}
 		
-	if (mq->my_bind_results) {
-		free(mq->my_bind_results);
+	if (mq->my_results) {
+		free(mq->my_results);
 	}
 		
 	free(mq);
@@ -170,13 +207,13 @@ my_query_create(MYSQL *db, char *query, ht_t *storage, ll_t *params,
 	{
 		size = params->ll_size * sizeof (MYSQL_BIND);
 
-		mq->my_bind_params = (MYSQL_BIND *) malloc(size);
-		if (mq->my_bind_params == NULL) {
+		mq->my_params = (MYSQL_BIND *) malloc(size);
+		if (mq->my_params == NULL) {
 			log_error("my_query_create: malloc");
 			goto error;
 		}
 
-		memset(mq->my_bind_params, 0, size);
+		memset(mq->my_params, 0, size);
 	}
 
 	/*
@@ -185,13 +222,13 @@ my_query_create(MYSQL *db, char *query, ht_t *storage, ll_t *params,
 	if (results) {
 		size = results->ll_size * sizeof (MYSQL_BIND);
 
-		mq->my_bind_results = (MYSQL_BIND *) malloc(size);
-		if (mq->my_bind_results == NULL) {
+		mq->my_results = (MYSQL_BIND *) malloc(size);
+		if (mq->my_results == NULL) {
 			log_error("my_query_create: malloc");
 			goto error;
 		}
 	
-		memset(mq->my_bind_results, 0, size);
+		memset(mq->my_results, 0, size);
 	}
 	
 
@@ -232,14 +269,14 @@ my_query_create(MYSQL *db, char *query, ht_t *storage, ll_t *params,
 				goto error;
 			}
 
-			mq->my_bind_params[i].buffer = mb->mb_buffer;
-			mq->my_bind_params[i].buffer_type = mb->mb_type;
-			mq->my_bind_params[i].length = &mb->mb_length;
-			mq->my_bind_params[i].is_null = &mb->mb_is_null;
-			mq->my_bind_params[i].error = &mb->mb_error;
+			mq->my_params[i].buffer = mb->mb_buffer;
+			mq->my_params[i].buffer_type = mb->mb_type;
+			mq->my_params[i].length = &mb->mb_length;
+			mq->my_params[i].is_null = &mb->mb_is_null;
+			mq->my_params[i].error = &mb->mb_error;
 		}
 
-		if (mysql_stmt_bind_param(mq->my_stmt, mq->my_bind_params))
+		if (mysql_stmt_bind_param(mq->my_stmt, mq->my_params))
 		{
 			log_error("my_query_create: mysql_stmt_bind_param: %s", 
 			mysql_stmt_error(mq->my_stmt));
@@ -266,14 +303,14 @@ my_query_create(MYSQL *db, char *query, ht_t *storage, ll_t *params,
 			goto error;
 		}
 
-		mq->my_bind_results[i].buffer = mb->mb_buffer;
-		mq->my_bind_results[i].buffer_type = mb->mb_type;
-		mq->my_bind_results[i].length = &mb->mb_length;
-		mq->my_bind_results[i].is_null = &mb->mb_is_null;
-		mq->my_bind_results[i].error = &mb->mb_error;
+		mq->my_results[i].buffer = mb->mb_buffer;
+		mq->my_results[i].buffer_type = mb->mb_type;
+		mq->my_results[i].length = &mb->mb_length;
+		mq->my_results[i].is_null = &mb->mb_is_null;
+		mq->my_results[i].error = &mb->mb_error;
 	}
 
-	if (mysql_stmt_bind_result(mq->my_stmt, mq->my_bind_results)) {
+	if (mysql_stmt_bind_result(mq->my_stmt, mq->my_results)) {
 		log_error("my_query_create: mysql_stmt_bind_result: %s", 
 			mysql_stmt_error(mq->my_stmt));
 		goto error;
@@ -415,7 +452,7 @@ my_prepare_select(dbt_t *dbt, ht_t *storage)
 {
 	my_handle_t *mh = dbt->dbt_handle;
 	my_query_t *mq;
-	char query[QLEN];
+	char query[MY_QUERY_LEN];
 	int len = 0;
 	ll_t *keys = NULL;
 	ll_t *full = NULL;
@@ -484,9 +521,9 @@ my_prepare_update(dbt_t *dbt, ht_t *storage)
 {
 	my_handle_t *mh = dbt->dbt_handle;
 	my_query_t *mq;
-	char query[QLEN];
-	char set[QLEN];
-	char where[QLEN];
+	char query[MY_QUERY_LEN];
+	char set[MY_QUERY_LEN];
+	char where[MY_QUERY_LEN];
 	int len = 0;
 	char *key;
 	ll_t *keys = NULL;
@@ -579,9 +616,9 @@ my_prepare_insert(dbt_t *dbt, ht_t *storage)
 	my_handle_t *mh = dbt->dbt_handle;
 	my_query_t *mq;
 	int i, len = 0;
-	char query[QLEN];
-	char table[QLEN];
-	char placeholders[QLEN];
+	char query[MY_QUERY_LEN];
+	char table[MY_QUERY_LEN];
+	char placeholders[MY_QUERY_LEN];
 	char *key;
 	ll_t *full = NULL;
 
@@ -663,8 +700,8 @@ my_prepare_delete(dbt_t *dbt, ht_t *storage)
 	my_handle_t *mh = dbt->dbt_handle;
 	my_query_t *mq;
 	int len = 0;
-	char query[QLEN];
-	char where[QLEN];
+	char query[MY_QUERY_LEN];
+	char where[MY_QUERY_LEN];
 	char *key;
 	ll_t *keys;
 
@@ -724,7 +761,7 @@ my_prepare_cleanup(dbt_t *dbt, ht_t *storage)
 {
 	my_handle_t *mh = dbt->dbt_handle;
 	my_query_t *mq;
-	char query[QLEN];
+	char query[MY_QUERY_LEN];
 	int len;
 
 	if (dbt->dbt_sql_invalid_where == NULL) {
@@ -849,7 +886,7 @@ my_database_exists(MYSQL *db, char *name)
 static int
 my_create_database(MYSQL *db, char *name)
 {
-	char query[BUFLEN];
+	char query[MY_QUERY_LEN];
 	int len;
 
 	len = snprintf(query, sizeof query, "CREATE DATABASE `%s`", name);
@@ -894,7 +931,7 @@ my_table_exists(MYSQL *db, char *table)
 static int
 my_create_table(MYSQL *db, char *table, var_t *scheme)
 {
-	char query[BUFLEN];
+	char query[MY_QUERY_LEN];
 	int len;
 	ll_t *list;
 	var_t *v;
@@ -1349,8 +1386,6 @@ init(void)
 {
 	snprintf(my_addr_type, sizeof my_addr_type, "VARBINARY(%lu)",
 	    sizeof (struct sockaddr_storage));
-
-	printf("TYPE: %s\n", my_types[VT_ADDR]);
 
 	dbt_driver.dd_name = "mysql";
 	dbt_driver.dd_open = (dbt_db_open_t) my_open;
