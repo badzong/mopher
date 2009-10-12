@@ -66,9 +66,161 @@ dbt_match(dbt_t *dbt1, dbt_t *dbt2)
 static void
 dbt_close(dbt_t *dbt)
 {
+	if ((dbt->dbt_driver->dd_flags & DBT_LOCK))
+	{
+		if (pthread_mutex_destroy(&dbt->dbt_driver->dd_mutex))
+		{
+			log_error("dbt_register: ptrhead_mutex_destroy");
+		}
+	}
+
 	DBT_DB_CLOSE(dbt);
 
 	return;
+}
+
+static int
+dbt_db_lock(dbt_t *dbt)
+{
+	if ((dbt->dbt_driver->dd_flags & DBT_LOCK) == 0)
+	{
+		return 0;
+	}
+
+	if (pthread_mutex_lock(&dbt->dbt_driver->dd_mutex))
+	{
+		log_error("dbt_db_lock: pthread_mutex_lock");
+		return -1;
+	}
+
+	return 0;
+}
+
+
+static void
+dbt_db_unlock(dbt_t *dbt)
+{
+	if ((dbt->dbt_driver->dd_flags & DBT_LOCK) == 0)
+	{
+		return;
+	}
+
+	if (pthread_mutex_unlock(&dbt->dbt_driver->dd_mutex))
+	{
+		log_error("dbt_db_unlock: pthread_mutex_unlock");
+	}
+
+	return;
+}
+
+int
+dbt_db_get(dbt_t *dbt, var_t *record, var_t **result)
+{
+	int r;
+
+	if (dbt_db_lock(dbt))
+	{
+		return -1;
+	}
+
+	r = dbt->dbt_driver->dd_get(dbt, record, result);
+
+	dbt_db_unlock(dbt);
+
+	return r;
+}
+
+
+int
+dbt_db_set(dbt_t *dbt, var_t *record)
+{
+	int r;
+
+	if (dbt_db_lock(dbt))
+	{
+		return -1;
+	}
+
+	r = dbt->dbt_driver->dd_set(dbt, record);
+
+	dbt_db_unlock(dbt);
+
+	return r;
+}
+
+
+int
+dbt_db_del(dbt_t *dbt, var_t *record)
+{
+	int r;
+
+	if (dbt_db_lock(dbt))
+	{
+		return -1;
+	}
+
+	r = dbt->dbt_driver->dd_del(dbt, record);
+
+	dbt_db_unlock(dbt);
+
+	return r;
+}
+
+
+int
+dbt_db_walk(dbt_t *dbt, dbt_db_callback_t callback)
+{
+	int r;
+
+	if (dbt_db_lock(dbt))
+	{
+		return -1;
+	}
+
+	r = dbt->dbt_driver->dd_walk(dbt, callback);
+
+	dbt_db_unlock(dbt);
+
+	return r;
+}
+
+int
+dbt_db_sync(dbt_t *dbt)
+{
+	int r;
+
+	if (dbt->dbt_driver->dd_sync == NULL)
+	{
+		return 0;
+	}
+
+	if (dbt_db_lock(dbt))
+	{
+		return -1;
+	}
+
+	r = dbt->dbt_driver->dd_sync(dbt);
+
+	dbt_db_unlock(dbt);
+
+	return r;
+}
+
+int
+dbt_db_cleanup(dbt_t *dbt)
+{
+	int r;
+
+	if (dbt_db_lock(dbt))
+	{
+		return -1;
+	}
+
+	r = dbt->dbt_driver->dd_sql_cleanup(dbt);
+
+	dbt_db_unlock(dbt);
+
+	return r;
 }
 
 
@@ -135,6 +287,17 @@ dbt_register(dbt_t *dbt)
 	dbt->dbt_driver = dd;
 
 	/*
+	 * Initialize mutex if driver requires locking
+	 */
+	if ((dd->dd_flags & DBT_LOCK))
+	{
+		if (pthread_mutex_init(&dd->dd_mutex, NULL))
+		{
+			log_die(EX_SOFTWARE, "dbt_register: ptrhead_mutex_init");
+		}
+	}
+
+	/*
 	 * Open database
 	 */
 	log_debug("dbt_register: open database \"%s\"", dbt->dbt_name);
@@ -167,8 +330,8 @@ dbt_cleanup(dbt_t *dbt, var_t *record)
 	if (valid) {
 		return 0;
 	}
-	if (DBT_DB_DEL(dbt, record)) {
-		log_error("dbt_cleanup: DBT_DB_DEL failed");
+	if (dbt_db_del(dbt, record)) {
+		log_error("dbt_cleanup: dbt_db_del failed");
 		return -1;
 	}
 
@@ -221,10 +384,10 @@ dbt_janitor(int force)
 		if (dbt->dbt_driver->dd_sql_cleanup &&
 		    dbt->dbt_sql_invalid_where)
 		{
-			deleted = DBT_SQL_CLEANUP(dbt);
+			deleted = dbt_db_cleanup(dbt);
 
 			if (deleted == -1) {
-				log_error("dbt_janitor: DBT_SQL_CLEANUP "
+				log_error("dbt_janitor: dbt_db_cleanup "
 					"failed");
 			}
 			else {
@@ -257,8 +420,8 @@ dbt_janitor(int force)
 
 		dbt->dbt_cleanup_deleted = 0;
 
-		if (DBT_DB_WALK(dbt, (void *) dbt_cleanup)) {
-			log_error("dbt_janitor: DBT_DB_WALK failed");
+		if (dbt_db_walk(dbt, (void *) dbt_cleanup)) {
+			log_error("dbt_janitor: dbt_db_walk failed");
 			continue;
 		}
 		
@@ -269,8 +432,8 @@ dbt_janitor(int force)
 		 * Sync database if driver supports syncing
 		 */
 		if (dbt->dbt_driver->dd_sync) {
-			if (DBT_DB_SYNC(dbt)) {
-				log_warning("dbt_janitor: DBT_DB_SYNC failed");
+			if (dbt_db_sync(dbt)) {
+				log_warning("dbt_janitor: dbt_db_sync failed");
 			}
 		}
 

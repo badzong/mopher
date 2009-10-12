@@ -17,10 +17,10 @@ greylist_init(void)
 }
 
 
-static var_t *
-greylist_lookup(var_t *attrs)
+static int
+greylist_lookup(var_t *attrs, var_t **record)
 {
-	var_t *lookup, *record;
+	var_t *lookup = NULL;
 	char *hostaddr;
 	char *envfrom;
 	char *envrcpt;
@@ -29,7 +29,7 @@ greylist_lookup(var_t *attrs)
 		"milter_envfrom", &envfrom, "milter_envrcpt", &envrcpt, NULL))
 	{
 		log_error("greylist_lookup: var_table_dereference failed");
-		return NULL;
+		goto error;
 	}
 
 	lookup = var_list_scheme(greylist_dbt->dbt_scheme, hostaddr, envfrom,
@@ -37,14 +37,26 @@ greylist_lookup(var_t *attrs)
 
 	if (lookup == NULL) {
 		log_warning("greylist_lookup: var_record_build failed");
-		return NULL;
+		goto error;
 	}
 
-	record = DBT_DB_GET(greylist_dbt, lookup);
+	if (dbt_db_get(greylist_dbt, lookup, record))
+	{
+		log_warning("greylist_lookup: var_record_build failed");
+		goto error;
+	}
 
 	var_delete(lookup);
 
-	return record;
+	return 0;
+
+error:
+	if (lookup)
+	{
+		var_delete(lookup);
+	}
+	
+	return -1;
 }
 
 
@@ -88,11 +100,15 @@ greylist_add(var_t *attrs, acl_delay_t *ad)
 		return -1;
 	}
 
-	 r = DBT_DB_SET(greylist_dbt, record);
+	if (dbt_db_set(greylist_dbt, record))
+	{
+		log_error("greylist_add: dbt_db_set failed");
+		return -1;
+	}
+	
+	var_delete(record);
 
-	 var_delete(record);
-
-	 return r;
+	return 0;
 }
 
 greylist_response_t
@@ -108,7 +124,12 @@ greylist(var_t *attrs, acl_delay_t *ad)
 	VAR_INT_T *valid;
 	greylist_response_t glr = GL_DELAY;
 
-	record = greylist_lookup(attrs);
+	if (greylist_lookup(attrs, &record))
+	{
+		log_error("greylist: greylist_lookup failed");
+		goto error;
+	}
+
 	if (record == NULL) {
 		log_info("greylist: create new record");
 		goto add;
@@ -180,7 +201,7 @@ greylist(var_t *attrs, acl_delay_t *ad)
 
 update:
 
-	if (DBT_DB_SET(greylist_dbt, record)) {
+	if (dbt_db_set(greylist_dbt, record)) {
 		log_warning("greylist: DBT_DB_SET failed");
 		goto error;
 	}

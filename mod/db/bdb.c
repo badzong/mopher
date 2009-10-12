@@ -53,16 +53,15 @@ bdb_close(dbt_t *dbt)
 	return;
 }
 
-static var_t *
-bdb_get(dbt_t *dbt, var_t *v)
+static int
+bdb_get(dbt_t *dbt, var_t *record, var_t **result)
 {
 	DB *db = dbt->dbt_handle;
 	DBT k, d;
-	var_t *record;
 	var_compact_t *vc = NULL;
 	int r;
 
-	vc = var_compress(v);
+	vc = var_compress(record);
 	if (vc == NULL) {
 		log_warning("bdb_get: var_compress failed");
 		goto error;
@@ -90,15 +89,15 @@ bdb_get(dbt_t *dbt, var_t *v)
 	vc->vc_data = d.data;
 	vc->vc_dlen = d.size;
 
-	record = var_decompress(vc, dbt->dbt_scheme);
-	if (record == NULL) {
+	*result = var_decompress(vc, dbt->dbt_scheme);
+	if (*result == NULL) {
 		log_warning("bdb_get: var_decompress failed");
 		goto error;
 	}
 
 	var_compact_delete(vc);
 
-	return record;
+	return 0;
 
 error:
 
@@ -106,7 +105,7 @@ error:
 		var_compact_delete(vc);
 	}
 
-	return NULL;
+	return -1;
 }
 
 

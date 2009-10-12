@@ -1186,8 +1186,8 @@ error:
 }
 
 
-static var_t *
-my_get(dbt_t *dbt, var_t *record)
+static int
+my_get(dbt_t *dbt, var_t *record, var_t **result)
 {
 	my_handle_t *mh = dbt->dbt_handle;
 	MYSQL_STMT *stmt = mh->my_query[MY_SELECT]->my_stmt;
@@ -1198,28 +1198,27 @@ my_get(dbt_t *dbt, var_t *record)
 	if (my_load_storage(storage, record))
 	{
 		log_error("my_get: my_load_storage failed");
-		return NULL;
+		return -1;
 	}
 
 	if (mysql_stmt_execute(stmt))
 	{
 		log_error("my_get: mysql_stmt_execute: %s",
 		    mysql_stmt_error(stmt));
-		return NULL;
+		return -1;
 	}
 
 	r = mysql_stmt_fetch(stmt);
 	switch (r)
 	{
 	case 0:
-	case 101:
 		break;
 
 	default:
 		log_error("my_get: mysql_stmt_fetch: %s",
 		    mysql_stmt_error(stmt));
 
-		return NULL;
+		return -1;
 	}
 
 	mysql_stmt_free_result(stmt);
@@ -1230,14 +1229,14 @@ my_get(dbt_t *dbt, var_t *record)
 		    mysql_stmt_error(stmt));
 	}
 	
-	copy = my_unload_storage(dbt, storage);
-	if (copy == NULL)
+	*result = my_unload_storage(dbt, storage);
+	if (*result == NULL)
 	{
 		log_error("my_get: my_uload_record failed");
-		return NULL;
+		return -1;
 	}
 	
-	return copy;
+	return 0;
 }
 
 
@@ -1394,6 +1393,7 @@ init(void)
 	dbt_driver.dd_set = (dbt_db_set_t) my_set;
 	dbt_driver.dd_del = (dbt_db_del_t) my_del;
 	dbt_driver.dd_sql_cleanup = (dbt_db_sql_cleanup_t) my_cleanup;
+	dbt_driver.dd_flags = DBT_LOCK;
 
 	dbt_driver_register(&dbt_driver);
 
