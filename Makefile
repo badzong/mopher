@@ -6,9 +6,9 @@ LEX=flex
 YACC=bison -y
 YFLAGS=-d
 
-OBJECTS=main.o cf_yacc.o cf_lex.o cf.o cf_defaults.o acl_yacc.o acl_lex.o acl.o milter.o modules.o ll.o ht.o var.o log.o hash.o util.o dbt.o table.o greylist.o sock.o
+OBJECTS=main.o cf_yacc.o cf_lex.o cf.o cf_defaults.o acl_yacc.o acl_lex.o acl.o milter.o modules.o ll.o ht.o var.o log.o hash.o util.o dbt.o greylist.o sock.o msync.o sql.o
 GENSRC=cf_yacc.c cf_yacc.h cf_lex.c acl_yacc.c acl_yacc.h acl_lex.c
-LIBS=-lpthread -lmilter -ldl -ldb
+LIBS=-lpthread -lmilter -ldl -lmysqlclient
 DIRS=mod/acl mod/db mod/tables
 
 all: main $(DIRS)

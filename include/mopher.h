@@ -17,7 +17,6 @@
 #include "modules.h"
 #include "parser.h"
 #include "sock.h"
-#include "table.h"
 #include "util.h"
 #include "var.h"
 

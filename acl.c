@@ -795,11 +795,13 @@ acl_function_eval(acl_value_t * av, var_t *attrs)
 
 	v = call->ac_function->af_callback(args);
 
+	ll_delete(args, NULL);
+
 	return v;
 
 error:
 	if (args) {
-		ll_delete(args, (void *) var_delete);
+		ll_delete(args, NULL);
 	}
 
 	return NULL;

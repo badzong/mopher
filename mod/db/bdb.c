@@ -3,103 +3,63 @@
 #include <db.h>
 #include <errno.h>
 
-#include "log.h"
-#include "dbt.h"
-#include "var.h"
-
-
-typedef struct bdb {
-	var_t	*bdb_scheme;
-	DB	*bdb_db;
-} bdb_t;
+#include "mopher.h"
 
 
 static dbt_driver_t dbt_driver;
 
 
-static void
-bdb_delete(bdb_t *bdb)
+static int
+bdb_open(dbt_t *dbt)
 {
-	free(bdb);
-
-	return;
-}
-
-
-static bdb_t*
-bdb_create(var_t *scheme)
-{
-	bdb_t *bdb = NULL;
-
-	bdb = (bdb_t *) malloc(sizeof(bdb_t));
-	if(bdb == NULL) {
-		log_warning("bdb_create: malloc");
-		goto error;
-	}
-
-	memset(bdb, 0, sizeof(bdb_t));
-
-	if (db_create(&bdb->bdb_db, NULL, 0)) {
-		log_error("bdb_create: db_create failed");
-		goto error;
-	}
-
-	bdb->bdb_scheme = scheme;
-
-	return bdb;
-
-
-error:
-
-	if(bdb) {
-		bdb_delete(bdb);
-	}
-
-	return NULL;
-}
-
-
-static void*
-bdb_open(var_t *scheme, char *path, char *host, char *user, char *pass,
-	char *name, char *table)
-{
-	bdb_t *bdb;
+	DB *db = NULL;
 	int r;
 
-	bdb = bdb_create(scheme);
-	if (bdb == NULL) {
-		log_error("bdb_open: bdb_create failed");
-		return NULL;
+	if (db_create(&db, NULL, 0)) {
+		log_error("bdb_open: db_create failed");
+		goto error;
 	}
 
-	r = bdb->bdb_db->open(bdb->bdb_db, NULL, path, NULL, DB_BTREE,
-		DB_CREATE | DB_THREAD, 0);
+	r = db->open(db, NULL, dbt->dbt_path, dbt->dbt_table,
+		DB_BTREE, DB_CREATE | DB_THREAD, 0);
 	if (r) {
-		bdb_delete(bdb);
-		log_error("bdb_open: DB->open for \"%s\" failed", path);
-		return NULL;
+		log_error("bdb_open: DB->open for \"%s\" failed",
+			dbt->dbt_path);
+		goto error;
 	}
 	errno = 0;
 
-	return bdb;
+	dbt->dbt_handle = db;
+
+	return 0;
+
+error:
+
+	if (db) {
+		db->close(db, 0);
+	}
+
+	return -1;
 }
 
 
 static void
-bdb_close(bdb_t *bdb)
+bdb_close(dbt_t *dbt)
 {
-	bdb->bdb_db->close(bdb->bdb_db, 0);
-	bdb_delete(bdb);
+	DB *db = dbt->dbt_handle;
+	
+	db->close(db, 0);
 
 	return;
 }
 
 static var_t *
-bdb_get(bdb_t *bdb, var_t *v)
+bdb_get(dbt_t *dbt, var_t *v)
 {
+	DB *db = dbt->dbt_handle;
+	DBT k, d;
 	var_t *record;
 	var_compact_t *vc = NULL;
-	DBT k, d;
 	int r;
 
 	vc = var_compress(v);
@@ -115,22 +75,22 @@ bdb_get(bdb_t *bdb, var_t *v)
 	k.size = vc->vc_klen;
 	d.flags = DB_DBT_MALLOC;
 
-	r = bdb->bdb_db->get(bdb->bdb_db, NULL, &k, &d, 0);
+	r = db->get(db, NULL, &k, &d, 0);
 	switch (r) {
 	case 0:
 		break;
 	case DB_NOTFOUND:
-		log_warning("bdb_get: no record found");
+		log_info("bdb_get: no record found");
 		goto error;
 	default:
-		log_warning("bdb_get: DB->get failed");
+		log_error("bdb_get: DB->get failed");
 		goto error;
 	}
 
 	vc->vc_data = d.data;
 	vc->vc_dlen = d.size;
 
-	record = var_decompress(vc, bdb->bdb_scheme);
+	record = var_decompress(vc, dbt->dbt_scheme);
 	if (record == NULL) {
 		log_warning("bdb_get: var_decompress failed");
 		goto error;
@@ -151,10 +111,11 @@ error:
 
 
 static int
-bdb_set(bdb_t *bdb, var_t *v)
+bdb_set(dbt_t *dbt, var_t *v)
 {
-	var_compact_t *vc = NULL;
+	DB *db = dbt->dbt_handle;
 	DBT k, d;
+	var_compact_t *vc = NULL;
 	int r;
 
 	vc = var_compress(v);
@@ -171,7 +132,7 @@ bdb_set(bdb_t *bdb, var_t *v)
 	d.data = vc->vc_data;
 	d.size = vc->vc_dlen;
 
-	r = bdb->bdb_db->put(bdb->bdb_db, NULL, &k, &d, 0);
+	r = db->put(db, NULL, &k, &d, 0);
 	if (r) {
 		log_warning("bdb_set: DB->put failed");
 		goto error;
@@ -191,10 +152,11 @@ error:
 
 
 static int
-bdb_del(bdb_t *bdb, var_t *v)
+bdb_del(dbt_t *dbt, var_t *v)
 {
-	var_compact_t *vc;
+	DB *db =dbt->dbt_handle;
 	DBT k, d;
+	var_compact_t *vc;
 	int r;
 
 	vc = var_compress(v);
@@ -211,7 +173,7 @@ bdb_del(bdb_t *bdb, var_t *v)
 	d.data = vc->vc_data;
 	d.size = vc->vc_dlen;
 
-	r = bdb->bdb_db->del(bdb->bdb_db, NULL, &k, 0);
+	r = db->del(db, NULL, &k, 0);
 	if (r) {
 		log_warning("bdb_del: DB->del failed");
 		goto error;
@@ -232,15 +194,16 @@ error:
 
 
 int
-bdb_walk(bdb_t *bdb, dbt_callback_t callback, void *data)
+bdb_walk(dbt_t *dbt, dbt_db_callback_t callback)
 {
+	DB *db = dbt->dbt_handle;
 	DBC *cursor = NULL;
 	DBT k, d;
 	int r;
 	var_compact_t vc;
 	var_t *record;
 
-	if (bdb->bdb_db->cursor(bdb->bdb_db, NULL, &cursor, 0)) {
+	if (db->cursor(db, NULL, &cursor, 0)) {
 		log_warning("bdb_walk: DB->cursor failed");
 		goto error;
 	}
@@ -254,13 +217,13 @@ bdb_walk(bdb_t *bdb, dbt_callback_t callback, void *data)
 		vc.vc_data = d.data;
 		vc.vc_dlen = d.size;
 
-		record = var_decompress(&vc, bdb->bdb_scheme);
+		record = var_decompress(&vc, dbt->dbt_scheme);
 		if (record == NULL) {
 			log_warning("bdb_walk: var_decompress failed");
 			goto error;
 		}
 
-		if(callback(data, record)) {
+		if(callback(dbt, record)) {
 			log_warning("bdb_walk: callback failed");
 		}
 
@@ -287,9 +250,11 @@ error:
 
 
 static int
-bdb_sync(bdb_t *bdb)
+bdb_sync(dbt_t *dbt)
 {
-	if (bdb->bdb_db->sync(bdb->bdb_db, 0)) {
+	DB *db = dbt->dbt_handle;
+
+	if (db->sync(db, 0)) {
 		log_warning("bdb_sync: DB->sync failed");
 		return -1;
 	}
@@ -301,17 +266,14 @@ bdb_sync(bdb_t *bdb)
 int
 init(void)
 {
-	memset(&dbt_driver, 0, sizeof(dbt_driver));
-
 	dbt_driver.dd_name = "bdb";
-	dbt_driver.dd_type = DT_FILE;
-	dbt_driver.dd_open = (dbt_open_t) bdb_open;
-	dbt_driver.dd_close = (dbt_close_t) bdb_close;
-	dbt_driver.dd_get = (dbt_get_t) bdb_get;
-	dbt_driver.dd_set = (dbt_set_t) bdb_set;
-	dbt_driver.dd_del = (dbt_del_t) bdb_del;
-	dbt_driver.dd_walk = (dbt_walk_t) bdb_walk;
-	dbt_driver.dd_sync = (dbt_sync_t) bdb_sync;
+	dbt_driver.dd_open = (dbt_db_open_t) bdb_open;
+	dbt_driver.dd_close = (dbt_db_close_t) bdb_close;
+	dbt_driver.dd_get = (dbt_db_get_t) bdb_get;
+	dbt_driver.dd_set = (dbt_db_set_t) bdb_set;
+	dbt_driver.dd_del = (dbt_db_del_t) bdb_del;
+	dbt_driver.dd_walk = (dbt_db_walk_t) bdb_walk;
+	dbt_driver.dd_sync = (dbt_db_sync_t) bdb_sync;
 
 	dbt_driver_register(&dbt_driver);
 

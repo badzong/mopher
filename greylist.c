@@ -1,19 +1,15 @@
 #include <time.h>
 #include <stdio.h>
 
-#include "log.h"
-#include "table.h"
-#include "acl.h"
-#include "greylist.h"
+#include "mopher.h"
 
-
-static table_t *greylist_table;
+static dbt_t *greylist_dbt;
 
 void
 greylist_init(void)
 {
-	greylist_table = table_lookup("greylist");
-	if (greylist_table == NULL) {
+	greylist_dbt = dbt_lookup("greylist");
+	if (greylist_dbt == NULL) {
 		log_die(EX_SOFTWARE, "greylist_init: greylist not found");
 	}
 
@@ -36,7 +32,7 @@ greylist_lookup(var_t *attrs)
 		return NULL;
 	}
 
-	lookup = var_list_schema(greylist_table->t_schema, hostaddr, envfrom,
+	lookup = var_list_scheme(greylist_dbt->dbt_scheme, hostaddr, envfrom,
 		envrcpt, NULL, NULL, NULL, NULL, NULL, NULL);
 
 	if (lookup == NULL) {
@@ -44,19 +40,13 @@ greylist_lookup(var_t *attrs)
 		return NULL;
 	}
 
-	record = dbt_get(greylist_table->t_dbt, lookup);
+	record = DBT_DB_GET(greylist_dbt, lookup);
 
 	var_delete(lookup);
 
 	return record;
 }
 
-
-static int
-greylist_update(var_t *record)
-{
-	return dbt_set(greylist_table->t_dbt, record);
-}
 
 static int
 greylist_add(var_t *attrs, acl_delay_t *ad)
@@ -89,16 +79,16 @@ greylist_add(var_t *attrs, acl_delay_t *ad)
 	retries = 1;
 	passed = 0;
 
-	record = var_schema_refcopy(greylist_table->t_schema, hostaddr,
+	record = var_scheme_refcopy(greylist_dbt->dbt_scheme, hostaddr,
 		envfrom, envrcpt, &created, &valid, &delay, &retries, &visa,
 		&passed);
 
 	if (record == NULL) {
-		log_warning("greylist_add: var_schema_refcopy failed");
+		log_warning("greylist_add: var_scheme_refcopy failed");
 		return -1;
 	}
 
-	 r = dbt_set(greylist_table->t_dbt, record);
+	 r = DBT_DB_SET(greylist_dbt, record);
 
 	 var_delete(record);
 
@@ -190,8 +180,8 @@ greylist(var_t *attrs, acl_delay_t *ad)
 
 update:
 
-	if (greylist_update(record)) {
-		log_warning("greylist: greylist_update failed");
+	if (DBT_DB_SET(greylist_dbt, record)) {
+		log_warning("greylist: DBT_DB_SET failed");
 		goto error;
 	}
 

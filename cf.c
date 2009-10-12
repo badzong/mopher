@@ -55,7 +55,7 @@ VAR_INT_T	 cf_log_level;
 VAR_INT_T	 cf_foreground;
 char		*cf_dbt_mod_path;
 char		*cf_tables_mod_path;
-VAR_INT_T	 cf_table_cleanup_interval;
+VAR_INT_T	 cf_dbt_cleanup_interval;
 char		*cf_hostname;
 char		*cf_spamd_socket;
 
@@ -72,7 +72,7 @@ static cf_symbol_t cf_symbols[] = {
 	{ "milter_socket_timeout", &cf_milter_socket_timeout },
 	{ "dbt_mod_path", &cf_dbt_mod_path },
 	{ "tables_mod_path", &cf_tables_mod_path },
-	{ "table_cleanup_interval", &cf_table_cleanup_interval },
+	{ "default_cleanup_interval", &cf_dbt_cleanup_interval },
 	{ "hostname", &cf_hostname },
 	{ "spamd_socket", &cf_spamd_socket },
 	{ NULL, NULL }

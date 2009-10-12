@@ -1,60 +1,76 @@
-#ifndef _DBA_H_
-#define _DBA_H_
+#ifndef _DBT_H_
+#define _DBT_H_
 
 #include "var.h"
 
-typedef void *(*dbt_open_t)(var_t *scheme, char *path, char *host, char *user,
-	char *pass, char *name, char *table);
-typedef void (*dbt_close_t)(void *handle);
-typedef int (*dbt_ping_t)(void *handle);
-typedef int (*dbt_set_t)(void *handle, var_t *record);
-typedef var_t *(*dbt_get_t)(void *handle, var_t *record);
-typedef int (*dbt_del_t)(void *handle, var_t *record);
-typedef int (*dbt_sync_t)(void *handle);
+typedef int (*dbt_db_open_t)(void *dbt);
+typedef void (*dbt_db_close_t)(void *dbt);
+typedef int (*dbt_db_set_t)(void *dbt, var_t *record);
+typedef var_t *(*dbt_db_get_t)(void *dbt, var_t *record);
+typedef int (*dbt_db_del_t)(void *dbt, var_t *record);
+typedef int (*dbt_db_sql_cleanup_t)(void *dbt);
+typedef int (*dbt_db_sync_t)(void *dbt);
 
-typedef int (*dbt_callback_t)(void *data, var_t *record);
-typedef int (*dbt_walk_t)(void *handle, dbt_callback_t callback, void *data);
+typedef int (*dbt_db_callback_t)(void *dbt, var_t *record);
+typedef int (*dbt_db_walk_t)(void *dbt, dbt_db_callback_t callback);
 
-typedef enum dbt_type { DT_NULL = 0, DT_FILE, DT_SERVER } dbt_type_t;
+typedef int (*dbt_update_t)(void *dbt);
+typedef int (*dbt_validate_t)(void *dbt, var_t *record);
 
 typedef struct dbt_driver {
-	char		*dd_name;
-	dbt_type_t	 dd_type;
-	dbt_open_t	 dd_open;
-	dbt_close_t	 dd_close;
-	dbt_ping_t	 dd_ping;
-	dbt_set_t	 dd_set;
-	dbt_get_t	 dd_get;
-	dbt_del_t	 dd_del;
-	dbt_walk_t	 dd_walk;
-	dbt_sync_t	 dd_sync;
+	char			*dd_name;
+	dbt_db_open_t		 dd_open;
+	dbt_db_close_t		 dd_close;
+	dbt_db_set_t		 dd_set;
+	dbt_db_get_t		 dd_get;
+	dbt_db_del_t		 dd_del;
+	dbt_db_walk_t		 dd_walk;
+	dbt_db_sync_t	 	 dd_sync;
+	dbt_db_sql_cleanup_t	 dd_sql_cleanup;
 } dbt_driver_t;
 
 typedef struct dbt {
-	char		*dbt_drivername;
+	char		*dbt_name;
 	char		*dbt_path;
 	char		*dbt_host;
+	VAR_INT_T	 dbt_port;
 	char		*dbt_user;
 	char		*dbt_pass;
-	char		*dbt_name;
+	char		*dbt_database;
 	char		*dbt_table;
+	var_t		*dbt_scheme;
+	int		 dbt_cleanup_interval;
+	int		 dbt_cleanup_schedule;
+	int		 dbt_cleanup_deleted;
+	char		*dbt_sql_invalid_where;
+	dbt_update_t	 dbt_update;
+	dbt_validate_t	 dbt_validate;
+	char		*dbt_drivername;
 	dbt_driver_t	*dbt_driver;
 	void		*dbt_handle;
 } dbt_t;
+
+#define DBT_DB_OPEN(dbt) (dbt)->dbt_driver->dd_open(dbt)
+#define DBT_DB_GET(dbt, var) (dbt)->dbt_driver->dd_get(dbt, var)
+#define DBT_DB_SET(dbt, var) (dbt)->dbt_driver->dd_set(dbt, var)
+#define DBT_DB_DEL(dbt, var) (dbt)->dbt_driver->dd_del(dbt, var)
+#define DBT_DB_WALK(dbt, callback) (dbt)->dbt_driver->dd_walk(dbt, callback)
+#define DBT_DB_SYNC(dbt) (dbt)->dbt_driver->dd_sync(dbt)
+#define DBT_DB_CLOSE(DBT) (dbt)->dbt_driver->dd_close(dbt)
+#define DBT_SQL_CLEANUP(dbt) (dbt)->dbt_driver->dd_sql_cleanup(dbt)
+
+#define DBT_VALIDATE(dbt, var) (dbt)->dbt_validate(dbt, var)
+#define DBT_SCHEDULE_CLEANUP(dbt, now) ((dbt)->dbt_cleanup_schedule = now + (dbt)->dbt_cleanup_interval)
 
 /*
  * Prototypes
  */
 
-void dbt_delete(dbt_t *dbt);
 void dbt_driver_register(dbt_driver_t *dd);
+void dbt_register(dbt_t *dbt);
+void dbt_janitor(int force);
 void dbt_init(void);
-void dbt_clear(void);
-dbt_t * dbt_open(var_t *scheme, char *driver, char *path, char *host, char *user,char *pass, char *name, char *table);
-var_t * dbt_get(dbt_t *dbt, var_t *record);
-int dbt_set(dbt_t *dbt, var_t *record);
-int dbt_del(dbt_t *dbt, var_t *record);
-int dbt_walk(dbt_t *dbt, dbt_callback_t callback, void *data);
-int dbt_sync(dbt_t *dbt);
+void dbt_clear();
+dbt_t * dbt_lookup(char *name);
 
-#endif /* _DBA_H_ */
+#endif /* _DBT_H_ */

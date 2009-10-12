@@ -9,13 +9,7 @@
 #include <arpa/inet.h>
 #include <time.h>
 
-#include "milter.h"
-// #include "access.h"
-#include "log.h"
-#include "cf.h"
-#include "acl.h"
-#include "util.h"
-#include "table.h"
+#include "mopher.h"
 
 #define MSN_CONNECT	"connect"
 #define MSN_UNKNOWN	"unknown"
@@ -467,7 +461,7 @@ milter_close(SMFICTX * ctx)
 	/*
 	 * Use this thread do cleanup the tables.
 	 */
-	table_janitor(0);
+	dbt_janitor(0);
 
 	return SMFIS_CONTINUE;
 }

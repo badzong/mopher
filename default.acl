@@ -10,7 +10,7 @@ eom default log "STAGE:{milter_stagename}" level 1
 unknown default log "UNKNOWN COMMAND {milter_unknown_command}" level 3
 
 
-envfrom string_strlen(milter_envfrom) > 10 log "{milter_envfrom} laenger als 10!!!"
+#envfrom string_strlen(milter_envfrom) > 10 log "{milter_envfrom} laenger als 10!!!"
 connect log "EMPTY RULE IN CONNECT"
 connect milter_hostaddr = 127.0.0.1 continue
 connect milter_myhostname log "MYHOSTNAME: {milter_myhostname}"

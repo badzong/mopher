@@ -1,12 +1,11 @@
 #include <stdio.h>
 
-#include "log.h"
-#include "var.h"
-#include "table.h"
+#include "mopher.h"
 
+static dbt_t greylist_dbt;
 
 static int
-greylist_validate(var_t *record)
+greylist_validate(dbt_t *dbt, var_t *record)
 {
 	VAR_INT_T *created;
 	VAR_INT_T *valid;
@@ -17,7 +16,10 @@ greylist_validate(var_t *record)
 		return -1;
 	}
 
-	if (table_cleanup_cycle > *created + *valid) {
+	/*
+	 * dbt->dbt_cleanup_schedule == time(NULL)
+	 */
+	if (dbt->dbt_cleanup_schedule > *created + *valid) {
 		return 0;
 	}
 
@@ -28,9 +30,9 @@ greylist_validate(var_t *record)
 int
 init(void)
 {
-	var_t *schema;
+	var_t *scheme;
 
-	schema = var_schema_create(
+	scheme = var_scheme_create(
 		"hostaddr",	VT_ADDR,	VF_KEEPNAME | VF_KEY, 
 		"envfrom",	VT_STRING,	VF_KEEPNAME | VF_KEY,
 		"envrcpt",	VT_STRING,	VF_KEEPNAME | VF_KEY,
@@ -42,20 +44,32 @@ init(void)
 		"passed",	VT_INT,		VF_KEEPNAME,
 		NULL);
 
-	if (schema == NULL) {
-		log_warning("greylist: init: var_schema_create failed");
+	if (scheme == NULL) {
+		log_warning("greylist: init: var_scheme_create failed");
 		return -1;
 	}
+
+	greylist_dbt.dbt_name = "greylist";
+	greylist_dbt.dbt_scheme = scheme;
+	greylist_dbt.dbt_validate = (dbt_validate_t) greylist_validate;
+	greylist_dbt.dbt_sql_invalid_where =
+		"`valid` + `created` < unix_timestamp()";
 
 	/*
 	 * greylist_valid need to be registered at table
 	 * sql bulk del where
 	 */
 
-	if (table_register("greylist", schema, NULL, greylist_validate)) {
-		log_warning("greylist: init: table_register failed");
-		return -1;
-	}
+	dbt_register(&greylist_dbt);
 
 	return 0;
+}
+
+
+void
+fini(void)
+{
+	var_delete(greylist_dbt.dbt_scheme);
+
+	return;
 }

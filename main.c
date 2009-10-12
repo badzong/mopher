@@ -47,12 +47,10 @@ main(int argc, char **argv)
 	cf_init(config);
 	modules_init();
 	dbt_init();
-	table_init();
 	greylist_init();
 
 	r = milter();
 
-	table_clear();
 	dbt_clear();
 	modules_clear();
 	cf_clear();

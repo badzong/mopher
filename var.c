@@ -146,7 +146,7 @@ error:
 }
 
 
-static int
+int
 var_data_size(var_t *v)
 {
 	if(v->v_type == VT_STRING) {
@@ -224,6 +224,22 @@ var_data_create(var_type_t type)
 	case VT_TABLE:
 		p = (void *) ht_create(BUCKETS, (ht_hash_t) var_hash,
 			(ht_match_t) var_match, (ht_delete_t) var_delete);
+		break;
+
+	case VT_INT:
+		p = malloc(sizeof (VAR_INT_T));
+		break;
+
+	case VT_FLOAT:
+		p = malloc(sizeof (VAR_FLOAT_T));
+		break;
+
+	case VT_STRING:
+		p = malloc(VAR_STRING_BUFFER_LEN);
+		break;
+
+	case VT_ADDR:
+		p = malloc(sizeof (struct sockaddr_storage));
 		break;
 
 	default:
@@ -553,7 +569,12 @@ var_dump_data(var_t * v, char *buffer, int size)
 		break;
 
 	case VT_STRING:
-		len = snprintf(buffer, size, "\"%s\"", (char *) v->v_data);
+		len = strlen(v->v_data);
+		if (len < size)
+		{
+			strcpy(buffer, v->v_data);
+		}
+
 		break;
 
 	case VT_ADDR:
@@ -566,7 +587,12 @@ var_dump_data(var_t * v, char *buffer, int size)
 			return -1;
 		}
 
-		len = snprintf(buffer, size, "[%s]", addrstr);
+		len = strlen(addrstr);
+		if (len < size)
+		{
+			strcpy(buffer, addrstr);
+		}
+
 		break;
 
 	case VT_LIST:
@@ -913,7 +939,7 @@ var_table_list_append(var_t *table, var_type_t type, char *name, void *data,
 
 
 var_t *
-var_schema_create(char *name, ...)
+var_scheme_create(char *name, ...)
 {
 	va_list ap;
 	var_t *v = NULL, *list = NULL;
@@ -922,9 +948,9 @@ var_schema_create(char *name, ...)
 
 	va_start(ap, name);
 
-	list = var_create(VT_LIST, "schema", NULL, VF_KEEPNAME | VF_CREATE);
+	list = var_create(VT_LIST, "scheme", NULL, VF_KEEPNAME | VF_CREATE);
 	if (list == NULL) {
-		log_warning("var_list_schema: var_create failed");
+		log_warning("var_list_scheme: var_create failed");
 		goto error;
 	}
 
@@ -934,12 +960,12 @@ var_schema_create(char *name, ...)
 
 		v = var_create(type, name, NULL, flags);
 		if (v == NULL) {
-			log_warning("var_list_schema: var_create failed");
+			log_warning("var_list_scheme: var_create failed");
 			goto error;
 		}
 
 		if (var_list_append(list, v) == -1) {
-			log_warning("var_list_schema: var_list_append failed");
+			log_warning("var_list_scheme: var_list_append failed");
 			goto error;
 		}
 	} while ((name = va_arg(ap, char *)));
@@ -965,25 +991,25 @@ error:
 
 
 var_t *
-var_list_schema(var_t *schema, ...)
+var_list_scheme(var_t *scheme, ...)
 {
 	va_list ap;
 	var_t *item, *new = NULL, *list = NULL;
 	int flags;
 	void *data;
 
-	va_start(ap, schema);
+	va_start(ap, scheme);
 
-	list = var_create(VT_LIST, schema->v_name, NULL,
+	list = var_create(VT_LIST, scheme->v_name, NULL,
 		VF_KEEPNAME | VF_CREATE);
 
 	if (list == NULL) {
-		log_warning("var_list_schema: var_create_failed");
+		log_warning("var_list_scheme: var_create_failed");
 		goto error;
 	}
 
-	ll_rewind(schema->v_data);
-	while ((item = ll_next(schema->v_data))) {
+	ll_rewind(scheme->v_data);
+	while ((item = ll_next(scheme->v_data))) {
 
 		flags = item->v_flags;
 		flags |= VF_KEEPDATA | VF_KEEPNAME;
@@ -994,12 +1020,12 @@ var_list_schema(var_t *schema, ...)
 		new = var_create(item->v_type, item->v_name, data, flags);
 
 		if (new == NULL) {
-			log_warning("var_list_schema: var_create failed");
+			log_warning("var_list_scheme: var_create failed");
 			goto error;
 		}
 
 		if (var_list_append(list, new) == -1) {
-			log_warning("var_list_schema: var_list_append failed");
+			log_warning("var_list_scheme: var_list_append failed");
 			goto error;
 		}
 	}
@@ -1083,24 +1109,24 @@ var_table_dereference(var_t *table, ...)
 }
 
 var_t *
-var_schema_refcopy(var_t *schema, ...)
+var_scheme_refcopy(var_t *scheme, ...)
 {
 	va_list ap;
 	var_t *item, *arg, *new = NULL, *list = NULL;
 	int flags;
 
-	va_start(ap, schema);
+	va_start(ap, scheme);
 
-	list = var_create(VT_LIST, schema->v_name, NULL,
+	list = var_create(VT_LIST, scheme->v_name, NULL,
 		VF_KEEPNAME | VF_CREATE);
 
 	if (list == NULL) {
-		log_warning("var_schema_refcopy: var_create_failed");
+		log_warning("var_scheme_refcopy: var_create_failed");
 		goto error;
 	}
 
-	ll_rewind(schema->v_data);
-	while ((item = ll_next(schema->v_data))) {
+	ll_rewind(scheme->v_data);
+	while ((item = ll_next(scheme->v_data))) {
 
 		flags = item->v_flags;
 		flags |= VF_KEEPDATA | VF_KEEPNAME;
@@ -1111,12 +1137,12 @@ var_schema_refcopy(var_t *schema, ...)
 		new = var_create(item->v_type, item->v_name, arg, flags);
 
 		if (new == NULL) {
-			log_warning("var_schema_refcopy: var_create failed");
+			log_warning("var_scheme_refcopy: var_create failed");
 			goto error;
 		}
 
 		if (var_list_append(list, new) == -1) {
-			log_warning("var_schema_refcopy: var_list_append failed");
+			log_warning("var_scheme_refcopy: var_list_append failed");
 			goto error;
 		}
 	}
@@ -1249,19 +1275,19 @@ error:
 
 
 var_t *
-var_decompress(var_compact_t *vc, var_t *schema)
+var_decompress(var_compact_t *vc, var_t *scheme)
 {
 	var_t *v, *item = NULL, *list = NULL;
 	void *p;
 	int k = 0, d = 0;
 	int *i;
 
-	if(schema->v_type != VT_LIST) {
+	if(scheme->v_type != VT_LIST) {
 		log_warning("var_decompress: bad type");
 		goto error;
 	}
 
-	list = var_create(VT_LIST, schema->v_name, NULL,
+	list = var_create(VT_LIST, scheme->v_name, NULL,
 		VF_COPYNAME | VF_CREATE);
 
 	if(list == NULL) {
@@ -1269,8 +1295,8 @@ var_decompress(var_compact_t *vc, var_t *schema)
 		goto error;
 	}
 
-	ll_rewind(schema->v_data);
-	while ((item = ll_next(schema->v_data))) {
+	ll_rewind(scheme->v_data);
+	while ((item = ll_next(scheme->v_data))) {
 		p = item->v_flags & VF_KEY ? vc->vc_key : vc->vc_data;
 		i = item->v_flags & VF_KEY ? &k : &d;
 

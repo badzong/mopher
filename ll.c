@@ -12,12 +12,12 @@ ll_init(ll_t * ll)
 }
 
 ll_t *
-ll_create(void)
+ll_create()
 {
 	ll_t *ll;
 
 	if ((ll = (ll_t *) malloc(sizeof(ll_t))) == NULL)
-		return NULL;
+	 	return NULL;
 
 	ll_init(ll);
 
