@@ -1,4 +1,5 @@
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/socket.h>
 #include <stdio.h>
 #include <string.h>
@@ -509,11 +510,24 @@ milter(void)
 
 	r = smfi_main();
 
+	if (r == MI_SUCCESS)
+	{
+		sock_unix_unlink(cf_milter_socket);
+	}
+	else
+	{
+		log_error("milter: smfi_main returned with errors");
+	}
+
+	/*
+	 * Reset umask
+	 */
+	umask(mask);
+
 	milter_running = 0;
 
 	acl_clear();
 
-	umask(mask);
 
 	return r;
 }
