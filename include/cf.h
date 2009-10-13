@@ -29,6 +29,7 @@ extern char		*cf_acl_path;
 extern char		*cf_acl_mod_path;
 extern char		*cf_milter_socket;
 extern VAR_INT_T	 cf_milter_socket_timeout;
+extern VAR_INT_T	 cf_milter_socket_umask;
 extern VAR_INT_T	 cf_log_level;
 extern VAR_INT_T	 cf_foreground;
 extern char		*cf_dbt_mod_path;

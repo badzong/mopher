@@ -3,6 +3,8 @@
 #include <string.h>
 #include <stdarg.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "log.h"
 #include "var.h"
@@ -51,6 +53,7 @@ char		*cf_acl_path;
 char		*cf_acl_mod_path;
 char		*cf_milter_socket;
 VAR_INT_T	 cf_milter_socket_timeout;
+VAR_INT_T	 cf_milter_socket_umask;
 VAR_INT_T	 cf_log_level;
 VAR_INT_T	 cf_foreground;
 char		*cf_dbt_mod_path;
@@ -70,6 +73,7 @@ static cf_symbol_t cf_symbols[] = {
 	{ "acl_mod_path", &cf_acl_mod_path },
 	{ "milter_socket", &cf_milter_socket },
 	{ "milter_socket_timeout", &cf_milter_socket_timeout },
+	{ "milter_socket_umask", &cf_milter_socket_umask },
 	{ "dbt_mod_path", &cf_dbt_mod_path },
 	{ "tables_mod_path", &cf_tables_mod_path },
 	{ "default_cleanup_interval", &cf_dbt_cleanup_interval },

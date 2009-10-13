@@ -471,6 +471,7 @@ milter(void)
 {
 	int8_t r;
 	struct smfiDesc smfid;
+	mode_t mask;
 
 	bzero(&smfid, sizeof(struct smfiDesc));
 
@@ -489,6 +490,11 @@ milter(void)
 	smfid.xxfi_eom = milter_eom;
 	smfid.xxfi_close = milter_close;
 
+	/*
+	 * Control socket permissions via umask
+	 */
+	mask = umask(cf_milter_socket_umask);
+
 	if (smfi_setconn(cf_milter_socket) == MI_FAILURE) {
 		log_die(EX_SOFTWARE, "milter: smfi_setconn failed");
 	}
@@ -506,6 +512,8 @@ milter(void)
 	milter_running = 0;
 
 	acl_clear();
+
+	umask(mask);
 
 	return r;
 }
