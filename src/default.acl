@@ -1,0 +1,4 @@
+envrcpt spf = SPF_PASS pass
+envrcpt spf = SPF_FAIL delay 30m
+eom spamd_spam delay
+eom spamd_score > 5.0 block
