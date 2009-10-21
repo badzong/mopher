@@ -590,6 +590,11 @@ var_true(const var_t * v)
 	ht_t *ht;
 	struct sockaddr_storage ss, *pss;
 
+	if (v->v_data == 0)
+	{
+		return 0;
+	}
+
 	switch (v->v_type) {
 
 	case VT_INT:

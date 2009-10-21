@@ -1,3 +1,4 @@
+connect xbl log "{hostaddr} listed in XBL"
 envrcpt spf = SPF_PASS pass
 envrcpt spf = SPF_FAIL delay 30m
 eom spamd_spam delay

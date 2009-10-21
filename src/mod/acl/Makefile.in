@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-Wall -g -shared -nostartfiles -fPIC -I../../include
-OBJECTS=milter.so string.so spf.so spamd.so
+OBJECTS=milter.so string.so spf.so spamd.so rbl.so
 ACFILES=Makefile
 
 all: $(OBJECTS)
