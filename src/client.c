@@ -540,6 +540,7 @@ client_clear(void)
 	if (client_servers->ll_size == 0) 
 	{
 		ll_delete(client_servers, (ll_delete_t) client_delete);
+		return;
 	}
 
 	if (pthread_mutex_lock(&client_mutex))
