@@ -1,9 +1,21 @@
+#include "config.h"
+
+#ifdef HAVE_MALLOC_H
+#include <malloc.h>
+#endif
+
+#ifdef HAVE_STDLIB_H
+#include <stdlib.h>
+#endif
+
+#include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <malloc.h>
 #include <string.h>
 #include <errno.h>
-#include <arpa/inet.h>
 #include <stdarg.h>
 
 #include "var.h"
@@ -87,30 +99,36 @@ var_delete(var_t *v)
 static void *
 var_copy_list_or_table(var_type_t type, void *src)
 {
-	int is_table, r;
-	void *copy = NULL;
-	ht_t *ht = src;
-	var_t *vo, *vc = NULL;
+	int	 is_table, r;
+	void	*copy = NULL;
+	ht_t	*ht = src;
+	ll_t	*ll = src;
+	var_t	*vo, *vc = NULL;
 
 	is_table = (type == VT_TABLE);
 
-	copy = is_table ?  (void *) ht_create(ht->ht_buckets, ht->ht_hash,
-		ht->ht_match, ht->ht_delete) : (void *) ll_create();
+	if (is_table)
+	{
+		ht_rewind(ht);
 
-	if (copy == NULL) {
+		copy = (void *) ht_create(ht->ht_buckets, ht->ht_hash,
+		    ht->ht_match, ht->ht_delete);
+	}
+	else
+	{
+		ll_rewind(ll);
+
+		copy = (void *) ll_create();
+	}
+
+	if (copy == NULL)
+	{
 		log_warning("var_list_copy: %s_create failed",
-			is_table ? "ht" : "ll");
+		    is_table ? "ht" : "ll");
 		goto error;
 	}
 
-	if(is_table) {
-		ht_rewind(copy);
-	}
-	else {
-		ll_rewind(copy);
-	}
-
-	while ((vo = is_table ? ht_next(copy) : ll_next(copy))) {
+	while ((vo = (is_table ? ht_next(ht) : ll_next(ll)))) {
 		if ((vc = var_create(vo->v_type, vo->v_name, vo->v_data,
 			VF_COPYNAME | VF_COPYDATA))
 			== NULL) {
@@ -369,6 +387,153 @@ var_create(var_type_t type, char *name, void *data, int flags)
 }
 
 
+void *
+var_scan_data(var_type_t type, char *str)
+{
+	void *src, *copy;
+	VAR_INT_T i;
+	VAR_FLOAT_T d;
+	struct sockaddr_storage *ss;
+
+	switch (type)
+	{
+	case VT_STRING:
+		src = str;
+		break;
+
+	case VT_INT:
+		i = atol(str);
+		src = &i;
+		break;
+
+	case VT_FLOAT:
+		d = atof(str);
+		src = &d;
+
+	case VT_ADDR:
+		ss = util_strtoaddr(str);
+		if (ss == NULL)
+		{
+			log_warning("var_scan_data: util_strtoaddr failed");
+			return NULL;
+		}
+
+		return ss;
+
+	//TODO Add more types
+
+	default:
+		log_warning("var_scan_data: bad type");
+		return NULL;
+	}
+
+	copy = var_copy_data(type, src);
+	if (copy == NULL)
+	{
+		log_warning("var_scan_data: var_copy_data failed");
+		return NULL;
+	}
+
+	return copy;
+}
+
+var_t *
+var_scan_scheme(var_t *scheme, char *str)
+{
+	char *name;
+	char *copy = NULL;
+	char *p, *q;
+	int len;
+	ll_t *list;
+	var_t *v;
+	var_t *output = NULL;
+	void *data;
+
+	output = var_create(VT_LIST, scheme->v_name, NULL,
+	    VF_KEEPNAME | VF_CREATE);
+	if (output == NULL)
+	{
+		log_warning("var_scan_scheme: var_create failed");
+		goto error;
+	}
+
+	p = strchr(str, '=');
+	if (p == NULL)
+	{
+		log_warning("var_scan_scheme: no '=' found");
+		goto error;
+	}
+
+	len = p - str;
+	name = strndup(str, len);
+	if (name == NULL)
+	{
+		log_warning("var_scan_scheme: strndup");
+		goto error;
+	}
+
+	copy = util_strdupenc(p + 1, "()");
+	if (copy == NULL)
+	{
+		log_warning("var_scan_scheme: util_strndupenc failed");
+		goto error;
+	}
+
+	list = scheme->v_data;
+	
+	for (p = copy, ll_rewind(list);
+	    (v = ll_next(list)) && p != NULL;
+	    p = q)
+	{
+		q = strchr(p, ',');
+		if (q != NULL)
+		{
+			*(q++) = 0;
+			
+		}
+
+		printf("SCAN: %s\n", p);
+
+		data = var_scan_data(v->v_type, p);
+		if (data == NULL)
+		{
+			log_warning("var_scan_scheme: var_scan_data failed");
+			goto error;
+		}
+
+		if (var_list_append_new(output, v->v_type, v->v_name, data,
+		    VF_KEEPNAME))
+		{
+			log_warning("var_scan_scheme: var_list_append_new "
+			    "failed");
+			goto error;
+		}
+	}
+
+	if (v != NULL || p != NULL)
+	{
+		log_warning("var_scan_scheme: bad string");
+		goto error;
+	}
+
+	return output;
+	
+		
+error:
+
+	if (output)
+	{
+		var_delete(output);
+	}
+
+	if (copy)
+	{
+		free(copy);
+	}
+
+	return NULL;
+}
+
 int
 var_compare(const var_t * v1, const var_t * v2)
 {
@@ -578,8 +743,14 @@ var_dump_data(var_t * v, char *buffer, int size)
 		break;
 
 	case VT_ADDR:
-		p = (ss->ss_family == AF_INET6 ? (void *) &sin6->sin6_addr :
-			(void *) &sin->sin_addr);
+		if (ss->ss_family == AF_INET6)
+		{
+			p = (void *) &sin6->sin6_addr;
+		}
+		else
+		{
+			p = (void *) &sin->sin_addr;
+		}
 
 		if (inet_ntop(ss->ss_family, p, addrstr, sizeof(addrstr))
 			== NULL) {
@@ -939,22 +1110,30 @@ var_table_list_append(var_t *table, var_type_t type, char *name, void *data,
 
 
 var_t *
-var_scheme_create(char *name, ...)
+var_scheme_create(char *scheme, ...)
 {
 	va_list ap;
 	var_t *v = NULL, *list = NULL;
 	var_type_t type;
 	int flags;
-
-	va_start(ap, name);
-
-	list = var_create(VT_LIST, "scheme", NULL, VF_KEEPNAME | VF_CREATE);
+	char *name;
+	
+	list = var_create(VT_LIST, scheme, NULL, VF_COPYNAME | VF_CREATE);
 	if (list == NULL) {
 		log_warning("var_list_scheme: var_create failed");
 		goto error;
 	}
 
-	do {
+	va_start(ap, scheme);
+
+	for (;;)
+	{
+		name = va_arg(ap, char *);
+		if (name == NULL)
+		{
+			break;
+		}
+
 		type = va_arg(ap, var_type_t);
 		flags = va_arg(ap, int);
 
@@ -968,7 +1147,7 @@ var_scheme_create(char *name, ...)
 			log_warning("var_list_scheme: var_list_append failed");
 			goto error;
 		}
-	} while ((name = va_arg(ap, char *)));
+	};
 
 	va_end(ap);
 
@@ -1287,8 +1466,7 @@ var_decompress(var_compact_t *vc, var_t *scheme)
 		goto error;
 	}
 
-	list = var_create(VT_LIST, scheme->v_name, NULL,
-		VF_COPYNAME | VF_CREATE);
+	list = var_create(VT_LIST, NULL, NULL, VF_CREATE);
 
 	if(list == NULL) {
 		log_warning("var_decompress: var_create failed");

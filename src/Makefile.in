@@ -1,0 +1,61 @@
+CC=@CC@
+LEX=@LEX@
+YACC=@YACC@
+YFLAGS=-d
+OBJCOPY=@OBJCOPY@
+INCLUDE=-Iinclude -I@top_srcdir@
+CFLAGS=-Wall -DDEBUG -g $(INCLUDE)
+LDFLAGS=-rdynamic
+
+OBJECTS=main.o cf_yacc.o cf_lex.o cf.o cf_defaults.o acl_yacc.o acl_lex.o acl.o milter.o modules.o ll.o ht.o var.o log.o hash.o util.o dbt.o greylist.o sock.o client.o server.o
+GENSRC=cf_yacc.c cf_yacc.h cf_lex.c acl_yacc.c acl_yacc.h acl_lex.c
+LIBS=-lpthread -lmilter -ldl
+SUBDIRS=mod/acl mod/db mod/tables
+ACFILES=Makefile
+
+all: main $(SUBDIRS)
+
+.PHONY: clean
+.PHONY: distclean
+.PHONY: $(SUBDIRS)
+
+cf_defaults.o: cf_defaults.conf
+	ld -r -b binary -o cf_defaults.o cf_defaults.conf
+	$(OBJCOPY) --rename-section .data=.rodata,alloc,load,readonly,data,contents cf_defaults.o cf_defaults.o
+
+cf_yacc.c: cf_yacc.y
+	$(YACC) $(YFLAGS) -p cf_ cf_yacc.y
+	mv y.tab.c cf_yacc.c
+	mv y.tab.h cf_yacc.h
+
+cf_lex.c: cf_lex.l
+	$(LEX) -t -Pcf_ cf_lex.l > cf_lex.c
+
+acl_yacc.c: acl_yacc.y
+	$(YACC) $(YFLAGS) -p acl_ acl_yacc.y
+	mv y.tab.c acl_yacc.c
+	mv y.tab.h acl_yacc.h
+
+acl_lex.c: acl_lex.l
+	$(LEX) -t -Pacl_ acl_lex.l > acl_lex.c
+
+../lib/lib.a:
+	cd ../lib && $(MAKE)
+
+main: Makefile $(OBJECTS) $(LIBS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o main $(OBJECTS) $(LIBS)
+
+%.o: %.c include/%.h Makefile
+	$(CC) $(CFLAGS) -c $<
+
+$(SUBDIRS):
+	cd $@ && $(MAKE)
+
+clean:
+	-rm main $(OBJECTS) $(GENSRC)
+	for d in $(SUBDIRS); do (cd $$d && $(MAKE) clean); done
+
+distclean:
+	for d in $(SUBDIRS); do (cd $$d && $(MAKE) distclean); done
+	-rm -f $(ACFILES)
+

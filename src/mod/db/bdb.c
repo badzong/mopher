@@ -61,6 +61,8 @@ bdb_get(dbt_t *dbt, var_t *record, var_t **result)
 	var_compact_t *vc = NULL;
 	int r;
 
+	*result = NULL;
+
 	vc = var_compress(record);
 	if (vc == NULL) {
 		log_warning("bdb_get: var_compress failed");
@@ -80,7 +82,7 @@ bdb_get(dbt_t *dbt, var_t *record, var_t **result)
 		break;
 	case DB_NOTFOUND:
 		log_info("bdb_get: no record found");
-		goto error;
+		goto exit;
 	default:
 		log_error("bdb_get: DB->get failed");
 		goto error;
@@ -95,6 +97,7 @@ bdb_get(dbt_t *dbt, var_t *record, var_t **result)
 		goto error;
 	}
 
+exit:
 	var_compact_delete(vc);
 
 	return 0;

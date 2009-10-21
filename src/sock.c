@@ -1,5 +1,14 @@
-#include <string.h>
+#include "config.h"
+
+#ifdef HAVE_MALLOC_H
 #include <malloc.h>
+#endif
+
+#ifdef HAVE_STDLIB_H
+#include <stdlib.h>
+#endif
+
+#include <string.h>
 #include <unistd.h>
 #include <sysexits.h>
 #include <sys/types.h>
@@ -147,7 +156,7 @@ sock_inet_listen(char *bindaddr, char *port, int backlog)
 static int
 sock_inet_connect(char *host, char *port)
 {
-	struct addrinfo *res;
+	struct addrinfo *res, *ai;
 	struct addrinfo hints;
 	int e;
 	int fd = -1;
@@ -157,13 +166,13 @@ sock_inet_connect(char *host, char *port)
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_ADDRCONFIG;
 
-	if((e = getaddrinfo(host, port, &hints, &res))) {
+	if((e = getaddrinfo(host, port, &hints, &ai))) {
 		log_error("sock_inet_connect: getaddrinfo %s:%s: %s",
 			host, port, gai_strerror(e));
 		return -1;
 	}
 
-	for(;res != NULL; res = res->ai_next) {
+	for(res = ai;res != NULL; res = res->ai_next) {
 		fd = socket(res->ai_family, res->ai_socktype,
 			res->ai_protocol);
 
@@ -179,7 +188,7 @@ sock_inet_connect(char *host, char *port)
 		fd = -1;
 	}
 
-	freeaddrinfo(res);
+	freeaddrinfo(ai);
 	if (fd == -1) {
 		log_error("sock_inet_connect: connection to %s:%s failed", host,
 			port);

@@ -1,6 +1,15 @@
+#include "config.h"
+
+#ifdef HAVE_MALLOC_H
+#include <malloc.h>
+#endif
+
+#ifdef HAVE_STDLIB_H
+#include <stdlib.h>
+#endif
+
 #include <sys/types.h>
 #include <stdio.h>
-#include <malloc.h>
 #include <string.h>
 
 #include "ht.h"

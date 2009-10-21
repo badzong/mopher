@@ -19,5 +19,7 @@
 #include "sock.h"
 #include "util.h"
 #include "var.h"
+#include "client.h"
+#include "server.h"
 
 #endif /* _MOPHER_H */

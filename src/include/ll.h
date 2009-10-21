@@ -23,6 +23,7 @@ typedef struct ll {
 	ll_entry_t	*ll_tail;
 } ll_t;
 
+typedef void (*ll_delete_t)(void *data);
 
 /*
  * Prototypes

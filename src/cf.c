@@ -1,4 +1,13 @@
+#include "config.h"
+
+#ifdef HAVE_MALLOC_H
 #include <malloc.h>
+#endif
+
+#ifdef HAVE_STDLIB_H
+#include <stdlib.h>
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
@@ -59,6 +68,9 @@ char		*cf_tables_mod_path;
 VAR_INT_T	 cf_dbt_cleanup_interval;
 char		*cf_hostname;
 char		*cf_spamd_socket;
+char		*cf_sync_socket;
+VAR_INT_T	 cf_client_retry_interval;
+char		*cf_server_socket;
 
 /*
  * Symbol table
@@ -77,6 +89,9 @@ static cf_symbol_t cf_symbols[] = {
 	{ "default_cleanup_interval", &cf_dbt_cleanup_interval },
 	{ "hostname", &cf_hostname },
 	{ "spamd_socket", &cf_spamd_socket },
+	{ "sync_socket", &cf_sync_socket },
+	{ "client_retry_interval", &cf_client_retry_interval },
+	{ "server_socket", &cf_server_socket },
 	{ NULL, NULL }
 };
 

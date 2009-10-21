@@ -1,0 +1,46 @@
+DIST=@PACKAGE@-@VERSION@
+DISTDIR=@top_srcdir@/$(DIST)
+ARCHIVE=$(DIST).tar
+TARBALL=$(ARCHIVE).bz2
+
+TAR=@TAR@
+BZIP2=@BZIP2@
+
+SUBDIRS=src
+
+DISTFILES=configure Makefile.in config.h.in $(SUBDIRS)
+ACFILES=Makefile config.h
+
+
+.PHONY: clean
+.PHONY: distclean
+.PHONY: $(SUBDIRS)
+.PHONY: $(ARCHIVE)
+
+
+all: $(SUBDIRS)
+
+$(SUBDIRS):
+	cd $@ && $(MAKE)
+
+clean:
+	for d in $(SUBDIRS); do (cd $$d && $(MAKE) clean); done
+
+distclean: clean
+	for d in $(SUBDIRS); do (cd $$d && $(MAKE) distclean); done
+	-rm -f $(ACFILES)
+	-rm -f $(TARBALL)
+
+dist: clean $(TARBALL) $(DISTDIR)
+
+$(DISTDIR):
+	mkdir $(DISTDIR)
+	cp -dpr $(DISTFILES) $(DISTDIR)
+
+$(TARBALL): $(ARCHIVE)
+	-rm -f $@
+	$(BZIP2) $<
+
+$(ARCHIVE): $(DISTDIR)
+	$(TAR) cvf $@ $(DISTDIR)
+	rm -rf $(DISTDIR)

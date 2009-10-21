@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <dlfcn.h>
@@ -37,7 +39,9 @@ modules_open(const char *path)
 		}
 	}
 
-	if ((error = dlerror()) != NULL) {
+	error = (char *) dlerror();
+	if (error != NULL)
+	{
 		log_die(EX_SOFTWARE, "modules_open: dlsym: %s", error);
 	}
 
@@ -117,7 +121,9 @@ modules_clear(void)
 			fini();
 		}
 
-		if ((error = dlerror()) != NULL) {
+		error = (char *) dlerror();
+		if (error != NULL)
+		{
 			log_info("modules_clear: dlsym: %s", error);
 		}
 

@@ -1,4 +1,13 @@
+#include "config.h"
+
+#ifdef HAVE_MALLOC_H
 #include <malloc.h>
+#endif
+
+#ifdef HAVE_STDLIB_H
+#include <stdlib.h>
+#endif
+
 #include <string.h>
 #include <pthread.h>
 #include <errno.h>
@@ -142,6 +151,8 @@ dbt_db_set(dbt_t *dbt, var_t *record)
 	{
 		return -1;
 	}
+
+	client_sync(dbt, record);
 
 	r = dbt->dbt_driver->dd_set(dbt, record);
 
@@ -478,7 +489,7 @@ dbt_init(void)
 		(ht_match_t) dbt_match, (ht_delete_t) dbt_close);
 
 	if (dbt_tables == NULL) {
-		log_die(EX_SOFTWARE, "table_init: ht_init failed");
+		log_die(EX_SOFTWARE, "dbt_init: ht_init failed");
 	}
 
 	/*
@@ -491,6 +502,19 @@ dbt_init(void)
 	 */
 	dbt_janitor(1);
 
+	/*
+	 * Start sync thread
+	 */
+	if (server_init())
+	{
+		log_die(EX_SOFTWARE, "dbt_init: server_init failed");
+	}
+
+	if (client_init())
+	{
+		log_die(EX_SOFTWARE, "dbt_init: client_init failed");
+	}
+
 	return;
 }
 
@@ -499,6 +523,9 @@ void
 dbt_clear()
 {
 	dbt_janitor(1);
+
+	client_clear();
+	server_clear();
 
 	ht_delete(dbt_drivers);
 	ht_delete(dbt_tables);

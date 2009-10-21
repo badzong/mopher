@@ -1,4 +1,13 @@
+#include "config.h"
+
+#ifdef HAVE_MALLOC_H
 #include <malloc.h>
+#endif
+
+#ifdef HAVE_STDLIB_H
+#include <stdlib.h>
+#endif
+
 #include <string.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
@@ -7,6 +16,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <pthread.h>
+#include <signal.h>
+#include <stdarg.h>
 
 #include "log.h"
 
@@ -271,6 +283,79 @@ util_addrcmp(struct sockaddr_storage *ss1, struct sockaddr_storage *ss2)
 
 	default:
 		log_warning("util_addrcmp: bad address family");
+	}
+
+	return 0;
+}
+
+
+int
+util_block_signals(int sig, ...)
+{
+	sigset_t	sigset;
+	int		signal;
+	va_list		ap;
+
+	if (sigemptyset(&sigset))
+	{
+		log_error("util_block_signals: sigemptyset");
+		return -1;
+	}
+
+	va_start(ap, sig);
+
+	while ((signal = va_arg(ap, int)))
+	{
+		if (sigaddset(&sigset, signal))
+		{
+			log_error("util_block_signals: sigaddset");
+			return -1;
+		}
+	}
+	
+	if (pthread_sigmask(SIG_BLOCK, &sigset, NULL))
+	{
+		log_error("client_main: pthread_sigmask");
+		return -1;
+	}
+
+	va_end(ap);
+
+	return 0;
+}
+
+int
+util_signal(int signum, void (*handler)(int))
+{
+	struct sigaction new, old;
+
+	new.sa_handler = handler;
+	sigemptyset(&new.sa_mask);
+	new.sa_flags = 0;
+
+	if(sigaction(signum, NULL, &old) == -1)
+	{
+		log_error("util_signal: sigaction");
+		return -1;
+	}
+
+	/*
+	 * Check if a signal handler is already installed
+	 */
+	if (new.sa_handler != SIG_DFL &&
+	    new.sa_handler != SIG_IGN &&
+	    old.sa_handler != SIG_DFL &&
+	    old.sa_handler != SIG_IGN)
+	{
+		log_error("util_signal: handler for signal %d already "
+		    "installed", signum);
+		return -1;
+	}
+
+	if(sigaction(signum, &new, NULL) == -1)
+	{
+		log_error("util_signal: sigaction");
+		return -1;
 	}
 
 	return 0;

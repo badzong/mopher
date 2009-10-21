@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include <time.h>
 #include <stdio.h>
 
@@ -33,7 +35,7 @@ greylist_lookup(var_t *attrs, var_t **record)
 	}
 
 	lookup = var_list_scheme(greylist_dbt->dbt_scheme, hostaddr, envfrom,
-		envrcpt, NULL, NULL, NULL, NULL, NULL, NULL);
+		envrcpt, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 	if (lookup == NULL) {
 		log_warning("greylist_lookup: var_list_scheme failed");
@@ -68,7 +70,7 @@ greylist_add(var_t *attrs, acl_delay_t *ad)
 	char *envfrom;
 	char *envrcpt;
 	time_t now;
-	VAR_INT_T created, delay, visa, valid, retries, passed;
+	VAR_INT_T created, updated, delay, visa, valid, retries, passed;
 	
 	if (var_table_dereference(attrs, "milter_hostaddr", &hostaddr,
 		"milter_envfrom", &envfrom, "milter_envrcpt", &envrcpt, NULL))
@@ -84,6 +86,7 @@ greylist_add(var_t *attrs, acl_delay_t *ad)
 	}
 
 	created = now;
+	updated = now;
 	delay = ad->ad_delay;
 	visa = 0;
 	valid = ad->ad_valid;
@@ -91,8 +94,8 @@ greylist_add(var_t *attrs, acl_delay_t *ad)
 	passed = 0;
 
 	record = var_scheme_refcopy(greylist_dbt->dbt_scheme, hostaddr,
-		envfrom, envrcpt, &created, &valid, &delay, &retries, &visa,
-		&passed);
+		envfrom, envrcpt, &created, &updated, &valid, &delay, &retries,
+		&visa, &passed);
 
 	if (record == NULL) {
 		log_warning("greylist_add: var_scheme_refcopy failed");
@@ -116,6 +119,7 @@ greylist(var_t *attrs, acl_delay_t *ad)
 	var_t *record;
 	time_t now;
 	VAR_INT_T *created;
+	VAR_INT_T *updated;
 	VAR_INT_T *delay;
 	VAR_INT_T *retries;
 	VAR_INT_T *visa;
@@ -129,19 +133,22 @@ greylist(var_t *attrs, acl_delay_t *ad)
 		goto error;
 	}
 
-	if (record == NULL) {
+	if (record == NULL)
+	{
 		log_info("greylist: create new record");
 		goto add;
 	}
 
-	if (var_list_dereference(record, NULL, NULL, NULL, &created, &valid,
-		&delay, &retries, &visa, &passed)) {
+	if (var_list_dereference(record, NULL, NULL, NULL, &created, &updated,
+	    &valid, &delay, &retries, &visa, &passed))
+	{
 		log_warning("greylist: var_list_unpack failed");
 		goto error;
 	}
 
 	now = time(NULL);
-	if (now == -1) {
+	if (now == -1)
+	{
 		log_warning("greylist: time");
 		goto error;
 	}
@@ -149,7 +156,7 @@ greylist(var_t *attrs, acl_delay_t *ad)
 	/*
 	 * Record expired.
 	 */
-	if (*created + *valid < now) {
+	if (*updated + *valid < now) {
 		log_info("greylist: record expired %d seconds ago",
 			now - *created - *valid);
 		goto add;
@@ -162,7 +169,6 @@ greylist(var_t *attrs, acl_delay_t *ad)
 		log_info("greylist: record delay too small. Extension: %d"
 			" seconds", ad->ad_delay);
 		*delay = ad->ad_delay;
-		*valid = now - *created + *valid;
 		*visa = 0;
 		goto update;
 	}
@@ -170,11 +176,10 @@ greylist(var_t *attrs, acl_delay_t *ad)
 	/*
 	 * Valid visa
 	 */
-	if (*created + *visa > now) {
+	if (*visa) {
 		log_info("greylist: valid visa found. expiry: %d seconds",
-			*created + *visa - now);
+			*updated + *valid - now);
 		*passed += 1;
-		*visa = now - *created + ad->ad_visa;
 		glr = GL_PASS;
 		goto update;
 	}
@@ -185,7 +190,8 @@ greylist(var_t *attrs, acl_delay_t *ad)
 	if (*created + *delay < now) {
 		log_info("greylist: delay passed. create visa for %d seconds",
 			ad->ad_visa);
-		*visa = now - *created + ad->ad_visa;
+		*visa = ad->ad_visa;
+		*valid = ad->ad_visa;
 		*passed = 1;
 		glr = GL_PASS;
 		goto update;
@@ -195,10 +201,10 @@ greylist(var_t *attrs, acl_delay_t *ad)
 		*created + *delay - now, *retries);
 
 	*retries += 1;
-	*valid = now - *created + *valid;
 
 
 update:
+	*updated = now;
 
 	if (dbt_db_set(greylist_dbt, record)) {
 		log_warning("greylist: DBT_DB_SET failed");

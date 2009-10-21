@@ -40,6 +40,8 @@ typedef struct var_compact {
 	int	 vc_klen;
 } var_compact_t;
 
+#define VAR_COPY(v) var_create(v->v_type, v->v_name, v->v_data, VF_COPY)
+
 /*
  * Prototypes
  */
@@ -49,6 +51,8 @@ void var_delete(var_t *v);
 int var_data_size(var_t *v);
 int var_init(var_t *v, var_type_t type, char *name, void *data, int flags);
 var_t * var_create(var_type_t type, char *name, void *data, int flags);
+void * var_scan_data(var_type_t type, char *str);
+var_t * var_scan_scheme(var_t *scheme, char *str);
 int var_compare(const var_t * v1, const var_t * v2);
 int var_true(const var_t * v);
 int var_dump_data(var_t * v, char *buffer, int size);
@@ -65,7 +69,7 @@ int var_table_printstr(var_t *table, char *buffer, int len, char *format);
 int var_list_append(var_t *list, var_t *item);
 int var_list_append_new(var_t *list, var_type_t type, char *name, void *data,int flags);
 int var_table_list_append(var_t *table, var_type_t type, char *name, void *data,int flags);
-var_t * var_scheme_create(char *name, ...);
+var_t * var_scheme_create(char *scheme, ...);
 var_t * var_list_scheme(var_t *scheme, ...);
 int var_list_dereference(var_t *list, ...);
 int var_table_dereference(var_t *table, ...);

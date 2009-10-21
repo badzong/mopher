@@ -1,6 +1,7 @@
 CC=gcc
 CFLAGS=-Wall -g -shared -nostartfiles -fPIC -I../../include
 OBJECTS=milter.so string.so spf.so spamd.so
+ACFILES=Makefile
 
 all: $(OBJECTS)
 
@@ -12,3 +13,7 @@ spf.so: spf.c
 
 clean:
 	-rm $(OBJECTS)
+
+distclean:
+	-rm -f $(ACFILES)
+

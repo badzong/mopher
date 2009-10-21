@@ -1,5 +1,14 @@
-#include <stdio.h>
+#include "config.h"
+
+#ifdef HAVE_MALLOC_H
 #include <malloc.h>
+#endif
+
+#ifdef HAVE_STDLIB_H
+#include <stdlib.h>
+#endif
+
+#include <stdio.h>
 #include <dlfcn.h>
 #include <glob.h>
 #include <string.h>

@@ -1,9 +1,18 @@
+#include "config.h"
+
+#ifdef HAVE_MALLOC_H
+#include <malloc.h>
+#endif
+
+#ifdef HAVE_STDLIB_H
+#include <stdlib.h>
+#endif
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <stdio.h>
 #include <string.h>
-#include <malloc.h>
 #include <unistd.h>
 #include <libmilter/mfapi.h>
 #include <netinet/in.h>

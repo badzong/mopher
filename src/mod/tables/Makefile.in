@@ -1,6 +1,7 @@
 CC=gcc
 CFLAGS=-Wall -g -shared -nostartfiles -fPIC -I../../include
 OBJECTS=greylist.so
+ACFILES=Makefile
 
 all: $(OBJECTS)
 
@@ -9,3 +10,7 @@ all: $(OBJECTS)
 
 clean:
 	-rm $(OBJECTS)
+
+distclean:
+	-rm -f $(ACFILES)
+

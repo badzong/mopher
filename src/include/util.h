@@ -13,4 +13,6 @@ int util_file_exists(char *path);
 int util_file(char *path, char **buffer);
 struct sockaddr_storage * util_hostaddr(struct sockaddr_storage *ss);
 int util_addrcmp(struct sockaddr_storage *ss1, struct sockaddr_storage *ss2);
+int util_block_signals(int sig, ...);
+int util_signal(int signum, void (*handler)(int));
 #endif /* _UTIL_H_ */

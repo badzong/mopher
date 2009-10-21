@@ -1,6 +1,7 @@
 CC=gcc
 CFLAGS=-Wall -g -shared -nostartfiles -fPIC -I../../include
 OBJECTS=bdb.so my.so
+ACFILES=Makefile
 
 all: $(OBJECTS)
 
@@ -8,8 +9,11 @@ bdb.so: bdb.c Makefile
 	$(CC) $(CFLAGS) -ldb -o $@ $<
 
 my.so: my.c Makefile
-	#$(CC) $(CFLAGS) -lmysqlclient -o $@ $<
-	$(CC) $(CFLAGS) -o $@ $<
+	$(CC) $(CFLAGS) -lmysqlclient -o $@ $<
 
 clean:
 	-rm $(OBJECTS)
+
+distclean:
+	-rm -f $(ACFILES)
+

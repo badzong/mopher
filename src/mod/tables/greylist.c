@@ -32,11 +32,12 @@ init(void)
 {
 	var_t *scheme;
 
-	scheme = var_scheme_create(
+	scheme = var_scheme_create("greylist",
 		"hostaddr",	VT_ADDR,	VF_KEEPNAME | VF_KEY, 
 		"envfrom",	VT_STRING,	VF_KEEPNAME | VF_KEY,
 		"envrcpt",	VT_STRING,	VF_KEEPNAME | VF_KEY,
 		"created",	VT_INT,		VF_KEEPNAME,
+		"updated",	VT_INT,		VF_KEEPNAME,
 		"valid",	VT_INT,		VF_KEEPNAME,
 		"delay",	VT_INT,		VF_KEEPNAME,
 		"retries",	VT_INT,		VF_KEEPNAME,
