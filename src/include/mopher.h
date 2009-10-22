@@ -14,7 +14,7 @@
 #include "ll.h"
 #include "log.h"
 #include "milter.h"
-#include "modules.h"
+#include "module.h"
 #include "parser.h"
 #include "sock.h"
 #include "util.h"

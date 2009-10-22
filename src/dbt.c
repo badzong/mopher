@@ -473,7 +473,7 @@ dbt_init(void)
 	/*
 	 * Load database drivers
 	 */
-	modules_load(cf_dbt_mod_path);
+	module_load(cf_dbt_mod_path);
 
 	/*
 	 * Initailaize tables
@@ -488,7 +488,7 @@ dbt_init(void)
 	/*
 	 * Load table modules
 	 */
-	modules_load(cf_tables_mod_path);
+	module_load(cf_tables_mod_path);
 
 	/*
 	 * Cleanup databases

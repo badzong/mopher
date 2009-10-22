@@ -13,7 +13,7 @@ GENSRC=cf_yacc.c cf_yacc.h cf_lex.c acl_yacc.c acl_yacc.h acl_lex.c
 SUBDIRS=mod/acl mod/db mod/tables
 ACFILES=Makefile
 
-all: main $(SUBDIRS)
+all: mopherd $(SUBDIRS)
 
 .PHONY: clean
 .PHONY: distclean
@@ -42,8 +42,8 @@ acl_lex.c: acl_lex.l
 ../lib/lib.a:
 	cd ../lib && $(MAKE)
 
-main: Makefile $(OBJECTS) $(LIBS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o main $(OBJECTS) $(LIBS)
+mopherd: Makefile $(OBJECTS) $(LIBS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o mopherd $(OBJECTS) $(LIBS)
 
 %.o: %.c include/%.h Makefile
 	$(CC) $(CFLAGS) -c $<

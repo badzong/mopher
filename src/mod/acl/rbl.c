@@ -236,3 +236,15 @@ init(void)
 
 	return 0;
 }
+
+
+void
+fini(void)
+{
+	if (rbl_table)
+	{
+		ht_delete(rbl_table);
+	}
+
+	return;
+}

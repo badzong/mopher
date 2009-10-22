@@ -6,16 +6,7 @@
 #include <glob.h>
 #include <string.h>
 
-#include "var.h"
-#include "ht.h"
-#include "ll.h"
-#include "log.h"
-#include "cf.h"
-#include "util.h"
-#include "modules.h"
-#include "acl.h"
-#include "acl_yacc.h"
-#include "greylist.h"
+#include "mopher.h"
 
 #define BUFLEN 1024
 
@@ -669,7 +660,7 @@ acl_init(void)
 	/*
 	 * Load modules
 	 */
-	modules_load(cf_acl_mod_path);
+	module_load(cf_acl_mod_path);
 
 	/*
 	 * Run parser
