@@ -1,4 +1,5 @@
-CFLAGS=-Wall -g -shared -nostartfiles -fPIC -I../../include
+INCLUDE=-I@top_srcdir@ -I@top_srcdir@/src/include
+CFLAGS=-Wall -g -shared -nostartfiles -fPIC $(INCLUDE)
 OBJECTS=milter.so string.so spamd.so rbl.so @MOD_ACL_SPF@
 ACFILES=Makefile
 

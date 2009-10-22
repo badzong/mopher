@@ -8,14 +8,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
-#define STDC_HEADERS
-#define HAVE_INTTYPES_H
-#define HAVE_SYS_TYPES_H
-#define HAVE_STRING_H
-#define HAVE_SYS_SOCKET_H
-#define HAVE_NETINET_IN_H
-#define HAVE_ARPA_INET_H
-#define HAVE_UNISTD_H
+#include "config.h"
 
 #include <spf2/spf.h>
 
