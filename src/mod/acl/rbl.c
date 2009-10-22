@@ -4,7 +4,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <arpa/inet.h>
-#include <malloc.h>
+#include <stdlib.h>
 
 #include "mopher.h"
 
@@ -56,7 +56,6 @@ rbl_register(char *name, char *domain)
 static hash_t
 rbl_hash(rbl_t *rbl)
 {
-	printf("HASH: %s\n", rbl->rbl_name);
 	return HASH(rbl->rbl_name, strlen(rbl->rbl_name));
 }
 
@@ -88,6 +87,7 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	char *b[4];
 	char *p;
 	int i;
+
 
 	lookup.rbl_name = name;
 
@@ -134,7 +134,7 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	/*
 	 * Build query string
 	 */
-	snprintf(query, BUFLEN, "%s.%s.%s.%s.%s", b[3], b[2], b[1], b[0],
+	snprintf(query, sizeof query, "%s.%s.%s.%s.%s", b[3], b[2], b[1], b[0],
 	    rbl->rbl_domain);
 
 	bzero(&hints, sizeof(hints));
@@ -154,12 +154,16 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	if (e == 0)
 	{
 		data = ai->ai_addr;
-		flags = VF_COPYDATA;
+		flags = VF_COPY;
+
+		log_debug("rbl_query: RBL record \"%s\" exists", query);
 	}
 	else
 	{
 		data = NULL;
-		flags = VF_KEEPDATA;
+		flags = VF_COPYNAME;
+
+		log_debug("rbl_query: RBL record \"%s\" not found", query);
 	}
 
 	if (var_table_setv(attrs, VT_ADDR, name, data, flags, VT_NULL))

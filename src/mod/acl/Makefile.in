@@ -1,19 +1,26 @@
-CC=gcc
 CFLAGS=-Wall -g -shared -nostartfiles -fPIC -I../../include
-OBJECTS=milter.so string.so spf.so spamd.so rbl.so
+OBJECTS=milter.so string.so spamd.so rbl.so @MOD_ACL_SPF@
 ACFILES=Makefile
 
 all: $(OBJECTS)
 
 spf.so: spf.c
-	$(CC) $(CFLAGS) -lspf2 -o $@ $<
+	$(CC) $(CFLAGS) -lspf2 -o spf.so spf.c
 
-%.so: %.c Makefile
-	$(CC) $(CFLAGS) -o $@ $<
+milter.so: milter.c Makefile
+	$(CC) $(CFLAGS) -o milter.so milter.c
+
+string.so: string.c Makefile
+	$(CC) $(CFLAGS) -o string.so string.c
+
+spamd.so: spamd.c Makefile
+	$(CC) $(CFLAGS) -o spamd.so spamd.c
+
+rbl.so: rbl.c Makefile
+	$(CC) $(CFLAGS) -o rbl.so rbl.c
 
 clean:
 	-rm $(OBJECTS)
 
 distclean:
 	-rm -f $(ACFILES)
-

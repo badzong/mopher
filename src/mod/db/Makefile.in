@@ -1,6 +1,5 @@
-CC=gcc
 CFLAGS=-Wall -g -shared -nostartfiles -fPIC -I../../include
-OBJECTS=bdb.so my.so
+OBJECTS=@MOD_DB_BDB@ @MOD_DB_MYSQL@
 ACFILES=Makefile
 
 all: $(OBJECTS)

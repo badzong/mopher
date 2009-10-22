@@ -17,13 +17,10 @@ comment		#.*$
 %{
 
 #include <stdio.h>
+#include <string.h>
 #include <arpa/inet.h>
 
-#include "log.h"
-#include "util.h"
-#include "var.h"
-#include "ll.h"
-#include "cf.h"
+#include "mopher.h"
 
 #include "cf_yacc.h"
 

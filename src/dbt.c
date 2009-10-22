@@ -1,13 +1,6 @@
 #include "config.h"
 
-#ifdef HAVE_MALLOC_H
-#include <malloc.h>
-#endif
-
-#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
-#endif
-
 #include <string.h>
 #include <pthread.h>
 #include <errno.h>

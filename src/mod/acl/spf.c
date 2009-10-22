@@ -19,9 +19,7 @@
 
 #include <spf2/spf.h>
 
-#include "log.h"
-#include "acl.h"
-#include "milter.h"
+#include "mopher.h"
 
 static SPF_server_t *spf_server;
 

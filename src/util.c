@@ -1,16 +1,11 @@
 #include "config.h"
 
-#ifdef HAVE_MALLOC_H
-#include <malloc.h>
-#endif
-
-#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
-#endif
-
 #include <string.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 #include <stdio.h>
 #include <errno.h>
 #include <sys/stat.h>

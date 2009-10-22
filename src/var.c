@@ -1,16 +1,10 @@
 #include "config.h"
 
-#ifdef HAVE_MALLOC_H
-#include <malloc.h>
-#endif
-
-#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
-#endif
-
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,10 +12,7 @@
 #include <errno.h>
 #include <stdarg.h>
 
-#include "var.h"
-#include "util.h"
-#include "ll.h"
-#include "log.h"
+#include "mopher.h"
 
 #define BUCKETS 256
 

@@ -1,4 +1,7 @@
-connect xbl log "{hostaddr} listed in XBL"
+connect rbl_xbl log "{milter_hostaddr} listed in XBL"
+connect rbl_sorbs log "{milter_hostaddr} listed in SORBS"
+connect rbl_spamcop log "{milter_hostaddr} listed in SPAMCOP"
+
 envrcpt spf = SPF_PASS pass
 envrcpt spf = SPF_FAIL delay 30m
 eom spamd_spam delay

@@ -32,11 +32,32 @@ then
   AC_MSG_WARN([tar not found.])
 fi
 
+
 # Checks for libraries.
-AC_CHECK_LIB([dl], [dlopen],
-	[LIBS="$LIBS -ldl"],
-	[AC_MSG_WARN([libdl not found. Make sure your system has libdl])]
+
+# Check if we need to link against libdl
+AC_CHECK_FUNCS(
+  [dlopen dlsym dlerror dlclose],
+  [have_dl="yes"],
+  [have_dl="no"]
 )
+
+if test "$have_dl" = "no"
+then
+  AC_CHECK_LIB(
+    [dl],
+    [dlopen],
+    [
+      LIBS="$LIBS -ldl"
+      have_dl="yes"
+    ]
+  )
+fi
+
+if test "$have_dl" = "no"
+then
+  AC_MSG_ERROR([dlopen not in libc and libdl not found.])
+fi
 
 AC_CHECK_LIB([pthread], [pthread_create],
 	[LIBS="$LIBS -lpthread"],
@@ -49,25 +70,68 @@ AC_CHECK_LIB([milter], [smfi_setconn],
 )
 
 
-AC_ARG_WITH([mysql], AS_HELP_STRING([--with-mysql], [build with MySQL support]))
+# Check for BerkeleyDB support
+AC_CHECK_LIB(
+  [db],
+  [db_create],
+  [have_bdb="yes"],
+  [have_bdb="no"]
+)
+
+AC_ARG_WITH([bdb], AS_HELP_STRING([--with-bdb], [build with BerkeleyDB support]))
+
+if test "$with_bdb" = "yes" -a "$have_bdb" = "no"
+then
+  AC_MSG_FAILURE([libdb failed (--without-bdb to disable)])
+fi
+
+if test "$have_bdb" = "yes"
+then
+  MOD_DB_BDB="bdb.so"
+  AC_SUBST([MOD_DB_BDB])
+fi
+
+
+# Check for MySQL support
 AC_CHECK_LIB(
   [mysqlclient],
   [mysql_real_connect],
-  AC_DEFINE([HAVE_LIBMYSQLCLIENT], [1], [Define if we have libmysqlclient]),
-  AS_IF([test "$with_mysql" = "yes"],
-    AC_MSG_FAILURE([libmysqlclient failed (--without-mysql to disable)]))
+  [have_mysql="yes"],
+  [have_mysql="no"]
 )
 
+AC_ARG_WITH([mysql], AS_HELP_STRING([--with-mysql], [build with MySQL support]))
 
-AC_ARG_WITH([spf2], AS_HELP_STRING([--with-spf2], [build with SPF support (libspf2)]))
+if test "$with_mysql" = "yes" -a "$have_mysql" = "no"
+then
+  AC_MSG_FAILURE([libmysqlclient failed (--without-mysql to disable)])
+fi
+
+if test "$have_mysql" = "yes"
+then
+  MOD_DB_MYSQL="my.so"
+  AC_SUBST([MOD_DB_MYSQL])
+fi
+
 AC_CHECK_LIB(
   [spf2],
   [SPF_request_new],
-  AC_DEFINE([HAVE_LIBSPF2], [1], [Define if we have libspf2]),
-  AS_IF([test "$with_spf2" = "yes"],
-    AC_MSG_FAILURE([libspf2 failed (--without-spf2 to disable)]))
+  [have_spf2="yes"],
+  [have_spf2="no"]
 )
 
+AC_ARG_WITH([spf2], AS_HELP_STRING([--with-spf2], [build with SPF support (libspf2)]))
+
+if test "$with_spf2" = "yes" -a "$have_spf2" = "no"
+then
+  AC_MSG_FAILURE([libspf2 failed (--without-spf2 to disable)])
+fi
+
+if test "$have_spf2" = "yes"
+then
+  MOD_ACL_SPF="spf.so"
+  AC_SUBST([MOD_ACL_SPF])
+fi
 
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h malloc.h netdb.h netinet/in.h stdlib.h string.h sys/socket.h syslog.h unistd.h])

@@ -1,9 +1,6 @@
 #include <stdio.h>
 
-#include "acl.h"
-#include "milter.h"
-#include "log.h"
-#include "var.h"
+#include "mopher.h"
 
 
 var_t *
