@@ -13,10 +13,19 @@ AC_PROG_CC
 AC_PROG_LEX
 AC_PROG_MAKE_SET
 
+# Override AC_PROG_CC CFLAGS
+CFLAGS=""
+
 AC_PATH_PROG([OBJCOPY], [objcopy], [])
 if test -z "$OBJCOPY"
 then
   AC_MSG_ERROR([objcopy not found. Make sure you have GNU binutils installed.])
+fi
+
+AC_PATH_PROG([AR], [ar], [])
+if test -z "$AR"
+then
+  AC_MSG_ERROR([ar not found. Make sure you have GNU binutils installed.])
 fi
 
 # tar and bzip2 are used to make dist.
@@ -32,32 +41,7 @@ then
   AC_MSG_WARN([tar not found.])
 fi
 
-
 # Checks for libraries.
-
-# Check if we need to link against libdl
-AC_CHECK_FUNCS(
-  [dlopen dlsym dlerror dlclose],
-  [have_dl="yes"],
-  [have_dl="no"]
-)
-
-if test "$have_dl" = "no"
-then
-  AC_CHECK_LIB(
-    [dl],
-    [dlopen],
-    [
-      LIBS="$LIBS -ldl"
-      have_dl="yes"
-    ]
-  )
-fi
-
-if test "$have_dl" = "no"
-then
-  AC_MSG_ERROR([dlopen not in libc and libdl not found.])
-fi
 
 AC_CHECK_LIB([pthread], [pthread_create],
 	[LIBS="$LIBS -lpthread"],
@@ -69,87 +53,100 @@ AC_CHECK_LIB([milter], [smfi_setconn],
 	[AC_MSG_ERROR([libmilter not found. Make sure your system has libmilter])]
 )
 
-
-# Check for BerkeleyDB support
-AC_CHECK_LIB(
-  [db],
-  [db_create],
-  [have_bdb="yes"],
-  [have_bdb="no"]
-)
-
-AC_ARG_WITH([bdb], AS_HELP_STRING([--with-bdb], [build with BerkeleyDB support]))
-
-if test "$with_bdb" = "yes" -a "$have_bdb" = "no"
+# Build with module support (default = yes)
+AC_ARG_ENABLE([dynamic], AS_HELP_STRING([--enable-dynamic], [compile modules as loadable shared objects]))
+if test ! "$enable_dynamic" = "no"
 then
-  AC_MSG_FAILURE([libdb failed (--without-bdb to disable)])
+  # Check if we need to link against libdl
+  AC_CHECK_FUNCS([dlopen dlsym dlerror dlclose], [have_dl="yes"], [have_dl="no"])
+
+  if test "$have_dl" = "no"
+  then
+    AC_CHECK_LIB([dl], [dlopen], [ LIBS="$LIBS -ldl" have_dl="yes"])
+  fi
+
+  if test "$have_dl" = "no"
+  then
+    AC_MSG_ERROR([libc has no dlopen and libdl was not found.])
+  fi
+
+  CFLAGS="$CFLAGS -DDYNAMIC"
+  MOD_ALL="\$(MODULES)"
+  mod_suffix="so"
+else
+  MOD_ALL="lib.a"
+  MOD_LIBS="mod/acl/lib.a mod/db/lib.a mod/tables/lib.a"
+  mod_suffix="o"
 fi
 
-if test "$have_bdb" = "yes"
+
+# Check for BerkeleyDB support
+AC_ARG_WITH([bdb], AS_HELP_STRING([--with-bdb], [build with BerkeleyDB support]))
+AC_CHECK_LIB([db], [db_create], [have_bdb="yes"], [have_bdb="no"])
+
+AS_IF(
+  [test -z "$with_bdb"], [with_bdb="$have_bdb"],
+  [test "$with_bdb" = "yes" -a "$have_bdb" = "no"],
+    AC_MSG_FAILURE([libdb failed (--without-bdb to disable)])
+)
+
+if test "$with_bdb" = "yes"
 then
-  MOD_DB_BDB="bdb.so"
+  MOD_DB_BDB="bdb.$mod_suffix"
   AC_SUBST([MOD_DB_BDB])
+  AC_DEFINE([WITH_MOD_BDB])
+  AS_IF([test "$enable_dynamic" = "no"], [MOD_LIBS="$MOD_LIBS -ldb"])
 fi
 
 
 # Check for MySQL support
-AC_CHECK_LIB(
-  [mysqlclient],
-  [mysql_real_connect],
-  [have_mysql="yes"],
-  [have_mysql="no"]
-)
-
 AC_ARG_WITH([mysql], AS_HELP_STRING([--with-mysql], [build with MySQL support]))
+AC_CHECK_LIB([mysqlclient], [mysql_real_connect], [have_mysql="yes"], [have_mysql="no"])
 
-if test "$with_mysql" = "yes" -a "$have_mysql" = "no"
-then
-  AC_MSG_FAILURE([libmysqlclient failed (--without-mysql to disable)])
-fi
-
-if test "$have_mysql" = "yes"
-then
-  MOD_DB_MYSQL="my.so"
-  AC_SUBST([MOD_DB_MYSQL])
-fi
-
-AC_CHECK_LIB(
-  [spf2],
-  [SPF_request_new],
-  [have_spf2="yes"],
-  [have_spf2="no"]
+AS_IF(
+  [test -z "$with_mysql"], [with_mysql="$have_mysql"],
+  [test "$with_mysql" = "yes" -a "$have_mysql" = "no"],
+    AC_MSG_FAILURE([libmysqlclient failed (--without-mysql to disable)])
 )
 
+if test "$with_mysql" = "yes"
+then
+  MOD_DB_MYSQL="sakila.$mod_suffix"
+  AC_SUBST([MOD_DB_MYSQL])
+  AC_DEFINE([WITH_MOD_MYSQL])
+  AS_IF([test "$enable_dynamic" = "no"], [MOD_LIBS="$MOD_LIBS -lmysqlclient"])
+fi
+
+
+# Check for spf2 support
 AC_ARG_WITH([spf2], AS_HELP_STRING([--with-spf2], [build with SPF support (libspf2)]))
+AC_CHECK_LIB([spf2], [SPF_request_new], [have_spf2="yes"], [have_spf2="no"])
 
-if test "$with_spf2" = "yes" -a "$have_spf2" = "no"
-then
-  AC_MSG_FAILURE([libspf2 failed (--without-spf2 to disable)])
-fi
+AS_IF(
+  [test -z "$with_spf2"], [with_spf2="$have_spf2"],
+  [test "$with_spf2" = "yes" -a "$have_spf2" = "no"],
+    AC_MSG_FAILURE([libspf2 failed (--without-spf2 to disable)])
+)
 
-if test "$have_spf2" = "yes"
+if test "$with_spf2" = "yes"
 then
-  MOD_ACL_SPF="spf.so"
+  MOD_ACL_SPF="spf.$mod_suffix"
   AC_SUBST([MOD_ACL_SPF])
+  AC_DEFINE([WITH_MOD_SPF])
+  AS_IF([test "$enable_dynamic" = "no"], [MOD_LIBS="$MOD_LIBS -lspf2"])
 fi
+
+
+AC_SUBST([MOD_LIBS])
+AC_SUBST([MOD_ALL])
+# So far no further checks
 
 # Checks for header files.
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h malloc.h netdb.h netinet/in.h stdlib.h string.h sys/socket.h syslog.h unistd.h])
-
 # Checks for typedefs, structures, and compiler characteristics.
-AC_HEADER_STDBOOL
-AC_TYPE_INT32_T
-AC_TYPE_INT8_T
-AC_TYPE_MODE_T
-AC_TYPE_SIZE_T
-
 # Checks for library functions.
-AC_FUNC_MALLOC
-AC_FUNC_REALLOC
-AC_FUNC_STRTOD
-AC_CHECK_FUNCS([acl bzero gethostname memset socket strchr strdup strerror strrchr strstr])
 
-AC_CONFIG_FILES([Makefile src/Makefile src/mod/acl/Makefile src/mod/db/Makefile
+
+AC_CONFIG_FILES([Makefile Makefile.common src/Makefile src/mod/acl/Makefile src/mod/db/Makefile
   src/mod/tables/Makefile])
 
 AC_OUTPUT

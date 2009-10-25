@@ -37,7 +37,8 @@ void
 dbt_driver_register(dbt_driver_t *dd)
 {
 	if((ht_insert(dbt_drivers, dd)) == -1) {
-		log_die(EX_SOFTWARE, "dbt_driver_register: ht_insert failed");
+		log_die(EX_SOFTWARE, "dbt_driver_register: ht_insert for "
+		    "driver \"%s\" failed", dd->dd_name);
 	}
 
 	log_info("dbt_driver_register: database driver \"%s\" registered",
@@ -316,7 +317,7 @@ dbt_register(dbt_t *dbt)
 	 * Store dbt in dbt_tables
 	 */
 	if (ht_insert(dbt_tables, dbt)) {
-		log_die(EX_SOFTWARE, "table_register: ht_insert failed");
+		log_die(EX_SOFTWARE, "dbt_register: ht_insert failed");
 	}
 
 	return;
@@ -473,7 +474,7 @@ dbt_init(void)
 	/*
 	 * Load database drivers
 	 */
-	module_load(cf_dbt_mod_path);
+	MODULE_LOAD_DB;
 
 	/*
 	 * Initailaize tables
@@ -488,7 +489,7 @@ dbt_init(void)
 	/*
 	 * Load table modules
 	 */
-	module_load(cf_tables_mod_path);
+	MODULE_LOAD_TABLE;
 
 	/*
 	 * Cleanup databases

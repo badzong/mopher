@@ -25,7 +25,7 @@ string_strlen(ll_t *args)
 
 
 int
-init(void)
+string_init(void)
 {
 	acl_function_register("string_strlen", (acl_fcallback_t) string_strlen);
 

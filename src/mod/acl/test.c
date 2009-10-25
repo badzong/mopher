@@ -33,7 +33,7 @@ test_symbol(var_t *attrs)
 
 
 int
-init(void)
+test_init(void)
 {
 	log_debug("test_init");
 
@@ -47,7 +47,7 @@ init(void)
 }
 
 void
-fini(void)
+test_fini(void)
 {
 	printf("test fini\n");
 }

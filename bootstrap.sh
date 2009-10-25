@@ -1,5 +1,5 @@
 #!/bin/sh
 
-aclocal \
-&& autoheader \
-&& autoconf
+aclocal &&\
+#autoheader &&\
+autoconf

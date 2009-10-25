@@ -195,7 +195,7 @@ error:
 
 
 int
-init(void)
+rbl_init(void)
 {
 	var_t *rbl;
 	ht_t *config;
@@ -239,7 +239,7 @@ init(void)
 
 
 void
-fini(void)
+rbl_fini(void)
 {
 	if (rbl_table)
 	{

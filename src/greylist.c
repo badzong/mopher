@@ -5,15 +5,75 @@
 
 #include "mopher.h"
 
-static dbt_t *greylist_dbt;
+static dbt_t greylist_dbt;
+
+static int
+greylist_validate(dbt_t *dbt, var_t *record)
+{
+	VAR_INT_T *created;
+	VAR_INT_T *valid;
+
+	if (var_list_dereference(record, NULL, NULL, NULL, &created, &valid,
+		NULL, NULL, NULL, NULL)) {
+		log_warning("greylist_valid: var_list_unpack failed");
+		return -1;
+	}
+
+	/*
+	 * dbt->dbt_cleanup_schedule == time(NULL)
+	 */
+	if (dbt->dbt_cleanup_schedule > *created + *valid) {
+		return 0;
+	}
+
+	return 1;
+}
+
 
 void
 greylist_init(void)
 {
-	greylist_dbt = dbt_lookup("greylist");
-	if (greylist_dbt == NULL) {
-		log_die(EX_SOFTWARE, "greylist_init: greylist not found");
+	var_t *scheme;
+
+	scheme = var_scheme_create("greylist",
+		"hostaddr",	VT_ADDR,	VF_KEEPNAME | VF_KEY, 
+		"envfrom",	VT_STRING,	VF_KEEPNAME | VF_KEY,
+		"envrcpt",	VT_STRING,	VF_KEEPNAME | VF_KEY,
+		"created",	VT_INT,		VF_KEEPNAME,
+		"updated",	VT_INT,		VF_KEEPNAME,
+		"valid",	VT_INT,		VF_KEEPNAME,
+		"delay",	VT_INT,		VF_KEEPNAME,
+		"retries",	VT_INT,		VF_KEEPNAME,
+		"visa",		VT_INT,		VF_KEEPNAME,
+		"passed",	VT_INT,		VF_KEEPNAME,
+		NULL);
+
+	if (scheme == NULL) {
+		log_die(EX_SOFTWARE, "greylist: init: var_scheme_create "
+		    "failed");
 	}
+
+	greylist_dbt.dbt_name = "greylist";
+	greylist_dbt.dbt_scheme = scheme;
+	greylist_dbt.dbt_validate = (dbt_validate_t) greylist_validate;
+	greylist_dbt.dbt_sql_invalid_where =
+		"`valid` + `created` < unix_timestamp()";
+
+	/*
+	 * greylist_valid need to be registered at table
+	 * sql bulk del where
+	 */
+
+	dbt_register(&greylist_dbt);
+
+	return;
+}
+
+
+void
+greylist_clear(void)
+{
+	var_delete(greylist_dbt.dbt_scheme);
 
 	return;
 }
@@ -34,7 +94,7 @@ greylist_lookup(var_t *attrs, var_t **record)
 		goto error;
 	}
 
-	lookup = var_list_scheme(greylist_dbt->dbt_scheme, hostaddr, envfrom,
+	lookup = var_list_scheme(greylist_dbt.dbt_scheme, hostaddr, envfrom,
 		envrcpt, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 	if (lookup == NULL) {
@@ -42,7 +102,7 @@ greylist_lookup(var_t *attrs, var_t **record)
 		goto error;
 	}
 
-	if (dbt_db_get(greylist_dbt, lookup, record))
+	if (dbt_db_get(&greylist_dbt, lookup, record))
 	{
 		log_warning("greylist_lookup: var_db_get failed");
 		goto error;
@@ -93,7 +153,7 @@ greylist_add(var_t *attrs, acl_delay_t *ad)
 	retries = 1;
 	passed = 0;
 
-	record = var_scheme_refcopy(greylist_dbt->dbt_scheme, hostaddr,
+	record = var_scheme_refcopy(greylist_dbt.dbt_scheme, hostaddr,
 		envfrom, envrcpt, &created, &updated, &valid, &delay, &retries,
 		&visa, &passed);
 
@@ -102,7 +162,7 @@ greylist_add(var_t *attrs, acl_delay_t *ad)
 		return -1;
 	}
 
-	if (dbt_db_set(greylist_dbt, record))
+	if (dbt_db_set(&greylist_dbt, record))
 	{
 		log_error("greylist_add: dbt_db_set failed");
 		return -1;
@@ -206,7 +266,7 @@ greylist(var_t *attrs, acl_delay_t *ad)
 update:
 	*updated = now;
 
-	if (dbt_db_set(greylist_dbt, record)) {
+	if (dbt_db_set(&greylist_dbt, record)) {
 		log_warning("greylist: DBT_DB_SET failed");
 		goto error;
 	}

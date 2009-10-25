@@ -1,27 +1,19 @@
-INCLUDE=-I@top_srcdir@ -I@top_srcdir@/src/include
-CFLAGS=-Wall -g -shared -nostartfiles -fPIC $(INCLUDE)
-OBJECTS=milter.so string.so spamd.so rbl.so @MOD_ACL_SPF@
-ACFILES=Makefile
+include @top_srcdir@/Makefile.common
 
-all: $(OBJECTS)
+INCLUDE=-I@top_srcdir@ -I@top_srcdir@/src/include
+CFLAGS+=$(INCLUDE)
+
+OBJECTS=milter.o string.o spamd.o rbl.o @MOD_ACL_SPF@
+MODULES=milter.so string.so spamd.so rbl.so @MOD_ACL_SPF@
+MOD_ALL=@MOD_ALL@
+
+all: $(MOD_ALL)
 
 spf.so: spf.c
-	$(CC) $(CFLAGS) -lspf2 -o spf.so spf.c
+	$(CC) $(CFLAGS) $(SOFLAGS) -lspf2 -o $@ $<
 
-milter.so: milter.c Makefile
-	$(CC) $(CFLAGS) -o milter.so milter.c
-
-string.so: string.c Makefile
-	$(CC) $(CFLAGS) -o string.so string.c
-
-spamd.so: spamd.c Makefile
-	$(CC) $(CFLAGS) -o spamd.so spamd.c
-
-rbl.so: rbl.c Makefile
-	$(CC) $(CFLAGS) -o rbl.so rbl.c
+lib.a: $(OBJECTS)
+	$(AR) $(ARFLAGS) $@ $^
 
 clean:
-	-rm $(OBJECTS)
-
-distclean:
-	-rm -f $(ACFILES)
+	-rm lib.a $(OBJECTS) $(MODULES)

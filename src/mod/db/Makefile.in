@@ -1,19 +1,22 @@
-INCLUDE=-I@top_srcdir@ -I@top_srcdir@/src/include
-CFLAGS=-Wall -g -shared -nostartfiles -fPIC $(INCLUDE)
-OBJECTS=@MOD_DB_BDB@ @MOD_DB_MYSQL@
-ACFILES=Makefile
+include @top_srcdir@/Makefile.common
 
-all: $(OBJECTS)
+INCLUDE=-I@top_srcdir@ -I@top_srcdir@/src/include
+CFLAGS+=$(INCLUDE)
+
+OBJECTS=@MOD_DB_BDB@ @MOD_DB_MYSQL@
+MODULES=@MOD_DB_BDB@ @MOD_DB_MYSQL@
+MOD_ALL=@MOD_ALL@
+
+all: $(MOD_ALL)
 
 bdb.so: bdb.c Makefile
-	$(CC) $(CFLAGS) -ldb -o $@ $<
+	$(CC) $(CFLAGS) $(SOFLAGS) -ldb -o $@ $<
 
-my.so: my.c Makefile
-	$(CC) $(CFLAGS) -lmysqlclient -o $@ $<
+sakila.so: sakila.c Makefile
+	$(CC) $(CFLAGS) $(SOFLAGS) -lmysqlclient -o $@ $<
+
+lib.a: $(OBJECTS)
+	$(AR) $(ARFLAGS) $@ $^
 
 clean:
-	-rm $(OBJECTS)
-
-distclean:
-	-rm -f $(ACFILES)
-
+	-rm lib.a $(OBJECTS) $(MODULES)

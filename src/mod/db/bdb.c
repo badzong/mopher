@@ -266,7 +266,7 @@ bdb_sync(dbt_t *dbt)
 
 
 int
-init(void)
+bdb_init(void)
 {
 	dbt_driver.dd_name = "bdb";
 	dbt_driver.dd_open = (dbt_db_open_t) bdb_open;

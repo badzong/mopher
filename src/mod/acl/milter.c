@@ -220,7 +220,7 @@ milter_macro_lookup(milter_stage_t stage, char *name, var_t *attrs)
 
 
 int
-init(void)
+milter_init(void)
 {
 	milter_symbol_t *ms;
 	milter_macro_t *mm;
@@ -286,7 +286,7 @@ init(void)
 }
 
 void
-fini(void)
+milter_fini(void)
 {
 	ht_delete(milter_postfix_macros_ht);
 	ht_delete(milter_sendmail_macros_ht);

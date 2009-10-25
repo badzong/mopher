@@ -1,0 +1,12 @@
+/* Package properties */
+#undef PACKAGE_BUGREPORT
+#undef PACKAGE_NAME
+#undef PACKAGE_STRING
+#undef PACKAGE_TARNAME
+#undef PACKAGE_URL
+#undef PACKAGE_VERSION
+
+/* Modules */
+#undef WITH_MOD_BDB
+#undef WITH_MOD_MYSQL
+#undef WITH_MOD_SPF

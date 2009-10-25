@@ -1,23 +1,22 @@
-CC=@CC@
-LEX=@LEX@
-YACC=@YACC@
-YFLAGS=-d
-OBJCOPY=@OBJCOPY@
-INCLUDE=-I@top_srcdir@ -I@top_srcdir@/src/include
-LIBS=@LIBS@
-CFLAGS=-Wall -DDEBUG -g $(INCLUDE)
-LDFLAGS=-rdynamic
+include @top_srcdir@/Makefile.common
 
-OBJECTS=main.o cf_yacc.o cf_lex.o cf.o cf_defaults.o acl_yacc.o acl_lex.o acl.o milter.o modules.o ll.o ht.o var.o log.o hash.o util.o dbt.o greylist.o sock.o client.o server.o
+INCLUDE=-I@top_srcdir@ -I@top_srcdir@/src/include
+CFLAGS+=$(INCLUDE)
+
+OBJECTS=main.o cf_yacc.o cf_lex.o cf.o cf_defaults.o acl_yacc.o acl_lex.o acl.o milter.o module.o ll.o ht.o var.o log.o hash.o util.o dbt.o greylist.o sock.o client.o server.o
 GENSRC=cf_yacc.c cf_yacc.h cf_lex.c acl_yacc.c acl_yacc.h acl_lex.c
 SUBDIRS=mod/acl mod/db mod/tables
-ACFILES=Makefile
 
-all: mopherd $(SUBDIRS)
 
 .PHONY: clean
 .PHONY: distclean
 .PHONY: $(SUBDIRS)
+
+
+all: $(SUBDIRS) mopherd
+
+$(SUBDIRS):
+	cd $@ && $(MAKE)
 
 cf_defaults.o: cf_defaults.conf
 	ld -r -b binary -o cf_defaults.o cf_defaults.conf
@@ -39,23 +38,9 @@ acl_yacc.c: acl_yacc.y
 acl_lex.c: acl_lex.l
 	$(LEX) -t -Pacl_ acl_lex.l > acl_lex.c
 
-../lib/lib.a:
-	cd ../lib && $(MAKE)
-
 mopherd: Makefile $(OBJECTS) $(LIBS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o mopherd $(OBJECTS) $(LIBS)
-
-%.o: %.c include/%.h Makefile
-	$(CC) $(CFLAGS) -c $<
-
-$(SUBDIRS):
-	cd $@ && $(MAKE)
+	$(CC) $(CFLAGS) -o mopherd $(OBJECTS) $(LDFLAGS)
 
 clean:
-	-rm main $(OBJECTS) $(GENSRC)
+	-rm mopherd $(OBJECTS) $(GENSRC)
 	for d in $(SUBDIRS); do (cd $$d && $(MAKE) clean); done
-
-distclean:
-	for d in $(SUBDIRS); do (cd $$d && $(MAKE) distclean); done
-	-rm -f $(ACFILES)
-

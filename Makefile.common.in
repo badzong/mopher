@@ -1,0 +1,32 @@
+# Program paths
+
+CC=@CC@
+LEX=@LEX@
+YACC=@YACC@
+OBJCOPY=@OBJCOPY@
+AR=@AR@
+TAR=@TAR@
+BZIP2=@BZIP2@
+
+
+# Flags
+
+YFLAGS=-d
+CFLAGS=-Wall -DDEBUG -g @CFLAGS@
+SOFLAGS=-shared -nostartfiles -fPIC
+LDFLAGS=-rdynamic @LIBS@ @MOD_LIBS@
+ARFLAGS=rcs
+
+
+# Files
+
+ACFILES=config.h Makefile Makefile.common src/Makefile src/mod/acl/Makefile src/mod/db/Makefile src/mod/tables/Makefile
+
+
+# Targets
+
+%.so: %.c Makefile
+	$(CC) $(CFLAGS) $(SOFLAGS) -o $@ $<
+
+%.o: %.c Makefile
+	$(CC) $(CFLAGS) -o $@ -c $<

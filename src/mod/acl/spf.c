@@ -157,7 +157,7 @@ error:
 }
 
 int
-init(void)
+spf_init(void)
 {
 	char **k, **v;
 	int r;
@@ -189,7 +189,7 @@ init(void)
 
 
 void
-fini(void)
+spf_fini(void)
 {
 	SPF_server_free(spf_server);
 

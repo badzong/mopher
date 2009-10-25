@@ -660,7 +660,7 @@ acl_init(void)
 	/*
 	 * Load modules
 	 */
-	module_load(cf_acl_mod_path);
+	MODULE_LOAD_ACL;
 
 	/*
 	 * Run parser

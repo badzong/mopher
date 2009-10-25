@@ -6,131 +6,383 @@
 #include <glob.h>
 #include <string.h>
 
-#include "log.h"
-#include "ll.h"
+#include "mopher.h"
 
 #define BUFLEN 1024
 
-static ll_t *module_list = NULL;
+static ll_t *module_list;
 
-void *
-module_open(const char *path)
+
+#ifdef DYNAMIC
+
+static ll_t *module_buffers;
+
+#else
+
+module_t module_static_db[] = {
+#ifdef WITH_MOD_BDB
+	{ "bdb.o",	bdb_init,	NULL,		NULL },
+#endif
+#ifdef WITH_MOD_MYSQL
+	{ "sakila.o",	sakila_init,	NULL,		NULL },
+#endif
+	{ NULL,		NULL,		NULL,		NULL }
+};
+
+module_t module_static_tables[] = {
+	{ NULL,		NULL,		NULL,		NULL }
+};
+
+module_t module_static_acl[] = {
+/*	{ "test.o",	test_init,	test_fini,	NULL },*/
+	{ "milter.o",	milter_init,	milter_fini,	NULL },
+	{ "rbl.o",	rbl_init,	rbl_fini,	NULL },
+	{ "spamd.o",	spamd_init,	NULL,		NULL },
+	{ "string.o",	string_init,	NULL,		NULL },
+#ifdef WITH_MOD_SPF
+	{ "spf.o",	spf_init,	spf_fini,	NULL },
+#endif
+	{ NULL,		NULL,		NULL,		NULL }
+};
+
+#endif /* DYNAMIC */
+
+
+#ifdef DYNAMIC
+
+static void
+module_symbol_name(char *path, char *buffer, int size)
 {
-	void *handle;
-	int (*init) (void);
+	char *base, *ext;
+	int len;
+
+	base = strrchr(path, '/');
+	if (base == NULL)
+	{
+		base = path;
+	}
+	else
+	{
+		++base;		/* Skip leading slash */
+	}
+
+	ext = strrchr(base, '.');
+	if (ext == NULL)
+	{
+		len = strlen(base);
+	}
+	else
+	{
+		len = ext - base;
+	}
+
+	if (size < len + 1)
+	{
+		log_die(EX_SOFTWARE, "module_symbol_name: buffer exhausted");
+	}
+
+	strncpy(buffer, base, len);
+
+	buffer[len] = 0;
+
+	return;
+}
+
+static void *
+module_symbol_load(void *handle, char *path, char *suffix, int die)
+{
+	char symbol[BUFLEN];
 	char *error;
+	int len;
+	void *p;
 
-	log_debug("module_open: load \"%s\"", path);
+	module_symbol_name(path, symbol, sizeof symbol);
 
-	if ((handle = dlopen(path, RTLD_LAZY)) == NULL) {
-		log_error("module_load: dlopen: %s", dlerror());
-		return NULL;
+	len = strlen(symbol);
+
+	/*
+	 * Append _suffix
+	 */
+	if (sizeof symbol < len + strlen(suffix) + 2)
+	{
+		log_die(EX_SOFTWARE, "module_symbol_load: buffer exhausted");
+	}
+
+	symbol[len++] = '_';
+
+	strcpy(symbol + len, suffix);
+
+	/*
+	 * Clear existing error
+	 */
+	dlerror();
+
+	/*
+	 * Load symbol
+	 */
+	p = dlsym(handle, symbol);
+
+	error = (char *) dlerror();
+	if (error == NULL)
+	{
+		return p;
+	}
+
+	if(die)
+	{
+		log_die(EX_SOFTWARE, "module_symbol_load: dlsym: %s", error);
+	}
+
+	log_debug("module_symbol_load: dlsym: %s", error);
+
+	return p;
+}
+
+
+static module_t *
+module_create(char *path)
+{
+	module_t *mod = NULL;
+
+	log_debug("module_create: load \"%s\"", path);
+
+	/*
+	 * Alloc module_t
+	 */
+	mod = (module_t *) malloc(sizeof (module_t));
+	if (mod == NULL)
+	{
+		log_die(EX_SOFTWARE, "module_create: malloc");
+	}
+
+	/*
+	 * Open module
+	 */
+	mod->mod_handle = dlopen(path, RTLD_LAZY);
+	if (mod->mod_handle == NULL)
+	{
+		log_die(EX_SOFTWARE, "module_create: dlopen: %s", dlerror());
 	}
 
 	dlerror();		/* Clear any existing error */
 
 	/*
-	 * Run init() if exists
+	 * Load symbols
 	 */
-	if ((init = dlsym(handle, "init"))) {
-		if (init()) {
-			log_die(EX_SOFTWARE, "module_open: \"%s\": init"
-				" failed", path);
-		}
-	}
+	mod->mod_name = path;
+	mod->mod_init = module_symbol_load(mod->mod_handle, path, "init", 1);
+	mod->mod_fini = module_symbol_load(mod->mod_handle, path, "fini", 0);
 
-	error = (char *) dlerror();
-	if (error != NULL)
-	{
-		log_die(EX_SOFTWARE, "module_open: dlsym: %s", error);
-	}
-
-	if (LL_INSERT(module_list, handle) == -1) {
-		log_die(EX_SOFTWARE, "module_open: LL_INSERT failed");
-	}
-
-	return handle;
+	return mod;
 }
 
-int
-module_load(const char *path)
+
+void
+module_glob(const char *path)
 {
 	glob_t pglob;
 	char pattern[BUFLEN];
-	char **module;
-	void *handle;
+	char **file;
+	module_t *mod;
+	int i;
 
 	memset(&pglob, 0, sizeof(pglob));
-
 	snprintf(pattern, sizeof(pattern), "%s/*.so", path);
 
-	switch (glob(pattern, GLOB_ERR, NULL, &pglob)) {
-
+	/*
+	 * Glob path
+	 */
+	switch (glob(pattern, GLOB_ERR, NULL, &pglob))
+	{
 	case 0:
 		break;
 
 	case GLOB_NOMATCH:
-		log_error("module_load: no modules found in \"%s\"", path);
-		return 0;
+		log_error("module_glob: no modules found in \"%s\"", path);
+		return;
 
 	default:
-		log_die(EX_NOPERM, "module_load: can't glob \"%s\"", path);
+		log_die(EX_NOPERM, "module_glob: can't glob \"%s\"", path);
 	}
 
-	log_debug("module_load: found %d modules in \"%s\"", pglob.gl_pathc,
-		  path);
+	log_debug("module_glob: found %d modules in \"%s\"", pglob.gl_pathc,
+	    path);
 
-	for (module = pglob.gl_pathv; *module; ++module) {
-		if ((handle = module_open(*module)) == NULL) {
-			log_die(EX_SOFTWARE, "module_load: module_open \"%s\""
-				" failed", *module);
+	/*
+	 * Create module_t array
+	 */
+	mod = (module_t *) malloc((pglob.gl_pathc + 1) * sizeof (module_t));
+	if (mod == NULL)
+	{
+		log_die(EX_SOFTWARE, "module_glob: malloc");
+	}
+
+	/*
+	 * Append buffer to module_buffers
+	 */
+	if (module_buffers == NULL)
+	{
+		module_buffers = ll_create();
+	}
+
+	if (module_buffers == NULL)
+	{
+		log_die(EX_SOFTWARE, "module_glob: ll_create failed");
+	}
+
+	if (LL_INSERT(module_buffers, mod) == -1)
+	{
+		log_die(EX_SOFTWARE, "module_glob: LL_INSERT failed");
+	}
+
+	/*
+	 * Prepare modules
+	 */
+	for (i = 0, file = pglob.gl_pathv; *file; ++file, ++i)
+	{
+		log_debug("module_glob: load \"%s\"", *file);
+
+		mod[i].mod_name = strdup(*file);
+
+		/*
+		 * Open module
+		 */
+		mod[i].mod_handle = dlopen(*file, RTLD_LAZY);
+		if (mod[i].mod_handle == NULL)
+		{
+			log_die(EX_SOFTWARE, "module_glob: dlopen: %s",
+			    dlerror());
 		}
+
+		/*
+		 * Load Symbols
+		 */
+		mod[i].mod_init = module_symbol_load(mod[i].mod_handle, *file,
+		    "init", 1);
+		mod[i].mod_fini = module_symbol_load(mod[i].mod_handle, *file,
+		    "fini", 0);
 	}
+
+	/*
+	 * Close array
+	 */
+	memset(&mod[i], 0, sizeof (module_t));
+
+	/*
+	 * Load modules
+	 */
+	module_load(mod);
 
 	globfree(&pglob);
 
-	return 0;
+	return;
 }
 
-int
-module_init(void)
+#else /* DYNAMIC */
+
+void
+module_load_db(void)
 {
-	if ((module_list = ll_create()) == NULL) {
-		log_die(EX_SOFTWARE, "module_init: ll_create failed");
+	module_load(module_static_db);
+
+	return;
+}
+
+void
+module_load_tables(void)
+{
+	module_load(module_static_tables);
+
+	return;
+}
+
+void
+module_load_acl(void)
+{
+	module_load(module_static_acl);
+
+	return;
+}
+
+#endif /* DYNAMIC */
+
+
+void
+module_load(module_t *mod)
+{
+	int i;
+
+	/*
+	 * Create module list if neccessary
+	 */
+	if (module_list == NULL)
+	{
+		module_list = ll_create();
 	}
 
-	return 0;
+	if (module_list == NULL)
+	{
+		log_die(EX_SOFTWARE, "module_load: ll_create failed");
+	}
+
+	/*
+	 * Append modules
+	 */
+	for(i = 0; mod[i].mod_name; ++i)
+	{
+		if (mod[i].mod_init())
+		{
+			log_die(EX_SOFTWARE, "module_load: %s: init failed",
+			    mod[i].mod_name);
+		}
+
+		if (LL_INSERT(module_list, &mod[i]) == -1)
+		{
+			log_die(EX_SOFTWARE, "module_create: LL_INSERT "
+			    "failed");
+		}
+	}
+
+	return;
+}
+
+
+static void
+module_delete(module_t *mod)
+{
+	if (mod->mod_fini)
+	{
+		log_debug("module_delete: %s: fini", mod->mod_name);
+		mod->mod_fini();
+	}
+
+#ifdef DYNAMIC
+	if (mod->mod_handle)
+	{
+		dlclose(mod->mod_handle);
+	}
+
+	free(mod->mod_name);
+#endif
+
+	return;
 }
 
 void
 module_clear(void)
 {
-	void *handle;
-	void (*fini) (void);
-	char *error;
-
-	if (module_list == NULL) {
-		return;
+	if (module_list)
+	{
+		ll_delete(module_list, (ll_delete_t) module_delete);
 	}
 
-	ll_rewind(module_list);
-	while ((handle = ll_next(module_list))) {
-		dlerror();	/* Clear any existing error */
-
-		if ((fini = dlsym(handle, "fini"))) {
-			fini();
-		}
-
-		error = (char *) dlerror();
-		if (error != NULL)
-		{
-			log_info("module_clear: dlsym: %s", error);
-		}
-
-		dlclose(handle);
+#ifdef DYNAMIC
+	if (module_buffers)
+	{
+		ll_delete(module_buffers, (ll_delete_t) free);
 	}
+#endif
 	
-	ll_delete(module_list, NULL);
 
 	return;
 }

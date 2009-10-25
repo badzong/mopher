@@ -47,12 +47,12 @@ main(int argc, char **argv)
 
 	log_init(BINNAME, loglevel, foreground);
 	cf_init(config);
-	module_init();
 	dbt_init();
 	greylist_init();
 
 	r = milter();
 
+	greylist_clear();
 	dbt_clear();
 	module_clear();
 	cf_clear();

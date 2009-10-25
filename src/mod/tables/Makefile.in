@@ -1,16 +1,16 @@
+include @top_srcdir@/Makefile.common
+
 INCLUDE=-I@top_srcdir@ -I@top_srcdir@/src/include
-CFLAGS=-Wall -g -shared -nostartfiles -fPIC $(INCLUDE)
-OBJECTS=greylist.so
-ACFILES=Makefile
+CFLAGS+=$(INCLUDE)
 
-all: $(OBJECTS)
+OBJECTS=penpal.o
+MODULES=penpal.so
+MOD_ALL=@MOD_ALL@
 
-greylist.so: greylist.c Makefile
-	$(CC) $(CFLAGS) -o greylist.so greylist.c
+all: $(MOD_ALL)
+
+lib.a: $(OBJECTS)
+	$(AR) $(ARFLAGS) $@ $^
 
 clean:
-	-rm $(OBJECTS)
-
-distclean:
-	-rm -f $(ACFILES)
-
+	-rm lib.a $(OBJECTS) $(MODULES)

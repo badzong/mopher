@@ -23,6 +23,12 @@
 #define SPAMD_FALSELEN 8
 
 
+static const char spamd_single[] = "Received: from %s (%s [%s])\r\n\tby %s "
+    "(envelope-sender <%s>) (%s) with SMTP id %s\r\n\tfor <%s>; %s\r\n";
+
+static const char spamd_multi[] = "Received: from %s (%s [%s])\r\n\tby %s "
+    "(envelope-sender <%s>) (%s) with SMTP id %s;\r\n\t%s%s\r\n";
+
 static char *spamd_symbols[] = { "spamd_spam", "spamd_score",
 	"spamd_symbols", NULL};
 
@@ -40,6 +46,8 @@ spamd_header(var_t *attrs, char *header, int len)
 	char timestamp[BUFLEN];
 	struct tm tm;
 	int r;
+	const char *fmt;
+	
 
 	r = var_table_dereference(attrs, "milter_received", &t,
 		"milter_hostname", &hostname, "milter_helo", &helo,
@@ -64,18 +72,18 @@ spamd_header(var_t *attrs, char *header, int len)
 		timestamp[0] = '\0';
 	}
 
-	if(recipients == 1) {
-		snprintf(header, len, "Received: from %s (%s [%s])\r\n"
-			"\tby %s (envelope-sender <%s>) (%s) with SMTP id %s\r"
-			"\n\tfor <%s>; %s\r\n", helo, hostname, addrstr,
-			cf_hostname, envfrom, BINNAME, queueid, envrcpt,
-			timestamp);
-	} else {
-		snprintf(header, len, "Received: from %s (%s [%s])\r\n"
-			"\tby %s (envelope-sender <%s>) (%s) with SMTP id %s;"
-			"\r\n\t%s\r\n", helo, hostname, addrstr, cf_hostname,
-			envfrom, BINNAME, queueid, timestamp);
+	if(recipients == 1)
+	{
+		fmt = spamd_single;
 	}
+	else
+	{
+		fmt = spamd_multi;
+		envrcpt = "";
+	}
+		
+	snprintf(header, len, fmt, helo, hostname, addrstr, cf_hostname,
+	    envfrom, BINNAME, queueid, envrcpt, timestamp);
 
 	return 0;
 }
@@ -296,7 +304,7 @@ error:
 
 
 int
-init(void)
+spamd_init(void)
 {
 	char **p;
 
