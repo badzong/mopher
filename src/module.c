@@ -21,10 +21,10 @@ static ll_t *module_buffers;
 
 module_t module_static_db[] = {
 #ifdef WITH_MOD_BDB
-	{ "bdb.o",	bdb_init,	NULL,		NULL },
+	{ "bdb-static",	bdb_init,	NULL,		NULL },
 #endif
 #ifdef WITH_MOD_MYSQL
-	{ "sakila.o",	sakila_init,	NULL,		NULL },
+	{ "sakila-static",	sakila_init,	sakila_fini,	NULL },
 #endif
 	{ NULL,		NULL,		NULL,		NULL }
 };
@@ -35,12 +35,12 @@ module_t module_static_tables[] = {
 
 module_t module_static_acl[] = {
 /*	{ "test.o",	test_init,	test_fini,	NULL },*/
-	{ "milter.o",	milter_init,	milter_fini,	NULL },
-	{ "rbl.o",	rbl_init,	rbl_fini,	NULL },
-	{ "spamd.o",	spamd_init,	NULL,		NULL },
-	{ "string.o",	string_init,	NULL,		NULL },
+	{ "milter-static",	milter_init,	milter_fini,	NULL },
+	{ "rbl-static",		rbl_init,	rbl_fini,	NULL },
+	{ "spamd-static",	spamd_init,	NULL,		NULL },
+	{ "string-static",	string_init,	NULL,		NULL },
 #ifdef WITH_MOD_SPF
-	{ "spf.o",	spf_init,	spf_fini,	NULL },
+	{ "spf-static",		spf_init,	spf_fini,	NULL },
 #endif
 	{ NULL,		NULL,		NULL,		NULL }
 };

@@ -38,6 +38,7 @@ int spf_init(void);
 int string_init(void);
 int test_init(void);
 
+void sakila_fini(void);
 void milter_fini(void);
 void rbl_fini(void);
 void spf_fini(void);

@@ -1408,3 +1408,12 @@ sakila_init(void)
 
 	return 0;
 }
+
+
+void
+sakila_fini(void)
+{
+	mysql_library_end();
+
+	return;
+}
