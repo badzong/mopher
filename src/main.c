@@ -11,11 +11,12 @@ int
 main(int argc, char **argv)
 {
 	int r, opt, foreground, loglevel;
-	char *config;
+	char *mopherd_conf;
+	char *mail_acl;
 
 	foreground = 0;
 	loglevel = LOG_WARNING;
-	config = "/etc/mopher.conf";
+	mopherd_conf = MOPHERD_CONF;
 
 	while ((opt = getopt(argc, argv, "fhd:c:")) != -1) {
 		switch(opt) {
@@ -28,7 +29,7 @@ main(int argc, char **argv)
 			break;
 
 		case 'c':
-			config = optarg;
+			mopherd_conf = optarg;
 			break;
 		default:
 			fprintf(stderr, "Usage: %s [-c file] [-d N] [-f] [-h]\n", 
@@ -46,12 +47,26 @@ main(int argc, char **argv)
 	}
 
 	log_init(BINNAME, loglevel, foreground);
-	cf_init(config);
+	
+	cf_init(mopherd_conf);
+
+	/*
+	 * Load default ACL path if not configured
+	 */
+	mail_acl = cf_get(VT_STRING, "acl_path", NULL);
+	if(mail_acl == NULL)
+	{
+		mail_acl = MAIL_ACL;
+		log_warning("acl_path not set: using \"%s\"", mail_acl);
+	}
+
 	dbt_init();
 	greylist_init();
+	acl_init(mail_acl);
 
 	r = milter();
 
+	acl_clear();
 	greylist_clear();
 	dbt_clear();
 	module_clear();

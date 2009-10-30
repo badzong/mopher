@@ -127,14 +127,8 @@ server_main(void *arg)
 	fd_set rs;
 
 	/*
-	 * This thread has not to handle any signal
+	 * Use SIGUSR2 to get out of select
 	 */
-	if (util_block_signals(SIGHUP, SIGTERM, SIGINT, 0))
-	{
-		log_error("server_main: util_block_signal failed");
-		return NULL;
-	}
-
 	if (util_signal(SIGUSR2, server_usr2))
 	{
 		log_error("server_main: util_signal failed");
@@ -323,22 +317,9 @@ server_init()
 	/*
 	 * Start server thread
 	 */
-
-	if (pthread_attr_init(&server_attr))
+	if (util_thread_create(&server_thread, &server_attr, server_main))
 	{
-		log_error("server_init: pthread_attr_init");
-		return -1;
-	}
-
-	if (pthread_attr_setdetachstate(&server_attr, PTHREAD_CREATE_JOINABLE))
-	{
-		log_error("server_init: pthread_attr_setdetachstate");
-		return -1;
-	}
-
-	if (pthread_create(&server_thread, NULL, server_main, NULL))
-	{
-		log_error("server_init: pthread_create");
+		log_error("server_init: util_thread_create failed");
 		return -1;
 	}
 

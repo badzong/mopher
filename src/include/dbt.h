@@ -74,7 +74,6 @@ int dbt_db_walk(dbt_t *dbt, dbt_db_callback_t callback);
 int dbt_db_sync(dbt_t *dbt);
 int dbt_db_cleanup(dbt_t *dbt);
 void dbt_register(dbt_t *dbt);
-void dbt_janitor(int force);
 void dbt_init(void);
 void dbt_clear();
 dbt_t * dbt_lookup(char *name);

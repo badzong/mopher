@@ -41,6 +41,13 @@ then
   AC_MSG_WARN([tar not found.])
 fi
 
+# check for install
+AC_PATH_PROG([INSTALL], [install], [])
+if test -z "$INSTALL"
+then
+  AC_MSG_WARN([install not found.])
+fi
+
 # Checks for libraries.
 
 AC_CHECK_LIB([pthread], [pthread_create],
@@ -139,14 +146,22 @@ fi
 
 AC_SUBST([MOD_LIBS])
 AC_SUBST([MOD_ALL])
+
+
+# Set configuration file path
+mopherd_conf="$sysconfdir/mopher/mopherd.conf"
+mail_acl="$sysconfdir/mopher/mail.acl"
+
+AC_SUBST([mopherd_conf])
+AC_SUBST([mail_acl])
+
 # So far no further checks
 
 # Checks for header files.
 # Checks for typedefs, structures, and compiler characteristics.
 # Checks for library functions.
 
-
-AC_CONFIG_FILES([Makefile Makefile.common src/Makefile src/mod/acl/Makefile src/mod/db/Makefile
-  src/mod/tables/Makefile])
+AC_CONFIG_FILES([Makefile Makefile.common src/Makefile
+  src/mod/acl/Makefile src/mod/db/Makefile src/mod/tables/Makefile])
 
 AC_OUTPUT

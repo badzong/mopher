@@ -7,37 +7,66 @@ TARBALL=$(ARCHIVE).bz2
 
 SUBDIRS=src
 
-DISTFILES=configure Makefile.in config.h.in $(SUBDIRS)
+DISTFILES=configure Makefile.common.in Makefile.in config.h.in $(SUBDIRS)
 
 
 .PHONY: clean
 .PHONY: distclean
+.PHONY: install
+.PHONY: uninstall
 .PHONY: $(SUBDIRS)
 .PHONY: $(ARCHIVE)
 
 
 all: $(SUBDIRS)
 
+install: all
+	@echo 
+	@echo creating directories
+	$(INSTALL) -m 755 -o root -g root -d $(sysconfdir)/mopher
+	$(INSTALL) -m 755 -o root -g root -d $(libdir)/mopher
+	$(INSTALL) -m 755 -o root -g root -d $(libdir)/mopher/db
+	$(INSTALL) -m 755 -o root -g root -d $(libdir)/mopher/acl
+	$(INSTALL) -m 755 -o root -g root -d $(libdir)/mopher/tables
+	@echo 
+	@echo installing mopherd in $(sbindir)
+	$(INSTALL) -m 755 -o root -g root src/mopherd $(sbindir)
+	@echo 
+	@echo installing modules in $(libdir)/mopher
+	-$(INSTALL) -m 755 -o root -g root src/mod/db/*.so $(libdir)/mopher/db
+	-$(INSTALL) -m 755 -o root -g root src/mod/acl/*.so $(libdir)/mopher/acl
+	-$(INSTALL) -m 755 -o root -g root src/mod/tables/*.so $(libdir)/mopher/tables
+	@echo 
+	@echo installing configuration files in $(sysconfdir)
+	$(INSTALL) -m 640 -o root -g root mopherd.conf $(sysconfdir)/mopher
+	$(INSTALL) -m 640 -o root -g root mail.acl $(sysconfdir)/mopher
+
+uninstall:
+	@echo removing $(DIST) files
+	@rm -rf $(sysconfdir)/mopher
+	@rm -rf $(libdir)/mopher
+	@rm -f $(sbindir)/mopherd
+
 $(SUBDIRS):
-	cd $@ && $(MAKE)
+	@cd $@ && $(MAKE)
 
 clean:
-	for d in $(SUBDIRS); do (cd $$d && $(MAKE) clean); done
+	@for d in $(SUBDIRS); do (cd $$d && $(MAKE) clean); done
 
 distclean: clean
-	-rm -f $(ACFILES)
-	-rm -f $(TARBALL)
+	@-rm -f $(ACFILES)
+	@-rm -f $(TARBALL)
 
 dist: clean $(TARBALL) $(DISTDIR)
 
 $(DISTDIR):
-	mkdir $(DISTDIR)
-	cp -dpr $(DISTFILES) $(DISTDIR)
+	@mkdir $(DISTDIR)
+	@cp -dpr $(DISTFILES) $(DISTDIR)
 
 $(TARBALL): $(ARCHIVE)
-	-rm -f $@
-	$(BZIP2) $<
+	@-rm -f $@
+	@$(BZIP2) $<
 
 $(ARCHIVE): $(DISTDIR)
-	$(TAR) cvf $@ $(DISTDIR)
-	rm -rf $(DISTDIR)
+	@$(TAR) cvf $@ $(DISTDIR)
+	@rm -rf $(DISTDIR)

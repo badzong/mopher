@@ -1,3 +1,10 @@
+# Install paths
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+sbindir=@sbindir@
+libdir=@libdir@
+sysconfdir=@sysconfdir@
+
 # Program paths
 
 CC=@CC@
@@ -7,6 +14,7 @@ OBJCOPY=@OBJCOPY@
 AR=@AR@
 TAR=@TAR@
 BZIP2=@BZIP2@
+INSTALL=@INSTALL@
 
 
 # Flags

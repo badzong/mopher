@@ -461,11 +461,6 @@ milter_close(SMFICTX * ctx)
 
 	log_debug("milter_close: connection closed");
 
-	/*
-	 * Use this thread do cleanup the tables.
-	 */
-	dbt_janitor(0);
-
 	return SMFIS_CONTINUE;
 }
 
@@ -508,8 +503,6 @@ milter(void)
 		log_die(EX_SOFTWARE, "milter: smfi_register failed");
 	}
 
-	acl_init();
-
 	r = smfi_main();
 
 	if (r == MI_SUCCESS)
@@ -527,9 +520,6 @@ milter(void)
 	umask(mask);
 
 	milter_running = 0;
-
-	acl_clear();
-
 
 	return r;
 }

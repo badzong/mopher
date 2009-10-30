@@ -136,6 +136,8 @@ sakila_buffer_create(char *name, var_type_t type)
 		return NULL;
 	}
 
+	memset(mb->mb_buffer, 0, length);
+
 	mb->mb_name = name;
 	mb->mb_length = length;
 	mb->mb_type = sakila_buffer_types[type];

@@ -77,6 +77,7 @@ static cf_symbol_t cf_symbols[] = {
 	{ "milter_socket", &cf_milter_socket },
 	{ "milter_socket_timeout", &cf_milter_socket_timeout },
 	{ "milter_socket_umask", &cf_milter_socket_umask },
+	{ "cleanup_interval", &cf_dbt_cleanup_interval },
 	{ "dbt_mod_path", &cf_dbt_mod_path },
 	{ "tables_mod_path", &cf_tables_mod_path },
 	{ "default_cleanup_interval", &cf_dbt_cleanup_interval },

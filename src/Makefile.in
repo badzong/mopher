@@ -38,6 +38,9 @@ acl_yacc.c: acl_yacc.y
 acl_lex.c: acl_lex.l
 	$(LEX) -t -Pacl_ acl_lex.l > acl_lex.c
 
+main.o: main.c Makefile
+	$(CC) $(CFLAGS) -DMOPHERD_CONF=\"@mopherd_conf@\" -DMAIL_ACL=\"@mail_acl@\" -o main.o -c main.c
+
 mopherd: Makefile $(OBJECTS) $(LIBS)
 	$(CC) $(CFLAGS) -o mopherd $(OBJECTS) $(LDFLAGS)
 

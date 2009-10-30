@@ -356,3 +356,68 @@ util_signal(int signum, void (*handler)(int))
 
 	return 0;
 }
+
+
+static void *
+util_thread_init(void *arg)
+{
+	void *(*callback)(void *) = arg;
+
+	if (util_block_signals(SIGHUP, SIGTERM, SIGINT, 0))
+	{
+		log_die(EX_SOFTWARE,
+		    "util_thread_init: util_block_signal failed");
+	}
+
+	return callback(NULL);
+}
+
+
+int
+util_thread_create(pthread_t *thread, pthread_attr_t *attr,
+    void *callback)
+{
+	if (pthread_attr_init(attr))
+	{
+		log_error("util_thread_create: pthread_attr_init");
+		return -1;
+	}
+
+	if (pthread_attr_setdetachstate(attr, PTHREAD_CREATE_JOINABLE))
+	{
+		log_error("util_thread_create: pthread_attr_setdetachstate");
+		return -1;
+	}
+
+	if (pthread_create(thread, NULL, util_thread_init, callback))
+	{
+		log_error("util_thread_create: pthread_create");
+		return -1;
+	}
+
+	return 0;
+}
+
+
+int
+util_now(struct timespec *ts)
+{
+	struct timeval	tv;
+
+	/*
+	 * Get current time
+	 */
+	if (gettimeofday(&tv, NULL))
+	{
+		log_error("util_now: gettimeofday");
+		return -1;
+	}
+
+	/*
+	 * Convert into timespec
+	 */
+	ts->tv_sec = tv.tv_sec;
+	ts->tv_nsec = tv.tv_usec * 1000;
+
+	return 0;
+}

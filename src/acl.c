@@ -634,7 +634,7 @@ error:
 }
 
 int
-acl_init(void)
+acl_init(char *mail_acl)
 {
 	if ((acl_tables = ht_create(ACL_TABLE_BUCKETS,
 		(ht_hash_t) acl_table_hash, (ht_match_t) acl_table_match,
@@ -665,7 +665,7 @@ acl_init(void)
 	/*
 	 * Run parser
 	 */
-	util_parser(cf_acl_path, &acl_in, acl_parse);
+	util_parser(mail_acl, &acl_in, acl_parse);
 
 	return 0;
 }

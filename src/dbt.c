@@ -4,6 +4,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <errno.h>
+#include <signal.h>
 
 #include "mopher.h"
 
@@ -12,7 +13,11 @@
 static ht_t *dbt_drivers;
 static ht_t *dbt_tables;
 
-static pthread_mutex_t dbt_janitor_mutex = PTHREAD_MUTEX_INITIALIZER;
+static int		dbt_janitor_running = 1;
+static pthread_t	dbt_janitor_thread;
+static pthread_attr_t	dbt_janitor_attr;
+static pthread_mutex_t	dbt_janitor_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t	dbt_janitor_cond = PTHREAD_COND_INITIALIZER;
 
 
 static hash_t
@@ -314,10 +319,23 @@ dbt_register(dbt_t *dbt)
 	}
 
 	/*
+	 * Lock janitor mutex in case the janitor is already working
+	 */
+	if (pthread_mutex_lock(&dbt_janitor_mutex))
+	{
+		log_die(EX_SOFTWARE, "dbt_register: pthread_mutex_lock");
+	}
+
+	/*
 	 * Store dbt in dbt_tables
 	 */
 	if (ht_insert(dbt_tables, dbt)) {
 		log_die(EX_SOFTWARE, "dbt_register: ht_insert failed");
+	}
+
+	if (pthread_mutex_unlock(&dbt_janitor_mutex))
+	{
+		log_die(EX_SOFTWARE, "dbt_register: pthread_mutex_unlock");
 	}
 
 	return;
@@ -325,7 +343,23 @@ dbt_register(dbt_t *dbt)
 
 
 static int
-dbt_cleanup(dbt_t *dbt, var_t *record)
+dbt_janitor_cleanup_sql(dbt_t *dbt)
+{
+	int deleted;
+
+	deleted = dbt_db_cleanup(dbt);
+
+	if (deleted == -1)
+	{
+		log_error("dbt_janitor_cleanup_sql: dbt_db_cleanup failed");
+	}
+
+	return deleted;
+}
+
+
+static int
+dbt_janitor_validate(dbt_t *dbt, var_t *record)
 {
 	int valid;
 
@@ -348,113 +382,191 @@ dbt_cleanup(dbt_t *dbt, var_t *record)
 }
 
 
-void
-dbt_janitor(int force)
+static int
+dbt_janitor_cleanup_walk(dbt_t *dbt)
 {
-	time_t now;
-	dbt_t *dbt;
-	int mutex;
-	int deleted;
+	dbt->dbt_cleanup_deleted = 0;
+
+	if (dbt_db_walk(dbt, (void *) dbt_janitor_validate)) {
+		log_error("dbt_janitor_cleanup_walk: dbt_db_walk failed");
+		return -1;
+	}
+		
+	/*
+	 * Sync database if driver supports syncing
+	 */
+	if (dbt->dbt_driver->dd_sync) {
+		if (dbt_db_sync(dbt)) {
+			log_warning("dbt_janitor: dbt_db_sync failed");
+		}
+	}
+
+	return dbt->dbt_cleanup_deleted;
+}
+
+
+static int
+dbt_janitor_cleanup(time_t now, dbt_t *dbt)
+{
+	int deleted = 0;
+
+	log_debug("dbt_janitor_cleanup: cleaning up \"%s\"", dbt->dbt_name);
 
 	/*
-	 * Check if someone else is doing the dirty work.
+	 * Check if driver supports SQL
 	 */
-	mutex = pthread_mutex_trylock(&dbt_janitor_mutex);
-	if (mutex == EBUSY) {
-		return;
-	}
-	else if (mutex) {
-		log_error("dbt_janitor: pthread_mutex_trylock");
-		return;
+	if (dbt->dbt_driver->dd_sql_cleanup && dbt->dbt_sql_invalid_where)
+	{
+		deleted = dbt_janitor_cleanup_sql(dbt);
 	}
 
-	if ((now = time(NULL)) == -1) {
-		log_error("dbt_janitor: time");
-		goto exit_unlock;
-	}
-
-	ht_rewind(dbt_tables);
-	while((dbt = ht_next(dbt_tables))) {
-		/*
-		 * Check if table needs a clean up
-		 */
-		if (force == 0 && now < dbt->dbt_cleanup_schedule)
+	/*
+	 * Check if driver and table support walking
+	 */
+	else if (dbt->dbt_driver->dd_walk)
+	{
+		if (dbt->dbt_validate)
 		{
-			continue;
+			deleted = dbt_janitor_cleanup_walk(dbt);
 		}
 
-		log_info("dbt_janitor: cleaning up \"%s\"", dbt->dbt_name);
-
-		/*
-		 * Check if driver supports SQL
-		 */
-		if (dbt->dbt_driver->dd_sql_cleanup &&
-		    dbt->dbt_sql_invalid_where)
-		{
-			deleted = dbt_db_cleanup(dbt);
-
-			if (deleted == -1) {
-				log_error("dbt_janitor: dbt_db_cleanup "
-					"failed");
-			}
-			else {
-				log_debug("dbt_janitor: deleted %d stale "
-					"records from \"%s\"", deleted,
-					dbt->dbt_name);
-			}
-
-			DBT_SCHEDULE_CLEANUP(dbt, now);
-
-			continue;
-		}
-
-		/*
-		 * Check if driver supports walking
-		 */
-		if (dbt->dbt_driver->dd_walk == NULL) {
-			log_warning("dbt_janitor: can't cleanup database "
-				"\"%s\": Driver supports neither SQL nor "
-				"walking", dbt->dbt_name);
-			continue;
-		}
-			
 		/*
 		 * No validate callback registered
 		 */
-		if (dbt->dbt_validate == NULL) {
-			continue;
+		log_debug("dbt_janitor_cleanup: \"%s\" has no validate"
+		    " callback");
+
+		return 0;
+	}
+
+	else
+	{
+		log_error("dbt_janitor_cleanup: can't cleanup database \"%s\":"
+		    " Driver supports neither SQL nor walking", dbt->dbt_name);
+		return -1;
+	}
+
+	/*
+	 * dbt_janitor_cleanup_sql or dbt_janitor_cleanup_walk should have
+	 * logged already
+	 */
+	if (deleted == -1)
+	{
+		return -1;
+	}
+
+	log_debug("dbt_janitor: deleted %d stale records from \"%s\"", deleted,
+	    dbt->dbt_name);
+
+	return deleted;
+}
+
+
+static void *
+dbt_janitor(void *arg)
+{
+	time_t now;
+	dbt_t *dbt;
+	int deleted;
+	unsigned long schedule, suspend;
+	struct timespec	ts;
+	int r;
+
+	log_debug("dbt_janitor: janitor thread running");
+
+	if (pthread_mutex_lock(&dbt_janitor_mutex))
+	{
+		log_error("dbt_janitor: pthread_mutex_lock");
+		return NULL;
+	}
+
+	while(dbt_janitor_running)
+	{
+		if (util_now(&ts))
+		{
+			log_error("client_main: util_now failed");
+			return NULL;
 		}
 
-		dbt->dbt_cleanup_deleted = 0;
+		now = ts.tv_sec;
 
-		if (dbt_db_walk(dbt, (void *) dbt_cleanup)) {
-			log_error("dbt_janitor: dbt_db_walk failed");
-			continue;
+		for(ht_rewind(dbt_tables); (dbt = ht_next(dbt_tables));)
+		{
+			/*
+			 * Check if table needs a clean up
+			 */
+			if (now < dbt->dbt_cleanup_schedule)
+			{
+				continue;
+			}
+
+			deleted = dbt_janitor_cleanup(now, dbt);
+			if (deleted == -1)
+			{
+				log_error("dbt_janitor: dbt_janitor_cleanup "
+				    "failed");
+			}
+
+			/*
+			 * Schedule next cleanup cycle
+			 */
+			DBT_SCHEDULE_CLEANUP(dbt, now);
 		}
-		
-		log_debug("dbt_janitor: deleted %d stale records from \"%s\"",
-			dbt->dbt_cleanup_deleted, dbt->dbt_name);
 
 		/*
-		 * Sync database if driver supports syncing
+		 * Schedule next run
 		 */
-		if (dbt->dbt_driver->dd_sync) {
-			if (dbt_db_sync(dbt)) {
-				log_warning("dbt_janitor: dbt_db_sync failed");
+		schedule = 0xffffffff;
+		for(ht_rewind(dbt_tables); (dbt = ht_next(dbt_tables));)
+		{
+			if (dbt->dbt_cleanup_schedule < schedule)
+			{
+				schedule = dbt->dbt_cleanup_schedule;
 			}
 		}
 
-		DBT_SCHEDULE_CLEANUP(dbt, now);
+		/*
+		 * Happens only if no table is registed
+		 */
+		if (schedule == 0xffffffff)
+		{
+			schedule = now + 1;
+		}
+
+		log_debug("dbt_janitor: sleeping for %lu seconds",
+		    schedule - now);
+
+		ts.tv_sec = schedule;
+
+		/*
+		 * Suspend execution
+		 */
+		r = pthread_cond_timedwait(&dbt_janitor_cond,
+		    &dbt_janitor_mutex, &ts);
+
+		/*
+		 * Signaled wakeup or timeout
+		 */
+		if (r == 0 || r == ETIMEDOUT)
+		{
+			continue;
+		}
+
+		log_error("client_main: pthread_cond_wait");
+		break;
 	}
 
+	log_debug("dbt_janitor: shutdown");
 
-exit_unlock:
-
-	if (pthread_mutex_unlock(&dbt_janitor_mutex)) {
-		log_warning("dbt_janitor: pthread_mutex_unlock");
+	/*
+	 * Unlock janitor mutex
+	 */
+	if (pthread_mutex_unlock(&dbt_janitor_mutex))
+	{
+		log_error("dbt_janitor: pthread_mutex_unlock");
 	}
 
-	return;
+	return NULL;
 }
 
 
@@ -492,12 +604,16 @@ dbt_init(void)
 	MODULE_LOAD_TABLE;
 
 	/*
-	 * Cleanup databases
+	 * Start table janitor thread
 	 */
-	dbt_janitor(1);
+	if (util_thread_create(&dbt_janitor_thread, &dbt_janitor_attr,
+	    dbt_janitor))
+	{
+		log_die(EX_SOFTWARE, "dbt_init: util_thread_create failed");
+	}
 
 	/*
-	 * Start sync thread
+	 * Start sync threads
 	 */
 	if (server_init())
 	{
@@ -516,7 +632,27 @@ dbt_init(void)
 void
 dbt_clear()
 {
-	dbt_janitor(1);
+	if (pthread_mutex_lock(&dbt_janitor_mutex))
+	{
+		log_error("dbt_janitor_clear: pthread_mutex_lock");
+	}
+
+	dbt_janitor_running = 0;
+
+	if (pthread_cond_signal(&dbt_janitor_cond))
+	{
+		log_error("dbt_janitor_clear: pthread_cond_signal");
+	}
+
+	if (pthread_mutex_unlock(&dbt_janitor_mutex))
+	{
+		log_error("dbt_janitor_clear: pthread_mutex_unlock");
+	}
+
+	if (pthread_join(dbt_janitor_thread, NULL))
+	{
+		log_error("dbt_clear: pthread_mutex_join");
+	}
 
 	client_clear();
 	server_clear();

@@ -296,7 +296,6 @@ client_main(void *arg)
 {
 	int		r, incomplete = 0;
 	struct timespec	ts;
-	struct timeval	tv;
 
 	/*
 	 * Client thread is running
@@ -304,28 +303,13 @@ client_main(void *arg)
 	client_running = 1;
 
 	/*
-	 * This thread has not to handle any signal
-	 */
-	if (util_block_signals(SIGHUP, SIGTERM, SIGINT, 0))
-	{
-		log_error("client_main: util_block_signal failed");
-		goto error;
-	}
-
-	/*
 	 * Get current time
 	 */
-	if (gettimeofday(&tv, NULL))
+	if (util_now(&ts))
 	{
-		log_error("client_main: gettimeofday");
+		log_error("client_main: util_now failed");
 		goto error;
 	}
-
-	/*
-	 * Convert into timespec
-	 */
-	ts.tv_sec = tv.tv_sec;
-	ts.tv_nsec = tv.tv_usec * 1000;
 
 	log_debug("client_main: client thread running");
 
@@ -511,22 +495,9 @@ client_init()
 	/*
 	 * Start thread
 	 */
-
-	if (pthread_attr_init(&client_attr))
+	if (util_thread_create(&client_thread, &client_attr, client_main))
 	{
-		log_error("client_init: pthread_attr_init");
-		return -1;
-	}
-
-	if (pthread_attr_setdetachstate(&client_attr, PTHREAD_CREATE_JOINABLE))
-	{
-		log_error("client_init: pthread_attr_setdetachstate");
-		return -1;
-	}
-
-	if (pthread_create(&client_thread, NULL, client_main, NULL))
-	{
-		log_error("client_init: pthread_create");
+		log_error("client_init: util_thread_create failed");
 		return -1;
 	}
 
