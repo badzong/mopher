@@ -483,8 +483,6 @@ var_scan_scheme(var_t *scheme, char *str)
 			
 		}
 
-		printf("SCAN: %s\n", p);
-
 		data = var_scan_data(v->v_type, p);
 		if (data == NULL)
 		{

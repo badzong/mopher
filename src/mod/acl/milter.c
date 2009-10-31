@@ -164,12 +164,13 @@ milter_macro_lookup(milter_stage_t stage, char *name, var_t *attrs)
 	char *stagename;
 	int r;
 
-	r = var_table_dereference(attrs, "milter_ctx", &ctx,
+	r = acl_symbol_dereference(attrs, "milter_ctx", &ctx,
 		"milter_mta_version", &version, "milter_stagename", &stagename,
 		NULL);
 	if (r)
 	{
-		log_error("milter_macro_lookup: var_table_dereference failed");
+		log_error("milter_macro_lookup: acl_symbol_dereference "
+		    "failed");
 		return -1;
 	}
 

@@ -432,7 +432,7 @@ milter_eom(SMFICTX * ctx)
 	    VT_STRING, "milter_stagename", MSN_EOM, VF_KEEP,
 	    VT_INT, "milter_body_size", &mp->mp_bodylen,
 		VF_KEEPNAME | VF_COPYDATA,
-	    VT_STRING, "milter_body", &mp->mp_body, VF_KEEP,
+	    VT_STRING, "milter_body", mp->mp_body, VF_KEEP,
 	    VT_NULL))
 	{
 		log_error("milter_body: var_table_setv failed");

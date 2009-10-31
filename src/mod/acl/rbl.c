@@ -81,8 +81,7 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	char query[BUFLEN];
 	struct addrinfo *ai = NULL;
 	struct addrinfo hints;
-	void *data;
-	int flags;
+	void *data = NULL;
 	int e;
 	char *b[4];
 	char *p;
@@ -98,9 +97,9 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 		goto error;
 	}
 
-	if (var_table_dereference(attrs, "milter_hostaddr", &addr, NULL))
+	if (acl_symbol_dereference(attrs, "milter_hostaddr", &addr, NULL))
 	{
-		log_error("rbl_query: var_table_dereference failed");
+		log_error("rbl_query: acl_symbol_dereference failed");
 		goto error;
 	}
 
@@ -153,20 +152,22 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	 */
 	if (e == 0)
 	{
-		data = ai->ai_addr;
-		flags = VF_COPY;
+		data = util_hostaddr(ai->ai_addr);
+		if (data == NULL)
+		{
+			log_error("rbl_query: util_hostaddr failed");
+			goto error;
+		}
 
 		log_debug("rbl_query: RBL record \"%s\" exists", query);
 	}
 	else
 	{
 		data = NULL;
-		flags = VF_COPYNAME;
-
 		log_debug("rbl_query: RBL record \"%s\" not found", query);
 	}
 
-	if (var_table_setv(attrs, VT_ADDR, name, data, flags, VT_NULL))
+	if (var_table_setv(attrs, VT_ADDR, name, data, VF_COPYNAME, VT_NULL))
 	{
 		log_error("rbl_query: var_table_setv failed");
 		goto error;
@@ -179,6 +180,10 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 
 
 error:
+	if (data)
+	{
+		free(data);
+	}
 
 	if (addrstr)
 	{

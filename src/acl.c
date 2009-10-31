@@ -740,7 +740,7 @@ acl_symbol_eval(acl_value_t * av, var_t *attrs)
 	}
 
 	/*
-	 * Check if callback entred the requested symbol
+	 * Check if callback set the requested symbol
 	 */
 	v = var_table_lookup(attrs, as->as_name);
 	if (v == NULL) {
@@ -750,6 +750,58 @@ acl_symbol_eval(acl_value_t * av, var_t *attrs)
 	}
 
 	return v;
+}
+
+
+int
+acl_symbol_dereference(var_t *attrs, ...)
+{
+	va_list ap;
+	acl_value_t av;
+	acl_symbol_t *as, lookup;
+	char *symbol;
+	void **data;
+	var_t *v;
+
+	va_start(ap, attrs);
+
+	while ((symbol = va_arg(ap, char *)))
+	{
+		data = va_arg(ap, void **);
+
+		*data = var_table_get(attrs, symbol);
+		if (*data)
+		{
+			continue;
+		}
+
+		/*
+		 * Lookup symbol
+		 */
+		lookup.as_name = symbol;
+		as = ht_lookup(acl_symbols, &lookup);
+		if (as == NULL)
+		{
+			log_error("acl_symbol_dereference: unknown symbol "
+			    "\"%s\"", symbol);
+			return -1;
+		}
+
+		av.av_type = AV_SYMBOL;
+		av.av_data = as;
+
+		v = acl_symbol_eval(&av, attrs);
+		if (v == NULL)
+		{
+			log_error("acl_symbol_dereference: acl_symbol_eval for"
+			    "\"%s\" failed", symbol);
+			return -1;
+		}
+
+		*data = v->v_data;
+	}
+
+	return 0;
 }
 
 

@@ -49,14 +49,14 @@ spamd_header(var_t *attrs, char *header, int len)
 	const char *fmt;
 	
 
-	r = var_table_dereference(attrs, "milter_received", &t,
+	r = acl_symbol_dereference(attrs, "milter_received", &t,
 		"milter_hostname", &hostname, "milter_helo", &helo,
 		"milter_envfrom", &envfrom, "milter_envrcpt", &envrcpt,
 		"milter_recipients", &recipients, "milter_queueid", &queueid,
 		"milter_addrstr", &addrstr, NULL);
 	if (r)
 	{
-		log_error("spamd_header: var_table_dereference failed");
+		log_error("spamd_header: acl_symbol_dereference failed");
 		return -1;
 	}
 
@@ -66,7 +66,7 @@ spamd_header(var_t *attrs, char *header, int len)
 	}
 
 	if (strftime(timestamp, sizeof(timestamp),
-		"%a, %d %b %Y %H:%M:%S +0000", &tm) == 0)
+	    "%a, %d %b %Y %H:%M:%S +0000", &tm) == 0)
 	{
 		log_error("spamd_header: strftime failed");
 		timestamp[0] = '\0';
@@ -82,10 +82,10 @@ spamd_header(var_t *attrs, char *header, int len)
 		envrcpt = "";
 	}
 		
-	snprintf(header, len, fmt, helo, hostname, addrstr, cf_hostname,
+	len = snprintf(header, len, fmt, helo, hostname, addrstr, cf_hostname,
 	    envfrom, BINNAME, queueid, envrcpt, timestamp);
 
-	return 0;
+	return len;
 }
 
 
@@ -95,30 +95,55 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 	int sock = 0;
 	var_t *symbols = NULL;
 	int n;
-	char header[BUFLEN];
+	char recv_header[BUFLEN];
 	char buffer[BUFLEN];
 	char *p, *q;
-	VAR_INT_T size;
-	char *message;
+	VAR_INT_T *header_size, *body_size;
+	char *header, *body, *message = NULL;
 	VAR_INT_T spam;
 	VAR_FLOAT_T score;
+	long len, size;
 
-	if (var_table_dereference(attrs, "milter_size", &size,
-		"milter_message", &message, NULL)) {
+	if (var_table_dereference(attrs, "milter_header", &header,
+	    "milter_header_size", &header_size, "milter_body", &body,
+	    "milter_body_size", &body_size, NULL))
+	{
 		log_error("spamd_query: var_table_dereference failed");
 		goto error;
 	}
 
-	if (spamd_header(attrs, header, sizeof(header))) {
+	len = spamd_header(attrs, recv_header, sizeof recv_header);
+	if (len == -1)
+	{
 		log_error("spamd_query: spamd_header failed");
 		goto error;
 	}
 
+	/*
+	 * received header + headers + \r\n\r\n + body 
+	 */
+	size = len + *header_size + 4 + *body_size;
+	message = (char *) malloc(size);
+	if (message == NULL)
+	{
+		log_error("spamd_query: malloc");
+		goto error;
+	}
+
+	/*
+	 * Build message
+	 */
+	strcpy(message, recv_header);
+	strcat(message, header);
+	strcat(message, "\r\n\r\n");
+	memcpy(message + len + *header_size + 4, body, *body_size);
+
 	snprintf(buffer, sizeof(buffer), "SYMBOLS SPAMC/1.2\r\n"
-		"Content-length: %ld\r\n\r\n", size + strlen(header));
+	    "Content-length: %ld\r\n\r\n", size);
 
 	sock = sock_connect(cf_spamd_socket);
-	if (sock == -1) {
+	if (sock == -1)
+	{
 		log_error("spamd_query: sock_connect failed");
 		goto error;
 	}
@@ -127,14 +152,6 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 	  * Write spamassassin request
 	  */
 	if (write(sock, buffer, strlen(buffer)) == -1) {
-		log_error("spamd_query: write");
-		goto error;
-	}
-
-	/*
-	 * Write header
-	 */
-	if (write(sock, header, strlen(header)) == -1) {
 		log_error("spamd_query: write");
 		goto error;
 	}
@@ -287,9 +304,15 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 
 	close(sock);
 
+	free(message);
+
 	return 0;
 
 error:
+	if (message)
+	{
+		free(message);
+	}
 
 	if (sock > 0) {
 		close(sock);
