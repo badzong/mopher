@@ -8,7 +8,7 @@ jump		jump
 pass		pass
 block		block
 discard		discard
-delay		delay
+greylist	greylist
 log		log
 facility	facility
 level		level
@@ -47,10 +47,7 @@ comment		#.*$
 #include <string.h>
 #include <arpa/inet.h>
 
-#include "log.h"
-#include "acl.h"
-#include "util.h"
-
+#include "mopher.h"
 #include "acl_yacc.h"
 
 int acl_line = 1;
@@ -96,9 +93,9 @@ acl_error(const char *s)
 			return DISCARD;
 		}
 
-{delay}		{
-			acl_lval.at = AA_DELAY;
-			return DELAY;
+{greylist}		{
+			acl_lval.at = AA_GREYLIST;
+			return GREYLIST;
 		}
 
 {and}		{

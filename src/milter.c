@@ -41,7 +41,7 @@ milter_acl(char *stage, milter_priv_t * mp)
 		return SMFIS_REJECT;
 
 	case AA_ERROR:
-	case AA_DELAY:
+	case AA_GREYLIST:
 		return SMFIS_TEMPFAIL;
 
 	case AA_DISCARD:

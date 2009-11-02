@@ -2,10 +2,7 @@
 
 #include <stdio.h>
 
-#include "var.h"
-#include "acl.h"
-#include "log.h"
-#include "cf.h"
+#include "mopher.h"
 
 extern int acl_line;
 int acl_lex(void);
@@ -13,9 +10,9 @@ int acl_error(char *);
 
 %}
 
-%token DEFAULT JUMP PASS BLOCK DELAY CONTINUE DISCARD VISA VALID LOG FACILITY
-%token LEVEL ANY COMMA OB CB AND OR NOT INTEGER FLOAT IP4 IP6 MULTIPLIER STRING
-%token ID EQ NE LT GT LE GE
+%token DEFAULT JUMP PASS BLOCK GREYLIST CONTINUE DISCARD VISA VALID LOG
+%token FACILITY LEVEL ANY COMMA OB CB AND OR NOT INTEGER FLOAT IP4 IP6
+%token MULTIPLIER STRING ID EQ NE LT GT LE GE
 
 %union {
 	char			 c;
@@ -30,7 +27,7 @@ int acl_error(char *);
 	acl_condition_t		*co;
 	acl_action_type_t	 at;
 	acl_action_t		*ac;
-	acl_delay_t		*ad;
+	greylist_t		*gl;
 	acl_log_t		*al;
 	struct sockaddr_storage *ss;
 }
@@ -45,9 +42,9 @@ int acl_error(char *);
 %type <ga>	AND OR gate
 %type <va>	value symbol function
 %type <co>	condition
-%type <at>	PASS BLOCK DISCARD CONTINUE DELAY JUMP terminal
+%type <at>	PASS BLOCK DISCARD CONTINUE GREYLIST JUMP terminal
 %type <ac>	action
-%type <ad>	delay
+%type <gl>	greylist
 %type <al>	log
 %type <ss>	IP6 IP4 addr
 
@@ -331,9 +328,9 @@ addr		: IP4
 		;
 
 
-action		: delay
+action		: greylist
 		  {
-			$$ = acl_action_create(AA_DELAY, NULL, (void *) $1);
+			$$ = acl_action_create(AA_GREYLIST, NULL, (void *) $1);
 			if ($$ == NULL) {
 				log_die(EX_CONFIG, "acl_yacc.y: "
 				    "acl_action_create failed");
@@ -381,30 +378,27 @@ jump		: JUMP ID
 		;
 
 
-delay		: delay VALID period
+greylist	: greylist VALID period
 		  {
-			$$->ad_valid = $3;
+			$$->gl_valid = $3;
 		  }
 
-		| delay VISA period
+		| greylist VISA period
 		  {
-			$$->ad_visa = $3;
+			$$->gl_visa = $3;
 		  }
 
-		| delay period
+		| greylist period
 		  {
-			$$->ad_delay = $2;
+			$$->gl_delay = $2;
 		  }
 
-		| DELAY
+		| GREYLIST
 		  {
-			$$ = acl_delay_create(cf_greylist_default_delay,
-			    cf_greylist_default_valid,
-			    cf_greylist_default_visa);
-
+			$$ = greylist_create();
 			if ($$ == NULL) {
 				log_die(EX_CONFIG, "acl_yacc.y: "
-				    "acl_delay_create failed");
+				    "greylist_create failed");
 			}
 		  }
 		;

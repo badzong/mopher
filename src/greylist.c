@@ -7,6 +7,35 @@
 
 static dbt_t greylist_dbt;
 
+greylist_t *
+greylist_create(void)
+{
+	greylist_t *gl;
+
+	gl = (greylist_t *) malloc(sizeof (greylist_t));
+	if (gl == NULL)
+	{
+		log_error("greylist_create: malloc");
+		return NULL;
+	}
+
+	gl->gl_delay = cf_greylist_default_delay;
+	gl->gl_visa = cf_greylist_default_visa;
+	gl->gl_valid = cf_greylist_default_valid;
+
+	return gl;
+}
+
+
+void
+greylist_delete(greylist_t *gl)
+{
+	free(gl);
+
+	return;
+}
+
+
 static int
 greylist_validate(dbt_t *dbt, var_t *record)
 {
@@ -123,7 +152,7 @@ error:
 
 
 static int
-greylist_add(var_t *attrs, acl_delay_t *ad)
+greylist_add(var_t *attrs, greylist_t *gl)
 {
 	var_t *record;
 	char *hostaddr;
@@ -147,9 +176,9 @@ greylist_add(var_t *attrs, acl_delay_t *ad)
 
 	created = now;
 	updated = now;
-	delay = ad->ad_delay;
+	delay = gl->gl_delay;
 	visa = 0;
-	valid = ad->ad_valid;
+	valid = gl->gl_valid;
 	retries = 1;
 	passed = 0;
 
@@ -174,7 +203,7 @@ greylist_add(var_t *attrs, acl_delay_t *ad)
 }
 
 greylist_response_t
-greylist(var_t *attrs, acl_delay_t *ad)
+greylist(var_t *attrs, greylist_t *gl)
 {
 	var_t *record;
 	time_t now;
@@ -225,10 +254,10 @@ greylist(var_t *attrs, acl_delay_t *ad)
 	/*
 	 * Delay smaller than requested.
 	 */
-	if (*delay < ad->ad_delay) {
+	if (*delay < gl->gl_delay) {
 		log_info("greylist: record delay too small. Extension: %d"
-			" seconds", ad->ad_delay);
-		*delay = ad->ad_delay;
+			" seconds", gl->gl_delay);
+		*delay = gl->gl_delay;
 		*visa = 0;
 		goto update;
 	}
@@ -249,9 +278,9 @@ greylist(var_t *attrs, acl_delay_t *ad)
 	 */
 	if (*created + *delay < now) {
 		log_info("greylist: delay passed. create visa for %d seconds",
-			ad->ad_visa);
-		*visa = ad->ad_visa;
-		*valid = ad->ad_visa;
+			gl->gl_visa);
+		*visa = gl->gl_visa;
+		*valid = gl->gl_visa;
 		*passed = 1;
 		glr = GL_PASS;
 		goto update;
@@ -279,7 +308,7 @@ update:
 
 add:
 
-	if (greylist_add(attrs, ad)) {
+	if (greylist_add(attrs, gl)) {
 		log_warning("greylist: greylist_add failed");
 		goto error;
 	}

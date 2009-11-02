@@ -372,8 +372,8 @@ acl_action_delete(acl_action_t * aa)
 		free(aa->aa_jump);
 	}
 
-	if (aa->aa_type == AA_DELAY && aa->aa_data) {
-		acl_delay_delete(aa->aa_data);
+	if (aa->aa_type == AA_GREYLIST && aa->aa_data) {
+		greylist_delete(aa->aa_data);
 	}
 
 	if (aa->aa_type == AA_LOG && aa->aa_data) {
@@ -410,32 +410,6 @@ error:
 	return NULL;
 }
 
-void
-acl_delay_delete(acl_delay_t * ad)
-{
-	free(ad);
-
-	return;
-}
-
-acl_delay_t *
-acl_delay_create(int delay, int valid, int visa)
-{
-	acl_delay_t *ad;
-
-	ad = (acl_delay_t *) malloc(sizeof(acl_delay_t));
-	if (ad == NULL) {
-		log_warning("acl_delay_create: malloc");
-		return NULL;
-	}
-
-	ad->ad_delay = delay;
-	ad->ad_valid = valid;
-	ad->ad_visa = visa;
-
-	return ad;
-}
-
 
 void
 acl_log_delete(acl_log_t *al)
@@ -457,7 +431,7 @@ acl_log_create(char *format)
 
 	al = (acl_log_t *) malloc(sizeof(acl_log_t));
 	if (al == NULL) {
-		log_warning("acl_delay_create: malloc");
+		log_warning("acl_log_create: malloc");
 		return NULL;
 	}
 
@@ -1044,7 +1018,7 @@ acl(char *table, var_t *attrs)
 			log_info("rule %d in table \"%s\" matched", i, table);
 			aa = ar->ar_action;
 
-			if (aa->aa_type == AA_DELAY)
+			if (aa->aa_type == AA_GREYLIST)
 			{
 				glr = greylist(attrs, aa->aa_data);
 
@@ -1091,9 +1065,9 @@ acl(char *table, var_t *attrs)
 	else if (ar == NULL) {
 
 		/*
-		 * Default Action is delay or log
+		 * Default Action is greylist or log
 		 */
-		if (aa->aa_type == AA_DELAY) {
+		if (aa->aa_type == AA_GREYLIST) {
 			glr = greylist(attrs, aa->aa_data);
 
 			if(glr == GL_PASS) {
@@ -1101,7 +1075,7 @@ acl(char *table, var_t *attrs)
 				return AA_CONTINUE;
 			}
 
-			return AA_DELAY;
+			return AA_GREYLIST;
 		}
 
 		if (aa->aa_type == AA_LOG) {
@@ -1116,7 +1090,7 @@ acl(char *table, var_t *attrs)
 	case AA_BLOCK:
 	case AA_CONTINUE:
 	case AA_DISCARD:
-	case AA_DELAY:
+	case AA_GREYLIST:
 		return aa->aa_type;
 
 	case AA_JUMP:

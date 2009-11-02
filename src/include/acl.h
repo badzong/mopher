@@ -21,7 +21,7 @@ typedef enum acl_value_type { AV_NULL = 0, AV_CONST, AV_FUNCTION, AV_SYMBOL }
     acl_value_type_t;
 
 typedef enum acl_action_type { AA_ERROR = -1, AA_NULL = 0, AA_PASS, AA_BLOCK,
-	AA_DISCARD, AA_CONTINUE, AA_DELAY, AA_LOG, AA_JUMP
+	AA_DISCARD, AA_CONTINUE, AA_GREYLIST, AA_LOG, AA_JUMP
 } acl_action_type_t;
 
 typedef enum acl_symbol_type { AS_NULL = 0, AS_CALLBACK, AS_STATIC }
@@ -75,12 +75,6 @@ typedef struct acl_table {
 	struct acl_action *at_default;
 } acl_table_t;
 
-typedef struct acl_delay {
-	int ad_delay;
-	int ad_visa;
-	int ad_valid;
-} acl_delay_t;
-
 typedef struct acl_log {
 	char *al_format;
 	int al_level;
@@ -113,8 +107,6 @@ void acl_condition_delete(acl_condition_t * ac);
 acl_condition_t * acl_condition_create(acl_not_t not, acl_gate_t gate, acl_cmp_t cmp,acl_value_t * left, acl_value_t * right);
 void acl_action_delete(acl_action_t * aa);
 acl_action_t * acl_action_create(acl_action_type_t type, char *jump, void *data);
-void acl_delay_delete(acl_delay_t * ad);
-acl_delay_t * acl_delay_create(int delay, int valid, int visa);
 void acl_log_delete(acl_log_t *al);
 acl_log_t * acl_log_create(char *format);
 void acl_rule_delete(acl_rule_t * ar);
