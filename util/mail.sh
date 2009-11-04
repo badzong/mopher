@@ -1,7 +1,7 @@
 RCPT=manuel@fredastaire.ch
 FROM=roth.daniela@gmail.com
 FIFO=mail.fifo
-HOST=118.166.221.81
+HOST=127.0.0.1
 
 if [ ! -z "$1" ]; then
 	RCPT=$1
