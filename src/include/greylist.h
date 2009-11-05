@@ -23,7 +23,9 @@ typedef struct greylist greylist_t;
  * Prototypes
  */
 
+greylist_t * greylist_create(void);
+void greylist_delete(greylist_t *gl);
 void greylist_init(void);
 void greylist_clear(void);
-greylist_response_t greylist(var_t *attrs, greylist_t *ad);
+greylist_response_t greylist(var_t *attrs, greylist_t *gl);
 #endif /* _GREYLIST_H_ */

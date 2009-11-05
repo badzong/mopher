@@ -1394,7 +1394,7 @@ sakila_cleanup(dbt_t *dbt)
 int
 sakila_init(void)
 {
-	snprintf(sakila_addr_type, sizeof sakila_addr_type, "VARBINARY(%lu)",
+	snprintf(sakila_addr_type, sizeof sakila_addr_type, "VARBINARY(%du)",
 	    sizeof (struct sockaddr_storage));
 
 	dbt_driver.dd_name = "mysql";

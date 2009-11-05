@@ -117,6 +117,7 @@ int acl_rule_register(acl_table_t * at, ll_t * conditions, acl_action_t * action
 int acl_init(char *mail_acl);
 void acl_clear(void);
 var_t * acl_symbol_eval(acl_value_t * av, var_t *attrs);
+int acl_symbol_dereference(var_t *attrs, ...);
 var_t * acl_function_eval(acl_value_t * av, var_t *attrs);
 var_t * acl_value_eval(acl_value_t * av, var_t *attrs);
 int acl_compare(var_t * v1, var_t * v2, acl_cmp_t ac);

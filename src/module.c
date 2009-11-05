@@ -139,44 +139,6 @@ module_symbol_load(void *handle, char *path, char *suffix, int die)
 }
 
 
-static module_t *
-module_create(char *path)
-{
-	module_t *mod = NULL;
-
-	log_debug("module_create: load \"%s\"", path);
-
-	/*
-	 * Alloc module_t
-	 */
-	mod = (module_t *) malloc(sizeof (module_t));
-	if (mod == NULL)
-	{
-		log_die(EX_SOFTWARE, "module_create: malloc");
-	}
-
-	/*
-	 * Open module
-	 */
-	mod->mod_handle = dlopen(path, RTLD_LAZY);
-	if (mod->mod_handle == NULL)
-	{
-		log_die(EX_SOFTWARE, "module_create: dlopen: %s", dlerror());
-	}
-
-	dlerror();		/* Clear any existing error */
-
-	/*
-	 * Load symbols
-	 */
-	mod->mod_name = path;
-	mod->mod_init = module_symbol_load(mod->mod_handle, path, "init", 1);
-	mod->mod_fini = module_symbol_load(mod->mod_handle, path, "fini", 0);
-
-	return mod;
-}
-
-
 void
 module_glob(const char *path)
 {

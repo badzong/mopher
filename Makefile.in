@@ -7,7 +7,7 @@ TARBALL=$(ARCHIVE).bz2
 
 SUBDIRS=src
 
-DISTFILES=configure Makefile.common.in Makefile.in config.h.in $(SUBDIRS)
+DISTFILES=configure Makefile.common.in Makefile.in config.h.in config $(SUBDIRS)
 
 
 .PHONY: clean

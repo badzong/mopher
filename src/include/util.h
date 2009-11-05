@@ -15,4 +15,6 @@ struct sockaddr_storage * util_hostaddr(struct sockaddr_storage *ss);
 int util_addrcmp(struct sockaddr_storage *ss1, struct sockaddr_storage *ss2);
 int util_block_signals(int sig, ...);
 int util_signal(int signum, void (*handler)(int));
+int util_thread_create(pthread_t *thread, pthread_attr_t *attr,void *callback);
+int util_now(struct timespec *ts);
 #endif /* _UTIL_H_ */

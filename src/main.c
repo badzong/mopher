@@ -53,7 +53,7 @@ main(int argc, char **argv)
 	/*
 	 * Load default ACL path if not configured
 	 */
-	mail_acl = cf_get(VT_STRING, "acl_path", NULL);
+	mail_acl = (char *) cf_get(VT_STRING, "acl_path", NULL);
 	if(mail_acl == NULL)
 	{
 		mail_acl = MAIL_ACL;

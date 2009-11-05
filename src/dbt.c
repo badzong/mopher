@@ -468,7 +468,7 @@ dbt_janitor(void *arg)
 	time_t now;
 	dbt_t *dbt;
 	int deleted;
-	unsigned long schedule, suspend;
+	unsigned long schedule;
 	struct timespec	ts;
 	int r;
 

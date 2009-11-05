@@ -33,8 +33,10 @@ ACFILES=config.h Makefile Makefile.common src/Makefile src/mod/acl/Makefile src/
 
 # Targets
 
-%.so: %.c Makefile
+.SUFFIXES: .c .o .so
+
+.c.so:
 	$(CC) $(CFLAGS) $(SOFLAGS) -o $@ $<
 
-%.o: %.c Makefile
-	$(CC) $(CFLAGS) -o $@ -c $<
+.c.o:
+	$(CC) $(CFLAGS) -c $<

@@ -152,7 +152,7 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	 */
 	if (e == 0)
 	{
-		data = util_hostaddr(ai->ai_addr);
+		data = util_hostaddr((struct sockaddr_storage *) ai->ai_addr);
 		if (data == NULL)
 		{
 			log_error("rbl_query: util_hostaddr failed");

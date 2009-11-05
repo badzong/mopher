@@ -14,6 +14,7 @@
 #include <pthread.h>
 #include <signal.h>
 #include <stdarg.h>
+#include <sys/time.h>
 
 #include "log.h"
 
