@@ -16,33 +16,33 @@ AC_PROG_MAKE_SET
 # Override AC_PROG_CC CFLAGS
 CFLAGS=""
 
-AC_PATH_PROG([OBJCOPY], [objcopy], [])
+AC_PATH_PROG([OBJCOPY], [objcopy])
 if test -z "$OBJCOPY"
 then
   AC_MSG_ERROR([objcopy not found. Make sure you have GNU binutils installed.])
 fi
 
-AC_PATH_PROG([AR], [ar], [])
+AC_PATH_PROG([AR], [ar])
 if test -z "$AR"
 then
   AC_MSG_ERROR([ar not found. Make sure you have GNU binutils installed.])
 fi
 
 # tar and bzip2 are used to make dist.
-AC_PATH_PROG([BZIP2], [bzip2], [])
+AC_PATH_PROG([BZIP2], [bzip2])
 if test -z "$BZIP2"
 then
   AC_MSG_WARN([bzip not found.])
 fi
 
-AC_PATH_PROG([TAR], [tar], [])
+AC_PATH_PROG([TAR], [tar])
 if test -z "$TAR"
 then
   AC_MSG_WARN([tar not found.])
 fi
 
 # check for install
-AC_PATH_PROG([INSTALL], [install], [])
+AC_PATH_PROG([INSTALL], [install])
 if test -z "$INSTALL"
 then
   AC_MSG_WARN([install not found.])

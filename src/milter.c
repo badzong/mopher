@@ -444,6 +444,7 @@ milter_eom(SMFICTX * ctx)
 	return milter_acl(MSN_EOM, mp);
 }
 
+
 static sfsistat
 milter_close(SMFICTX * ctx)
 {

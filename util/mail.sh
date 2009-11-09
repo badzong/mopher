@@ -1,5 +1,5 @@
 RCPT=manuel@fredastaire.ch
-FROM=roth.daniela@gmail.com
+FROM=manuel@badzong.com
 FIFO=mail.fifo
 HOST=127.0.0.1
 
