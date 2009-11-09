@@ -68,5 +68,5 @@ $(TARBALL): $(ARCHIVE)
 	@$(BZIP2) $<
 
 $(ARCHIVE): $(DISTDIR)
-	@$(TAR) cvf $@ $(DISTDIR)
+	@$(TAR) cf $@ $(DISTDIR)
 	@rm -rf $(DISTDIR)
