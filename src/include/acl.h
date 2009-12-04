@@ -1,126 +1,104 @@
 #ifndef _ACL_H_
 #define _ACL_H_
 
-#include "var.h"
+#include "exp.h"
 #include "ll.h"
-#include "ht.h"
 #include "milter.h"
 
-#define ACL_TABLE_BUCKETS 128
-#define ACL_FUNCTION_BUCKETS 128
-#define ACL_SYMBOL_BUCKETS 128
+enum acl_action_type
+{
+	ACL_ERROR	= -1,
+	ACL_NULL	=  0,
+	ACL_NONE,
+	ACL_CONTINUE,
+	ACL_REJECT,
+	ACL_DISCARD,
+	ACL_ACCEPT,
+	ACL_TEMPFAIL,
+	ACL_JUMP,
+	ACL_SET,
+	ACL_LOG,
+	ACL_GREYLIST,
+	ACL_TARPIT
+};
 
-typedef enum acl_cmp { AC_NULL = 0, AC_EQ, AC_NE, AC_LT, AC_LE, AC_GT, AC_GE }
-    acl_cmp_t;
+typedef enum acl_action_type acl_action_type_t;
+typedef acl_action_type_t (*acl_action_handler_t)(var_t *mailspec, void *data);
 
-typedef enum acl_gate { AG_NULL = 0, AG_AND, AG_OR } acl_gate_t;
+struct acl_action
+{
+	acl_action_type_t	 aa_type;
+	void			*aa_data;
+};
+typedef struct acl_action acl_action_t;
 
-typedef enum acl_not { AN_NULL = 0, AN_NOT = 1 } acl_not_t;
 
-typedef enum acl_value_type { AV_NULL = 0, AV_CONST, AV_FUNCTION, AV_SYMBOL }
-    acl_value_type_t;
+struct acl_rule
+{
+	exp_t		*ar_expression;
+	acl_action_t	*ar_action;
+};
+typedef struct acl_rule acl_rule_t;
 
-typedef enum acl_action_type { AA_ERROR = -1, AA_NULL = 0, AA_PASS, AA_BLOCK,
-	AA_DISCARD, AA_CONTINUE, AA_GREYLIST, AA_LOG, AA_JUMP
-} acl_action_type_t;
 
-typedef enum acl_symbol_type { AS_NULL = 0, AS_CALLBACK, AS_STATIC }
-	acl_symbol_type_t;
+struct acl_table
+{
+	char	*at_name;
+	ll_t	*at_rules;
+};
+typedef struct acl_table acl_table_t;
 
-/*
- * Function pointer types for functions and symbols
- */
-typedef var_t *(*acl_fcallback_t) (ll_t *args);
-typedef int (*acl_scallback_t) (milter_stage_t stage, char *name, var_t *attrs);
 
-typedef struct acl_symbol {
-	char			*as_name;
+enum acl_symbol_type
+{
+	AS_NULL = 0,
+	AS_CONSTANT,
+	AS_SYMBOL,
+	AS_FUNCTION
+};
+typedef enum acl_symbol_type acl_symbol_type_t;
+
+
+struct acl_symbol
+{
 	acl_symbol_type_t	 as_type;
-	milter_stage_t		 as_stage;
+	char			*as_name;
+	milter_stage_t		 as_stages;
 	void			*as_data;
-} acl_symbol_t;
+};
+typedef struct acl_symbol acl_symbol_t;
 
-/*
- * Registered function callbacks (loaded modules)
- */
-typedef struct acl_function {
-	char		*af_name;
-	acl_fcallback_t	 af_callback;
-} acl_function_t;
+typedef int (*acl_symbol_callback_t)(milter_stage_t stage, char *name, var_t *mailspec);
+typedef var_t *(*acl_function_callback_t)(ll_t *args);
 
-/*
- * Function calls
- */
-typedef struct acl_call {
-	acl_function_t	*ac_function;
-	ll_t		*ac_args;
-} acl_call_t;
+struct acl_log
+{
+	exp_t	*al_exp;
+	int	 al_level;
+};
 
-typedef struct acl_value {
-	acl_value_type_t av_type;
-	void *av_data;
-} acl_value_t;
-
-typedef struct acl_condition {
-	acl_not_t ac_not;
-	acl_gate_t ac_gate;
-	acl_cmp_t ac_cmp;
-	acl_value_t *ac_left;
-	acl_value_t *ac_right;
-} acl_condition_t;
-
-typedef struct acl_table {
-	char *at_name;
-	ll_t *at_rules;
-	struct acl_action *at_default;
-} acl_table_t;
-
-typedef struct acl_log {
-	char *al_format;
-	int al_level;
-} acl_log_t;
-
-typedef struct acl_action {
-	acl_action_type_t aa_type;
-	char *aa_jump;
-	void *aa_data;
-} acl_action_t;
-
-typedef struct acl_rule {
-	ll_t *ar_conditions;
-	acl_action_t *ar_action;
-} acl_rule_t;
+typedef struct acl_log acl_log_t;
 
 /*
  * Prototypes
  */
 
-int acl_symbol_register(acl_symbol_type_t type, char *name, milter_stage_t stage,void *data);
-int acl_static_register(var_type_t type, char *name, void *data, int flags);
-int acl_symbol_add(var_t * attrs, var_type_t type, char *name, void *data, int flags);
-int acl_function_register(char *name, acl_fcallback_t callback);
-void acl_value_delete(acl_value_t * av);
-acl_value_t * acl_value_create(acl_value_type_t type, void * data);
-acl_value_t * acl_value_create_symbol(char *name);
-acl_value_t * acl_value_create_function(char *name, ll_t * args);
-void acl_condition_delete(acl_condition_t * ac);
-acl_condition_t * acl_condition_create(acl_not_t not, acl_gate_t gate, acl_cmp_t cmp,acl_value_t * left, acl_value_t * right);
-void acl_action_delete(acl_action_t * aa);
-acl_action_t * acl_action_create(acl_action_type_t type, char *jump, void *data);
-void acl_log_delete(acl_log_t *al);
-acl_log_t * acl_log_create(char *format);
-void acl_rule_delete(acl_rule_t * ar);
-acl_rule_t * acl_rule_create(ll_t * conditions, acl_action_t * action);
-acl_table_t * acl_table_lookup(char *name);
-acl_table_t * acl_table_register(char *name, acl_action_t * target);
-int acl_rule_register(acl_table_t * at, ll_t * conditions, acl_action_t * action);
-int acl_init(char *mail_acl);
+acl_action_t * acl_action(acl_action_type_t type, void *data);
+void acl_append(char *table, exp_t *exp, acl_action_t *aa);
+void acl_symbol_insert(acl_symbol_t *as);
+void acl_symbol_register(char *name, milter_stage_t stages,acl_symbol_callback_t callback);
+void acl_constant_register(var_type_t type, char *name, void *data, int flags);
+void acl_function_register(char *name, acl_function_callback_t callback);
+acl_function_callback_t acl_function_lookup(char *name);
+acl_symbol_t * acl_symbol_lookup(char *name);
+var_t * acl_symbol_get(var_t *mailspec, char *name);
+int acl_symbol_dereference(var_t *mailspec, ...);
+acl_log_t * acl_log_create(exp_t *exp);
+acl_log_t * acl_log_level(acl_log_t *al, int level);
+acl_action_type_t acl_log(var_t *mailspec, acl_log_t *al);
+acl_action_type_t acl_jump(var_t *mailspec, char *table);
+acl_action_type_t acl_set(var_t *mailspec, exp_t *exp);
+acl_action_type_t acl(char *stage, var_t *mailspec);
+void acl_init(char *mail_acl);
 void acl_clear(void);
-var_t * acl_symbol_eval(acl_value_t * av, var_t *attrs);
-int acl_symbol_dereference(var_t *attrs, ...);
-var_t * acl_function_eval(acl_value_t * av, var_t *attrs);
-var_t * acl_value_eval(acl_value_t * av, var_t *attrs);
-int acl_compare(var_t * v1, var_t * v2, acl_cmp_t ac);
-int acl_conditions_eval(ll_t * conditions, var_t *attrs);
-acl_action_type_t acl(char *table, var_t *attrs);
-#endif				/* _ACL_H_ */
+#endif /* _ACL_H_ */

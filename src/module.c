@@ -38,6 +38,7 @@ module_t module_static_acl[] = {
 	{ "milter-static",	milter_init,	milter_fini,	NULL },
 	{ "rbl-static",		rbl_init,	rbl_fini,	NULL },
 	{ "spamd-static",	spamd_init,	NULL,		NULL },
+	{ "cast-static",	cast_init,	NULL,		NULL },
 	{ "string-static",	string_init,	NULL,		NULL },
 #ifdef WITH_MOD_SPF
 	{ "spf-static",		spf_init,	spf_fini,	NULL },

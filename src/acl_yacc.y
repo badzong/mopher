@@ -1,52 +1,49 @@
 %{
 
 #include <stdio.h>
-
 #include "mopher.h"
 
-extern int acl_line;
+#define acl_error parser_error
+
 int acl_lex(void);
-int acl_error(char *);
 
 %}
 
-%token DEFAULT JUMP PASS BLOCK GREYLIST CONTINUE DISCARD VISA VALID LOG
-%token FACILITY LEVEL ANY COMMA OB CB AND OR NOT INTEGER FLOAT IP4 IP6
-%token MULTIPLIER STRING ID EQ NE LT GT LE GE
+%token ID INTEGER FLOAT STRING ADDR VARIABLE CONTINUE XREJECT DISCARD ACCEPT
+%token TEMPFAIL GREYLIST TARPIT SET LOG LEVEL VALID VISA MULTIPLIER EQ NE LE GE
+%token AND OR DEFINE
 
 %union {
 	char			 c;
 	char			*str;
 	long			 i;
 	double			 d;
-	var_t			*v;
-	ll_t			*ll;
-	acl_cmp_t		 cm;
-	acl_gate_t		 ga;
-	acl_value_t		*va;
-	acl_condition_t		*co;
-	acl_action_type_t	 at;
-	acl_action_t		*ac;
-	greylist_t		*gl;
-	acl_log_t		*al;
 	struct sockaddr_storage *ss;
+	exp_t 			*exp;
+	acl_action_t		*aa;
+	greylist_t		*gl;
+	tarpit_t		*tp;
+	acl_log_t		*al;
 }
 
 %type <c>	MULTIPLIER
-%type <str>	STRING ID jump
-%type <i>	INTEGER integer size period
+%type <str>	STRING ID VARIABLE
+%type <i>	INTEGER number
 %type <d>	FLOAT
-%type <v>	constant
-%type <ll>	conditions parameters
-%type <cm>	EQ NE LT LE GT GE comparator
-%type <ga>	AND OR gate
-%type <va>	value symbol function
-%type <co>	condition
-%type <at>	PASS BLOCK DISCARD CONTINUE GREYLIST JUMP terminal
-%type <ac>	action
+%type <ss>	ADDR
+%type <exp>	exp function symbol constant set
+%type <aa>	action
 %type <gl>	greylist
+%type <tp>	tarpit
 %type <al>	log
-%type <ss>	IP6 IP4 addr
+
+%left ','
+%left AND OR
+%left EQ NE LE GE '<' '>'
+%left '+' '-'
+%left '*' '/'
+%right '='
+%right '!'
 
 %%
 
@@ -54,408 +51,80 @@ statements	: statements statement
 		| statement
 		;
 
-
-statement	: setting
-		| rule
+statement	: ID exp action		{ acl_append($1, $2, $3); }
+		| ID action		{ acl_append($1, NULL, $2); }
+		| DEFINE ID exp		{ exp_define($2, $3); }
 		;
 
-
-setting		: ID DEFAULT action
-		  { 
-			acl_table_t *at;
-
-			at = acl_table_lookup($1);
-			if (at) {
-				at->at_default = $3;
-				free($1);
-			}
-			else {
-				if (acl_table_register($1, $3) == NULL) {
-					log_die(EX_CONFIG, "acl_yacc.y: "
-					    "acl_table_register failed");
-				}
-			}
-		  }
+action		: CONTINUE		{ $$ = acl_action(ACL_CONTINUE, NULL); }
+		| XREJECT		{ $$ = acl_action(ACL_REJECT, NULL); }
+		| DISCARD		{ $$ = acl_action(ACL_DISCARD, NULL); }
+		| ACCEPT		{ $$ = acl_action(ACL_ACCEPT, NULL); }
+		| TEMPFAIL		{ $$ = acl_action(ACL_TEMPFAIL, NULL); }
+		| greylist		{ $$ = acl_action(ACL_GREYLIST, $1); }
+		| tarpit		{ $$ = acl_action(ACL_TARPIT, $1); }
+		| log			{ $$ = acl_action(ACL_LOG, $1); }
+		| set			{ $$ = acl_action(ACL_SET, $1); }
 		;
 
-
-rule		: ID conditions action
-		  {
-			acl_table_t *at;
-
-			at = acl_table_lookup($1);
-			if (at == NULL) {
-				at = acl_table_register($1, NULL);
-				if (at == NULL) {
-					log_die(EX_CONFIG, "acl_yacc.y: "
-					    "acl_table_register failed");
-				}
-			}
-			else {
-				free($1);
-			}
-
-			if (acl_rule_register(at, $2, $3)) {
-				log_die(EX_CONFIG, "acl_yacc.y: "
-				    "acl_rule_register failed");
-			}
-		  }
-		| ID action
-		  {
-			acl_table_t *at;
-
-			at = acl_table_lookup($1);
-			if (at == NULL) {
-				at = acl_table_register($1, NULL);
-				if (at == NULL) {
-					log_die(EX_CONFIG, "acl_yacc.y: "
-					    "acl_table_register failed");
-				}
-			}
-			else {
-				free($1);
-			}
-
-			if (acl_rule_register(at, NULL, $2)) {
-				log_die(EX_CONFIG, "acl_yacc.y: "
-				    "acl_rule_register failed");
-			}
-		  }
+greylist	: greylist VALID number	{ $$ = greylist_valid($1, $3); }
+		| greylist VISA number	{ $$ = greylist_visa($1, $3); }
+		| greylist number	{ $$ = greylist_delay($1, $2); }
+		| GREYLIST		{ $$ = greylist_create(); }
 		;
 
-
-conditions	: conditions gate condition
-		  {
-			$3->ac_gate = $2;
-
-			if (LL_INSERT($$, $3) == -1) {
-				log_die(EX_CONFIG, "acl_yacc.y: LL_INSERT "
-				    "failed");
-			}
-		  }
-
-		| condition
-		  {
-			$$ = ll_create();
-			if ($$ == NULL) {
-				log_die(EX_CONFIG, "acl_yacc.y: ll_create "
-				    "failed");
-			}
-
-			if (LL_INSERT($$, $1) == -1) {
-				log_die(EX_CONFIG, "acl_yacc.y: LL_INSERT "
-				    "failed");
-			}
-		  }
+tarpit		: tarpit number		{ $$ = tarpit_delay($1, $2); }
+		| TARPIT		{ $$ = tarpit_create(); }
 		;
 
-
-gate		: AND
-		| OR
+set		: SET VARIABLE '=' exp	{ $$ = exp_operation('=', exp_variable($2), $4); }
 		;
 
-condition	: NOT condition
-		  {
-			$$ = $2;
-			$$->ac_not ^= AN_NOT;
-		  }
-
-		| value comparator value
-		  {
-			$$ = acl_condition_create(AN_NULL, AG_NULL, $2, $1,
-				$3);
-			if ($$ == NULL) {
-				log_die(EX_CONFIG, "acl_yacc.y: "
-				    "acl_condition_create failed");
-			}
-		  }
-
-		| value
-		  {
-			$$ = acl_condition_create(AN_NULL, AG_NULL, AC_NULL,
-				$1, NULL);
-			if ($$ == NULL) {
-				log_die(EX_CONFIG, "acl_yacc.y: "
-				    "acl_condition_create failed");
-			}
-		  }
+log		: log LEVEL number	{ $$ = acl_log_level($1, $3); }
+		| LOG exp		{ $$ = acl_log_create($2); }
 		;
 
-
-comparator	: EQ
-		| NE
-		| LT
-		| GT
-		| LE
-		| GE
-		;
-
-
-value		: constant
-		  {
-			$$ = acl_value_create(AV_CONST, $1);
-			if ($$ == NULL) {
-				log_die(EX_CONFIG, "acl_yacc.y: "
-				    "acl_value_create_constant failed");
-			}
-		  }
-
+exp		: '(' exp ')'		{ $$ = $2; }
+		| exp ',' exp		{ $$ = exp_list($1, $3); }
+		| '!' exp		{ $$ = exp_operation('!', $2, NULL); }
+		| exp '+' exp		{ $$ = exp_operation('+', $1, $3); }
+		| exp '-' exp		{ $$ = exp_operation('-', $1, $3); }
+		| exp '*' exp		{ $$ = exp_operation('*', $1, $3); }
+		| exp '/' exp		{ $$ = exp_operation('/', $1, $3); }
+		| exp '<' exp		{ $$ = exp_operation('<', $1, $3); }
+		| exp '>' exp		{ $$ = exp_operation('>', $1, $3); }
+		| exp '=' exp		{ $$ = exp_operation('=', $1, $3); }
+		| exp EQ exp		{ $$ = exp_operation(EQ, $1, $3); }
+		| exp NE exp		{ $$ = exp_operation(NE, $1, $3); }
+		| exp GE exp		{ $$ = exp_operation(GE, $1, $3); }
+		| exp LE exp		{ $$ = exp_operation(LE, $1, $3); }
+		| exp AND exp		{ $$ = exp_operation(AND, $1, $3); }
+		| exp OR exp		{ $$ = exp_operation(OR, $1, $3); }
+		| VARIABLE		{ $$ = exp_variable($1); }
+		| constant
 		| symbol
 		| function
 		;
 
-
-symbol	: ID
-		  {
-			$$ = acl_value_create_symbol($1);
-			if ($$ == NULL) {
-				log_die(EX_CONFIG, "unknown symbol \"%s\" "
-				    "on line: %d", $1, acl_line);
-			}
-
-			free($1);
-		  }
+function	: ID '(' exp ')'	{ $$ = exp_function($1, $3); }
 		;
 
-
-function	: ID OB parameters CB
-		  {
-			$$ = acl_value_create_function($1, $3);
-			if ($$ == NULL) {
-				log_die(EX_CONFIG, "unknown function \"%s\" "
-				    "on line: %d", $1, acl_line);
-			}
-
-			free($1);
-		  }
+symbol		: ID 			{ $$ = exp_symbol($1); }
 		;
 
-
-parameters	: parameters COMMA value
-		  {
-			if (LL_INSERT($$, $3) == -1) {
-				log_die(EX_CONFIG, "acl_yacc.y: LL_INSERT "
-				    "failed");
-			}
-		  }
-
-		| value
-		  {
-			$$ = ll_create();
-			if ($$ == NULL) {
-				log_die(EX_CONFIG, "acl_yacc.y: ll_create "
-				    "failed");
-			}
-
-			if (LL_INSERT($$, $1) == -1) {
-				log_die(EX_CONFIG, "acl_yacc.y: LL_INSERT "
-				    "failed");
-			}
-		  }
+constant	: STRING		{ $$ = exp_constant(VT_STRING, $1); }
+		| number		{ $$ = exp_constant(VT_INT, &$1); }
+		| FLOAT			{ $$ = exp_constant(VT_FLOAT, &$1); }
+		| ADDR			{ $$ = exp_constant(VT_ADDR, $1); }
 		;
 
-
-constant	: STRING
-		  {
-			$$ = var_create(VT_STRING, NULL, $1, VF_REF);
-			if ($$ == NULL) {
-				log_die(EX_CONFIG, "acl_yacc.y: "
-				    "var_create_reference failed"); 
-			}
-		  }
-
-		| FLOAT
-		  {
-			$$ = var_create(VT_FLOAT, NULL, &$1, VF_COPYDATA);
-			if ($$ == NULL) {
-				log_die(EX_CONFIG, "acl_yacc.y: "
-				    "var_create_copy failed"); 
-			}
-		  }
-
-		| integer
-		  {
-			$$ = var_create(VT_INT, NULL, &$1, VF_COPYDATA);
-			if ($$ == NULL) {
-				log_die(EX_CONFIG, "acl_yacc.y: "
-				    "var_create_copy failed"); 
-			}
-		  }
-
-		| addr
-		  {
-			$$ = var_create(VT_ADDR, NULL, $1, VF_REF);
-			if ($$ == NULL) {
-				log_die(EX_CONFIG, "acl_yacc.y: "
-				    "var_create_reference failed"); 
-			}
-		  }
-		;
-
-
-integer		: INTEGER
-		| size
-		;
-
-
-size		: INTEGER MULTIPLIER
-		  {
-			switch($2) {
-			case 'G':
-			case 'g':
-				$$ = $1 * 1024 * 1024 * 1024;
-				break;
-
-			case 'M':
-			case 'm':
-				$$ = $1 * 1024 * 1024;
-				break;
-
-			case 'K':
-			case 'k':
-				$$ = $1 * 1024;
-				break;
-
-			default:
-				acl_error("bad size unit");
-			}
-		  }
-		;
-
-
-addr		: IP4
-		| IP6
-		;
-
-
-action		: greylist
-		  {
-			$$ = acl_action_create(AA_GREYLIST, NULL, (void *) $1);
-			if ($$ == NULL) {
-				log_die(EX_CONFIG, "acl_yacc.y: "
-				    "acl_action_create failed");
-			}
-		  }
-
-		| log
-		  {
-			$$ = acl_action_create(AA_LOG, NULL, (void *) $1);
-			if ($$ == NULL) {
-				log_die(EX_CONFIG, "acl_yacc.y: "
-				    "acl_action_create failed");
-			}
-		  }
-
-		| jump
-		  {
-			$$ = acl_action_create(AA_JUMP, $1, NULL);
-			if ($$ == NULL) {
-				log_die(EX_CONFIG, "acl_yacc.y: "
-				    "acl_action_create failed");
-			}
-		  }
-
-		| terminal
-		  {
-			$$ = acl_action_create($1, NULL, NULL);
-			if ($$ == NULL) {
-				log_die(EX_CONFIG, "acl_yacc.y: "
-				    "acl_action_create failed");
-			}
-		  }
-		;
-
-terminal	: PASS
-		| BLOCK
-		| DISCARD
-		| CONTINUE
-		;
-
-jump		: JUMP ID
-		  {
-			$$ = $2;
-		  }
-		;
-
-
-greylist	: greylist VALID period
-		  {
-			$$->gl_valid = $3;
-		  }
-
-		| greylist VISA period
-		  {
-			$$->gl_visa = $3;
-		  }
-
-		| greylist period
-		  {
-			$$->gl_delay = $2;
-		  }
-
-		| GREYLIST
-		  {
-			$$ = greylist_create();
-			if ($$ == NULL) {
-				log_die(EX_CONFIG, "acl_yacc.y: "
-				    "greylist_create failed");
-			}
-		  }
-		;
-
-
-log		: log LEVEL INTEGER
-		  {
-			$$->al_level = $3;
-		  }
-
-		| LOG STRING
-		  {
-			$$ = acl_log_create($2);
-
-			if ($$ == NULL) {
-				log_die(EX_CONFIG, "acl_yacc.y: acl_log_create"
-					" failed");
-			}
-		  }
-		;
-
-
-period		: INTEGER MULTIPLIER
-		  {
-			switch($2) {
-			case 'y':
-				$$ = $1 * 60 * 60 * 24 * 365;
-				break;
-
-			case 'M':
-				$$ = $1 * 60 * 60 * 24 * 30;
-				break;
-
-			case 'w':
-				$$ = $1 * 60 * 60 * 24 * 7;
-				break;
-
-			case 'd':
-				$$ = $1 * 60 * 60 * 24;
-				break;
-
-			case 'h':
-				$$ = $1 * 60 * 60;
-				break;
-
-			case 'm':
-				$$ = $1 * 60;
-				break;
-
-			case 's':
-				$$ = $1;
-				break;
-
-			default:
-				acl_error("bad time unit");
-			}
-		  }
-
-		| INTEGER
+number		: INTEGER 's'		{ $$ = $1; }
+		| INTEGER 'm'		{ $$ = $1 * 60; }
+		| INTEGER 'h'		{ $$ = $1 * 60 * 60; }
+		| INTEGER 'd'		{ $$ = $1 * 60 * 60 * 24; }
+		| INTEGER 'B'		{ $$ = $1; }
+		| INTEGER 'K'		{ $$ = $1 * 1024; }
+		| INTEGER 'M'		{ $$ = $1 * 1024 * 1024; }
+		| INTEGER 'G'		{ $$ = $1 * 1024 * 1024 * 1024; }
+		| INTEGER 
 		;

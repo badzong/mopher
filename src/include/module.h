@@ -24,6 +24,10 @@ typedef struct module
 #define MODULE_LOAD_TABLE	module_load_tables()
 #define MODULE_LOAD_ACL		module_load_acl()
 
+void module_load_db(void);
+void module_load_tables(void);
+void module_load_acl(void);
+
 
 /*
  * Module Prototypes
@@ -36,6 +40,7 @@ int rbl_init(void);
 int spamd_init(void);
 int spf_init(void);
 int string_init(void);
+int cast_init(void);
 int test_init(void);
 
 void sakila_fini(void);

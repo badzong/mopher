@@ -30,15 +30,18 @@ typedef struct milter_symbol {
  * Symbols without callback set by milter.c (the other one)
  */
 static milter_symbol_t milter_symbols[] = {
+	{ "milter_ctx", MS_ANY },
+	{ "milter_mta_version", MS_ANY },
 	{ "milter_stage", MS_ANY },
 	{ "milter_stagename", MS_ANY }, 
 	{ "milter_unknown_command", MS_UNKNOWN },
 	{ "milter_received", MS_ANY },
 	{ "milter_hostaddr", MS_ANY },
+	{ "milter_addrstr", MS_ANY },
 	{ "milter_hostname", MS_ANY },
 	{ "milter_helo", MS_OFF_HELO },
 	{ "milter_envfrom", MS_OFF_ENVFROM },
-	{ "milter_envrcpt", MS_ENVRCPT },
+	{ "milter_envrcpt", MS_OFF_ENVRCPT },
 	{ "milter_recipients", MS_OFF_DATA },
 	{ "milter_recipient_list", MS_OFF_DATA },
 	{ "milter_header_name", MS_HEADER },
@@ -231,12 +234,9 @@ milter_init(void)
 	/*
 	 * Symbols without callbacks set by milter.c (the other one)
 	 */
-	for (ms = milter_symbols; ms->ms_name; ++ms) {
-		if (acl_symbol_register(AS_NULL, ms->ms_name, ms->ms_stage,
-			NULL)) {
-			log_error("milter: init: acl_symbol_register failed");
-			return -1;
-		}
+	for (ms = milter_symbols; ms->ms_name; ++ms)
+	{
+		acl_symbol_register(ms->ms_name, ms->ms_stage, NULL);
 	}
 
 	/*
@@ -245,13 +245,17 @@ milter_init(void)
 	milter_postfix_macros_ht = ht_create(BUCKETS,
 		(ht_hash_t) milter_macro_hash, (ht_match_t) milter_macro_match,
 		NULL);
-	if (milter_postfix_macros_ht == NULL) {
+
+	if (milter_postfix_macros_ht == NULL)
+	{
 		log_error("milter: init: ht_create failed");
 		return -1;
 	}
 
-	for (mm = milter_postfix_macros; mm->mm_name; ++mm) {
-		if (ht_insert(milter_postfix_macros_ht, mm)) {
+	for (mm = milter_postfix_macros; mm->mm_name; ++mm)
+	{
+		if (ht_insert(milter_postfix_macros_ht, mm))
+		{
 			log_error("milter: init: ht_insert failed");
 			return -1;
 		}
@@ -263,24 +267,25 @@ milter_init(void)
 	milter_sendmail_macros_ht = ht_create(BUCKETS,
 		(ht_hash_t) milter_macro_hash, (ht_match_t) milter_macro_match,
 		NULL);
-	if (milter_sendmail_macros_ht == NULL) {
+
+	if (milter_sendmail_macros_ht == NULL)
+	{
 		log_error("milter: init: ht_create failed");
 		return -1;
 	}
 
-	for (mm = milter_sendmail_macros; mm->mm_name; ++mm) {
-		if (ht_insert(milter_sendmail_macros_ht, mm)) {
+	for (mm = milter_sendmail_macros; mm->mm_name; ++mm)
+	{
+		if (ht_insert(milter_sendmail_macros_ht, mm))
+		{
 			log_error("milter: init: ht_insert failed");
 			return -1;
 		}
 	}
 
-	for (macro = milter_macros; *macro; ++macro) {
-		if (acl_symbol_register(AS_CALLBACK, *macro, MS_ANY,
-			milter_macro_lookup)) {
-			log_error("milter: init: acl_symbol_register failed");
-			return -1;
-		}
+	for (macro = milter_macros; *macro; ++macro)
+	{
+		acl_symbol_register(*macro, MS_ANY, milter_macro_lookup);
 	}
 
 	return 0;

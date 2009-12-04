@@ -11,6 +11,7 @@
 #include "greylist.h"
 #include "hash.h"
 #include "ht.h"
+#include "sht.h"
 #include "ll.h"
 #include "log.h"
 #include "milter.h"
@@ -21,5 +22,7 @@
 #include "var.h"
 #include "client.h"
 #include "server.h"
+#include "exp.h"
+#include "tarpit.h"
 
 #endif /* _MOPHER_H */

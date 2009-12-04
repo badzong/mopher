@@ -46,9 +46,11 @@ typedef struct var_compact {
  * Prototypes
  */
 
+void var_clear_name(var_t *v);
 void var_clear(var_t *v);
 void var_delete(var_t *v);
 int var_data_size(var_t *v);
+void var_rename(var_t *v, char *name, int flags);
 int var_init(var_t *v, var_type_t type, char *name, void *data, int flags);
 var_t * var_create(var_type_t type, char *name, void *data, int flags);
 void * var_scan_data(var_type_t type, char *str);
@@ -77,4 +79,5 @@ var_t * var_scheme_refcopy(var_t *scheme, ...);
 void var_compact_delete(var_compact_t *vc);
 var_compact_t * var_compress(var_t *v);
 var_t * var_decompress(var_compact_t *vc, var_t *scheme);
+var_t * var_cast_copy(var_type_t type, var_t *v);
 #endif /* _VAR_H_ */

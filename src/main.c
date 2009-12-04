@@ -61,8 +61,8 @@ main(int argc, char **argv)
 	}
 
 	dbt_init();
-	greylist_init();
 	acl_init(mail_acl);
+	greylist_init();
 
 	r = milter();
 

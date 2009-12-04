@@ -3,197 +3,82 @@
 %option nounput
 %option noinput
 
-default		default
-jump		jump
-pass		pass
-block		block
-discard		discard
-greylist	greylist
-log		log
-facility	facility
-level		level
+define		define
 continue	continue
-visa		visa
+reject		reject
+discard		discard
+accept		accept
+tempfail	tempfail
+greylist	greylist
+tarpit		tarpit
+log		log
+set		set
 valid		valid
-any		any
-and		and
-or		or
+visa		visa
 
-eq		=
+eq		==
 ne		!=
-lt		<
-gt		>
 le		<=
 ge		>=
+and		&&
+or		\|\|
 
-ob		\(
-cb		\)
-comma		,
+op		[-+*/!()<>=,]
+multiplier	[smhdwMy]
 
-not		(not|!)
 id		[a-zA-Z][a-zA-Z0-9_-]+
+variable	\$[a-zA-Z][a-zA-Z0-9_-]+
 integer		[+-]?[0-9]+
 float		[+-]?[0-9]+\.[0-9]+
-multiplier	[KkMmGgHhDdWw]
 string		\"[^\"]*\"
-ip4		[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}
-ip6		[0-9a-fA-F:]{1,34}:[0-9a-fA-F]{1,4}
+addr		(([0-9]{1,3}\.){3}[0-9]{1,3}|[0-9a-fA-F:]{1,34}:[0-9a-fA-F]{1,4})
 
 comment		#.*$
 
 %{
 
-#include <stdio.h>
-#include <string.h>
-#include <arpa/inet.h>
-
 #include "mopher.h"
 #include "acl_yacc.h"
 
-int acl_line = 1;
-
-void
-acl_error(const char *s)
-{
-	log_die(EX_CONFIG, "%s on line %d\n", s, acl_line);
-}
+#define acl_error parser_error
 
 %}
+
 %%
-{default}	return DEFAULT;
-{jump}		return JUMP;
-{visa}		return VISA;
-{valid}		return VALID;
+
+{define}	return DEFINE;
+{continue}	return CONTINUE;
+{reject}	return XREJECT; /* REJECT defined by flex */
+{discard}	return DISCARD;
+{accept}	return ACCEPT;
+{tempfail}	return TEMPFAIL;
+{greylist}	return GREYLIST;
+{tarpit}	return TARPIT;
+{set}		return SET;
 {log}		return LOG;
-{facility}	return FACILITY;
-{level}		return LEVEL;
-{any}		return ANY;
-{not}		return NOT;
-{comma}		return COMMA;
-{ob}		return OB;
-{cb}		return CB;
+{valid}		return VALID;
+{visa}		return VISA;
+{eq}		return EQ;
+{ne}		return NE;
+{le}		return LE;
+{ge}		return GE;
+{and}		return AND;
+{or}		return OR;
 
-{pass}		{
-			acl_lval.at = AA_PASS;
-			return PASS;
-		}
+{op}		return acl_text[0];
+{multiplier}	return acl_text[0];
 
-{block}		{
-			acl_lval.at = AA_BLOCK;
-			return BLOCK;
-		}
-
-{continue}	{
-			acl_lval.at = AA_CONTINUE;
-			return CONTINUE;
-		}
-
-{discard}	{
-			acl_lval.at = AA_DISCARD;
-			return DISCARD;
-		}
-
-{greylist}		{
-			acl_lval.at = AA_GREYLIST;
-			return GREYLIST;
-		}
-
-{and}		{
-			acl_lval.ga = AG_AND;
-			return AND;
-		}
-
-{or}		{
-			acl_lval.ga = AG_OR;
-			return OR;
-		}
-
-{integer}	{
-			acl_lval.i = atol(acl_text);
-			return INTEGER;
-		}
-
-{float}		{
-			acl_lval.d = atof(acl_text);
-			return FLOAT;
-		}
-
-{multiplier}	{
-			acl_lval.c = acl_text[0];
-			return MULTIPLIER;
-		}
-
-{string}	{
-			if((acl_lval.str = strdup(acl_text + 1)) == NULL) {
-				log_die(EX_CONFIG, "acl_lex.l: strdup");
-			}
-			acl_lval.str[strlen(acl_lval.str) - 1] = 0;
-			return STRING;
-		}
-
-{ip4}		{
-			if((acl_lval.ss = util_strtoaddr(acl_text)) == NULL) {
-				log_die(EX_CONFIG, "acl_lex.l: util_strtoaddr"
-					" failed");
-			}
-
-			acl_lval.ss->ss_family = AF_INET;
-
-			return IP4;
-		}
-
-{ip6}		{
-			if((acl_lval.ss = util_strtoaddr(acl_text)) == NULL) {
-				log_die(EX_CONFIG, "acl_lex.l: util_strtoaddr"
-					" failed");
-			}
-
-			return IP6;
-		}
-
-{id}		{
-			if((acl_lval.str = strdup(acl_text)) == NULL) {
-				log_die(EX_CONFIG, "acl_lex.l: strdup");
-			}
-			return ID;
-		}
-
-{eq}		{
-			acl_lval.cm = AC_EQ;
-			return EQ;
-		}
-
-{ne}		{
-			acl_lval.cm = AC_NE;
-			return NE;
-		}
-
-{lt}		{
-			acl_lval.cm = AC_LT;
-			return LT;
-		}
-
-{le}		{
-			acl_lval.cm = AC_LE;
-			return LE;
-		}
-
-{gt}		{
-			acl_lval.cm = AC_GT;
-			return GT;
-		}
-
-{ge}		{
-			acl_lval.cm = AC_GE;
-			return GE;
-		}
+{integer}	return parser_tok_int(INTEGER, &acl_lval.i, acl_text);
+{float}		return parser_tok_float(FLOAT, &acl_lval.d, acl_text);
+{string}	return parser_tok_encstr(STRING, &acl_lval.str, acl_text);
+{addr}		return parser_tok_addr(ADDR, &acl_lval.ss, acl_text);
+{id}		return parser_tok_str(ID, &acl_lval.str, acl_text);
+{variable}	return parser_tok_str(VARIABLE, &acl_lval.str, acl_text + 1);
 
 {comment}	;
 [ \t]		;
-\n		++acl_line;
+\n		parser_line();
 
-.		{
-			log_die(EX_CONFIG, "unknown token '%s' on line %d\n",
-			    yytext, acl_line);
-		}
+.		parser_error("unknown token '%s'", acl_text);
+
 %%

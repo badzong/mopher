@@ -3,8 +3,8 @@ include @top_srcdir@/Makefile.common
 INCLUDE=-I@top_srcdir@ -I@top_srcdir@/src/include
 CFLAGS+=$(INCLUDE)
 
-OBJECTS=milter.o string.o spamd.o rbl.o @MOD_ACL_SPF@
-MODULES=milter.so string.so spamd.so rbl.so @MOD_ACL_SPF@
+OBJECTS=milter.o cast.o string.o spamd.o rbl.o @MOD_ACL_SPF@
+MODULES=milter.so cast.so string.so spamd.so rbl.so @MOD_ACL_SPF@
 MOD_ALL=@MOD_ALL@
 
 all: $(MOD_ALL)

@@ -15,6 +15,7 @@
 #include "mopher.h"
 
 #define BUCKETS 256
+#define BUFLEN 1024
 
 
 static hash_t
@@ -36,6 +37,11 @@ var_match(var_t * v1, var_t * v2)
 static void
 var_data_clear(var_t * v)
 {
+	if (v->v_data == NULL || (v->v_flags & VF_KEEPDATA))
+	{
+		return;
+	}
+
 	switch (v->v_type) {
 
 	case VT_LIST:
@@ -55,6 +61,19 @@ var_data_clear(var_t * v)
 	return;
 }
 
+
+void
+var_clear_name(var_t *v)
+{
+	if (v->v_name && !(v->v_flags & VF_KEEPNAME))
+	{
+		free(v->v_name);
+	}
+
+	return;
+}
+
+
 void
 var_clear(var_t *v)
 {
@@ -65,13 +84,8 @@ var_clear(var_t *v)
 	}
 	*/
 
-	if (v->v_name && !(v->v_flags & VF_KEEPNAME)) {
-		free(v->v_name);
-	}
-
-	if (v->v_data && !(v->v_flags & VF_KEEPDATA)) {
-		var_data_clear(v);
-	}
+	var_clear_name(v);
+	var_data_clear(v);
 
 	memset(v, 0, sizeof(var_t));
 
@@ -270,16 +284,39 @@ var_name_init(char *name, int flags)
 {
 	char *copy;
 
+	if (name == NULL)
+	{
+		return NULL;
+	}
 
-	if((flags & VF_COPYNAME) == 0) {
+	if((flags & VF_COPYNAME) == 0)
+	{
 		return name;
 	}
 
-	if ((copy = strdup(name)) == NULL) {
+	if ((copy = strdup(name)) == NULL)
+	{
 		log_warning("var_name_init: strdup");
 	}
 
 	return copy;
+}
+
+
+void
+var_rename(var_t *v, char *name, int flags)
+{
+	var_clear_name(v);
+
+	flags &= VF_COPYNAME | VF_KEEPNAME;
+
+	v->v_name = var_name_init(name, flags);
+
+	/* Copy only name flags */
+	v->v_flags &= ~(VF_COPYNAME | VF_KEEPNAME);
+	v->v_flags |= flags;
+
+	return;
 }
 
 
@@ -599,7 +636,13 @@ var_true(const var_t * v)
 		return 1;
 
 	case VT_STRING:
-		if (strlen(v->v_data)) {
+		if (strcmp(v->v_data, "0") == 0)
+		{
+			return 0;
+		}
+
+		if (strlen(v->v_data))
+		{
 			return 1;
 		}
 		return 0;
@@ -766,6 +809,7 @@ var_dump_data(var_t * v, char *buffer, int size)
 		break;
 
 	case VT_POINTER:
+		len = snprintf(buffer, size, "(%p)", v->v_data);
 		break;
 
 	default:
@@ -1499,6 +1543,127 @@ error:
 
 	if (list) {
 		var_delete(list);
+	}
+
+	return NULL;
+}
+
+
+static var_t *
+var_as_int(var_t *v)
+{
+	VAR_INT_T i;
+	VAR_FLOAT_T *f;
+	var_t *copy;
+
+	switch (v->v_type)
+	{
+	case VT_FLOAT:
+		f = v->v_data;
+		i = *f;
+		break;
+
+	case VT_STRING:
+		errno = 0;
+
+		i = strtol(v->v_data, NULL, 10);
+
+		/*
+		 * Arbitrary strings should return a true value
+		 */
+		if (errno && strcmp(v->v_data, "0"))
+		{
+			i = strlen(v->v_data);
+		}
+
+		break;
+
+	default:
+		log_error("var_as_int: bad type");
+		return NULL;
+	}
+
+	copy = var_create(VT_INT, v->v_name, &i, VF_COPY);
+	if (copy == NULL)
+	{
+		log_error("var_as_int: var_create failed");
+	}
+
+	return copy;
+}
+
+
+static var_t *
+var_as_float(var_t *v)
+{
+	VAR_FLOAT_T f;
+	VAR_INT_T *i;
+	var_t *copy;
+
+	switch (v->v_type)
+	{
+	case VT_INT:
+		i = v->v_data;
+		f = *i;
+		break;
+
+	case VT_STRING:
+		f = strtof(v->v_data, NULL);
+		break;
+
+	default:
+		log_error("var_as_int: bad type");
+		return NULL;
+	}
+
+	copy = var_create(VT_FLOAT, v->v_name, &f, VF_COPY);
+	if (copy == NULL)
+	{
+		log_error("var_as_int: var_create failed");
+	}
+
+	return copy;
+}
+
+
+static var_t *
+var_as_string(var_t *v)
+{
+	char buffer[BUFLEN];
+	var_t *copy;
+
+	if (var_dump_data(v, buffer, sizeof buffer) == -1)
+	{
+		log_error("var_as_string: var_dump_data failed");
+		return NULL;
+	}
+
+	copy = var_create(VT_STRING, NULL, buffer, VF_COPY);
+	if (copy == NULL)
+	{
+		log_error("var_as_string: var_create failed");
+	}
+
+	return copy;
+}
+
+
+var_t *
+var_cast_copy(var_type_t type, var_t *v)
+{
+	switch (type)
+	{
+	case VT_INT:
+		return var_as_int(v);
+
+	case VT_FLOAT:
+		return var_as_float(v);
+
+	case VT_STRING:
+		return var_as_string(v);
+
+	default:
+		log_error("var_cast_copy: bad type");
 	}
 
 	return NULL;

@@ -21,37 +21,6 @@
 #define ADDR6_LEN 16
 #define ADDR6_STRLEN 40
 
-int
-util_parser(char *path, FILE ** input, int (*parser) (void))
-{
-	struct stat fs;
-
-	if (stat(path, &fs) == -1) {
-		log_error("util_parser: stat '%s'", path);
-		return -1;
-	}
-
-	if (fs.st_size == 0) {
-		log_notice("util_parser: '%s' is empty", path);
-		return -1;
-	}
-
-	if ((*input = fopen(path, "r")) == NULL) {
-		log_error("util_parser: fopen '%s'", path);
-		return -1;
-	}
-
-	if (parser()) {
-		log_error("util_parser: supplied parser failed");
-		return -1;
-	}
-
-	fclose(*input);
-
-	return 0;
-}
-
-
 char *
 util_strdupenc(const char *src, const char *encaps)
 {
@@ -421,4 +390,37 @@ util_now(struct timespec *ts)
 	ts->tv_nsec = tv.tv_usec * 1000;
 
 	return 0;
+}
+
+
+int
+util_concat(char *buffer, int size, ...)
+{
+	va_list ap;
+	char *part;
+	int len, n;
+
+	va_start(ap, size);
+
+	for (len = 0;; len += n)
+	{
+		part = va_arg(ap, char *);
+		if (part == NULL)
+		{
+			break;
+		}
+
+		n = strlen(part);
+
+		if (len + n > size - 1)
+		{
+			return -1;
+		}
+
+		strcpy(buffer + len, part);
+	}
+
+	va_end(ap);
+
+	return len;
 }

@@ -6,7 +6,7 @@ envrcpt rbl_xbl greylist
 envrcpt rbl_sorbs greylist
 envrcpt rbl_spamcop greylist
 
-envrcpt spf = SPF_PASS pass
-envrcpt spf = SPF_FAIL greylist 30m
+envrcpt spf == SPF_PASS accept
+envrcpt spf == SPF_FAIL greylist 30m
 eom spamd_spam greylist
-eom spamd_score > 5.0 block
+eom spamd_score > 5.0 reject

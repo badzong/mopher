@@ -332,12 +332,7 @@ spamd_init(void)
 	char **p;
 
 	for (p = spamd_symbols; *p; ++p) {
-		if (!acl_symbol_register(AS_CALLBACK, *p, MS_EOM, spamd_query)) {
-			continue;
-		}
-
-		log_error("spamd: init: acl_symbol_register failed");
-		return -1;
+		acl_symbol_register(*p, MS_EOM, spamd_query);
 	}
 
 	return 0;

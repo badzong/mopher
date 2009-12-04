@@ -231,12 +231,7 @@ rbl_init(void)
 			return -1;
 		}
 		
-		if (acl_symbol_register(AS_CALLBACK, v->v_name, MS_CONNECT,
-		    rbl_query))
-		{
-			log_error("rbl: init: acl_symbol_register failed");
-			return -1;
-		}
+		acl_symbol_register(v->v_name, MS_OFF_CONNECT, rbl_query);
 	}
 
 	return 0;

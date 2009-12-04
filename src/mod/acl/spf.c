@@ -18,7 +18,6 @@ static SPF_server_t *spf_server;
 
 static char *spf_static_keys[] = { "SPF_NEUTRAL", "SPF_PASS", "SPF_FAIL",
 	"SPF_SOFTFAIL", NULL };
-
 static char *spf_static_values[] = { "neutral", "pass", "fail", "softfail",
 	NULL };
 
@@ -122,9 +121,10 @@ result:
 	log_debug("spf: helo:%s envfrom:%s spf:%s", helo,
 		envfrom, spfstr);
 
-	if(acl_symbol_add(attrs, VT_STRING, "spf", spfstr,
-		VF_KEEPNAME | VF_KEEPDATA)) {
-		log_error("spf: acl_symbol_add failed");
+	if (var_table_setv(attrs, VT_STRING, "spf", spfstr,
+	    VF_KEEPNAME | VF_KEEPDATA, VT_NULL))
+	{
+		log_error("spf: var_table_setv failed");
 		goto error;
 	}
 
@@ -160,27 +160,19 @@ int
 spf_init(void)
 {
 	char **k, **v;
-	int r;
 
 	if((spf_server = SPF_server_new(SPF_DNS_CACHE, 0)) == NULL) {
 		log_error("spf: init: SPF_server_new failed");
 		return -1;
 	}
 
-	r = acl_symbol_register(AS_CALLBACK, "spf", MS_ENVFROM | MS_ENVRCPT |
-		MS_HEADER | MS_EOH | MS_BODY | MS_EOM, (acl_scallback_t) spf);
-	if (r) {
-		log_error("spf: init: acl_symbol_register failed");
-		return -1;
-	}
+	acl_symbol_register("spf", MS_ENVFROM | MS_ENVRCPT | MS_HEADER |
+	    MS_EOH | MS_BODY | MS_EOM, spf);
 
-	for (k = spf_static_keys, v = spf_static_values; *k && *v; ++k, ++v) {
-		r = acl_static_register(VT_STRING, *k, *v,
-			VF_KEEPNAME | VF_KEEPDATA);
-		if (r) {
-			log_error("spf: init: acl_static_register failed");
-			return -1;
-		}
+	for (k = spf_static_keys, v = spf_static_values; *k && *v; ++k, ++v)
+	{
+		acl_constant_register(VT_STRING, *k, *v,
+		    VF_KEEPNAME | VF_KEEPDATA);
 	}
 
 

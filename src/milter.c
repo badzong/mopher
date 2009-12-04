@@ -32,26 +32,29 @@ int milter_running = 1;
 static sfsistat
 milter_acl(char *stage, milter_priv_t * mp)
 {
-	switch (acl(stage, mp->mp_table)) {
-
-	case AA_PASS:
-		return SMFIS_ACCEPT;
-
-	case AA_BLOCK:
-		return SMFIS_REJECT;
-
-	case AA_ERROR:
-	case AA_GREYLIST:
-		return SMFIS_TEMPFAIL;
-
-	case AA_DISCARD:
-		return SMFIS_DISCARD;
-
-	case AA_CONTINUE:
+	switch (acl(stage, mp->mp_table))
+	{
+	case ACL_CONTINUE:
 		return SMFIS_CONTINUE;
 
+	case ACL_REJECT:
+		return SMFIS_REJECT;
+
+	case ACL_DISCARD:
+		return SMFIS_DISCARD;
+
+	case ACL_ACCEPT:
+		return SMFIS_ACCEPT;
+
+	case ACL_TEMPFAIL:
+		return SMFIS_TEMPFAIL;
+
+	case ACL_ERROR:
+		log_error("milter_acl: acl failed");
+		break;
+
 	default:
-		log_error("milter_acl: acl returned unknown action");
+		log_error("milter_acl: acl returned bad action type");
 	}
 
 	return SMFIS_TEMPFAIL;
@@ -234,7 +237,7 @@ milter_envfrom(SMFICTX * ctx, char **argv)
 	}
 
 	if (var_table_setv(mp->mp_table,
-	    VT_POINTER, "milter_ctx", ctx, VF_KEEPNAME | VF_KEEPDATA,
+	    VT_POINTER, "milter_ctx", ctx, VF_KEEP,
 	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "milter_stagename", MSN_ENVFROM, VF_KEEP,
 	    VT_STRING, "milter_envfrom", envfrom, VF_KEEPNAME,
@@ -276,7 +279,7 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 	}
 
 	if (var_table_setv(mp->mp_table,
-	    VT_POINTER, "milter_ctx", ctx, VF_KEEPNAME | VF_KEEPDATA,
+	    VT_POINTER, "milter_ctx", ctx, VF_KEEP,
 	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "milter_stagename", MSN_ENVRCPT, VF_KEEP,
 	    VT_STRING, "milter_envrcpt", envrcpt, VF_KEEPNAME,
@@ -343,7 +346,7 @@ milter_header(SMFICTX * ctx, char *headerf, char *headerv)
 	mp->mp_headerlen += len - 1;
 
 	if (var_table_setv(mp->mp_table,
-	    VT_POINTER, "milter_ctx", ctx, VF_KEEPNAME | VF_KEEPDATA,
+	    VT_POINTER, "milter_ctx", ctx, VF_KEEP,
 	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "milter_stagename", MSN_HEADER, VF_KEEP,
 	    VT_STRING, "milter_header_name", headerf,
@@ -368,7 +371,7 @@ milter_eoh(SMFICTX * ctx)
 	mp = ((milter_priv_t *) smfi_getpriv(ctx));
 
 	if (var_table_setv(mp->mp_table,
-	    VT_POINTER, "milter_ctx", ctx, VF_KEEPNAME | VF_KEEPDATA,
+	    VT_POINTER, "milter_ctx", ctx, VF_KEEP,
 	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "milter_stagename", MSN_EOH, VF_KEEP,
 	    VT_STRING, "milter_header", mp->mp_header, VF_KEEP,
@@ -406,7 +409,7 @@ milter_body(SMFICTX * ctx, unsigned char *body, size_t len)
 	mp->mp_body[mp->mp_bodylen] = 0;
 
 	if (var_table_setv(mp->mp_table,
-	    VT_POINTER, "milter_ctx", ctx, VF_KEEPNAME | VF_KEEPDATA,
+	    VT_POINTER, "milter_ctx", ctx, VF_KEEP,
 	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "milter_stagename", MSN_BODY, VF_KEEP,
 	    VT_NULL))
@@ -427,7 +430,7 @@ milter_eom(SMFICTX * ctx)
 	mp = ((milter_priv_t *) smfi_getpriv(ctx));
 
 	if (var_table_setv(mp->mp_table,
-	    VT_POINTER, "milter_ctx", ctx, VF_KEEPNAME | VF_KEEPDATA,
+	    VT_POINTER, "milter_ctx", ctx, VF_KEEP,
 	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "milter_stagename", MSN_EOM, VF_KEEP,
 	    VT_INT, "milter_body_size", &mp->mp_bodylen,

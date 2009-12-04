@@ -9,6 +9,30 @@
 static dbt_t greylist_dbt;
 
 greylist_t *
+greylist_delay(greylist_t *gl, int delay)
+{
+	gl->gl_delay = delay;
+	return gl;
+}
+
+
+greylist_t *
+greylist_visa(greylist_t *gl, int visa)
+{
+	gl->gl_visa = visa;
+	return gl;
+}
+
+
+greylist_t *
+greylist_valid(greylist_t *gl, int valid)
+{
+	gl->gl_valid = valid;
+	return gl;
+}
+
+
+greylist_t *
 greylist_create(void)
 {
 	greylist_t *gl;
@@ -16,8 +40,7 @@ greylist_create(void)
 	gl = (greylist_t *) malloc(sizeof (greylist_t));
 	if (gl == NULL)
 	{
-		log_error("greylist_create: malloc");
-		return NULL;
+		log_die(EX_OSERR, "greylist_create: malloc");
 	}
 
 	gl->gl_delay = cf_greylist_default_delay;

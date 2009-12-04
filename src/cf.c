@@ -55,6 +55,7 @@ char		*cf_milter_socket;
 VAR_INT_T	 cf_milter_socket_timeout;
 VAR_INT_T	 cf_milter_socket_umask;
 VAR_INT_T	 cf_log_level;
+VAR_INT_T	 cf_acl_log_level;
 VAR_INT_T	 cf_foreground;
 char		*cf_dbt_mod_path;
 char		*cf_tables_mod_path;
@@ -64,6 +65,7 @@ char		*cf_spamd_socket;
 char		*cf_sync_socket;
 VAR_INT_T	 cf_client_retry_interval;
 char		*cf_server_socket;
+VAR_INT_T	 cf_tarpit_delay;
 
 /*
  * Symbol table
@@ -74,6 +76,7 @@ static cf_symbol_t cf_symbols[] = {
 	{ "greylist_default_valid", &cf_greylist_default_valid },
 	{ "acl_path", &cf_acl_path },
 	{ "acl_mod_path", &cf_acl_mod_path },
+	{ "acl_log_level", &cf_acl_log_level },
 	{ "milter_socket", &cf_milter_socket },
 	{ "milter_socket_timeout", &cf_milter_socket_timeout },
 	{ "milter_socket_umask", &cf_milter_socket_umask },
@@ -86,6 +89,7 @@ static cf_symbol_t cf_symbols[] = {
 	{ "sync_socket", &cf_sync_socket },
 	{ "client_retry_interval", &cf_client_retry_interval },
 	{ "server_socket", &cf_server_socket },
+	{ "tarpit_delay", &cf_tarpit_delay },
 	{ NULL, NULL }
 };
 
