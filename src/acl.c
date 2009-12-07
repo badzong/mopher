@@ -10,8 +10,8 @@
 extern FILE *acl_in;
 extern int acl_parse(void);
 
-static ht_t *acl_tables;
-static ht_t *acl_symbols;
+static sht_t *acl_tables;
+static sht_t *acl_symbols;
 
 static acl_action_handler_t acl_action_handlers[] = {
 	NULL,					/* ACL_NULL 	*/
@@ -28,6 +28,21 @@ static acl_action_handler_t acl_action_handlers[] = {
 	(acl_action_handler_t) tarpit		/* ACL_TARPIT	*/
 };
 
+
+static void
+acl_action_delete(acl_action_t *aa)
+{
+	/*
+	if (aa->aa_data)
+	{
+		free(aa->aa_data);
+	}
+	*/
+
+	free(aa);
+
+	return;
+}
 
 static acl_action_t *
 acl_action_create(acl_action_type_t type, void *data)
@@ -84,6 +99,11 @@ acl_rule_create(exp_t *exp, acl_action_t *aa)
 static void
 acl_rule_delete(acl_rule_t *ar)
 {
+	if (ar->ar_action)
+	{
+		acl_action_delete(ar->ar_action);
+	}
+
 	free(ar);
 
 	return;
@@ -91,97 +111,39 @@ acl_rule_delete(acl_rule_t *ar)
 
 
 static void
-acl_table_delete(acl_table_t *at)
+acl_rules_delete(ll_t *rules)
 {
-	free(at->at_name);
-
-	if (at->at_rules)
+	if (rules)
 	{
-		ll_delete(at->at_rules, (ll_delete_t) acl_rule_delete);
+		ll_delete(rules, (ll_delete_t) acl_rule_delete);
 	}
 
 	return;
-}
-
-static acl_table_t *
-acl_table_create(char *name)
-{
-	acl_table_t *at = NULL;
-
-	at = (acl_table_t *) malloc(sizeof (acl_table_t));
-	if (at == NULL)
-	{
-		log_error("acl_table_create: malloc");
-		goto error;
-	}
-
-	at->at_name = name;
-	at->at_rules = ll_create();
-
-	if (at->at_rules == NULL)
-	{
-		log_error("acl_table_create: ll_create failed");
-		goto error;
-	}
-
-	if (ht_insert(acl_tables, at))
-	{
-		log_error("acl_table_create: ht_insert failed");
-		goto error;
-	}
-	
-
-	return at;
-
-error:
-
-	if (at)
-	{
-		acl_table_delete(at);
-	}
-
-	return NULL;
-}
-
-
-static hash_t
-acl_table_hash(acl_table_t *at)
-{
-	return HASH(at->at_name, strlen(at->at_name));
-}
-
-
-static int
-acl_table_match(acl_table_t *at1, acl_table_t *at2)
-{
-	if (strcmp(at1->at_name, at2->at_name))
-	{
-		return 0;
-	}
-
-	return 1;
 }
 
 
 void
 acl_append(char *table, exp_t *exp, acl_action_t *aa)
 {
-	acl_table_t *at = NULL, lookup;
+	ll_t *rules;
 	acl_rule_t *ar;
 
-	lookup.at_name = table;
-	at = ht_lookup(acl_tables, &lookup);
+	rules = sht_lookup(acl_tables, table);
 
 	/*
-	 * Create table if not exists
+	 * Create rules if table not exists
 	 */
-	if (at == NULL)
+	if (rules == NULL)
 	{
-		at = acl_table_create(table);
-		if (at == NULL)
+		rules = ll_create();
+		if (rules == NULL)
 		{
-			log_die(EX_SOFTWARE,
-			    "acl_append: acl_table_create failed");
+			log_die(EX_SOFTWARE, "acl_append: ll_create failed");
+		}
+
+		if (sht_insert(acl_tables, table, rules))
+		{
+			log_die(EX_SOFTWARE, "acl_append: sht_insert failed");
 		}
 	}
 
@@ -197,10 +159,15 @@ acl_append(char *table, exp_t *exp, acl_action_t *aa)
 	/*
 	 * Append rule to rules
 	 */
-	if (LL_INSERT(at->at_rules, ar) == -1)
+	if (LL_INSERT(rules, ar) == -1)
 	{
 		log_die(EX_SOFTWARE, "acl_append: LL_INSERT failed");
 	}
+
+	/*
+	 * table is stduped by acl_lex.l
+	 */
+	free(table);
 
 	return;
 }
@@ -209,6 +176,11 @@ acl_append(char *table, exp_t *exp, acl_action_t *aa)
 static void
 acl_symbol_delete(acl_symbol_t *as)
 {
+	if (as->as_type == AS_CONSTANT)
+	{
+		free(as->as_data);
+	}
+
 	free(as);
 
 	return;
@@ -227,7 +199,6 @@ acl_symbol_create(acl_symbol_type_t type, char *name, milter_stage_t stages,
 	}
 
 	as->as_type = type;
-	as->as_name = name;
 	as->as_stages = stages;
 	as->as_data = data;
 
@@ -235,31 +206,12 @@ acl_symbol_create(acl_symbol_type_t type, char *name, milter_stage_t stages,
 }
 
 
-static hash_t
-acl_symbol_hash(acl_symbol_t *as)
+static void
+acl_symbol_insert(char *symbol, acl_symbol_t *as)
 {
-	return HASH(as->as_name, strlen(as->as_name));
-}
-
-
-static int
-acl_symbol_match(acl_symbol_t *as1, acl_symbol_t *as2)
-{
-	if (strcmp(as1->as_name, as2->as_name))
+	if (sht_insert(acl_symbols, symbol, as))
 	{
-		return 0;
-	}
-
-	return 1;
-}
-
-
-void
-acl_symbol_insert(acl_symbol_t *as)
-{
-	if (ht_insert(acl_symbols, as))
-	{
-		log_die(EX_SOFTWARE, "acl_symbol_register: ht_insert failed");
+		log_die(EX_SOFTWARE, "acl_symbol_register: sht_insert failed");
 	}
 	
 	return;
@@ -273,7 +225,7 @@ acl_symbol_register(char *name, milter_stage_t stages,
 	acl_symbol_t *as;
 
 	as = acl_symbol_create(AS_SYMBOL, name, stages, callback);
-	acl_symbol_insert(as);
+	acl_symbol_insert(name, as);
 	
 	log_debug("acl_symbol_register: \"%s\" registered", name);
 
@@ -295,7 +247,7 @@ acl_constant_register(var_type_t type, char *name, void *data, int flags)
 	}
 
 	as = acl_symbol_create(AS_CONSTANT, name, MS_ANY, v);
-	acl_symbol_insert(as);
+	acl_symbol_insert(name, as);
 	
 	log_debug("acl_constant_register: \"%s\" registered", name);
 
@@ -308,7 +260,7 @@ acl_function_register(char *name, acl_function_callback_t callback)
 	acl_symbol_t *as;
 
 	as = acl_symbol_create(AS_FUNCTION, name, MS_ANY, callback);
-	acl_symbol_insert(as);
+	acl_symbol_insert(name, as);
 	
 	log_debug("acl_function_register: \"%s\" registered", name);
 
@@ -319,10 +271,9 @@ acl_function_register(char *name, acl_function_callback_t callback)
 acl_function_callback_t
 acl_function_lookup(char *name)
 {
-	acl_symbol_t *as, lookup;
+	acl_symbol_t *as;
 
-	lookup.as_name = name;
-	as = ht_lookup(acl_symbols, &lookup);
+	as = sht_lookup(acl_symbols, name);
 	if (as == NULL)
 	{
 		log_error("acl_function_lookup: unknwon function \"%s\"",
@@ -343,11 +294,9 @@ acl_function_lookup(char *name)
 acl_symbol_t *
 acl_symbol_lookup(char *name)
 {
-	acl_symbol_t *as, lookup;
+	acl_symbol_t *as;
 
-	lookup.as_name = name;
-	as = ht_lookup(acl_symbols, &lookup);
-	
+	as = sht_lookup(acl_symbols, name);
 	if (as == NULL)
 	{
 		log_debug("acl_symbol_lookup: unknown symbol \"%s\"", name);
@@ -566,7 +515,7 @@ acl_set(var_t *mailspec, exp_t *exp)
 acl_action_type_t
 acl(char *stage, var_t *mailspec)
 {
-	acl_table_t *at, lookup;
+	ll_t *rules;
 	acl_rule_t *ar;
 	acl_action_t *aa;
 	acl_action_type_t response;
@@ -575,20 +524,18 @@ acl(char *stage, var_t *mailspec)
 
 	log_debug("acl: stage \"%s\"", stage);
 
-	lookup.at_name = stage;
-
 	/*
 	 * Lookup table
 	 */
-	at = ht_lookup(acl_tables, &lookup);
-	if (at == NULL)
+	rules = sht_lookup(acl_tables, stage);
+	if (rules == NULL)
 	{
 		log_info("acl: no rules for \"%s\": continue", stage);
 		return ACL_CONTINUE;
 	}
 
-	ll_rewind(at->at_rules);
-	for (i = 1; (ar = ll_next(at->at_rules)); ++i)
+	ll_rewind(rules);
+	for (i = 1; (ar = ll_next(rules)); ++i)
 	{
 		/*
 		 * Expression doesn't match
@@ -641,21 +588,16 @@ acl(char *stage, var_t *mailspec)
 void
 acl_init(char *mail_acl)
 {
-	acl_symbols = ht_create(ACL_BUCKETS, (ht_hash_t) acl_symbol_hash,
-	    (ht_match_t) acl_symbol_match, (ht_delete_t) acl_symbol_delete);
-
-	if (acl_symbols == NULL)
-	{
-		log_die(EX_SOFTWARE, "acl_symbol_register: ht_create failed");
-	}
-
-
-	acl_tables = ht_create(ACL_BUCKETS, (ht_hash_t) acl_table_hash,
-	    (ht_match_t) acl_table_match, (ht_delete_t) acl_table_delete);
-
+	acl_tables = sht_create(ACL_BUCKETS, (sht_delete_t) acl_rules_delete);
 	if (acl_tables == NULL)
 	{
-		log_die(EX_SOFTWARE, "acl_append: ht_create failed");
+		log_die(EX_SOFTWARE, "acl_init: sht_create failed");
+	}
+
+	acl_symbols = sht_create(ACL_BUCKETS, (sht_delete_t) acl_symbol_delete);
+	if (acl_symbols == NULL)
+	{
+		log_die(EX_SOFTWARE, "acl_init: sht_create failed");
 	}
 
 	/*
@@ -680,17 +622,17 @@ acl_init(char *mail_acl)
 void
 acl_clear(void)
 {
+	exp_clear();
+
 	if (acl_tables)
 	{
-		ht_delete(acl_tables);
+		sht_delete(acl_tables);
 	}
 
 	if (acl_symbols)
 	{
-		ht_delete(acl_symbols);
+		sht_delete(acl_symbols);
 	}
-
-	exp_clear();
 
 	return;
 }

@@ -271,7 +271,7 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 	/*
 	 * Append recipient to recipient_list
 	 */
-	if (var_table_list_append
+	if (var_table_list_append_new
 	    (mp->mp_table, VT_STRING, "milter_recipient_list", envrcpt,
 	     VF_KEEP)) {
 		log_error("milter_envrcpt: var_table_list_append failed");

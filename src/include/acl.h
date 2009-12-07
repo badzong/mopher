@@ -41,14 +41,6 @@ struct acl_rule
 typedef struct acl_rule acl_rule_t;
 
 
-struct acl_table
-{
-	char	*at_name;
-	ll_t	*at_rules;
-};
-typedef struct acl_table acl_table_t;
-
-
 enum acl_symbol_type
 {
 	AS_NULL = 0,
@@ -62,7 +54,6 @@ typedef enum acl_symbol_type acl_symbol_type_t;
 struct acl_symbol
 {
 	acl_symbol_type_t	 as_type;
-	char			*as_name;
 	milter_stage_t		 as_stages;
 	void			*as_data;
 };
@@ -85,7 +76,6 @@ typedef struct acl_log acl_log_t;
 
 acl_action_t * acl_action(acl_action_type_t type, void *data);
 void acl_append(char *table, exp_t *exp, acl_action_t *aa);
-void acl_symbol_insert(acl_symbol_t *as);
 void acl_symbol_register(char *name, milter_stage_t stages,acl_symbol_callback_t callback);
 void acl_constant_register(var_type_t type, char *name, void *data, int flags);
 void acl_function_register(char *name, acl_function_callback_t callback);

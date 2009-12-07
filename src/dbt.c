@@ -10,8 +10,8 @@
 
 #define DBT_BUCKETS 32
 
-static ht_t *dbt_drivers;
-static ht_t *dbt_tables;
+static sht_t *dbt_drivers;
+static sht_t *dbt_tables;
 
 static int		dbt_janitor_running = 1;
 static pthread_t	dbt_janitor_thread;
@@ -20,54 +20,19 @@ static pthread_mutex_t	dbt_janitor_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t	dbt_janitor_cond = PTHREAD_COND_INITIALIZER;
 
 
-static hash_t
-dbt_driver_hash(dbt_driver_t *dd)
-{
-	return HASH(dd->dd_name, strlen(dd->dd_name));
-}
-
-
-static int
-dbt_driver_match(dbt_driver_t *dd1, dbt_driver_t *dd2)
-{
-	if(strcmp(dd1->dd_name, dd2->dd_name) == 0) {
-		return 1;
-	}
-
-	return 0;
-}
-
-
 void
-dbt_driver_register(dbt_driver_t *dd)
+dbt_driver_register(char *name, dbt_driver_t *dd)
 {
-	if((ht_insert(dbt_drivers, dd)) == -1) {
-		log_die(EX_SOFTWARE, "dbt_driver_register: ht_insert for "
-		    "driver \"%s\" failed", dd->dd_name);
+	if((sht_insert(dbt_drivers, name, dd)) == -1)
+	{
+		log_die(EX_SOFTWARE, "dbt_driver_register: sht_insert for "
+		    "driver \"%s\" failed", name);
 	}
 
 	log_info("dbt_driver_register: database driver \"%s\" registered",
-		dd->dd_name);
+	    name);
 
 	return;
-}
-
-
-static hash_t
-dbt_hash(dbt_t *dbt)
-{
-	return HASH(dbt->dbt_name, strlen(dbt->dbt_name));
-}
-
-
-static int
-dbt_match(dbt_t *dbt1, dbt_t *dbt2)
-{
-	if(strcmp(dbt1->dbt_name, dbt2->dbt_name)) {
-		return 0;
-	}
-
-	return 1;
 }
 
 
@@ -237,19 +202,15 @@ dbt_db_cleanup(dbt_t *dbt)
 
 
 void
-dbt_register(dbt_t *dbt)
+dbt_register(char *name, dbt_t *dbt)
 {
-	dbt_driver_t lookup, *dd;
+	dbt_driver_t *dd;
 	var_t *config;
-
-	if (dbt->dbt_name == NULL) {
-		log_die(EX_SOFTWARE, "dbt_register: no name specified");
-	}
 
 	/*
 	 * Load config table
 	 */
-	config = cf_get(VT_TABLE, "tables", dbt->dbt_name, NULL);
+	config = cf_get(VT_TABLE, "tables", name, NULL);
 	if (config == NULL) {
 		log_die(EX_CONFIG, "dbt_register: missing database "
 			"configuration for \"%s\"", dbt->dbt_name);
@@ -269,10 +230,15 @@ dbt_register(dbt_t *dbt)
 	}
 
 	/*
+	 * dbt_name is used by the janitor
+	 */
+	dbt->dbt_name = name;
+
+	/*
 	 * Add some defaults
 	 */
 	if (dbt->dbt_table == NULL) {
-		dbt->dbt_table = dbt->dbt_name;
+		dbt->dbt_table = name;
 	}
 
 	if (dbt->dbt_database == NULL) {
@@ -287,13 +253,11 @@ dbt_register(dbt_t *dbt)
 	/*
 	 * Lookup database driver
 	 */
-	memset(&lookup, 0, sizeof lookup);
-	lookup.dd_name = dbt->dbt_drivername;
-
-	dd = ht_lookup(dbt_drivers, &lookup);
-	if (dd == NULL) {
+	dd = sht_lookup(dbt_drivers, dbt->dbt_drivername);
+	if (dd == NULL)
+	{
 		log_die(EX_CONFIG, "dbt_register: unknown database driver "
-			"\"%s\"", dbt->dbt_drivername);
+		    "\"%s\"", dbt->dbt_drivername);
 	}
 
 	dbt->dbt_driver = dd;
@@ -312,10 +276,12 @@ dbt_register(dbt_t *dbt)
 	/*
 	 * Open database
 	 */
-	log_debug("dbt_register: open database \"%s\"", dbt->dbt_name);
+	log_debug("dbt_register: open database \"%s\"", name);
 
-	if (DBT_DB_OPEN(dbt)) {
-		log_die(EX_CONFIG, "dbt_register: can't open database");
+	if (DBT_DB_OPEN(dbt))
+	{
+		log_die(EX_CONFIG, "dbt_register: can't open database \"%s\"",
+		    name);
 	}
 
 	/*
@@ -329,7 +295,7 @@ dbt_register(dbt_t *dbt)
 	/*
 	 * Store dbt in dbt_tables
 	 */
-	if (ht_insert(dbt_tables, dbt)) {
+	if (sht_insert(dbt_tables, name, dbt)) {
 		log_die(EX_SOFTWARE, "dbt_register: ht_insert failed");
 	}
 
@@ -490,7 +456,8 @@ dbt_janitor(void *arg)
 
 		now = ts.tv_sec;
 
-		for(ht_rewind(dbt_tables); (dbt = ht_next(dbt_tables));)
+		sht_rewind(dbt_tables);
+		while ((dbt = sht_next(dbt_tables)))
 		{
 			/*
 			 * Check if table needs a clean up
@@ -517,7 +484,9 @@ dbt_janitor(void *arg)
 		 * Schedule next run
 		 */
 		schedule = 0xffffffff;
-		for(ht_rewind(dbt_tables); (dbt = ht_next(dbt_tables));)
+
+		sht_rewind(dbt_tables);
+		while ((dbt = sht_next(dbt_tables)))
 		{
 			if (dbt->dbt_cleanup_schedule < schedule)
 			{
@@ -576,11 +545,9 @@ dbt_init(void)
 	/*
 	 * Initialize driver table
 	 */
-	dbt_drivers = ht_create(DBT_BUCKETS, (ht_hash_t) dbt_driver_hash,
-		(ht_match_t) dbt_driver_match, NULL);
-
+	dbt_drivers = sht_create(DBT_BUCKETS, NULL);
 	if(dbt_drivers == NULL) {
-		log_die(EX_SOFTWARE, "dbt_init: ht_create failed");
+		log_die(EX_SOFTWARE, "dbt_init: sht_create failed");
 	}
 
 	/*
@@ -591,9 +558,7 @@ dbt_init(void)
 	/*
 	 * Initailaize tables
 	 */
-	dbt_tables = ht_create(DBT_BUCKETS, (ht_hash_t) dbt_hash,
-		(ht_match_t) dbt_match, (ht_delete_t) dbt_close);
-
+	dbt_tables = sht_create(DBT_BUCKETS, (sht_delete_t) dbt_close);
 	if (dbt_tables == NULL) {
 		log_die(EX_SOFTWARE, "dbt_init: ht_init failed");
 	}
@@ -657,8 +622,8 @@ dbt_clear()
 	client_clear();
 	server_clear();
 
-	ht_delete(dbt_drivers);
-	ht_delete(dbt_tables);
+	sht_delete(dbt_drivers);
+	sht_delete(dbt_tables);
 
 	return;
 }
@@ -667,10 +632,5 @@ dbt_clear()
 dbt_t *
 dbt_lookup(char *name)
 {
-	dbt_t lookup;
-
-	memset(&lookup, 0, sizeof lookup);
-	lookup.dbt_name = name;
-
-	return ht_lookup(dbt_tables, &lookup);
+	return sht_lookup(dbt_tables, name);
 }

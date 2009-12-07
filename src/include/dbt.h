@@ -23,7 +23,6 @@ typedef int (*dbt_update_t)(void *dbt);
 typedef int (*dbt_validate_t)(void *dbt, var_t *record);
 
 typedef struct dbt_driver {
-	char			*dd_name;
 	dbt_db_open_t		 dd_open;
 	dbt_db_close_t		 dd_close;
 	dbt_db_set_t		 dd_set;
@@ -66,14 +65,14 @@ typedef struct dbt {
  * Prototypes
  */
 
-void dbt_driver_register(dbt_driver_t *dd);
+void dbt_driver_register(char *name, dbt_driver_t *dd);
 int dbt_db_get(dbt_t *dbt, var_t *record, var_t **result);
 int dbt_db_set(dbt_t *dbt, var_t *record);
 int dbt_db_del(dbt_t *dbt, var_t *record);
 int dbt_db_walk(dbt_t *dbt, dbt_db_callback_t callback);
 int dbt_db_sync(dbt_t *dbt);
 int dbt_db_cleanup(dbt_t *dbt);
-void dbt_register(dbt_t *dbt);
+void dbt_register(char *name, dbt_t *dbt);
 void dbt_init(void);
 void dbt_clear();
 dbt_t * dbt_lookup(char *name);

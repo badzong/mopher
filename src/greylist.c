@@ -106,7 +106,6 @@ greylist_init(void)
 		    "failed");
 	}
 
-	greylist_dbt.dbt_name = "greylist";
 	greylist_dbt.dbt_scheme = scheme;
 	greylist_dbt.dbt_validate = (dbt_validate_t) greylist_validate;
 	greylist_dbt.dbt_sql_invalid_where =
@@ -117,7 +116,7 @@ greylist_init(void)
 	 * sql bulk del where
 	 */
 
-	dbt_register(&greylist_dbt);
+	dbt_register("greylist", &greylist_dbt);
 
 	return;
 }

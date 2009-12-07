@@ -31,5 +31,6 @@ int sht_insert(sht_t *sht, char *key, void *data);
 void * sht_lookup(sht_t *sht, char *key);
 void sht_remove(sht_t *sht, char *key);
 int sht_replace(sht_t *sht, char *key, void *data);
-
+void sht_rewind(sht_t *sht);
+void * sht_next(sht_t *sht);
 #endif /* _SHT_H_ */

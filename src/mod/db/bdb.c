@@ -268,7 +268,6 @@ bdb_sync(dbt_t *dbt)
 int
 bdb_init(void)
 {
-	dbt_driver.dd_name = "bdb";
 	dbt_driver.dd_open = (dbt_db_open_t) bdb_open;
 	dbt_driver.dd_close = (dbt_db_close_t) bdb_close;
 	dbt_driver.dd_get = (dbt_db_get_t) bdb_get;
@@ -277,7 +276,7 @@ bdb_init(void)
 	dbt_driver.dd_walk = (dbt_db_walk_t) bdb_walk;
 	dbt_driver.dd_sync = (dbt_db_sync_t) bdb_sync;
 
-	dbt_driver_register(&dbt_driver);
+	dbt_driver_register("bdb", &dbt_driver);
 
 	return 0;
 }

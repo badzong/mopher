@@ -231,3 +231,27 @@ sht_replace(sht_t *sht, char *key, void *data)
 
 	return sht_insert(sht, key, data);
 }
+
+
+void
+sht_rewind(sht_t *sht)
+{
+	ht_rewind(sht->sht_ht);
+
+	return;
+}
+
+
+void *
+sht_next(sht_t *sht)
+{
+	sht_record_t *sr;
+
+	sr = ht_next(sht->sht_ht);
+	if (sr == NULL)
+	{
+		return NULL;
+	}
+
+	return sr->sr_data;
+}

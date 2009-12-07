@@ -1117,14 +1117,15 @@ var_list_append_new(var_t *list, var_type_t type, char *name, void *data,
 
 
 int
-var_table_list_append(var_t *table, var_type_t type, char *name, void *data,
-	int flags)
+var_table_list_append(var_t *table, char *listname, var_t *v)
 {
 	var_t *list;
 	ht_t *ht = table->v_data;
 
-	if ((list = var_table_lookup(table, name)) == NULL) {
-		if ((list = var_create(VT_LIST, name, NULL,
+	list = var_table_lookup(table, listname);
+	if (list == NULL)
+	{
+		if ((list = var_create(VT_LIST, listname, NULL,
 		    VF_COPYNAME | VF_CREATE)) == NULL)
 		{
 			log_warning("var_table_list_append: var_create failed");
@@ -1138,8 +1139,34 @@ var_table_list_append(var_t *table, var_type_t type, char *name, void *data,
 		}
 	}
 
+	return var_list_append(list, v);
+}
+
+
+int
+var_table_list_append_new(var_t *table, var_type_t type, char *name, void *data,
+	int flags)
+{
+	var_t *list;
+	ht_t *ht = table->v_data;
+
+	if ((list = var_table_lookup(table, name)) == NULL) {
+		if ((list = var_create(VT_LIST, name, NULL,
+		    VF_COPYNAME | VF_CREATE)) == NULL)
+		{
+			log_warning("var_table_list_append_new: var_create failed");
+			return -1;
+		}
+
+		if (ht_insert(ht, list)) {
+			log_warning("var_table_list_append_new: ht_insert failed");
+			var_delete(list);
+			return -1;
+		}
+	}
+
 	if (var_list_append_new(list, type, name, data, flags)) {
-		log_warning("var_table_list_append: var_list_append_new failed");
+		log_warning("var_table_list_append_new: var_list_append_new failed");
 		return -1;
 	}
 

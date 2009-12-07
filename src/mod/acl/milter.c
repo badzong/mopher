@@ -135,33 +135,16 @@ static milter_macro_t milter_sendmail_macros[] = {
 /*
  * Macros are loaded into hash tables
  */
-static ht_t *milter_postfix_macros_ht;
-static ht_t *milter_sendmail_macros_ht;
-
-
-static hash_t 
-milter_macro_hash(milter_macro_t *mm)
-{
-	return HASH(mm->mm_name, strlen(mm->mm_name));
-}
-
-static int
-milter_macro_match(milter_macro_t *mm1, milter_macro_t *mm2)
-{
-	if (strcmp(mm1->mm_name, mm2->mm_name)) {
-		return 0;
-	}
-
-	return 1;
-}
+static sht_t *milter_postfix_macro_table;
+static sht_t *milter_sendmail_macro_table;
 
 
 static int
 milter_macro_lookup(milter_stage_t stage, char *name, var_t *attrs)
 {
-	ht_t *macro_table;
+	sht_t *macro_table;
 	char *version;
-	milter_macro_t *mm, lookup;
+	milter_macro_t *mm;
 	char *value;
 	SMFICTX *ctx;
 	char *stagename;
@@ -178,10 +161,10 @@ milter_macro_lookup(milter_stage_t stage, char *name, var_t *attrs)
 	}
 
 	if (strncmp(version, POSTFIX, POSTFIX_LEN) == 0) {
-		macro_table = milter_postfix_macros_ht;
+		macro_table = milter_postfix_macro_table;
 	}
 	else if (strncmp(version, SENDMAIL, SENDMAIL_LEN) == 0) {
-		macro_table = milter_postfix_macros_ht;
+		macro_table = milter_postfix_macro_table;
 	}
 	else {
 		log_error("milter_macro_lookup: unkown MTA \"%s\"",
@@ -189,10 +172,7 @@ milter_macro_lookup(milter_stage_t stage, char *name, var_t *attrs)
 		return -1;
 	}
 
-	memset(&lookup, 0, sizeof(lookup));
-	lookup.mm_name = name;
-
-	mm = ht_lookup(macro_table, &lookup);
+	mm = sht_lookup(macro_table, name);
 	if (mm == NULL) {
 		log_error("milter_macro_lookup: \"%s\" has no macro for \"%s\"",
 			version, name);
@@ -242,21 +222,18 @@ milter_init(void)
 	/*
 	 * Initialize Postfix macro table
 	 */
-	milter_postfix_macros_ht = ht_create(BUCKETS,
-		(ht_hash_t) milter_macro_hash, (ht_match_t) milter_macro_match,
-		NULL);
-
-	if (milter_postfix_macros_ht == NULL)
+	milter_postfix_macro_table = sht_create(BUCKETS, NULL);
+	if (milter_postfix_macro_table == NULL)
 	{
-		log_error("milter: init: ht_create failed");
+		log_error("milter: init: sht_create failed");
 		return -1;
 	}
 
 	for (mm = milter_postfix_macros; mm->mm_name; ++mm)
 	{
-		if (ht_insert(milter_postfix_macros_ht, mm))
+		if (sht_insert(milter_postfix_macro_table, mm->mm_name, mm))
 		{
-			log_error("milter: init: ht_insert failed");
+			log_error("milter: init: sht_insert failed");
 			return -1;
 		}
 	}
@@ -264,21 +241,18 @@ milter_init(void)
 	/*
 	 * Initialize Sendmail macro table
 	 */
-	milter_sendmail_macros_ht = ht_create(BUCKETS,
-		(ht_hash_t) milter_macro_hash, (ht_match_t) milter_macro_match,
-		NULL);
-
-	if (milter_sendmail_macros_ht == NULL)
+	milter_sendmail_macro_table = sht_create(BUCKETS, NULL);
+	if (milter_sendmail_macro_table == NULL)
 	{
-		log_error("milter: init: ht_create failed");
+		log_error("milter: init: sht_create failed");
 		return -1;
 	}
 
 	for (mm = milter_sendmail_macros; mm->mm_name; ++mm)
 	{
-		if (ht_insert(milter_sendmail_macros_ht, mm))
+		if (sht_insert(milter_sendmail_macro_table, mm->mm_name, mm))
 		{
-			log_error("milter: init: ht_insert failed");
+			log_error("milter: init: sht_insert failed");
 			return -1;
 		}
 	}
@@ -294,8 +268,8 @@ milter_init(void)
 void
 milter_fini(void)
 {
-	ht_delete(milter_postfix_macros_ht);
-	ht_delete(milter_sendmail_macros_ht);
+	sht_delete(milter_postfix_macro_table);
+	sht_delete(milter_sendmail_macro_table);
 
 	return;
 }

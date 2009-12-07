@@ -11,61 +11,15 @@
 #define BUFLEN 1024
 #define RBL_BUCKETS 32
 
-typedef struct rbl {
-	char *rbl_name;
-	char *rbl_domain;
-} rbl_t;
-
-static ht_t *rbl_table;
-
-static void
-rbl_delete(rbl_t *rbl)
-{
-	free(rbl);
-
-	return;
-}
-
+static sht_t *rbl_table;
 
 static int
 rbl_register(char *name, char *domain)
 {
-	rbl_t *rbl;
-
-	rbl = (rbl_t *) malloc(sizeof (rbl_t));
-	if (rbl == NULL)
+	if (sht_insert(rbl_table, name, domain))
 	{
-		log_error("rbl_register: malloc");
+		log_error("rbl_register: sht_insert failed");
 		return -1;
-	}
-
-	rbl->rbl_name = name;
-	rbl->rbl_domain = domain;
-
-	if (ht_insert(rbl_table, rbl))
-	{
-		log_error("rbl_register: ht_insert failed");
-		rbl_delete(rbl);
-		return -1;
-	}
-
-	return 0;
-}
-
-
-static hash_t
-rbl_hash(rbl_t *rbl)
-{
-	return HASH(rbl->rbl_name, strlen(rbl->rbl_name));
-}
-
-
-static int
-rbl_match(rbl_t *r1, rbl_t *r2)
-{
-	if (strcmp(r1->rbl_name, r2->rbl_name) == 0)
-	{
-		return 1;
 	}
 
 	return 0;
@@ -75,7 +29,7 @@ rbl_match(rbl_t *r1, rbl_t *r2)
 int
 rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 {
-	rbl_t lookup, *rbl;
+	char *domain;
 	struct sockaddr_storage *addr;
 	char *addrstr = NULL;
 	char query[BUFLEN];
@@ -88,10 +42,8 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	int i;
 
 
-	lookup.rbl_name = name;
-
-	rbl = ht_lookup(rbl_table, &lookup);
-	if (rbl == NULL)
+	domain = sht_lookup(rbl_table, name);
+	if (domain == NULL)
 	{
 		log_error("rbl_query: unknown rbl \"%s\"", name);
 		goto error;
@@ -134,7 +86,7 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	 * Build query string
 	 */
 	snprintf(query, sizeof query, "%s.%s.%s.%s.%s", b[3], b[2], b[1], b[0],
-	    rbl->rbl_domain);
+	    domain);
 
 	bzero(&hints, sizeof(hints));
 	hints.ai_family = AF_INET;
@@ -206,12 +158,11 @@ rbl_init(void)
 	ht_t *config;
 	var_t *v;
 
-	rbl_table = ht_create(RBL_BUCKETS, (ht_hash_t) rbl_hash,
-	    (ht_match_t) rbl_match, (ht_delete_t) rbl_delete);
+	rbl_table = sht_create(RBL_BUCKETS, NULL);
 
 	if (rbl_table == NULL)
 	{
-		log_error("rbl: init: ht_create failed");
+		log_error("rbl: init: sht_create failed");
 		return 0;
 	}
 		
@@ -243,7 +194,7 @@ rbl_fini(void)
 {
 	if (rbl_table)
 	{
-		ht_delete(rbl_table);
+		sht_delete(rbl_table);
 	}
 
 	return;

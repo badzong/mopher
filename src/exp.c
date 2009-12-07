@@ -6,25 +6,22 @@
 
 #define EXP_BUCKETS 128
 #define EXP_STRLEN 1024
-#define EXP_VAR "VAR"
+
+#define EXP_VAR "VARIABLES"
+#define EXP_GARBAGE "GARBAGE"
+
 
 static sht_t *exp_defs;
+static ll_t *exp_garbage;
 
 
 static void
-exp_operation_delete(exp_t *exp)
+exp_function_delete(exp_t *exp)
 {
-	exp_operation_t *eo = exp->ex_data;
+	exp_function_t *ef = exp->ex_data;;
 
-	if (eo->eo_operand[0])
-	{
-		exp_delete(eo->eo_operand[0]);
-	}
-
-	if (eo->eo_operand[1])
-	{
-		exp_delete(eo->eo_operand[1]);
-	}
+	free(ef->ef_name);
+	free(ef);
 
 	return;
 }
@@ -39,20 +36,15 @@ exp_delete(exp_t *exp)
 		var_delete(exp->ex_data);
 		break;
 
-	case EX_LIST:
-		ll_delete(exp->ex_data, (ll_delete_t) exp_delete);
+	case EX_FUNCTION:
+		exp_function_delete(exp);
 		break;
 
+	case EX_LIST:
 	case EX_SYMBOL:
-	case EX_FUNCTION:
-		log_die(EX_SOFTWARE, "TODO: CAN'T FREE SYMBOLS OR FUNCTIONS");
-	
+	case EX_OPERATION:
 	case EX_VARIABLE:
 		free(exp->ex_data);
-		break;
-
-	case EX_OPERATION:
-		exp_operation_delete(exp);
 		break;
 
 	default:
@@ -78,6 +70,11 @@ exp_create(exp_type_t type, void *data)
 
 	exp->ex_type = type;
 	exp->ex_data = data;
+
+	if (LL_INSERT(exp_garbage, exp) == -1)
+	{
+		log_die(EX_OSERR, "exp_create: LL_INSERT failed");
+	}
 
 	return exp;
 }
@@ -169,10 +166,12 @@ exp_constant(var_type_t type, void *data)
 	case VT_ADDR:
 		v = var_create(type, NULL, data, VF_REF);
 		break;
+
 	case VT_INT:
 	case VT_FLOAT:
 		v = var_create(type, NULL, data, VF_COPYDATA);
 		break;
+
 	default:
 		log_die(EX_SOFTWARE, "exp_constant: bad type");
 	}
@@ -210,6 +209,11 @@ exp_function(char *id, exp_t *args)
 {
 	exp_function_t *ef;
 
+	if (acl_function_lookup(id) == NULL)
+	{
+		parser_error("unknown function \"%s\"", id);
+	}
+		
 	ef = (exp_function_t *) malloc(sizeof (exp_function_t));
 	if (ef == NULL)
 	{
@@ -223,6 +227,18 @@ exp_function(char *id, exp_t *args)
 }
 
 
+void
+exp_mail_garbage(var_t *mailspec, var_t *v)
+{
+	if (var_table_list_append(mailspec, EXP_GARBAGE, v))
+	{
+		log_error("exp_mail_garbage: var_table_list_append failed");
+	}
+
+	return;
+}
+
+
 var_t *
 exp_eval_list(exp_t *exp, var_t *mailspec)
 {
@@ -233,7 +249,7 @@ exp_eval_list(exp_t *exp, var_t *mailspec)
 	exp_list = exp->ex_data;
 	ll_rewind(exp_list);
 
-	var_list = var_create(VT_LIST, NULL, NULL, VF_CREATE);
+	var_list = var_create(VT_LIST, NULL, NULL, VF_CREATE | VF_KEEPDATA);
 	if (var_list == NULL)
 	{
 		log_error("exp_eval_list: malloc");
@@ -250,6 +266,8 @@ exp_eval_list(exp_t *exp, var_t *mailspec)
 			goto error;
 		}
 	}
+
+	exp_mail_garbage(mailspec, var_list);
 
 	return var_list;
 
@@ -291,7 +309,7 @@ exp_eval_function(exp_t *exp, var_t *mailspec)
 	{
 		v = args;
 
-		args = var_create(VT_LIST, NULL, NULL, VF_CREATE);
+		args = var_create(VT_LIST, NULL, NULL, VF_CREATE | VF_KEEPDATA);
 		if (args == NULL)
 		{
 			log_error("exp_eval_function: var_create failed");
@@ -304,6 +322,8 @@ exp_eval_function(exp_t *exp, var_t *mailspec)
 			var_delete(args);
 			return NULL;
 		}
+
+		exp_mail_garbage(mailspec, args);
 	}
 
 	ll_rewind(args->v_data);
@@ -313,6 +333,8 @@ exp_eval_function(exp_t *exp, var_t *mailspec)
 		log_error("exp_eval_function: function callback \"%s\" failed",
 		    ef->ef_name);
 	}
+
+	exp_mail_garbage(mailspec, v);
 
 	return v;
 }
@@ -372,7 +394,7 @@ exp_assign(exp_t *left, exp_t *right, var_t *mailspec)
 	if (variables == NULL)
 	{
 		variables = var_create(VT_TABLE, EXP_VAR, NULL,
-		    VF_CREATE | VF_KEEPNAME);
+		    VF_CREATE | VF_KEEP);
 
 		if (variables == NULL)
 		{
@@ -707,6 +729,8 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 				    "failed");
 				return NULL;
 			}
+
+			exp_mail_garbage(mailspec, right);
 		}
 	}
 
@@ -728,7 +752,9 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 		log_error("exp_eval_operation: bad type");
 		result = NULL;
 	}
-	
+
+	exp_mail_garbage(mailspec, result);
+
 	return result;
 }
 
@@ -792,10 +818,16 @@ exp_init(void)
 	/*
 	 * Create variable table if neccessary
 	 */
-	exp_defs = sht_create(EXP_BUCKETS, (sht_delete_t) exp_delete);
+	exp_defs = sht_create(EXP_BUCKETS, NULL);
 	if (exp_defs == NULL)
 	{
 		log_die(EX_SOFTWARE, "exp_init: sht_create failed");
+	}
+
+	exp_garbage = ll_create();
+	if (exp_garbage == NULL)
+	{
+		log_die(EX_SOFTWARE, "exp_init: ll_create failed");
 	}
 
 	return;
@@ -808,6 +840,11 @@ exp_clear(void)
 	if (exp_defs)
 	{
 		sht_delete(exp_defs);
+	}
+
+	if (exp_garbage)
+	{
+		ll_delete(exp_garbage, (ll_delete_t) exp_delete);
 	}
 
 	return;
