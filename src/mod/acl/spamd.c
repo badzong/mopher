@@ -104,11 +104,11 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 	VAR_FLOAT_T score;
 	long len, size;
 
-	if (var_table_dereference(attrs, "milter_header", &header,
+	if (vtable_dereference(attrs, "milter_header", &header,
 	    "milter_header_size", &header_size, "milter_body", &body,
 	    "milter_body_size", &body_size, NULL))
 	{
-		log_error("spamd_query: var_table_dereference failed");
+		log_error("spamd_query: vtable_dereference failed");
 		goto error;
 	}
 
@@ -282,23 +282,24 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 			*q = 0;
 		}
 
-		if (var_list_append_new(symbols, VT_STRING, NULL, p,
+		if (vlist_append_new(symbols, VT_STRING, NULL, p,
 			VF_COPYDATA) == -1) {
-			log_error("spamd_query: var_list_append failed");
+			log_error("spamd_query: vlist_append failed");
 			goto error;
 		}
 
 		p = q + 1;
 	} while (q);
 
-	if (var_table_setv(attrs, VT_INT, "spamd_spam", &spam,
+	if (vtable_setv(attrs, VT_INT, "spamd_spam", &spam,
 		VF_KEEPNAME | VF_COPYDATA, VT_FLOAT, "spamd_score", &score,
 		VF_KEEPNAME | VF_COPYDATA, VT_NULL)) {
-		log_error("spamd_query: var_table_setv failed");
+		log_error("spamd_query: vtable_setv failed");
 		goto error;
 	}
-	if (var_table_set(attrs, symbols)) {
-		log_error("spamd_query: var_table_set failed");
+
+	if (vtable_set(attrs, symbols)) {
+		log_error("spamd_query: vtable_set failed");
 		goto error;
 	}
 

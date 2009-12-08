@@ -66,9 +66,9 @@ greylist_validate(dbt_t *dbt, var_t *record)
 	VAR_INT_T *created;
 	VAR_INT_T *valid;
 
-	if (var_list_dereference(record, NULL, NULL, NULL, &created, &valid,
+	if (vlist_dereference(record, NULL, NULL, NULL, &created, &valid,
 		NULL, NULL, NULL, NULL)) {
-		log_warning("greylist_valid: var_list_unpack failed");
+		log_warning("greylist_valid: vlist_dereference failed");
 		return -1;
 	}
 
@@ -88,7 +88,7 @@ greylist_init(void)
 {
 	var_t *scheme;
 
-	scheme = var_scheme_create("greylist",
+	scheme = vlist_scheme("greylist",
 		"hostaddr",	VT_ADDR,	VF_KEEPNAME | VF_KEY, 
 		"envfrom",	VT_STRING,	VF_KEEPNAME | VF_KEY,
 		"envrcpt",	VT_STRING,	VF_KEEPNAME | VF_KEY,
@@ -101,9 +101,9 @@ greylist_init(void)
 		"passed",	VT_INT,		VF_KEEPNAME,
 		NULL);
 
-	if (scheme == NULL) {
-		log_die(EX_SOFTWARE, "greylist: init: var_scheme_create "
-		    "failed");
+	if (scheme == NULL)
+	{
+		log_die(EX_SOFTWARE, "greylist: init: vlist_scheme failed");
 	}
 
 	greylist_dbt.dbt_scheme = scheme;
@@ -139,24 +139,24 @@ greylist_lookup(var_t *attrs, var_t **record)
 	char *envfrom;
 	char *envrcpt;
 	
-	if (var_table_dereference(attrs, "milter_hostaddr", &hostaddr,
-		"milter_envfrom", &envfrom, "milter_envrcpt", &envrcpt, NULL))
+	if (vtable_dereference(attrs, "milter_hostaddr", &hostaddr,
+	    "milter_envfrom", &envfrom, "milter_envrcpt", &envrcpt, NULL))
 	{
-		log_error("greylist_lookup: var_table_dereference failed");
+		log_error("greylist_lookup: vtable_dereference failed");
 		goto error;
 	}
 
-	lookup = var_list_scheme(greylist_dbt.dbt_scheme, hostaddr, envfrom,
+	lookup = vlist_record(greylist_dbt.dbt_scheme, hostaddr, envfrom,
 		envrcpt, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 	if (lookup == NULL) {
-		log_warning("greylist_lookup: var_list_scheme failed");
+		log_warning("greylist_lookup: vlist_record failed");
 		goto error;
 	}
 
 	if (dbt_db_get(&greylist_dbt, lookup, record))
 	{
-		log_warning("greylist_lookup: var_db_get failed");
+		log_warning("greylist_lookup: dbt_db_get failed");
 		goto error;
 	}
 
@@ -184,10 +184,10 @@ greylist_add(var_t *attrs, greylist_t *gl)
 	time_t now;
 	VAR_INT_T created, updated, delay, visa, valid, retries, passed;
 	
-	if (var_table_dereference(attrs, "milter_hostaddr", &hostaddr,
+	if (vtable_dereference(attrs, "milter_hostaddr", &hostaddr,
 		"milter_envfrom", &envfrom, "milter_envrcpt", &envrcpt, NULL))
 	{
-		log_error("greylist_lookup: var_table_dereference failed");
+		log_error("greylist_lookup: vtable_dereference failed");
 		return -1;
 	}
 
@@ -205,12 +205,12 @@ greylist_add(var_t *attrs, greylist_t *gl)
 	retries = 1;
 	passed = 0;
 
-	record = var_scheme_refcopy(greylist_dbt.dbt_scheme, hostaddr,
-		envfrom, envrcpt, &created, &updated, &valid, &delay, &retries,
-		&visa, &passed);
+	record = vlist_record(greylist_dbt.dbt_scheme, hostaddr, envfrom,
+	    envrcpt, &created, &updated, &valid, &delay, &retries, &visa,
+	    &passed);
 
 	if (record == NULL) {
-		log_warning("greylist_add: var_scheme_refcopy failed");
+		log_warning("greylist_add: vlist_record failed");
 		return -1;
 	}
 
@@ -251,10 +251,10 @@ greylist(var_t *attrs, greylist_t *gl)
 		goto add;
 	}
 
-	if (var_list_dereference(record, NULL, NULL, NULL, &created, &updated,
+	if (vlist_dereference(record, NULL, NULL, NULL, &created, &updated,
 	    &valid, &delay, &retries, &visa, &passed))
 	{
-		log_warning("greylist: var_list_unpack failed");
+		log_warning("greylist: vlist_dereference failed");
 		goto error;
 	}
 

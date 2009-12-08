@@ -452,9 +452,9 @@ client_init()
 	for (ht_rewind(server_table); (server = ht_next(server_table));)
 	{
 		name = server->v_name;
-		path = var_table_get(server, "socket");
-		secret = var_table_get(server, "secret");
-		myname = var_table_get(server, "myname");
+		path = vtable_get(server, "socket");
+		secret = vtable_get(server, "secret");
+		myname = vtable_get(server, "myname");
 
 		if (myname == NULL)
 		{

@@ -41,6 +41,9 @@ exp_delete(exp_t *exp)
 		break;
 
 	case EX_LIST:
+		ll_delete(exp->ex_data, NULL);
+		break;
+
 	case EX_SYMBOL:
 	case EX_OPERATION:
 	case EX_VARIABLE:
@@ -200,6 +203,11 @@ exp_operation(int operator, exp_t *op1, exp_t *op2)
 	eo->eo_operand[0] = op1;
 	eo->eo_operand[1] = op2;
 
+	if (operator == '=' && op1->ex_type != EX_VARIABLE)
+	{
+		parser_error("bad use of '=' operator");
+	}
+
 	return exp_create(EX_OPERATION, eo);
 }
 
@@ -228,12 +236,35 @@ exp_function(char *id, exp_t *args)
 
 
 void
-exp_mail_garbage(var_t *mailspec, var_t *v)
+exp_free_list(ll_t *list)
 {
-	if (var_table_list_append(mailspec, EXP_GARBAGE, v))
+	var_t *item;
+
+	ll_rewind(list);
+	while ((item = ll_next(list)))
 	{
-		log_error("exp_mail_garbage: var_table_list_append failed");
+		exp_free(item);
 	}
+
+	return;
+}
+
+void
+exp_free(var_t *v)
+{
+	if ((v->v_flags & VF_EXP_FREE) == 0)
+	{
+		return;
+	}
+
+	if (v->v_type == VT_LIST && v->v_data)
+	{
+		exp_free_list(v->v_data);
+		ll_delete(v->v_data, NULL);
+		v->v_data = NULL;
+	}
+
+	var_delete(v);
 
 	return;
 }
@@ -249,7 +280,7 @@ exp_eval_list(exp_t *exp, var_t *mailspec)
 	exp_list = exp->ex_data;
 	ll_rewind(exp_list);
 
-	var_list = var_create(VT_LIST, NULL, NULL, VF_CREATE | VF_KEEPDATA);
+	var_list = vlist_create(NULL, VF_EXP_FREE);
 	if (var_list == NULL)
 	{
 		log_error("exp_eval_list: malloc");
@@ -260,14 +291,12 @@ exp_eval_list(exp_t *exp, var_t *mailspec)
 	{
 		var_item = exp_eval(exp_item, mailspec);
 
-		if (var_list_append(var_list, var_item))
+		if (vlist_append(var_list, var_item))
 		{
 			log_error("exp_eval_list: malloc");
 			goto error;
 		}
 	}
-
-	exp_mail_garbage(mailspec, var_list);
 
 	return var_list;
 
@@ -309,21 +338,19 @@ exp_eval_function(exp_t *exp, var_t *mailspec)
 	{
 		v = args;
 
-		args = var_create(VT_LIST, NULL, NULL, VF_CREATE | VF_KEEPDATA);
+		args = vlist_create(NULL, VF_EXP_FREE);
 		if (args == NULL)
 		{
 			log_error("exp_eval_function: var_create failed");
 			return NULL;
 		}
 
-		if (var_list_append(args, v))
+		if (vlist_append(args, v))
 		{
-			log_error("exp_eval_function: var_list_append failed");
+			log_error("exp_eval_function: vlist_append failed");
 			var_delete(args);
 			return NULL;
 		}
-
-		exp_mail_garbage(mailspec, args);
 	}
 
 	ll_rewind(args->v_data);
@@ -334,7 +361,9 @@ exp_eval_function(exp_t *exp, var_t *mailspec)
 		    ef->ef_name);
 	}
 
-	exp_mail_garbage(mailspec, v);
+	exp_free(args);
+
+	v->v_flags |= VF_EXP_FREE;
 
 	return v;
 }
@@ -351,14 +380,14 @@ exp_eval_variable(exp_t *exp, var_t *mailspec)
 		return NULL;
 	}
 
-	variables = var_table_lookup(mailspec, EXP_VAR);
+	variables = vtable_lookup(mailspec, EXP_VAR);
 	if (variables == NULL)
 	{
 		log_error("exp_eval_variable: no variables set");
 		return NULL;
 	}
 
-	value = var_table_lookup(variables, exp->ex_data);
+	value = vtable_lookup(variables, exp->ex_data);
 	if (value == NULL)
 	{
 		log_error("exp_eval_variable: unknown variable \"%s\"",
@@ -372,39 +401,29 @@ exp_eval_variable(exp_t *exp, var_t *mailspec)
 static var_t *
 exp_assign(exp_t *left, exp_t *right, var_t *mailspec)
 {
-	var_t *variables, *value;
+	var_t *variables, *value, *copy;
 	char *name;
-
-	if (left->ex_type != EX_VARIABLE)
-	{
-		log_error("exp_assign: bad use of '=' operator");
-		return NULL;
-	}
-
-	name = left->ex_data;
 
 	/*
 	 * Get variable space
 	 */
-	variables = var_table_lookup(mailspec, EXP_VAR);
+	variables = vtable_lookup(mailspec, EXP_VAR);
 
 	/*
 	 * No variables yet. Create variable space
 	 */
 	if (variables == NULL)
 	{
-		variables = var_create(VT_TABLE, EXP_VAR, NULL,
-		    VF_CREATE | VF_KEEP);
-
+		variables = vtable_create(EXP_VAR, VF_KEEPNAME);
 		if (variables == NULL)
 		{
-			log_error("exp_eval_variable: var_create failed");
+			log_error("exp_eval_variable: vtable_create failed");
 			return NULL;
 		}
 
-		if (var_table_set(mailspec, variables))
+		if (vtable_set(mailspec, variables))
 		{
-			log_error("exp_eval_variable: var_table_set failed");
+			log_error("exp_eval_variable: vtable_set failed");
 			var_delete(variables);
 			return NULL;
 		}
@@ -420,13 +439,25 @@ exp_assign(exp_t *left, exp_t *right, var_t *mailspec)
 		return NULL;
 	}
 
-	var_rename(value, name, VF_KEEPNAME);
-
-	if (var_table_set(variables, value))
+	/*
+	 * Sava a copy
+	 */
+	copy = VAR_COPY(value);
+	if (copy == NULL)
 	{
-		log_error("exp_eval_variable: var_table_set failed");
+		log_error("exp_assign: VAR_COPY failed");
 		return NULL;
 	}
+
+	var_rename(copy, left->ex_data, VF_KEEPNAME);
+
+	if (vtable_set(variables, copy))
+	{
+		log_error("exp_eval_variable: vtable_set failed");
+		return NULL;
+	}
+
+	exp_free(value);
 
 	return value;
 }
@@ -443,64 +474,26 @@ exp_math_int(int op, var_t *left, var_t *right)
 
 	switch (op)
 	{
-	case '+':
-		x = *l + *r;
-		break;
-
-	case '-':
-		x = *l - *r;
-		break;
-
-	case '*':
-		x = *l * *r;
-		break;
-
-	case '/':
-		x = *l / *r;
-		break;
-
-	case '<':
-		x = *l < *r;
-		break;
-
-	case '>':
-		x = *l + *r;
-		break;
-
-	case '!':
-		x = ! *l;
-		break;
-
-	case EQ:
-		x = *l == *r;
-		break;
-
-	case NE:
-		x = *l != *r;
-		break;
-
-	case LE:
-		x = *l <= *r;
-		break;
-
-	case GE:
-		x = *l >= *r;
-		break;
-
-	case AND:
-		x = *l && *r;
-		break;
-
-	case OR:
-		x = *l || *r;
-		break;
+	case '+':	x = *l + *r;	break;
+	case '-':	x = *l - *r;	break;
+	case '*':	x = *l * *r;	break;
+	case '/':	x = *l / *r;	break;
+	case '<':	x = *l < *r;	break;
+	case '>':	x = *l + *r;	break;
+	case '!':	x = ! *l;	break;
+	case EQ:	x = *l == *r;	break;
+	case NE:	x = *l != *r;	break;
+	case LE:	x = *l <= *r;	break;
+	case GE:	x = *l >= *r;	break;
+	case AND:	x = *l && *r;	break;
+	case OR:	x = *l || *r;	break;
 
 	default:
 		log_error("exp_math_int: bad operation");
 		return NULL;
 	}
 
-	v = var_create(VT_INT, NULL, &x, VF_COPYDATA);
+	v = var_create(VT_INT, NULL, &x, VF_COPYDATA | VF_EXP_FREE);
 	if (v == NULL)
 	{
 		log_error("exp_math_int: var_create failed");
@@ -522,74 +515,37 @@ exp_math_float(int op, var_t *left, var_t *right)
 
 	switch (op)
 	{
-	case '+':
-		x = *l + *r;
-		v = var_create(VT_FLOAT, NULL, &x, VF_COPYDATA);
-		break;
+	case '+':	x = *l + *r;	break;
+	case '-':	x = *l - *r;	break;
+	case '*':	x = *l * *r;	break;
+	case '/':	x = *l / *r;	break;
 
-	case '-':
-		x = *l - *r;
-		v = var_create(VT_FLOAT, NULL, &x, VF_COPYDATA);
-		break;
-
-	case '*':
-		x = *l * *r;
-		v = var_create(VT_FLOAT, NULL, &x, VF_COPYDATA);
-		break;
-
-	case '/':
-		x = *l / *r;
-		v = var_create(VT_FLOAT, NULL, &x, VF_COPYDATA);
-		break;
-
-	case '<':
-		i = *l < *r;
-		v = var_create(VT_INT, NULL, &i, VF_COPYDATA);
-		break;
-
-	case '>':
-		i = *l > *r;
-		v = var_create(VT_INT, NULL, &i, VF_COPYDATA);
-		break;
-
-	case '!':
-		i = ! *l;
-		v = var_create(VT_INT, NULL, &i, VF_COPYDATA);
-		break;
-
-	case EQ:
-		i = *l == *r;
-		v = var_create(VT_INT, NULL, &i, VF_COPYDATA);
-		break;
-
-	case NE:
-		i = *l != *r;
-		v = var_create(VT_INT, NULL, &i, VF_COPYDATA);
-		break;
-
-	case LE:
-		i = *l <= *r;
-		v = var_create(VT_INT, NULL, &i, VF_COPYDATA);
-		break;
-
-	case GE:
-		i = *l >= *r;
-		v = var_create(VT_INT, NULL, &i, VF_COPYDATA);
-		break;
-
-	case AND:
-		i = *l && *r;
-		v = var_create(VT_INT, NULL, &i, VF_COPYDATA);
-		break;
-
-	case OR:
-		x = *l || *r;
-		v = var_create(VT_INT, NULL, &i, VF_COPYDATA);
-		break;
+	case '<':	i = *l < *r;	break;
+	case '>':	i = *l > *r;	break;
+	case '!':	i = ! *l;	break;
+	case EQ:	i = *l == *r;	break;
+	case NE:	i = *l != *r;	break;
+	case LE:	i = *l <= *r;	break;
+	case GE:	i = *l >= *r;	break;
+	case AND:	i = *l && *r;	break;
+	case OR:	i = *l || *r;	break;
 
 	default:
 		log_error("exp_math_float: bad operation");
 		return NULL;
+	}
+
+	switch (op)
+	{
+	case '+':
+	case '-':
+	case '*':
+	case '/':
+		v = var_create(VT_FLOAT, NULL, &x, VF_COPYDATA | VF_EXP_FREE);
+		break;
+
+	default:
+		v = var_create(VT_INT, NULL, &i, VF_COPYDATA | VF_EXP_FREE);
 	}
 
 	if (v == NULL)
@@ -613,7 +569,23 @@ exp_math_string(int op, var_t *left, var_t *right)
 
 	switch (op)
 	{
-	case '+':
+	case '+':						break;
+	case '<':	i = strcmp(l, r) == -1;			break;
+	case '>':	i = strcmp(l, r) == 1;			break;
+	case EQ:	i = strcmp(l, r) == 0;			break;
+	case NE:	i = strcmp(l, r) != 0;			break;
+	case LE:	i = strcmp(l, r) <= 0;			break;
+	case GE:	i = strcmp(l, r) >= 0;			break;
+	case AND:	i = var_true(left) && var_true(right);	break;
+	case OR:	i = var_true(left) || var_true(right);	break;
+
+	default:
+		log_error("exp_math_string: bad operation");
+		return NULL;
+	}
+
+	if (op == '+')
+	{
 		if (util_concat(x, sizeof x, l, r, NULL) == -1)
 		{
 			log_error("exp_math_string: util_concat: buffer "
@@ -621,62 +593,13 @@ exp_math_string(int op, var_t *left, var_t *right)
 			return NULL;
 		}
 
-		v = var_create(VT_STRING, NULL, x, VF_COPYDATA);
-		break;
-
-	case '<':
-		i = strcmp(l, r) == -1;
-
-		v = var_create(VT_INT, NULL, &i, VF_COPYDATA);
-		break;
-
-	case '>':
-		i = strcmp(l, r) == 1;
-
-		v = var_create(VT_INT, NULL, &i, VF_COPYDATA);
-		break;
-
-	case EQ:
-		i = strcmp(l, r) == 0;
-
-		v = var_create(VT_INT, NULL, &i, VF_COPYDATA);
-		break;
-
-	case NE:
-		i = strcmp(l, r) != 0;
-
-		v = var_create(VT_INT, NULL, &i, VF_COPYDATA);
-		break;
-
-	case LE:
-		i = strcmp(l, r) <= 0;
-
-		v = var_create(VT_INT, NULL, &i, VF_COPYDATA);
-		break;
-
-	case GE:
-		i = strcmp(l, r) >= 0;
-
-		v = var_create(VT_INT, NULL, &i, VF_COPYDATA);
-		break;
-
-	case AND:
-		i = var_true(left) && var_true(right);
-
-		v = var_create(VT_INT, NULL, &i, VF_COPYDATA);
-		break;
-
-	case OR:
-		i = var_true(left) || var_true(right);
-
-		v = var_create(VT_INT, NULL, &i, VF_COPYDATA);
-		break;
-
-	default:
-		log_error("exp_math_string: bad operation");
-		return NULL;
+		v = var_create(VT_STRING, NULL, x, VF_COPYDATA | VF_EXP_FREE);
 	}
-
+	else
+	{
+		v = var_create(VT_INT , NULL, &i, VF_COPYDATA | VF_EXP_FREE);
+	}
+		
 	if (v == NULL)
 	{
 		log_error("exp_math_string: var_create failed");
@@ -689,7 +612,7 @@ exp_math_string(int op, var_t *left, var_t *right)
 var_t *
 exp_eval_operation(exp_t *exp, var_t *mailspec)
 {
-	var_t *left, *right;
+	var_t *left, *right, *copy;
 	exp_operation_t *eo = exp->ex_data;
 	var_t *result;
 
@@ -722,15 +645,18 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 
 		if (left->v_type != right->v_type)
 		{
-			right = var_cast_copy(left->v_type, right);
-			if (right == NULL)
+			copy = var_cast_copy(left->v_type, right);
+			if (copy == NULL)
 			{
 				log_error("exp_eval_operation: var_cast_copy "
 				    "failed");
 				return NULL;
 			}
 
-			exp_mail_garbage(mailspec, right);
+			exp_free(right);
+
+			right = copy;
+			right->v_flags |= VF_EXP_FREE;
 		}
 	}
 
@@ -753,7 +679,8 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 		result = NULL;
 	}
 
-	exp_mail_garbage(mailspec, result);
+	exp_free(left);
+	exp_free(right);
 
 	return result;
 }
@@ -764,23 +691,12 @@ exp_eval(exp_t *exp, var_t *mailspec)
 {
 	switch (exp->ex_type)
 	{
-	case EX_CONSTANT:
-		return exp->ex_data;
-
-	case EX_LIST:
-		return exp_eval_list(exp, mailspec);
-
-	case EX_SYMBOL:
-		return acl_symbol_get(mailspec, exp->ex_data);
-
-	case EX_FUNCTION:
-		return exp_eval_function(exp, mailspec);
-
-	case EX_OPERATION:
-		return exp_eval_operation(exp, mailspec);
-
-	case EX_VARIABLE:
-		return exp_eval_variable(exp, mailspec);
+	case EX_CONSTANT:	return exp->ex_data;
+	case EX_LIST:		return exp_eval_list(exp, mailspec);
+	case EX_SYMBOL:		return acl_symbol_get(mailspec, exp->ex_data);
+	case EX_FUNCTION:	return exp_eval_function(exp, mailspec);
+	case EX_OPERATION:	return exp_eval_operation(exp, mailspec);
+	case EX_VARIABLE:	return exp_eval_variable(exp, mailspec);
 
 	default:
 		log_error("exp_eval: bad type");
@@ -794,6 +710,7 @@ int
 exp_true(exp_t *exp, var_t *mailspec)
 {
 	var_t *v;
+	int r;
 
 	if (exp == NULL)
 	{
@@ -808,7 +725,11 @@ exp_true(exp_t *exp, var_t *mailspec)
 		return 0;
 	}
 
-	return var_true(v);
+	r = var_true(v);
+
+	exp_free(v);
+
+	return r;
 }
 
 

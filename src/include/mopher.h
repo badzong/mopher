@@ -20,6 +20,8 @@
 #include "sock.h"
 #include "util.h"
 #include "var.h"
+#include "vlist.h"
+#include "vtable.h"
 #include "client.h"
 #include "server.h"
 #include "exp.h"

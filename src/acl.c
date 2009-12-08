@@ -28,16 +28,29 @@ static acl_action_handler_t acl_action_handlers[] = {
 	(acl_action_handler_t) tarpit		/* ACL_TARPIT	*/
 };
 
+static acl_action_delete_t acl_action_deleters[] = {
+	NULL,					/* ACL_NULL 	*/
+	NULL,					/* ACL_NONE 	*/
+	NULL,					/* ACL_CONTINUE	*/
+	NULL,					/* ACL_REJECT	*/
+	NULL,					/* ACL_DISCARD	*/
+	NULL,					/* ACL_ACCEPT	*/
+	NULL,					/* ACL_TEMPFAIL	*/
+	(acl_action_delete_t) free,		/* ACL_JUMP	*/
+	(acl_action_delete_t) NULL,		/* ACL_SET	*/
+	(acl_action_delete_t) free,		/* ACL_LOG	*/
+	(acl_action_delete_t) free,		/* ACL_GREYLIST	*/
+	(acl_action_delete_t) free		/* ACL_TARPIT	*/
+};
+
 
 static void
 acl_action_delete(acl_action_t *aa)
 {
-	/*
-	if (aa->aa_data)
+	if (acl_action_deleters[aa->aa_type] && aa->aa_data)
 	{
-		free(aa->aa_data);
+		acl_action_deleters[aa->aa_type](aa->aa_data);
 	}
-	*/
 
 	free(aa);
 
@@ -178,7 +191,7 @@ acl_symbol_delete(acl_symbol_t *as)
 {
 	if (as->as_type == AS_CONSTANT)
 	{
-		free(as->as_data);
+		var_delete(as->as_data);
 	}
 
 	free(as);
@@ -323,7 +336,7 @@ acl_symbol_get(var_t *mailspec, char *name)
 		return NULL;
 	}
 
-	stage = var_table_get(mailspec, "milter_stage");
+	stage = vtable_get(mailspec, "milter_stage");
 	if (stage == NULL)
 	{
 		log_debug("acl_symbol_get: milter stage not set");
@@ -333,7 +346,7 @@ acl_symbol_get(var_t *mailspec, char *name)
 
 	if ((as->as_stages & *stage) == 0)
 	{
-		stagename = var_table_get(mailspec, "milter_stagename");
+		stagename = vtable_get(mailspec, "milter_stagename");
 		log_notice("acl_symbol_get: symbol \"%s\" not available at %s",
 		    name, stagename);
 
@@ -349,6 +362,7 @@ acl_symbol_get(var_t *mailspec, char *name)
 	case AS_CONSTANT:
 	case AS_SYMBOL:
 		break;
+
 	default:
 		log_error("acl_symbol_get: bad type");
 		return NULL;
@@ -365,7 +379,7 @@ acl_symbol_get(var_t *mailspec, char *name)
 	/*
 	 * Lookup symbol
 	 */
-	v = var_table_lookup(mailspec, name);
+	v = vtable_lookup(mailspec, name);
 	if (v)
 	{
 		return v;
@@ -385,7 +399,7 @@ acl_symbol_get(var_t *mailspec, char *name)
 		return NULL;
 	}
 
-	v = var_table_lookup(mailspec, name);
+	v = vtable_lookup(mailspec, name);
 	if (v == NULL)
 	{
 		log_error("acl_symbol_get: symbol \"%s\" not set", name);
@@ -430,6 +444,18 @@ acl_symbol_dereference(var_t *mailspec, ...)
 	}
 
 	return errors;
+}
+
+
+void
+acl_log_delete(acl_log_t *al)
+{
+	if (al->al_exp)
+	{
+		exp_delete(al->al_exp);
+	}
+
+	free(al);
 }
 
 
@@ -482,6 +508,8 @@ acl_log(var_t *mailspec, acl_log_t *al)
 	{
 		log_log(al->al_level, v->v_data);
 	}
+
+	exp_free(v);
 
 	return ACL_NONE;
 }

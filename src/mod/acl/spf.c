@@ -121,10 +121,10 @@ result:
 	log_debug("spf: helo:%s envfrom:%s spf:%s", helo,
 		envfrom, spfstr);
 
-	if (var_table_setv(attrs, VT_STRING, "spf", spfstr,
+	if (vtable_setv(attrs, VT_STRING, "spf", spfstr,
 	    VF_KEEPNAME | VF_KEEPDATA, VT_NULL))
 	{
-		log_error("spf: var_table_setv failed");
+		log_error("spf: vtable_setv failed");
 		goto error;
 	}
 

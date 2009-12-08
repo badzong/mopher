@@ -16,7 +16,19 @@
 #define VF_KEEPNAME	1<<2
 #define VF_KEEPDATA	1<<3
 #define VF_CREATE	1<<4
+
+/*
+ * VF_KEY is used in dbt.c to distinct between key and non-key values
+ */
 #define VF_KEY		1<<5
+
+/*
+ * VF_EXP_FREE is used in exp.c to mark resources that have to be freed after
+ * evaluation.
+ */
+#define VF_EXP_FREE	1<<6
+
+
 #define VF_KEEP		VF_KEEPNAME | VF_KEEPDATA
 #define VF_COPY		VF_COPYNAME | VF_COPYDATA
 

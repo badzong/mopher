@@ -3,10 +3,7 @@
 #include <stdio.h>
 #include <arpa/inet.h>
 
-#include "log.h"
-#include "ll.h"
-#include "var.h"
-#include "cf.h"
+#include "mopher.h"
 
 extern int cf_line;
 int cf_lex(void);
@@ -72,18 +69,18 @@ value		: '{' table '}'
 
 list		: list ',' value
 		  {
-			if(var_list_append($$, $3)) {
-				log_die(EX_CONFIG, "cf_lex.l: var_list_insert failed");
+			if(vlist_append($$, $3) == -1) {
+				log_die(EX_CONFIG, "cf_lex.l: vlist_append failed");
 			}
 		  }
        		| value
 		  {
-			if(($$ = var_create(VT_LIST, NULL, NULL, VF_CREATE)) == NULL) {
-				log_die(EX_CONFIG, "cf_lex.l: var_create failed");
+			if(($$ = vlist_create(NULL, 0)) == NULL) {
+				log_die(EX_CONFIG, "cf_lex.l: vlist_create failed");
 			}
 
-			if(var_list_append($$, $1)) {
-				log_die(EX_CONFIG, "cf_lex.l: var_list_insert failed");
+			if(vlist_append($$, $1) == -1) {
+				log_die(EX_CONFIG, "cf_lex.l: vlist_append failed");
 			}
 		  }
 		;
@@ -91,19 +88,19 @@ list		: list ',' value
 table		: table ',' ID '=' value
 		  {
 			$5->v_name = $3;
-			if(var_table_insert($$, $5)) {
-				log_die(EX_CONFIG, "cf_lex.l: var_list_insert failed");
+			if(vtable_insert($$, $5)) {
+				log_die(EX_CONFIG, "cf_lex.l: vtable_insert failed");
 			}
 		  }
        		| ID '=' value
 		  {
-			if(($$ = var_create(VT_TABLE, NULL, NULL, VF_CREATE)) == NULL) {
-				log_die(EX_CONFIG, "cf_lex.l: var_create failed");
+			if(($$ = vtable_create(NULL, 0)) == NULL) {
+				log_die(EX_CONFIG, "cf_lex.l: vtable_create failed");
 			}
 
 			$3->v_name = $1;
-			if(var_table_insert($$, $3)) {
-				log_die(EX_CONFIG, "cf_lex.l: var_list_insert failed");
+			if(vtable_insert($$, $3)) {
+				log_die(EX_CONFIG, "cf_lex.l: vtable_insert failed");
 			}
 		  }
 		;

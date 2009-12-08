@@ -23,7 +23,9 @@ enum acl_action_type
 };
 
 typedef enum acl_action_type acl_action_type_t;
+
 typedef acl_action_type_t (*acl_action_handler_t)(var_t *mailspec, void *data);
+typedef void (*acl_action_delete_t)(void *data);
 
 struct acl_action
 {
@@ -83,6 +85,7 @@ acl_function_callback_t acl_function_lookup(char *name);
 acl_symbol_t * acl_symbol_lookup(char *name);
 var_t * acl_symbol_get(var_t *mailspec, char *name);
 int acl_symbol_dereference(var_t *mailspec, ...);
+void acl_log_delete(acl_log_t *al);
 acl_log_t * acl_log_create(exp_t *exp);
 acl_log_t * acl_log_level(acl_log_t *al, int level);
 acl_action_type_t acl_log(var_t *mailspec, acl_log_t *al);

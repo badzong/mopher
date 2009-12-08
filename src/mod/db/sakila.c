@@ -1172,10 +1172,10 @@ sakila_unload_storage(dbt_t *dbt, ht_t *storage)
 			goto error;
 		}
 
-		if (var_list_append_new(record, v->v_type, v->v_name,
+		if (vlist_append_new(record, v->v_type, v->v_name,
 		    mb->mb_buffer, VF_COPY))
 		{
-			log_error("sakila_unload_record: var_list_append_new "
+			log_error("sakila_unload_record: vlist_append_new "
 			    "failed");
 			goto error;
 		}

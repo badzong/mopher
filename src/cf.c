@@ -6,11 +6,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 
-#include "log.h"
-#include "var.h"
-#include "ll.h"
-#include "cf.h"
-#include "util.h"
+#include "mopher.h"
 
 #include "cf_yacc.h"
 
@@ -134,7 +130,7 @@ cf_load_functions(void)
 
 	for(function = cf_functions; function->cf_type; ++function) {
 
-		if(var_table_get(cf_config, function->cf_name)) {
+		if(vtable_get(cf_config, function->cf_name)) {
 			continue;
 		}
 
@@ -151,7 +147,7 @@ cf_load_functions(void)
 				"failed");
 		}
 
-		if(var_table_set(cf_config, v) == -1) {
+		if(vtable_set(cf_config, v) == -1) {
 			log_die(EX_CONFIG, "cf_load_functions: var_table_set "
 				"failed");
 		}
@@ -169,7 +165,7 @@ cf_load_symbols(void)
 
 	for(symbol = cf_symbols; symbol->cs_name; ++symbol) {
 
-		v = var_table_lookup(cf_config, symbol->cs_name);
+		v = vtable_lookup(cf_config, symbol->cs_name);
 		if(v == NULL) {
 			continue;
 		}
@@ -280,9 +276,10 @@ cf_init(char *file)
 {
 	//char buffer[4096];
 
-	if ((cf_config = var_create(VT_TABLE, "config", NULL,
-		VF_KEEPNAME | VF_CREATE)) == NULL) {
-		log_die(EX_CONFIG, "cf_init: var_table_create failed");
+	cf_config = vtable_create("config", VF_KEEPNAME);
+	if (cf_config == NULL)
+	{
+		log_die(EX_CONFIG, "cf_init: vtable_create failed");
 	}
 
 	log_debug("cf_init: load default configuration");
@@ -324,14 +321,14 @@ cf_set(var_t *table, ll_t *keys, var_t *v)
 			v->v_name = key;
 		}
 
-		if(var_table_set(table, v) == -1) {
-			log_die(EX_CONFIG, "cf_set: var_table_set failed");
+		if(vtable_set(table, v) == -1) {
+			log_die(EX_CONFIG, "cf_set: vtable_set failed");
 		}
 
 		return;
 	}
 
-	if((sub = var_table_lookup(table, key))) {
+	if((sub = vtable_lookup(table, key))) {
 		cf_set(sub, keys, v);
 
 		/*
@@ -342,16 +339,15 @@ cf_set(var_t *table, ll_t *keys, var_t *v)
 		return;
 	}
 
-	if ((sub = var_create(VT_TABLE, key, NULL, VF_CREATE)) == NULL) {
-		log_die(EX_CONFIG, "cf_setr: var_create failed");
+	if ((sub = vtable_create(key, 0)) == NULL) {
+		log_die(EX_CONFIG, "cf_setr: vtable_create failed");
 	}
 
-	if(var_table_set(table, sub) == -1) {
-		log_die(EX_CONFIG, "cf_set: var_table_set failed");
+	if(vtable_set(table, sub) == -1) {
+		log_die(EX_CONFIG, "cf_set: vtable_set failed");
 	}
 
 	cf_set(sub, keys, v);
-
 
 	return;
 }
@@ -365,7 +361,7 @@ cf_get(var_type_t type, ...)
 
 	va_start(ap, type);
 
-	v = var_table_getva(type, cf_config, ap);
+	v = vtable_getva(type, cf_config, ap);
 
 	va_end(ap);
 

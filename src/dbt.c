@@ -219,13 +219,13 @@ dbt_register(char *name, dbt_t *dbt)
 	/*
 	 * Fill configuration into dbt
 	 */
-	if (var_table_dereference(config, "driver", &dbt->dbt_drivername,
+	if (vtable_dereference(config, "driver", &dbt->dbt_drivername,
 		"path", &dbt->dbt_path, "host", &dbt->dbt_host,
 		"port", &dbt->dbt_port, "user", &dbt->dbt_user,
 		"pass", &dbt->dbt_pass, "database", &dbt->dbt_database,
 		"table", &dbt->dbt_table, NULL))
 	{
-		log_die(EX_CONFIG, "dbt_register: var_table_dereference"
+		log_die(EX_CONFIG, "dbt_register: vtable_dereference"
 			" failed");
 	}
 

@@ -193,9 +193,10 @@ milter_macro_lookup(milter_stage_t stage, char *name, var_t *attrs)
 		return SMFIS_TEMPFAIL;
 	}
 
-	if (var_table_set_new(attrs, VT_STRING, mm->mm_name, value,
-		VF_KEEPNAME | VF_COPYDATA)) {
-		log_error("milter_macro_lookup: var_table_set failed");
+	if (vtable_set_new(attrs, VT_STRING, mm->mm_name, value,
+	    VF_KEEPNAME | VF_COPYDATA))
+	{
+		log_error("milter_macro_lookup: vtable_set failed");
 		return -1;
 	}
 
