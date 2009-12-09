@@ -34,6 +34,10 @@
 
 typedef struct sockaddr_storage var_sockaddr_t;
 
+
+/*
+ * CAVEAT: The order of types is used for type casting in exp.c!
+ */
 typedef enum var_type { VT_NULL = 0, VT_TABLE, VT_LIST, VT_ADDR, VT_INT,
     VT_FLOAT, VT_POINTER, VT_STRING, VT_MAX = VT_STRING } var_type_t;
 

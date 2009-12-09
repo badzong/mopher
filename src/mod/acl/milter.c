@@ -42,7 +42,7 @@ static milter_symbol_t milter_symbols[] = {
 	{ "milter_helo", MS_OFF_HELO },
 	{ "milter_envfrom", MS_OFF_ENVFROM },
 	{ "milter_envrcpt", MS_OFF_ENVRCPT },
-	{ "milter_recipients", MS_OFF_DATA },
+	{ "milter_recipients", MS_OFF_ENVRCPT },
 	{ "milter_recipient_list", MS_OFF_DATA },
 	{ "milter_header_name", MS_HEADER },
 	{ "milter_header_value", MS_HEADER },

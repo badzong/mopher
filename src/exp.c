@@ -718,6 +718,11 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 var_t *
 exp_eval(exp_t *exp, var_t *mailspec)
 {
+	if (exp == NULL)
+	{
+		return NULL;
+	}
+
 	switch (exp->ex_type)
 	{
 	case EX_CONSTANT:	return exp->ex_data;

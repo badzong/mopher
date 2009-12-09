@@ -49,6 +49,11 @@ dbt_close(dbt_t *dbt)
 
 	DBT_DB_CLOSE(dbt);
 
+	if (dbt->dbt_scheme)
+	{
+		var_delete(dbt->dbt_scheme);
+	}
+
 	return;
 }
 

@@ -40,7 +40,7 @@ static acl_action_delete_t acl_action_deleters[] = {
 	(acl_action_delete_t) NULL,		/* ACL_SET	*/
 	(acl_action_delete_t) free,		/* ACL_LOG	*/
 	(acl_action_delete_t) free,		/* ACL_GREYLIST	*/
-	(acl_action_delete_t) free		/* ACL_TARPIT	*/
+	(acl_action_delete_t) NULL		/* ACL_TARPIT	*/
 };
 
 
@@ -390,6 +390,7 @@ acl_symbol_get(var_t *mailspec, char *name)
 	{
 		log_error("acl_symbol_get: \"%s\" is not set and has no "
 		    "callback", name);
+		return NULL;
 	}
 
 	if (callback(*stage, name, mailspec))

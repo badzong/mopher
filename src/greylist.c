@@ -103,7 +103,7 @@ greylist_init(void)
 
 	if (scheme == NULL)
 	{
-		log_die(EX_SOFTWARE, "greylist: init: vlist_scheme failed");
+		log_die(EX_SOFTWARE, "greylist_init: vlist_scheme failed");
 	}
 
 	greylist_dbt.dbt_scheme = scheme;
@@ -117,15 +117,6 @@ greylist_init(void)
 	 */
 
 	dbt_register("greylist", &greylist_dbt);
-
-	return;
-}
-
-
-void
-greylist_clear(void)
-{
-	var_delete(greylist_dbt.dbt_scheme);
 
 	return;
 }

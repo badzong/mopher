@@ -22,7 +22,6 @@ int acl_lex(void);
 	exp_t 			*exp;
 	acl_action_t		*aa;
 	greylist_t		*gl;
-	tarpit_t		*tp;
 	acl_log_t		*al;
 }
 
@@ -31,10 +30,9 @@ int acl_lex(void);
 %type <i>	INTEGER number
 %type <d>	FLOAT
 %type <ss>	ADDR
-%type <exp>	exp function symbol constant set
+%type <exp>	exp function symbol constant set tarpit
 %type <aa>	action
 %type <gl>	greylist
-%type <tp>	tarpit
 %type <al>	log
 
 %left ','
@@ -73,8 +71,7 @@ greylist	: greylist VALID number	{ $$ = greylist_valid($1, $3); }
 		| GREYLIST		{ $$ = greylist_create(); }
 		;
 
-tarpit		: tarpit number		{ $$ = tarpit_delay($1, $2); }
-		| TARPIT		{ $$ = tarpit_create(); }
+tarpit		: TARPIT exp		{ $$ = $2; }
 		;
 
 set		: SET VARIABLE '=' exp	{ $$ = exp_operation('=', exp_variable($2), $4); }

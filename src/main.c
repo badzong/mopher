@@ -67,7 +67,6 @@ main(int argc, char **argv)
 	r = milter();
 
 	acl_clear();
-	greylist_clear();
 	dbt_clear();
 	module_clear();
 	cf_clear();

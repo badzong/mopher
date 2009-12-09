@@ -287,6 +287,8 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "milter_stagename", MSN_ENVRCPT, VF_KEEP,
 	    VT_STRING, "milter_envrcpt", envrcpt, VF_KEEPNAME,
+	    VT_INT, "milter_recipients", &mp->mp_recipients,
+		VF_KEEPNAME | VF_COPYDATA,
 	    VT_NULL))
 	{
 		log_error("milter_envrcpt: vtable_setv failed");
