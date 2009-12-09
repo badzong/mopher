@@ -34,7 +34,7 @@
 
 typedef struct sockaddr_storage var_sockaddr_t;
 
-typedef enum var_type { VT_NULL = 0, VT_INT, VT_FLOAT, VT_STRING, VT_ADDR,
+typedef enum var_type { VT_NULL = 0, VT_ADDR, VT_INT, VT_FLOAT, VT_STRING,
     VT_LIST, VT_TABLE, VT_POINTER, VT_MAX = VT_POINTER } var_type_t;
 
 typedef struct var {
@@ -53,6 +53,7 @@ typedef struct var_compact {
 } var_compact_t;
 
 #define VAR_COPY(v) var_create(v->v_type, v->v_name, v->v_data, VF_COPY)
+#define VAR_MAX_TYPE(v1, v2) ((v1)->v_type > (v2)->v_type ? (v1)->v_type : (v2)->v_type)
 
 /*
  * Prototypes

@@ -618,6 +618,7 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 	var_t *left, *right, *copy;
 	exp_operation_t *eo = exp->ex_data;
 	var_t *result;
+	var_type_t type;
 
 	/*
 	 * Variable assigment
@@ -646,9 +647,26 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 			return NULL;
 		}
 
+		/*
+		 * Check data types
+		 */
 		if (left->v_type != right->v_type)
 		{
-			copy = var_cast_copy(left->v_type, right);
+			/*
+			 * The biggest type has precedence (see exp.h)
+			 * STRING > FLOAT > INT
+			 */
+			type = VAR_MAX_TYPE(left, right);
+
+			if (type == left->v_type)
+			{
+				copy = var_cast_copy(type, right);
+			}
+			else
+			{
+				copy = var_cast_copy(type, left);
+			}
+
 			if (copy == NULL)
 			{
 				log_error("exp_eval_operation: var_cast_copy "
@@ -656,10 +674,18 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 				return NULL;
 			}
 
-			exp_free(right);
-
-			right = copy;
-			right->v_flags |= VF_EXP_FREE;
+			if (type == left->v_type)
+			{
+				exp_free(right);
+				right = copy;
+				right->v_flags |= VF_EXP_FREE;
+			}
+			else
+			{
+				exp_free(left);
+				left = copy;
+				left->v_flags |= VF_EXP_FREE;
+			}
 		}
 	}
 
