@@ -2,6 +2,7 @@
 #define _EXP_H_
 
 #include "var.h"
+#include "ll.h"
 
 enum exp_type
 {
@@ -44,13 +45,14 @@ typedef struct exp_function exp_function_t;
 
 void exp_delete(exp_t *exp);
 void exp_define(char *name, exp_t *exp);
+exp_t * exp_symbol(char *symbol);
+exp_t * exp_variable(char *variable);
 exp_t * exp_list(exp_t *list, exp_t *exp);
-exp_t * exp_variable(char *name);
 exp_t * exp_constant(var_type_t type, void *data);
 exp_t * exp_operation(int operator, exp_t *op1, exp_t *op2);
-exp_t * exp_assignment(char *id, exp_t *exp);
-exp_t * exp_symbol(char *symbol);
 exp_t * exp_function(char *id, exp_t *args);
+void exp_free_list(ll_t *list);
+void exp_free(var_t *v);
 var_t * exp_eval_list(exp_t *exp, var_t *mailspec);
 var_t * exp_eval_function(exp_t *exp, var_t *mailspec);
 var_t * exp_math_int(int op, var_t *left, var_t *right);

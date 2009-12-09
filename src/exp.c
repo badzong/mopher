@@ -45,8 +45,8 @@ exp_delete(exp_t *exp)
 		break;
 
 	case EX_SYMBOL:
-	case EX_OPERATION:
 	case EX_VARIABLE:
+	case EX_OPERATION:
 		free(exp->ex_data);
 		break;
 
@@ -91,6 +91,8 @@ exp_define(char *name, exp_t *exp)
 		log_die(EX_SOFTWARE, "exp_define: sht_insert failed");
 	}
 
+	free(name);
+
 	return;
 }
 
@@ -106,6 +108,8 @@ exp_symbol(char *symbol)
 	exp = sht_lookup(exp_defs, symbol);
 	if (exp)
 	{
+		free(symbol);
+
 		return exp;
 	}
 
@@ -402,7 +406,6 @@ static var_t *
 exp_assign(exp_t *left, exp_t *right, var_t *mailspec)
 {
 	var_t *variables, *value, *copy;
-	char *name;
 
 	/*
 	 * Get variable space
@@ -736,9 +739,6 @@ exp_true(exp_t *exp, var_t *mailspec)
 void
 exp_init(void)
 {
-	/*
-	 * Create variable table if neccessary
-	 */
 	exp_defs = sht_create(EXP_BUCKETS, NULL);
 	if (exp_defs == NULL)
 	{
