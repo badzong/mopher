@@ -1,0 +1,40 @@
+.TH "mail.acl" "5" "9 December 2009" "mopher 1.0" "mopher user manual"
+.SH NAME
+.B mail.acl \- access control list for mopher
+.SH INTRODUCTION
+The mopher daemon
+.BR mopherd (1)
+uses 2 configuration files
+.BR mopherd.conf (5)
+and
+.BR mail.acl (5).
+The former controls the behaviour of the daemon itself while the latter
+controls how incoming mail is filtered. By default
+.B mopherd
+looks for both configuration files in
+.I /etc/mopher.
+Alternative locations may be specified using the
+.B mopherd
+command line argument -c for
+.B mopherd.conf
+or the configuration directive acl_path for
+.B mail.acl.
+For more information see the respective man pages.
+.SH DESCRIPTION
+The file
+.B mail.acl
+contains information about how
+.B mopherd
+should filter incoming email. A statement is either a definition or a filter
+rule. Statements may spawn multiple lines. Multiple whitespaces and emtpy
+lines are ignored. # starts a comment until the end of the line.
+.SH FILTER RULES
+.SH DEFINITIONS
+Definitions can be used as shorthands for long or frequently used expressions.
+A definition starts with the keyword
+.I define
+followed by an
+.I identifier 
+followed by an
+.I expression.
+See EXPRESSIONS below.
