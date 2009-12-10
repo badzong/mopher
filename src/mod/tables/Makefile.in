@@ -3,8 +3,8 @@ include @top_srcdir@/Makefile.common
 INCLUDE=-I@top_srcdir@ -I@top_srcdir@/src/include
 CFLAGS+=$(INCLUDE)
 
-OBJECTS=penpal.o
-MODULES=penpal.so
+OBJECTS=known.o
+MODULES=known.so
 MOD_ALL=@MOD_ALL@
 
 all: $(MOD_ALL)

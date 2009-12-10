@@ -13,6 +13,8 @@ extern int acl_parse(void);
 static sht_t *acl_tables;
 static sht_t *acl_symbols;
 
+static ll_t *acl_update_callbacks;
+
 static acl_action_handler_t acl_action_handlers[] = {
 	NULL,					/* ACL_NULL 	*/
 	NULL,					/* ACL_NONE 	*/
@@ -488,7 +490,7 @@ acl_log_level(acl_log_t *al, int level)
 
 
 acl_action_type_t
-acl_log(var_t *mailspec, acl_log_t *al)
+acl_log(milter_stage_t stage, char *stagename, var_t *mailspec, acl_log_t *al)
 {
 	var_t *v;
 	char buffer[ACL_LOGLEN];
@@ -517,16 +519,16 @@ acl_log(var_t *mailspec, acl_log_t *al)
 
 
 acl_action_type_t
-acl_jump(var_t *mailspec, char *table)
+acl_jump(milter_stage_t stage, char *stagename, var_t *mailspec, char *table)
 {
 	log_debug("acl_jump: jump to \"%s\"", table);
 
-	return acl(table, mailspec);
+	return acl(stage, table, mailspec);
 }
 
 
 acl_action_type_t
-acl_set(var_t *mailspec, exp_t *exp)
+acl_set(milter_stage_t stage, char *stagename, var_t *mailspec, exp_t *exp)
 {
 	var_t *v;
 
@@ -541,8 +543,48 @@ acl_set(var_t *mailspec, exp_t *exp)
 }
 
 
+void
+acl_update_callback(acl_update_t callback)
+{
+	if (acl_update_callbacks == NULL)
+	{
+		acl_update_callbacks = ll_create();
+		if (acl_update_callbacks == NULL)
+		{
+			log_die(EX_SOFTWARE,
+			    "acl_update_register: ll_create failed");
+		}
+	}
+
+	if (LL_INSERT(acl_update_callbacks, callback) == -1)
+	{
+		log_die(EX_SOFTWARE, "acl_update_callback: LL_INSERT failed");
+	}
+
+	return;
+}
+
+
+static void
+acl_update(milter_stage_t stage, acl_action_type_t action, var_t *mailspec)
+{
+	acl_update_t callback;
+
+	ll_rewind(acl_update_callbacks);
+	while ((callback = ll_next(acl_update_callbacks)))
+	{
+		if (callback(stage, action, mailspec))
+		{
+			log_error("acl_update: update callback failed");
+		}
+	}
+
+	return;
+}
+	
+
 acl_action_type_t
-acl(char *stage, var_t *mailspec)
+acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 {
 	ll_t *rules;
 	acl_rule_t *ar;
@@ -551,15 +593,15 @@ acl(char *stage, var_t *mailspec)
 	acl_action_handler_t action_handler;
 	int i;
 
-	log_debug("acl: stage \"%s\"", stage);
+	log_debug("acl: stage \"%s\"", stagename);
 
 	/*
 	 * Lookup table
 	 */
-	rules = sht_lookup(acl_tables, stage);
+	rules = sht_lookup(acl_tables, stagename);
 	if (rules == NULL)
 	{
-		log_info("acl: no rules for \"%s\": continue", stage);
+		log_info("acl: no rules for \"%s\": continue", stagename);
 		return ACL_CONTINUE;
 	}
 
@@ -574,7 +616,7 @@ acl(char *stage, var_t *mailspec)
 			continue;
 		}
 
-		log_debug("acl: rule %d in \"%s\" matched", i, stage);
+		log_debug("acl: rule %d in \"%s\" matched", i, stagename);
 
 		aa = ar->ar_action;
 
@@ -584,7 +626,7 @@ acl(char *stage, var_t *mailspec)
 		action_handler = acl_action_handlers[aa->aa_type];
 		if (action_handler)
 		{
-			response = action_handler(mailspec,
+			response = action_handler(stage, stagename, mailspec,
 			    ar->ar_action->aa_data);
 		}
 		else
@@ -600,8 +642,10 @@ acl(char *stage, var_t *mailspec)
 		if (response == ACL_ERROR)
 		{
 			log_error("acl: rule number %d in table \"%s\" failed",
-			    i, stage);
+			    i, stagename);
 		}
+
+		acl_update(stage, response, mailspec);
 
 		return response;
 	}
@@ -609,7 +653,9 @@ acl(char *stage, var_t *mailspec)
 	/*
 	 * No rule matched
 	 */
-	log_info("acl: no match in \"%s\": continue", stage);
+	log_info("acl: no match in \"%s\": continue", stagename);
+
+	acl_update(stage, response, mailspec);
 
 	return ACL_CONTINUE;
 }
@@ -662,6 +708,12 @@ acl_clear(void)
 	{
 		sht_delete(acl_symbols);
 	}
+
+	if (acl_update_callbacks)
+	{
+		ll_delete(acl_update_callbacks, NULL);
+	}
+
 
 	return;
 }

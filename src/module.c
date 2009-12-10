@@ -30,6 +30,7 @@ module_t module_static_db[] = {
 };
 
 module_t module_static_tables[] = {
+	{ "known-static",	known_init,	NULL,	NULL },
 	{ NULL,		NULL,		NULL,		NULL }
 };
 

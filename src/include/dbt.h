@@ -19,9 +19,6 @@ typedef int (*dbt_db_sync_t)(void *dbt);
 typedef int (*dbt_db_callback_t)(void *dbt, var_t *record);
 typedef int (*dbt_db_walk_t)(void *dbt, dbt_db_callback_t callback);
 
-typedef int (*dbt_update_t)(void *dbt);
-typedef int (*dbt_validate_t)(void *dbt, var_t *record);
-
 typedef struct dbt_driver {
 	dbt_db_open_t		 dd_open;
 	dbt_db_close_t		 dd_close;
@@ -36,30 +33,33 @@ typedef struct dbt_driver {
 } dbt_driver_t;
 
 typedef struct dbt {
-	char			*dbt_name;
-	char			*dbt_path;
-	char			*dbt_host;
-	VAR_INT_T		 dbt_port;
-	char			*dbt_user;
-	char			*dbt_pass;
-	char			*dbt_database;
-	char			*dbt_table;
-	var_t			*dbt_scheme;
-	int			 dbt_cleanup_interval;
-	int			 dbt_cleanup_schedule;
-	int			 dbt_cleanup_deleted;
-	char			*dbt_sql_invalid_where;
-	dbt_update_t		 dbt_update;
-	dbt_validate_t		 dbt_validate;
-	char			*dbt_drivername;
-	dbt_driver_t		*dbt_driver;
-	void			*dbt_handle;
+	char			 *dbt_name;
+	char			 *dbt_path;
+	char			 *dbt_host;
+	VAR_INT_T		  dbt_port;
+	char			 *dbt_user;
+	char			 *dbt_pass;
+	char			 *dbt_database;
+	char			 *dbt_table;
+	var_t			 *dbt_scheme;
+	int			  dbt_cleanup_interval;
+	int			  dbt_cleanup_schedule;
+	int			  dbt_cleanup_deleted;
+	char			 *dbt_sql_invalid_where;
+	int			(*dbt_validate)(struct dbt *, var_t *);
+	char			 *dbt_drivername;
+	dbt_driver_t		 *dbt_driver;
+	void			 *dbt_handle;
 } dbt_t;
+
+typedef int (*dbt_validate_t)(dbt_t *dbt, var_t *record);
 
 #define DBT_DB_OPEN(dbt) (dbt)->dbt_driver->dd_open(dbt)
 #define DBT_DB_CLOSE(DBT) (dbt)->dbt_driver->dd_close(dbt)
 #define DBT_VALIDATE(dbt, var) (dbt)->dbt_validate(dbt, var)
 #define DBT_SCHEDULE_CLEANUP(dbt, now) ((dbt)->dbt_cleanup_schedule = now + (dbt)->dbt_cleanup_interval)
+
+#define DBT_COMMON_INVALID_SQL "`valid` + `created` < unix_timestamp()"
 
 /*
  * Prototypes
@@ -73,6 +73,7 @@ int dbt_db_walk(dbt_t *dbt, dbt_db_callback_t callback);
 int dbt_db_sync(dbt_t *dbt);
 int dbt_db_cleanup(dbt_t *dbt);
 void dbt_register(char *name, dbt_t *dbt);
+int dbt_common_validate(dbt_t *dbt, var_t *record);
 void dbt_init(void);
 void dbt_clear();
 dbt_t * dbt_lookup(char *name);

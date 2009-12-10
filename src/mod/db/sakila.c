@@ -65,21 +65,44 @@ static char sakila_addr_type[15];
 /*
  * Datatype storage requirements (allocated for sakila_buffer_t)
  */
-static unsigned long sakila_buffer_length[] = { 0, sizeof (VAR_INT_T),
-    sizeof (VAR_FLOAT_T), MY_STRING_LEN, sizeof (struct sockaddr_storage), 0,
-    0, 0 };
+static unsigned long sakila_buffer_length[] = {
+    0,					/* VT_NULL	*/
+    0,					/* VT_TABLE	*/
+    0,					/* VT_LIST	*/
+    sizeof (struct sockaddr_storage),	/* VT_ADDR	*/
+    sizeof (VAR_INT_T),			/* VT_INT	*/
+    sizeof (VAR_FLOAT_T),		/* VT_FLOAT	*/
+    0,					/* VT_POINTER	*/
+    MY_STRING_LEN			/* VT_STRING	*/
+};
 
 /*
  * Datatype conversions (var.c <-> MySQL) for mysql_bind_params/results.
  */
-static int sakila_buffer_types[] = { 0, MYSQL_TYPE_LONG, MYSQL_TYPE_DOUBLE,
-	MYSQL_TYPE_STRING, MYSQL_TYPE_BLOB, 0, 0, 0 };
+static int sakila_buffer_types[] = {
+    0,					/* VT_NULL	*/
+    0,					/* VT_TABLE	*/
+    0,					/* VT_LIST	*/
+    MYSQL_TYPE_BLOB,			/* VT_ADDR	*/
+    MYSQL_TYPE_LONG,			/* VT_INT	*/
+    MYSQL_TYPE_DOUBLE,			/* VT_FLOAT	*/
+    0,					/* VT_POINTER	*/
+    MYSQL_TYPE_STRING			/* VT_STRING	*/
+};
 
 /*
  * Datatype conversions (var.c <-> MySQL) for create database statement
  */
-static char *sakila_types[] = { NULL, "INT", "DOUBLE", "VARCHAR(320)", \
-	sakila_addr_type, NULL, NULL, NULL };
+static char *sakila_types[] = {
+    NULL,				/* VT_NULL	*/
+    NULL,				/* VT_TABLE	*/
+    NULL,				/* VT_LIST	*/
+    sakila_addr_type,			/* VT_ADDR	*/
+    "INT",				/* VT_INT	*/
+    "DOUBLE",				/* VT_FLOAT	*/
+    NULL,				/* VT_POINTER	*/
+    "VARCHAR(320)"			/* VT_STRING	*/
+};
 
 
 /*
@@ -988,6 +1011,7 @@ sakila_create_table(MYSQL *db, char *table, var_t *scheme)
 		return -1;
 	}
 
+	printf("QUERY: %s\n", query);
 	if (mysql_query(db, query)) {
 		log_error("sakila_create_table: mysql_query: %s", mysql_error(db));
 		return -1;
@@ -1394,7 +1418,7 @@ sakila_cleanup(dbt_t *dbt)
 int
 sakila_init(void)
 {
-	snprintf(sakila_addr_type, sizeof sakila_addr_type, "VARBINARY(%du)",
+	snprintf(sakila_addr_type, sizeof sakila_addr_type, "VARBINARY(%lu)",
 	    sizeof (struct sockaddr_storage));
 
 	dbt_driver.dd_open = (dbt_db_open_t) sakila_open;

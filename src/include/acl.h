@@ -24,7 +24,9 @@ enum acl_action_type
 
 typedef enum acl_action_type acl_action_type_t;
 
-typedef acl_action_type_t (*acl_action_handler_t)(var_t *mailspec, void *data);
+typedef acl_action_type_t (*acl_action_handler_t)(milter_stage_t stage,
+    char *stagename, var_t *mailspec, void *data);
+
 typedef void (*acl_action_delete_t)(void *data);
 
 struct acl_action
@@ -72,6 +74,9 @@ struct acl_log
 
 typedef struct acl_log acl_log_t;
 
+typedef int (*acl_update_t)(milter_stage_t stage, acl_action_type_t at,
+    var_t *mailspec);
+
 /*
  * Prototypes
  */
@@ -88,10 +93,11 @@ int acl_symbol_dereference(var_t *mailspec, ...);
 void acl_log_delete(acl_log_t *al);
 acl_log_t * acl_log_create(exp_t *exp);
 acl_log_t * acl_log_level(acl_log_t *al, int level);
-acl_action_type_t acl_log(var_t *mailspec, acl_log_t *al);
-acl_action_type_t acl_jump(var_t *mailspec, char *table);
-acl_action_type_t acl_set(var_t *mailspec, exp_t *exp);
-acl_action_type_t acl(char *stage, var_t *mailspec);
+acl_action_type_t acl_log(milter_stage_t stage, char *stagename, var_t *mailspec, acl_log_t *al);
+acl_action_type_t acl_jump(milter_stage_t stage, char *stagename, var_t *mailspec, char *table);
+acl_action_type_t acl_set(milter_stage_t stage, char *stagename, var_t *mailspec, exp_t *exp);
+void acl_update_callback(acl_update_t callback);
+acl_action_type_t acl(milter_stage_t stage, char *stagename, var_t *mailspec);
 void acl_init(char *mail_acl);
 void acl_clear(void);
 #endif /* _ACL_H_ */

@@ -30,9 +30,12 @@ int milter_running = 1;
 
 
 static sfsistat
-milter_acl(char *stage, milter_priv_t * mp)
+milter_acl(milter_stage_t stage, char *stagename, milter_priv_t * mp)
 {
-	switch (acl(stage, mp->mp_table))
+	/*
+	 * Translate acl_action_type into sfsistat
+	 */
+	switch (acl(stage, stagename, mp->mp_table))
 	{
 	case ACL_CONTINUE:
 		return SMFIS_CONTINUE;
@@ -50,11 +53,12 @@ milter_acl(char *stage, milter_priv_t * mp)
 		return SMFIS_TEMPFAIL;
 
 	case ACL_ERROR:
-		log_error("milter_acl: acl failed");
+		log_error("milter_acl: acl failed in %s stage", stagename);
 		break;
 
 	default:
-		log_error("milter_acl: acl returned bad action type");
+		log_error("milter_acl: acl returned bad action type in %s "
+		    "stage", stagename);
 	}
 
 	return SMFIS_TEMPFAIL;
@@ -174,7 +178,7 @@ milter_connect(SMFICTX * ctx, char *hostname, _SOCK_ADDR * hostaddr)
 	log_debug("milter_connect: connection from: %s (%s)", hostname,
 		addrstr);
 
-	return milter_acl(MSN_CONNECT, mp);
+	return milter_acl(MS_CONNECT, MSN_CONNECT, mp);
 }
 
 static sfsistat
@@ -199,7 +203,7 @@ milter_unknown(SMFICTX * ctx, const char *cmd)
 
 	log_debug("milter_unknown: unknown command: \"%s\"", cmd);
 
-	return milter_acl(MSN_UNKNOWN, mp);
+	return milter_acl(MS_UNKNOWN, MSN_UNKNOWN, mp);
 }
 
 static sfsistat
@@ -223,7 +227,7 @@ milter_helo(SMFICTX * ctx, char *helostr)
 
 	log_debug("milter_helo: helo hostname: %s", helostr);
 
-	return milter_acl(MSN_HELO, mp);
+	return milter_acl(MS_HELO, MSN_HELO, mp);
 }
 
 static sfsistat
@@ -253,7 +257,7 @@ milter_envfrom(SMFICTX * ctx, char **argv)
 
 	log_debug("milter_envfrom: envelope from: %s", envfrom);
 
-	return milter_acl(MSN_ENVFROM, mp);
+	return milter_acl(MS_ENVFROM, MSN_ENVFROM, mp);
 }
 
 static sfsistat
@@ -297,7 +301,7 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 
 	log_debug("milter_envrcpt: envelope recipient: %s", envrcpt);
 
-	return milter_acl(MSN_ENVRCPT, mp);
+	return milter_acl(MS_ENVRCPT, MSN_ENVRCPT, mp);
 }
 
 static sfsistat
@@ -320,7 +324,7 @@ milter_data(SMFICTX * ctx)
 		return SMFIS_TEMPFAIL;
 	}
 
-	return milter_acl(MSN_DATA, mp);
+	return milter_acl(MS_DATA, MSN_DATA, mp);
 }
 
 
@@ -367,7 +371,7 @@ milter_header(SMFICTX * ctx, char *headerf, char *headerv)
 		return SMFIS_TEMPFAIL;
 	}
 
-	return milter_acl(MSN_HEADER, mp);
+	return milter_acl(MS_HEADER, MSN_HEADER, mp);
 }
 
 static sfsistat
@@ -393,7 +397,7 @@ milter_eoh(SMFICTX * ctx)
 
 	log_debug("milter_eom: header size: %d", mp->mp_headerlen);
 
-	return milter_acl(MSN_EOH, mp);
+	return milter_acl(MS_EOH, MSN_EOH, mp);
 }
 
 static sfsistat
@@ -426,7 +430,7 @@ milter_body(SMFICTX * ctx, unsigned char *body, size_t len)
 		return SMFIS_TEMPFAIL;
 	}
 
-	return milter_acl(MSN_BODY, mp);
+	return milter_acl(MS_BODY, MSN_BODY, mp);
 }
 
 static sfsistat
@@ -452,7 +456,7 @@ milter_eom(SMFICTX * ctx)
 
 	log_debug("milter_eom: body size: %d", mp->mp_bodylen);
 
-	return milter_acl(MSN_EOM, mp);
+	return milter_acl(MS_EOM, MSN_EOM, mp);
 }
 
 

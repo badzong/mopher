@@ -43,6 +43,8 @@ int string_init(void);
 int cast_init(void);
 int test_init(void);
 
+int known_init(void);
+
 void sakila_fini(void);
 void milter_fini(void);
 void rbl_fini(void);

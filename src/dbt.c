@@ -218,7 +218,7 @@ dbt_register(char *name, dbt_t *dbt)
 	config = cf_get(VT_TABLE, "tables", name, NULL);
 	if (config == NULL) {
 		log_die(EX_CONFIG, "dbt_register: missing database "
-			"configuration for \"%s\"", dbt->dbt_name);
+			"configuration for \"%s\"", name);
 	}
 
 	/*
@@ -310,6 +310,48 @@ dbt_register(char *name, dbt_t *dbt)
 	}
 
 	return;
+}
+
+
+int
+dbt_common_validate(dbt_t *dbt, var_t *record)
+{
+	var_t *attr;
+	VAR_INT_T *created = NULL;
+	VAR_INT_T *valid = NULL;
+
+	/*
+	 * Lookup created and valid in record.
+	 */
+	ll_rewind(record->v_data);
+	while ((attr = ll_next(record->v_data)))
+	{
+		if (strcmp(attr->v_name, "created") == 0)
+		{
+			created = attr->v_data;
+		}
+		else if (strcmp(attr->v_name, "valid") == 0)
+		{
+			valid = attr->v_data;
+		}
+	}
+
+	if (created == NULL || valid == NULL)
+	{
+		log_die(EX_SOFTWARE, "dbt_common_vaildate: table \"%s\" must "
+		    "have created and valid to use dbt_common_validate",
+		    dbt->dbt_name);
+	}
+
+	/*
+	 * dbt->dbt_cleanup_schedule == time(NULL)
+	 */
+	if (dbt->dbt_cleanup_schedule > *created + *valid)
+	{
+		return 0;
+	}
+
+	return 1;
 }
 
 

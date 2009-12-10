@@ -60,29 +60,6 @@ greylist_delete(greylist_t *gl)
 }
 
 
-static int
-greylist_validate(dbt_t *dbt, var_t *record)
-{
-	VAR_INT_T *created;
-	VAR_INT_T *valid;
-
-	if (vlist_dereference(record, NULL, NULL, NULL, &created, &valid,
-		NULL, NULL, NULL, NULL)) {
-		log_warning("greylist_valid: vlist_dereference failed");
-		return -1;
-	}
-
-	/*
-	 * dbt->dbt_cleanup_schedule == time(NULL)
-	 */
-	if (dbt->dbt_cleanup_schedule > *created + *valid) {
-		return 0;
-	}
-
-	return 1;
-}
-
-
 void
 greylist_init(void)
 {
@@ -107,9 +84,8 @@ greylist_init(void)
 	}
 
 	greylist_dbt.dbt_scheme = scheme;
-	greylist_dbt.dbt_validate = (dbt_validate_t) greylist_validate;
-	greylist_dbt.dbt_sql_invalid_where =
-		"`valid` + `created` < unix_timestamp()";
+	greylist_dbt.dbt_validate = dbt_common_validate;
+	greylist_dbt.dbt_sql_invalid_where = DBT_COMMON_INVALID_SQL;
 
 	/*
 	 * greylist_valid need to be registered at table
@@ -217,7 +193,7 @@ greylist_add(var_t *attrs, greylist_t *gl)
 }
 
 greylist_response_t
-greylist(var_t *attrs, greylist_t *gl)
+greylist(milter_stage_t stage, char *stagename, var_t *attrs, greylist_t *gl)
 {
 	var_t *record;
 	time_t now;

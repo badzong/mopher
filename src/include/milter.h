@@ -20,6 +20,7 @@ typedef enum milter_stage {
 	MS_EOH		= 1<<7,
 	MS_BODY		= 1<<8,
 	MS_EOM		= 1<<9,
+
 	MS_ANY		= MS_CONNECT | MS_HELO | MS_ENVFROM | MS_ENVRCPT |
 			  MS_DATA | MS_HEADER | MS_EOH | MS_BODY | MS_EOM,
 	MS_OFF_CONNECT	= MS_ANY,
@@ -36,7 +37,7 @@ typedef enum milter_stage {
 } milter_stage_t;
 
 typedef struct milter_priv {
-    var_t    *mp_table;
+    var_t   *mp_table;
     int      mp_recipients;
     char    *mp_header;
     int      mp_headerlen;
