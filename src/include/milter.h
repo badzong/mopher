@@ -45,9 +45,24 @@ typedef struct milter_priv {
     int      mp_bodylen;
 } milter_priv_t;
 
+typedef struct milter_macro {
+	char		*mm_name;
+	char		*mm_macro;
+	milter_stage_t	 mm_stage;
+} milter_macro_t;
+
+typedef struct milter_symbol {
+	char		*ms_name;
+	milter_stage_t	 ms_stage;
+} milter_symbol_t;
+
+
 extern int milter_running;
 
-int8_t
-milter(void);
+/*
+ * Prototypes
+ */
 
+void milter_init(void);
+int8_t milter(void);
 #endif

@@ -63,10 +63,12 @@ main(int argc, char **argv)
 	dbt_init();
 	acl_init();
 	greylist_init();
+	milter_init();
 
-	MODULE_LOAD_DB;
-	MODULE_LOAD_TABLE;
-	MODULE_LOAD_ACL;
+	/*
+	 * Load modules
+	 */
+	module_init();
 
 	dbt_open_databases();
 	acl_read(mail_acl);

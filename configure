@@ -3504,7 +3504,7 @@ mail_acl="$sysconfdir/mopher/mail.acl"
 # Checks for typedefs, structures, and compiler characteristics.
 # Checks for library functions.
 
-ac_config_files="$ac_config_files Makefile Makefile.common src/Makefile src/mod/acl/Makefile src/mod/db/Makefile src/mod/tables/Makefile"
+ac_config_files="$ac_config_files Makefile Makefile.common src/Makefile src/modules/Makefile"
 
 
 cat >confcache <<\_ACEOF
@@ -4189,9 +4189,7 @@ do
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "Makefile.common") CONFIG_FILES="$CONFIG_FILES Makefile.common" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
-    "src/mod/acl/Makefile") CONFIG_FILES="$CONFIG_FILES src/mod/acl/Makefile" ;;
-    "src/mod/db/Makefile") CONFIG_FILES="$CONFIG_FILES src/mod/db/Makefile" ;;
-    "src/mod/tables/Makefile") CONFIG_FILES="$CONFIG_FILES src/mod/tables/Makefile" ;;
+    "src/modules/Makefile") CONFIG_FILES="$CONFIG_FILES src/modules/Makefile" ;;
 
   *) as_fn_error "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

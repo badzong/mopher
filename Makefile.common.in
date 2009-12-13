@@ -28,7 +28,7 @@ ARFLAGS=rcs
 
 # Files
 
-ACFILES=config.h Makefile Makefile.common src/Makefile src/mod/acl/Makefile src/mod/db/Makefile src/mod/tables/Makefile
+ACFILES=config.h Makefile Makefile.common src/Makefile src/modules/Makefile
 
 
 # Targets

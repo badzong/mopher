@@ -22,19 +22,17 @@ typedef struct cf_function {
  * Global configuration variables
  */
 
+extern char		*cf_module_path;
 extern VAR_INT_T	 cf_greylist_default_delay;
 extern VAR_INT_T	 cf_greylist_default_visa;
 extern VAR_INT_T	 cf_greylist_default_valid;
 extern char		*cf_acl_path;
-extern char		*cf_acl_mod_path;
 extern VAR_INT_T	 cf_acl_log_level;
 extern char		*cf_milter_socket;
 extern VAR_INT_T	 cf_milter_socket_timeout;
 extern VAR_INT_T	 cf_milter_socket_umask;
 extern VAR_INT_T	 cf_log_level;
 extern VAR_INT_T	 cf_foreground;
-extern char		*cf_dbt_mod_path;
-extern char		*cf_tables_mod_path;
 extern VAR_INT_T	 cf_dbt_cleanup_interval;
 extern char		*cf_hostname;
 extern char		*cf_spamd_socket;

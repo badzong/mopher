@@ -161,7 +161,6 @@ AC_SUBST([mail_acl])
 # Checks for typedefs, structures, and compiler characteristics.
 # Checks for library functions.
 
-AC_CONFIG_FILES([Makefile Makefile.common src/Makefile
-  src/mod/acl/Makefile src/mod/db/Makefile src/mod/tables/Makefile])
+AC_CONFIG_FILES([Makefile Makefile.common src/Makefile src/modules/Makefile])
 
 AC_OUTPUT

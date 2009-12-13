@@ -42,19 +42,17 @@ static char *cf_file;
 /*
  * Extern configuration symbols
  */
+char		*cf_module_path;
 VAR_INT_T	 cf_greylist_default_delay;
 VAR_INT_T	 cf_greylist_default_visa;
 VAR_INT_T	 cf_greylist_default_valid;
 char		*cf_acl_path;
-char		*cf_acl_mod_path;
 char		*cf_milter_socket;
 VAR_INT_T	 cf_milter_socket_timeout;
 VAR_INT_T	 cf_milter_socket_umask;
 VAR_INT_T	 cf_log_level;
 VAR_INT_T	 cf_acl_log_level;
 VAR_INT_T	 cf_foreground;
-char		*cf_dbt_mod_path;
-char		*cf_tables_mod_path;
 VAR_INT_T	 cf_dbt_cleanup_interval;
 char		*cf_hostname;
 char		*cf_spamd_socket;
@@ -68,18 +66,16 @@ VAR_INT_T	 cf_delivered_valid;
  * Symbol table
  */
 static cf_symbol_t cf_symbols[] = {
+	{ "module_path", &cf_module_path },
 	{ "greylist_default_delay", &cf_greylist_default_delay },
 	{ "greylist_default_visa", &cf_greylist_default_visa },
 	{ "greylist_default_valid", &cf_greylist_default_valid },
 	{ "acl_path", &cf_acl_path },
-	{ "acl_mod_path", &cf_acl_mod_path },
 	{ "acl_log_level", &cf_acl_log_level },
 	{ "milter_socket", &cf_milter_socket },
 	{ "milter_socket_timeout", &cf_milter_socket_timeout },
 	{ "milter_socket_umask", &cf_milter_socket_umask },
 	{ "cleanup_interval", &cf_dbt_cleanup_interval },
-	{ "dbt_mod_path", &cf_dbt_mod_path },
-	{ "tables_mod_path", &cf_tables_mod_path },
 	{ "default_cleanup_interval", &cf_dbt_cleanup_interval },
 	{ "hostname", &cf_hostname },
 	{ "spamd_socket", &cf_spamd_socket },

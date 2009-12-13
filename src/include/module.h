@@ -59,5 +59,6 @@ void test_fini(void);
 
 void module_glob(const char *path);
 void module_load(module_t *mod);
+void module_init(void);
 void module_clear(void);
 #endif /* _MODULES_H_ */

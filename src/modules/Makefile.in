@@ -3,8 +3,8 @@ include @top_srcdir@/Makefile.common
 INCLUDE=-I@top_srcdir@ -I@top_srcdir@/src/include
 CFLAGS+=$(INCLUDE)
 
-OBJECTS=@MOD_DB_BDB@ @MOD_DB_MYSQL@
-MODULES=@MOD_DB_BDB@ @MOD_DB_MYSQL@
+OBJECTS=cast.o string.o spamd.o rbl.o delivered.o @MOD_ACL_SPF@ @MOD_DB_BDB@ @MOD_DB_MYSQL@
+MODULES=cast.so string.so spamd.so rbl.so delivered.so @MOD_ACL_SPF@ @MOD_DB_BDB@ @MOD_DB_MYSQL@
 MOD_ALL=@MOD_ALL@
 
 all: $(MOD_ALL)
@@ -14,6 +14,9 @@ bdb.so: bdb.c Makefile
 
 sakila.so: sakila.c Makefile
 	$(CC) $(CFLAGS) $(SOFLAGS) -lmysqlclient -o $@ $<
+
+spf.so: spf.c
+	$(CC) $(CFLAGS) $(SOFLAGS) -lspf2 -o $@ $<
 
 lib.a: $(OBJECTS)
 	$(AR) $(ARFLAGS) $@ $^

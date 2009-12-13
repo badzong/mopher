@@ -19,23 +19,9 @@ static ll_t *module_buffers;
 
 #else
 
-module_t module_static_db[] = {
-#ifdef WITH_MOD_BDB
-	{ "bdb-static",	bdb_init,	NULL,		NULL },
-#endif
-#ifdef WITH_MOD_MYSQL
-	{ "sakila-static",	sakila_init,	sakila_fini,	NULL },
-#endif
-	{ NULL,		NULL,		NULL,		NULL }
-};
-
-module_t module_static_tables[] = {
-	{ "delivered-static",	delivered_init,	NULL,	NULL },
-	{ NULL,		NULL,		NULL,		NULL }
-};
-
-module_t module_static_acl[] = {
+module_t module_table[] = {
 /*	{ "test.o",	test_init,	test_fini,	NULL },*/
+	{ "delivered-static",	delivered_init,	NULL,	NULL },
 	{ "milter-static",	milter_init,	milter_fini,	NULL },
 	{ "rbl-static",		rbl_init,	rbl_fini,	NULL },
 	{ "spamd-static",	spamd_init,	NULL,		NULL },
@@ -43,6 +29,12 @@ module_t module_static_acl[] = {
 	{ "string-static",	string_init,	NULL,		NULL },
 #ifdef WITH_MOD_SPF
 	{ "spf-static",		spf_init,	spf_fini,	NULL },
+#endif
+#ifdef WITH_MOD_BDB
+	{ "bdb-static",	bdb_init,	NULL,		NULL },
+#endif
+#ifdef WITH_MOD_MYSQL
+	{ "sakila-static",	sakila_init,	sakila_fini,	NULL },
 #endif
 	{ NULL,		NULL,		NULL,		NULL }
 };
@@ -241,33 +233,6 @@ module_glob(const char *path)
 
 	return;
 }
-
-#else /* DYNAMIC */
-
-void
-module_load_db(void)
-{
-	module_load(module_static_db);
-
-	return;
-}
-
-void
-module_load_tables(void)
-{
-	module_load(module_static_tables);
-
-	return;
-}
-
-void
-module_load_acl(void)
-{
-	module_load(module_static_acl);
-
-	return;
-}
-
 #endif /* DYNAMIC */
 
 
@@ -308,6 +273,17 @@ module_load(module_t *mod)
 	}
 
 	return;
+}
+
+
+void
+module_init(void)
+{
+#ifdef DYNAMIC
+	module_glob(cf_module_path);
+#else /* DUNAMIC */
+	module_load(module_table);
+#endif /* DUNAMIC */
 }
 
 

@@ -14,18 +14,6 @@
 #define SENDMAIL_LEN 8
 
 
-typedef struct milter_macro {
-	char		*mm_name;
-	char		*mm_macro;
-	milter_stage_t	 mm_stage;
-} milter_macro_t;
-
-
-typedef struct milter_symbol {
-	char		*ms_name;
-	milter_stage_t	 ms_stage;
-} milter_symbol_t;
-
 /*
  * Symbols without callback set by milter.c (the other one)
  */
