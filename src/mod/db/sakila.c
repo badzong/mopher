@@ -1011,7 +1011,6 @@ sakila_create_table(MYSQL *db, char *table, var_t *scheme)
 		return -1;
 	}
 
-	printf("QUERY: %s\n", query);
 	if (mysql_query(db, query)) {
 		log_error("sakila_create_table: mysql_query: %s", mysql_error(db));
 		return -1;

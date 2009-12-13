@@ -42,6 +42,7 @@ extern char		*cf_sync_socket;
 extern VAR_INT_T	 cf_client_retry_interval;
 extern char		*cf_server_socket;
 extern VAR_INT_T	 cf_tarpit_progress_interval;
+extern VAR_INT_T	 cf_delivered_valid;
 
 /*
  * Prototypes

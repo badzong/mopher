@@ -1,4 +1,5 @@
 #include <stdarg.h>
+#include <string.h>
 
 #include "mopher.h"
 
@@ -163,4 +164,26 @@ vlist_record(var_t *scheme, ...)
 	va_end(ap);
 
 	return record;
+}
+
+
+void *
+vlist_record_get(var_t *record, char *key)
+{
+	ll_t *list = record->v_data;
+	var_t *item;
+
+	/*
+	 * Bad search: but records usually only have less than 10 values.
+	 */
+	ll_rewind(list);
+	while ((item = ll_next(list)))
+	{
+		if (strcmp(item->v_name, key) == 0)
+		{
+			return item->v_data;
+		}
+	}
+
+	return NULL;
 }

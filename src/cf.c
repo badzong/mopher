@@ -62,6 +62,7 @@ char		*cf_sync_socket;
 VAR_INT_T	 cf_client_retry_interval;
 char		*cf_server_socket;
 VAR_INT_T	 cf_tarpit_progress_interval;
+VAR_INT_T	 cf_delivered_valid;
 
 /*
  * Symbol table
@@ -86,6 +87,7 @@ static cf_symbol_t cf_symbols[] = {
 	{ "client_retry_interval", &cf_client_retry_interval },
 	{ "server_socket", &cf_server_socket },
 	{ "tarpit_progress_interval", &cf_tarpit_progress_interval },
+	{ "delivered_valid", &cf_delivered_valid },
 	{ NULL, NULL }
 };
 

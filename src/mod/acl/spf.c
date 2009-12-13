@@ -166,8 +166,7 @@ spf_init(void)
 		return -1;
 	}
 
-	acl_symbol_register("spf", MS_ENVFROM | MS_ENVRCPT | MS_HEADER |
-	    MS_EOH | MS_BODY | MS_EOM, spf);
+	acl_symbol_register("spf", MS_OFF_ENVFROM, spf);
 
 	for (k = spf_static_keys, v = spf_static_values; *k && *v; ++k, ++v)
 	{

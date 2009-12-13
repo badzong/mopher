@@ -344,6 +344,14 @@ var_data_init(var_type_t type, void *data, int flags)
 	}
 
 	/*
+	 * No data
+	 */
+	if (data == NULL)
+	{
+		return NULL;
+	}
+
+	/*
 	 * Return a copy
 	 */
 	if((p = var_copy_data(type, data)) == NULL) {

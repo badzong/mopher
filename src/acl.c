@@ -655,13 +655,13 @@ acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 	 */
 	log_info("acl: no match in \"%s\": continue", stagename);
 
-	acl_update(stage, response, mailspec);
+	acl_update(stage, ACL_CONTINUE, mailspec);
 
 	return ACL_CONTINUE;
 }
 
 void
-acl_init(char *mail_acl)
+acl_init(void)
 {
 	acl_tables = sht_create(ACL_BUCKETS, (sht_delete_t) acl_rules_delete);
 	if (acl_tables == NULL)
@@ -680,11 +680,13 @@ acl_init(char *mail_acl)
 	 */
 	exp_init();
 
-	/*
-	 * Load table modules
-	 */
-	MODULE_LOAD_ACL;
+	return;
+}
 
+
+void
+acl_read(char *mail_acl)
+{
 	/*
 	 * run parser
 	 */

@@ -263,3 +263,24 @@ vtable_dereference(var_t *table, ...)
 
 	return 0;
 }
+
+
+int
+vtable_add_record(var_t *table, var_t *record)
+{
+	ll_t *list = record->v_data;
+	var_t *item;
+
+	ll_rewind(list);
+	while ((item = ll_next(list)))
+	{
+		if (vtable_set_new(table, item->v_type, item->v_name,
+		    item->v_data, VF_COPY))
+		{
+			log_error("vtable_add_record: vtable_set_new failed");
+			return -1;
+		}
+	}
+
+	return 0;
+}

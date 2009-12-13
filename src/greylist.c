@@ -66,16 +66,16 @@ greylist_init(void)
 	var_t *scheme;
 
 	scheme = vlist_scheme("greylist",
-		"hostaddr",	VT_ADDR,	VF_KEEPNAME | VF_KEY, 
-		"envfrom",	VT_STRING,	VF_KEEPNAME | VF_KEY,
-		"envrcpt",	VT_STRING,	VF_KEEPNAME | VF_KEY,
-		"created",	VT_INT,		VF_KEEPNAME,
-		"updated",	VT_INT,		VF_KEEPNAME,
-		"valid",	VT_INT,		VF_KEEPNAME,
-		"delay",	VT_INT,		VF_KEEPNAME,
-		"retries",	VT_INT,		VF_KEEPNAME,
-		"visa",		VT_INT,		VF_KEEPNAME,
-		"passed",	VT_INT,		VF_KEEPNAME,
+		"milter_hostaddr",	VT_ADDR,	VF_KEEPNAME | VF_KEY, 
+		"milter_envfrom",	VT_STRING,	VF_KEEPNAME | VF_KEY,
+		"milter_envrcpt",	VT_STRING,	VF_KEEPNAME | VF_KEY,
+		"created",		VT_INT,		VF_KEEPNAME,
+		"updated",		VT_INT,		VF_KEEPNAME,
+		"valid",		VT_INT,		VF_KEEPNAME,
+		"delay",		VT_INT,		VF_KEEPNAME,
+		"retries",		VT_INT,		VF_KEEPNAME,
+		"visa",			VT_INT,		VF_KEEPNAME,
+		"passed",		VT_INT,		VF_KEEPNAME,
 		NULL);
 
 	if (scheme == NULL)
@@ -89,9 +89,7 @@ greylist_init(void)
 
 	/*
 	 * greylist_valid need to be registered at table
-	 * sql bulk del where
 	 */
-
 	dbt_register("greylist", &greylist_dbt);
 
 	return;
@@ -99,68 +97,25 @@ greylist_init(void)
 
 
 static int
-greylist_lookup(var_t *attrs, var_t **record)
-{
-	var_t *lookup = NULL;
-	char *hostaddr;
-	char *envfrom;
-	char *envrcpt;
-	
-	if (vtable_dereference(attrs, "milter_hostaddr", &hostaddr,
-	    "milter_envfrom", &envfrom, "milter_envrcpt", &envrcpt, NULL))
-	{
-		log_error("greylist_lookup: vtable_dereference failed");
-		goto error;
-	}
-
-	lookup = vlist_record(greylist_dbt.dbt_scheme, hostaddr, envfrom,
-		envrcpt, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-
-	if (lookup == NULL) {
-		log_warning("greylist_lookup: vlist_record failed");
-		goto error;
-	}
-
-	if (dbt_db_get(&greylist_dbt, lookup, record))
-	{
-		log_warning("greylist_lookup: dbt_db_get failed");
-		goto error;
-	}
-
-	var_delete(lookup);
-
-	return 0;
-
-error:
-	if (lookup)
-	{
-		var_delete(lookup);
-	}
-	
-	return -1;
-}
-
-
-static int
 greylist_add(var_t *attrs, greylist_t *gl)
 {
 	var_t *record;
-	char *hostaddr;
+	void *hostaddr;
 	char *envfrom;
 	char *envrcpt;
 	time_t now;
 	VAR_INT_T created, updated, delay, visa, valid, retries, passed;
 	
 	if (vtable_dereference(attrs, "milter_hostaddr", &hostaddr,
-		"milter_envfrom", &envfrom, "milter_envrcpt", &envrcpt, NULL))
+	    "milter_envfrom", &envfrom, "milter_envrcpt", &envrcpt, NULL))
 	{
-		log_error("greylist_lookup: vtable_dereference failed");
+		log_error("greylist_add: vtable_dereference failed");
 		return -1;
 	}
 
 	now = time(NULL);
 	if (now == -1) {
-		log_warning("greylist: time");
+		log_warning("greylist_add: time");
 		return -1;
 	}
 
@@ -184,6 +139,7 @@ greylist_add(var_t *attrs, greylist_t *gl)
 	if (dbt_db_set(&greylist_dbt, record))
 	{
 		log_error("greylist_add: dbt_db_set failed");
+		var_delete(record);
 		return -1;
 	}
 	
@@ -192,7 +148,7 @@ greylist_add(var_t *attrs, greylist_t *gl)
 	return 0;
 }
 
-greylist_response_t
+acl_action_type_t
 greylist(milter_stage_t stage, char *stagename, var_t *attrs, greylist_t *gl)
 {
 	var_t *record;
@@ -204,11 +160,11 @@ greylist(milter_stage_t stage, char *stagename, var_t *attrs, greylist_t *gl)
 	VAR_INT_T *visa;
 	VAR_INT_T *passed;
 	VAR_INT_T *valid;
-	greylist_response_t glr = GL_DELAY;
+	acl_action_type_t action = ACL_GREYLIST;
 
-	if (greylist_lookup(attrs, &record))
+	if (dbt_db_get_from_table(&greylist_dbt, attrs, &record))
 	{
-		log_error("greylist: greylist_lookup failed");
+		log_error("greylist: dbt_db_get_from_table failed");
 		goto error;
 	}
 
@@ -259,7 +215,7 @@ greylist(milter_stage_t stage, char *stagename, var_t *attrs, greylist_t *gl)
 		log_info("greylist: valid visa found. expiry: %d seconds",
 			*updated + *valid - now);
 		*passed += 1;
-		glr = GL_PASS;
+		action = ACL_NONE;
 		goto update;
 	}
 
@@ -272,14 +228,14 @@ greylist(milter_stage_t stage, char *stagename, var_t *attrs, greylist_t *gl)
 		*visa = gl->gl_visa;
 		*valid = gl->gl_visa;
 		*passed = 1;
-		glr = GL_PASS;
+		action = ACL_NONE;
 		goto update;
 	}
 
+	*retries += 1;
+
 	log_info("greylist: remaining delay: %d seconds retries: %d",
 		*created + *delay - now, *retries);
-
-	*retries += 1;
 
 
 update:
@@ -294,7 +250,7 @@ update:
 		var_delete(record);
 	}
 
-	return glr;
+	return action;
 
 add:
 
@@ -307,7 +263,7 @@ add:
 		var_delete(record);
 	}
 
-	return glr;
+	return action;
 
 error:
 
@@ -315,5 +271,5 @@ error:
 		var_delete(record);
 	}
 
-	return GL_ERROR;
+	return ACL_ERROR;
 }

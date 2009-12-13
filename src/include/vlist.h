@@ -3,7 +3,6 @@
 
 #include "var.h"
 
-
 /*
  * Prototypes
  */
@@ -14,5 +13,5 @@ int vlist_append_new(var_t *list, var_type_t type, char *name, void *data,int fl
 int vlist_dereference(var_t *list, ...);
 var_t * vlist_scheme(char *scheme, ...);
 var_t * vlist_record(var_t *scheme, ...);
-
+void * vlist_record_get(var_t *record, char *key);
 #endif /* _VLIST_H_ */

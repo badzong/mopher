@@ -206,10 +206,82 @@ dbt_db_cleanup(dbt_t *dbt)
 }
 
 
+int
+dbt_db_get_from_table(dbt_t *dbt, var_t *attrs, var_t **record)
+{
+	var_t *lookup = NULL;
+	var_t *v, *template;
+
+	lookup = VAR_COPY(dbt->dbt_scheme);
+	if (lookup == NULL)
+	{
+		log_error("dbt_db_get_from_table: VAR_COPY failed");
+		return -1;
+	}
+
+	ll_rewind(lookup->v_data);
+	ll_rewind(dbt->dbt_scheme->v_data);
+
+	for (;;)
+	{
+		template = ll_next(dbt->dbt_scheme->v_data);
+		v = ll_next(lookup->v_data);
+
+		if (v == NULL || template == NULL)
+		{
+			break;
+		}
+
+		if ((template->v_flags & VF_KEY) == 0)
+		{
+			continue;
+		}
+
+		v->v_flags |= VF_KEY;
+
+		if (v->v_data != NULL)
+		{
+			log_die(EX_SOFTWARE,
+			    "dbt_db_get_from_table: scheme contains data");
+		}
+
+		v->v_data = vtable_get(attrs, v->v_name);
+		if (v->v_data == NULL)
+		{
+			log_die(EX_SOFTWARE,
+			    "dbt_db_get_from_table: required key attribute "
+			    "\"%s\" for table \"%s\" not set", v->v_name,
+			    dbt->dbt_name);
+		}
+
+		v->v_flags |= VF_KEEPDATA;
+	}
+
+	if (dbt_db_get(dbt, lookup, record))
+	{
+		log_warning("dbt_db_get_from_table: dbt_db_get failed");
+		var_delete(lookup);
+		return -1;
+	}
+
+	if (*record)
+	{
+		log_debug("dbt_db_get_from_table: record found");
+	}
+	else
+	{
+		log_debug("dbt_db_get_from_table: no record");
+	}
+
+	var_delete(lookup);
+
+	return 0;
+}
+
+
 void
 dbt_register(char *name, dbt_t *dbt)
 {
-	dbt_driver_t *dd;
 	var_t *config;
 
 	/*
@@ -225,13 +297,13 @@ dbt_register(char *name, dbt_t *dbt)
 	 * Fill configuration into dbt
 	 */
 	if (vtable_dereference(config, "driver", &dbt->dbt_drivername,
-		"path", &dbt->dbt_path, "host", &dbt->dbt_host,
-		"port", &dbt->dbt_port, "user", &dbt->dbt_user,
-		"pass", &dbt->dbt_pass, "database", &dbt->dbt_database,
-		"table", &dbt->dbt_table, NULL))
+	    "path", &dbt->dbt_path, "host", &dbt->dbt_host,
+	    "port", &dbt->dbt_port, "user", &dbt->dbt_user,
+	    "pass", &dbt->dbt_pass, "database", &dbt->dbt_database,
+	    "table", &dbt->dbt_table, NULL))
 	{
-		log_die(EX_CONFIG, "dbt_register: vtable_dereference"
-			" failed");
+		log_die(EX_CONFIG,
+		    "dbt_register: vtable_dereference failed");
 	}
 
 	/*
@@ -252,41 +324,6 @@ dbt_register(char *name, dbt_t *dbt)
 
 	if (dbt->dbt_cleanup_interval == 0) {
 		dbt->dbt_cleanup_interval = cf_dbt_cleanup_interval;
-	}
-
-
-	/*
-	 * Lookup database driver
-	 */
-	dd = sht_lookup(dbt_drivers, dbt->dbt_drivername);
-	if (dd == NULL)
-	{
-		log_die(EX_CONFIG, "dbt_register: unknown database driver "
-		    "\"%s\"", dbt->dbt_drivername);
-	}
-
-	dbt->dbt_driver = dd;
-
-	/*
-	 * Initialize mutex if driver requires locking
-	 */
-	if ((dd->dd_flags & DBT_LOCK))
-	{
-		if (pthread_mutex_init(&dd->dd_mutex, NULL))
-		{
-			log_die(EX_SOFTWARE, "dbt_register: ptrhead_mutex_init");
-		}
-	}
-
-	/*
-	 * Open database
-	 */
-	log_debug("dbt_register: open database \"%s\"", name);
-
-	if (DBT_DB_OPEN(dbt))
-	{
-		log_die(EX_CONFIG, "dbt_register: can't open database \"%s\"",
-		    name);
 	}
 
 	/*
@@ -586,6 +623,65 @@ dbt_janitor(void *arg)
 }
 
 
+static void
+dbt_open_database(dbt_t *dbt)
+{
+	dbt_driver_t *dd;
+
+	/*
+	 * Lookup database driver
+	 */
+	dd = sht_lookup(dbt_drivers, dbt->dbt_drivername);
+	if (dd == NULL)
+	{
+		log_die(EX_CONFIG, "dbt_open_database: unknown database "
+		    "driver \"%s\"", dbt->dbt_drivername);
+	}
+
+	dbt->dbt_driver = dd;
+
+	/*
+	 * Initialize mutex if driver requires locking
+	 */
+	if ((dd->dd_flags & DBT_LOCK))
+	{
+		if (pthread_mutex_init(&dd->dd_mutex, NULL))
+		{
+			log_die(EX_SOFTWARE,
+			    "dbt_open_database: ptrhead_mutex_init");
+		}
+	}
+
+	/*
+	 * Open database
+	 */
+	log_debug("dbt_open_database: open \"%s\"", dbt->dbt_name);
+
+	if (DBT_DB_OPEN(dbt))
+	{
+		log_die(EX_CONFIG, "dbt_open_database: can't open \"%s\"",
+		    dbt->dbt_name);
+	}
+
+	return;
+}
+
+
+void
+dbt_open_databases(void)
+{
+	dbt_t *dbt;
+
+	sht_rewind(dbt_tables);
+	while ((dbt = sht_next((dbt_tables))))
+	{
+		dbt_open_database(dbt);
+	}
+
+	return;
+}
+
+
 void
 dbt_init(void)
 {
@@ -598,22 +694,12 @@ dbt_init(void)
 	}
 
 	/*
-	 * Load database drivers
-	 */
-	MODULE_LOAD_DB;
-
-	/*
 	 * Initailaize tables
 	 */
 	dbt_tables = sht_create(DBT_BUCKETS, (sht_delete_t) dbt_close);
 	if (dbt_tables == NULL) {
 		log_die(EX_SOFTWARE, "dbt_init: ht_init failed");
 	}
-
-	/*
-	 * Load table modules
-	 */
-	MODULE_LOAD_TABLE;
 
 	/*
 	 * Start table janitor thread

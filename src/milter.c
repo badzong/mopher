@@ -50,6 +50,7 @@ milter_acl(milter_stage_t stage, char *stagename, milter_priv_t * mp)
 		return SMFIS_ACCEPT;
 
 	case ACL_TEMPFAIL:
+	case ACL_GREYLIST:
 		return SMFIS_TEMPFAIL;
 
 	case ACL_ERROR:

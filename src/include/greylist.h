@@ -29,5 +29,5 @@ greylist_t * greylist_valid(greylist_t *gl, int valid);
 greylist_t * greylist_create(void);
 void greylist_delete(greylist_t *gl);
 void greylist_init(void);
-greylist_response_t greylist(milter_stage_t stage, char *stagename, var_t *attrs, greylist_t *gl);
+acl_action_type_t greylist(milter_stage_t stage, char *stagename, var_t *attrs, greylist_t *gl);
 #endif /* _GREYLIST_H_ */
