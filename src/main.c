@@ -42,6 +42,7 @@ main(int argc, char **argv)
 			fprintf(stderr, "Start the %s mail filter system.\n\n", 
 				BINNAME);
 			fprintf(stderr, "  -c file  Read configuration from file\n");
+			fprintf(stderr, "  -C       Check configuration file syntax\n");
 			fprintf(stderr, "  -d N     Set log verbosity level\n");
 			fprintf(stderr, "  -f       Don't detach into background\n");
 			fprintf(stderr, "  -h       Show this message\n");
