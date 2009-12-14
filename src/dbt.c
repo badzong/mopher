@@ -312,6 +312,11 @@ dbt_register(char *name, dbt_t *dbt)
 	dbt->dbt_name = name;
 
 	/*
+	 * Set driver to NULL (filled in upon connection)
+	 */
+	dbt->dbt_driver = NULL;
+
+	/*
 	 * Add some defaults
 	 */
 	if (dbt->dbt_table == NULL) {
@@ -461,6 +466,16 @@ dbt_janitor_cleanup(time_t now, dbt_t *dbt)
 	int deleted = 0;
 
 	log_debug("dbt_janitor_cleanup: cleaning up \"%s\"", dbt->dbt_name);
+
+	/*
+	 * Check if driver is registered
+	 */
+	if (dbt->dbt_driver == NULL)
+	{
+		log_debug("dbt_janitor_cleanup: database \"%s\" not connected "
+		    "yet", dbt->dbt_name);
+		return 0;
+	}
 
 	/*
 	 * Check if driver supports SQL

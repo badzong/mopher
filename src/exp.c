@@ -720,6 +720,7 @@ exp_eval(exp_t *exp, var_t *mailspec)
 {
 	if (exp == NULL)
 	{
+		log_debug("exp_eval: expression is null");
 		return NULL;
 	}
 
