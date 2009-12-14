@@ -15,43 +15,31 @@ static sht_t *acl_symbols;
 
 static ll_t *acl_update_callbacks;
 
-static acl_action_handler_t acl_action_handlers[] = {
-	NULL,					/* ACL_NULL 	*/
-	NULL,					/* ACL_NONE 	*/
-	NULL,					/* ACL_CONTINUE	*/
-	NULL,					/* ACL_REJECT	*/
-	NULL,					/* ACL_DISCARD	*/
-	NULL,					/* ACL_ACCEPT	*/
-	NULL,					/* ACL_TEMPFAIL	*/
-	(acl_action_handler_t) acl_jump,	/* ACL_JUMP	*/
-	(acl_action_handler_t) acl_set,		/* ACL_SET	*/
-	(acl_action_handler_t) acl_log,		/* ACL_LOG	*/
-	(acl_action_handler_t) greylist,	/* ACL_GREYLIST	*/
-	(acl_action_handler_t) tarpit		/* ACL_TARPIT	*/
-};
-
-static acl_action_delete_t acl_action_deleters[] = {
-	NULL,					/* ACL_NULL 	*/
-	NULL,					/* ACL_NONE 	*/
-	NULL,					/* ACL_CONTINUE	*/
-	NULL,					/* ACL_REJECT	*/
-	NULL,					/* ACL_DISCARD	*/
-	NULL,					/* ACL_ACCEPT	*/
-	NULL,					/* ACL_TEMPFAIL	*/
-	(acl_action_delete_t) free,		/* ACL_JUMP	*/
-	(acl_action_delete_t) NULL,		/* ACL_SET	*/
-	(acl_action_delete_t) free,		/* ACL_LOG	*/
-	(acl_action_delete_t) free,		/* ACL_GREYLIST	*/
-	(acl_action_delete_t) NULL		/* ACL_TARPIT	*/
+static acl_handler_stage_t acl_action_handlers[] = {
+    { NULL,	NULL,	MS_ANY },		/* ACL_NULL 	*/ 
+    { NULL,	NULL,	MS_ANY },		/* ACL_NONE 	*/
+    { NULL,	NULL,	MS_ANY },		/* ACL_CONTINUE	*/
+    { NULL,	NULL,	MS_ANY },		/* ACL_REJECT	*/
+    { NULL,	NULL,	MS_ANY },		/* ACL_DISCARD	*/
+    { NULL,	NULL,	MS_ANY },		/* ACL_ACCEPT	*/
+    { NULL,	NULL,	MS_ANY },		/* ACL_TEMPFAIL	*/
+    { acl_jump,	free,	MS_ANY },		/* ACL_JUMP	*/
+    { acl_set,	NULL,	MS_ANY },		/* ACL_SET	*/
+    { acl_log,	free,	MS_ANY },		/* ACL_LOG	*/
+    { greylist,	free,	MS_OFF_ENVRCPT },	/* ACL_GREYLIST	*/
+    { tarpit,	NULL,	MS_ANY }		/* ACL_TARPIT	*/
 };
 
 
 static void
 acl_action_delete(acl_action_t *aa)
 {
-	if (acl_action_deleters[aa->aa_type] && aa->aa_data)
+	acl_action_delete_t delete;
+
+	delete = acl_action_handlers[aa->aa_type].ah_delete;
+	if (delete && aa->aa_data)
 	{
-		acl_action_deleters[aa->aa_type](aa->aa_data);
+		delete(aa->aa_data);
 	}
 
 	free(aa);
@@ -621,9 +609,19 @@ acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 		aa = ar->ar_action;
 
 		/*
+		 * Check if action is allowed at this stage
+		 */
+		if ((acl_action_handlers[aa->aa_type].ah_stages & stage) == 0)
+		{
+			log_debug("acl: rule %d in \"%s\": forbidden action",
+			    i, stagename);
+			return ACL_ERROR;
+		}
+		
+		/*
 		 * Action needs evaluation
 		 */
-		action_handler = acl_action_handlers[aa->aa_type];
+		action_handler = acl_action_handlers[aa->aa_type].ah_handler;
 		if (action_handler)
 		{
 			response = action_handler(stage, stagename, mailspec,

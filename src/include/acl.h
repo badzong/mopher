@@ -26,8 +26,16 @@ typedef enum acl_action_type acl_action_type_t;
 
 typedef acl_action_type_t (*acl_action_handler_t)(milter_stage_t stage,
     char *stagename, var_t *mailspec, void *data);
-
 typedef void (*acl_action_delete_t)(void *data);
+
+struct acl_handler_stage
+{
+	acl_action_handler_t	ah_handler;
+	acl_action_delete_t	ah_delete;
+	milter_stage_t		ah_stages;
+};
+typedef struct acl_handler_stage acl_handler_stage_t;
+
 
 struct acl_action
 {
