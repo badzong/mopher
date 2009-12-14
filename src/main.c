@@ -10,15 +10,16 @@
 int
 main(int argc, char **argv)
 {
-	int r, opt, foreground, loglevel;
+	int r, opt, foreground, loglevel, check_config;
 	char *mopherd_conf;
 	char *mail_acl;
 
+	check_config = 0;
 	foreground = 0;
 	loglevel = LOG_WARNING;
 	mopherd_conf = MOPHERD_CONF;
 
-	while ((opt = getopt(argc, argv, "fhd:c:")) != -1) {
+	while ((opt = getopt(argc, argv, "fhCd:c:")) != -1) {
 		switch(opt) {
 		case 'f':
 			foreground = 1;
@@ -30,6 +31,10 @@ main(int argc, char **argv)
 
 		case 'c':
 			mopherd_conf = optarg;
+			break;
+		case 'C':
+			check_config = 1;
+			loglevel = 0;
 			break;
 		default:
 			fprintf(stderr, "Usage: %s [-c file] [-d N] [-f] [-h]\n", 
@@ -58,6 +63,23 @@ main(int argc, char **argv)
 	{
 		mail_acl = MAIL_ACL;
 		log_warning("acl_path not set: using \"%s\"", mail_acl);
+	}
+
+	/*
+	 * Check configuration and exit
+	 */
+	if (check_config)
+	{
+		dbt_init();
+		acl_init();
+		greylist_init();
+		milter_init();
+		module_init();
+		acl_read(mail_acl);
+
+		printf("%s: configuration ok.\n", BINNAME);
+
+		return 0;
 	}
 
 	dbt_init();

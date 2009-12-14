@@ -111,8 +111,6 @@ parser(char *path, FILE ** input, int (*parser_callback) (void))
 	parser_linenumber = 1;
 	parser_filename = path;
 
-	printf("INIT: %d\n", parser_linenumber);
-
 	if (parser_callback()) {
 		log_error("parser: supplied parser callback failed");
 		return -1;
