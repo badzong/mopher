@@ -176,16 +176,6 @@ module_glob(const char *path)
 	/*
 	 * Append buffer to module_buffers
 	 */
-	if (module_buffers == NULL)
-	{
-		module_buffers = ll_create();
-	}
-
-	if (module_buffers == NULL)
-	{
-		log_die(EX_SOFTWARE, "module_glob: ll_create failed");
-	}
-
 	if (LL_INSERT(module_buffers, mod) == -1)
 	{
 		log_die(EX_SOFTWARE, "module_glob: LL_INSERT failed");
@@ -242,19 +232,6 @@ module_load(module_t *mod)
 	int i;
 
 	/*
-	 * Create module list if neccessary
-	 */
-	if (module_list == NULL)
-	{
-		module_list = ll_create();
-	}
-
-	if (module_list == NULL)
-	{
-		log_die(EX_SOFTWARE, "module_load: ll_create failed");
-	}
-
-	/*
 	 * Append modules
 	 */
 	for(i = 0; mod[i].mod_name; ++i)
@@ -279,11 +256,31 @@ module_load(module_t *mod)
 void
 module_init(void)
 {
+	/*
+	 * Create module list
+	 */
+	module_list = ll_create();
+	if (module_list == NULL)
+	{
+		log_die(EX_SOFTWARE, "module_load: ll_create failed");
+	}
+
+#ifdef DYNAMIC
+	/*
+	 * Create module buffers
+	 */
+	module_buffers = ll_create();
+	if (module_buffers == NULL)
+	{
+		log_die(EX_SOFTWARE, "module_glob: ll_create failed");
+	}
+#endif /* DYNAMIC */
+
 #ifdef DYNAMIC
 	module_glob(cf_module_path);
-#else /* DUNAMIC */
+#else /* DYNAMIC */
 	module_load(module_table);
-#endif /* DUNAMIC */
+#endif /* DYNAMIC */
 }
 
 
@@ -311,16 +308,10 @@ module_delete(module_t *mod)
 void
 module_clear(void)
 {
-	if (module_list)
-	{
-		ll_delete(module_list, (ll_delete_t) module_delete);
-	}
+	ll_delete(module_list, (ll_delete_t) module_delete);
 
 #ifdef DYNAMIC
-	if (module_buffers)
-	{
-		ll_delete(module_buffers, (ll_delete_t) free);
-	}
+	ll_delete(module_buffers, (ll_delete_t) free);
 #endif
 	
 

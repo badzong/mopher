@@ -35,7 +35,6 @@ void module_load_acl(void);
 
 int bdb_init(void);
 int sakila_init(void);
-int milter_init(void);
 int rbl_init(void);
 int spamd_init(void);
 int spf_init(void);
@@ -46,7 +45,6 @@ int test_init(void);
 int delivered_init(void);
 
 void sakila_fini(void);
-void milter_fini(void);
 void rbl_fini(void);
 void spf_fini(void);
 void test_fini(void);

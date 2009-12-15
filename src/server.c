@@ -131,9 +131,23 @@ server_main(void *arg)
 	 */
 	if (util_signal(SIGUSR2, server_usr2))
 	{
-		log_error("server_main: util_signal failed");
-		return NULL;
+		log_die(EX_SOFTWARE, "server_main: util_signal failed");
 	}
+
+	/*
+	 * Create server socket
+	 */
+	server_socket = sock_listen(cf_server_socket, BACKLOG);
+	if (server_socket == -1)
+	{
+		log_die(EX_SOFTWARE, "server_init: sock_listen failed");
+	}
+
+	/*
+	 * Initialize client sockets
+	 */
+	for (i = 0; i < MAX_CLIENTS; server_clients[i++] = -1);
+	server_clients[MAX_CLIENTS] = 0;
 
 	/*
 	 * Prepare master set and max fd
@@ -296,24 +310,6 @@ server_slots_depleted:
 int
 server_init()
 {
-	int i;
-
-	/*
-	 * Create server socket
-	 */
-	server_socket = sock_listen(cf_server_socket, BACKLOG);
-	if (server_socket == -1)
-	{
-		log_error("server_init: sock_listen failed");
-		return -1;
-	}
-
-	/*
-	 * Initialize client sockets
-	 */
-	for (i = 0; i < MAX_CLIENTS; server_clients[i++] = -1);
-	server_clients[MAX_CLIENTS] = 0;
-
 	/*
 	 * Start server thread
 	 */

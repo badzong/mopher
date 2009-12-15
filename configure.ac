@@ -77,7 +77,7 @@ then
     AC_MSG_ERROR([libc has no dlopen and libdl was not found.])
   fi
 
-  CFLAGS="$CFLAGS -DDYNAMIC"
+  AC_DEFINE([DYNAMIC])
   MOD_ALL="\$(MODULES)"
   mod_suffix="so"
 else
@@ -149,11 +149,11 @@ AC_SUBST([MOD_ALL])
 
 
 # Set configuration file path
-mopherd_conf="$sysconfdir/mopher/mopherd.conf"
-mail_acl="$sysconfdir/mopher/mail.acl"
+MOPHERD_CONF="$sysconfdir/mopher/mopherd.conf"
+MAIL_ACL="$sysconfdir/mopher/mail.acl"
 
-AC_SUBST([mopherd_conf])
-AC_SUBST([mail_acl])
+AC_DEFINE_UNQUOTED([MOPHERD_CONF], ["$MOPHERD_CONF"])
+AC_DEFINE_UNQUOTED([MAIL_ACL], ["$MAIL_ACL"])
 
 # So far no further checks
 

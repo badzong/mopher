@@ -1,9 +1,10 @@
 #ifndef _UTIL_H_
 #define _UTIL_H_
 
+#include <sys/signal.h>
+
 #define UTIL_MIN(a,b) (a < b ? a : b)
 #define UTIL_MAX(a,b) (a > b ? a : b)
-
 
 /*
  * Prototypes

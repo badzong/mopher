@@ -107,6 +107,6 @@ acl_action_type_t acl_set(milter_stage_t stage, char *stagename, var_t *mailspec
 void acl_update_callback(acl_update_t callback);
 acl_action_type_t acl(milter_stage_t stage, char *stagename, var_t *mailspec);
 void acl_init(void);
-void acl_read(char *mail_acl);
+void acl_read(void);
 void acl_clear(void);
 #endif /* _ACL_H_ */

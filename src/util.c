@@ -306,7 +306,7 @@ util_signal(int signum, void (*handler)(int))
 	}
 
 	/*
-	 * Check if a signal handler is already installed
+	 * Check if a signal handler was already installed
 	 */
 	if (new.sa_handler != SIG_DFL &&
 	    new.sa_handler != SIG_IGN &&
@@ -315,7 +315,6 @@ util_signal(int signum, void (*handler)(int))
 	{
 		log_error("util_signal: handler for signal %d already "
 		    "installed", signum);
-		return -1;
 	}
 
 	if(sigaction(signum, &new, NULL) == -1)
@@ -362,6 +361,12 @@ util_thread_create(pthread_t *thread, pthread_attr_t *attr,
 	if (pthread_create(thread, NULL, util_thread_init, callback))
 	{
 		log_error("util_thread_create: pthread_create");
+		return -1;
+	}
+
+	if (pthread_detach(*thread))
+	{
+		log_error("util_thread_create: pthread_detach");
 		return -1;
 	}
 

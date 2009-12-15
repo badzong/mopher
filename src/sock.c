@@ -101,6 +101,7 @@ sock_inet_listen(char *bindaddr, char *port, int backlog)
 	struct addrinfo *next;
 	int e;
 	int fd = -1;
+	int opt = 1;
 
 	memset(&hints, 0, sizeof(hints));
 
@@ -121,6 +122,11 @@ sock_inet_listen(char *bindaddr, char *port, int backlog)
 
 		if(fd == -1) {
 			continue;
+		}
+
+		if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof opt))
+		{
+			log_error("sock_inet_listen: setsockopt");
 		}
 
 		if(bind(fd, next->ai_addr, next->ai_addrlen) == 0) {

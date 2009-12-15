@@ -13,7 +13,7 @@
 static sht_t *dbt_drivers;
 static sht_t *dbt_tables;
 
-static int		dbt_janitor_running = 1;
+static int		dbt_janitor_running;
 static pthread_t	dbt_janitor_thread;
 static pthread_attr_t	dbt_janitor_attr;
 static pthread_mutex_t	dbt_janitor_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -538,6 +538,8 @@ dbt_janitor(void *arg)
 	int r;
 
 	log_debug("dbt_janitor: janitor thread running");
+
+	dbt_janitor_running = 1;
 
 	if (pthread_mutex_lock(&dbt_janitor_mutex))
 	{

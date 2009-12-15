@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -534,16 +536,6 @@ acl_set(milter_stage_t stage, char *stagename, var_t *mailspec, exp_t *exp)
 void
 acl_update_callback(acl_update_t callback)
 {
-	if (acl_update_callbacks == NULL)
-	{
-		acl_update_callbacks = ll_create();
-		if (acl_update_callbacks == NULL)
-		{
-			log_die(EX_SOFTWARE,
-			    "acl_update_register: ll_create failed");
-		}
-	}
-
 	if (LL_INSERT(acl_update_callbacks, callback) == -1)
 	{
 		log_die(EX_SOFTWARE, "acl_update_callback: LL_INSERT failed");
@@ -673,6 +665,12 @@ acl_init(void)
 		log_die(EX_SOFTWARE, "acl_init: sht_create failed");
 	}
 
+	acl_update_callbacks = ll_create();
+	if (acl_update_callbacks == NULL)
+	{
+		log_die(EX_SOFTWARE, "acl_update_register: ll_create failed");
+	}
+
 	/*
 	 * Initialize exp
 	 */
@@ -683,8 +681,21 @@ acl_init(void)
 
 
 void
-acl_read(char *mail_acl)
+acl_read(void)
 {
+	char *mail_acl;
+
+	/*
+	 * Load default ACL path if not configured
+	 */
+	mail_acl = (char *) cf_get(VT_STRING, "acl_path", NULL);
+	if(mail_acl == NULL)
+	{
+		mail_acl = MAIL_ACL;
+		log_warning("acl_read: acl_path not set: using \"%s\"",
+		    mail_acl);
+	}
+
 	/*
 	 * run parser
 	 */
@@ -697,22 +708,14 @@ acl_read(char *mail_acl)
 void
 acl_clear(void)
 {
+	/*
+	 * Free expressions
+	 */
 	exp_clear();
 
-	if (acl_tables)
-	{
-		sht_delete(acl_tables);
-	}
-
-	if (acl_symbols)
-	{
-		sht_delete(acl_symbols);
-	}
-
-	if (acl_update_callbacks)
-	{
-		ll_delete(acl_update_callbacks, NULL);
-	}
+	sht_delete(acl_tables);
+	sht_delete(acl_symbols);
+	ll_delete(acl_update_callbacks, NULL);
 
 
 	return;

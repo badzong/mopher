@@ -20,7 +20,7 @@ INSTALL=@INSTALL@
 # Flags
 
 YFLAGS=-d
-CFLAGS=-Wall -DDEBUG -g @CFLAGS@
+CFLAGS=-Wall -g @CFLAGS@
 SOFLAGS=-shared -nostartfiles -fPIC
 LDFLAGS=-rdynamic @LIBS@ @MOD_LIBS@
 ARFLAGS=rcs

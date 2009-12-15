@@ -667,8 +667,8 @@ milter_close(SMFICTX * ctx)
 }
 
 
-void
-milter_init(void)
+static void
+milter_load_symbols(void)
 {
 	milter_symbol_t *ms;
 	milter_macro_t *mm;
@@ -726,6 +726,51 @@ milter_init(void)
 }
 
 
+void
+milter_init(void)
+{
+	cf_init();
+	dbt_init();
+	acl_init();
+	greylist_init();
+	module_init();
+	milter_load_symbols();
+
+	dbt_open_databases();
+	acl_read();
+
+	return;
+}
+
+
+void
+milter_clear(void)
+{
+	acl_clear();
+	dbt_clear();
+	module_clear();
+	cf_clear();
+
+	/*
+	 * Free macro tables
+	 */
+	sht_delete(milter_postfix_macro_table);
+	sht_delete(milter_sendmail_macro_table);
+
+	return;
+}
+
+
+void
+milter_reload(int signal)
+{
+	milter_clear();
+	milter_init();
+
+	return;
+}
+
+
 int8_t
 milter(void)
 {
@@ -768,6 +813,14 @@ milter(void)
 		log_die(EX_SOFTWARE, "milter: smfi_register failed");
 	}
 
+	/*
+	 * Reload on SIGHUP
+	 */
+	if (util_signal(SIGHUP, milter_reload))
+	{
+		log_die(EX_SOFTWARE, "milter: util_signal failed");
+	}
+
 	r = smfi_main();
 
 	if (r == MI_SUCCESS)
@@ -785,12 +838,6 @@ milter(void)
 	umask(mask);
 
 	milter_running = 0;
-
-	/*
-	 * Free macro tables
-	 */
-	sht_delete(milter_postfix_macro_table);
-	sht_delete(milter_sendmail_macro_table);
 
 	return r;
 }

@@ -64,5 +64,6 @@ extern int milter_running;
  */
 
 void milter_init(void);
+void milter_clear(void);
 int8_t milter(void);
-#endif
+#endif /* _MILTER_H_ */

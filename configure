@@ -556,8 +556,6 @@ PACKAGE_URL=''
 ac_unique_file="src"
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
-mail_acl
-mopherd_conf
 MOD_ALL
 MOD_LIBS
 MOD_ACL_SPF
@@ -3261,7 +3259,8 @@ fi
     as_fn_error "libc has no dlopen and libdl was not found." "$LINENO" 5
   fi
 
-  CFLAGS="$CFLAGS -DDYNAMIC"
+  $as_echo "#define DYNAMIC 1" >>confdefs.h
+
   MOD_ALL="\$(MODULES)"
   mod_suffix="so"
 else
@@ -3492,10 +3491,16 @@ fi
 
 
 # Set configuration file path
-mopherd_conf="$sysconfdir/mopher/mopherd.conf"
-mail_acl="$sysconfdir/mopher/mail.acl"
+MOPHERD_CONF="$sysconfdir/mopher/mopherd.conf"
+MAIL_ACL="$sysconfdir/mopher/mail.acl"
 
+cat >>confdefs.h <<_ACEOF
+#define MOPHERD_CONF "$MOPHERD_CONF"
+_ACEOF
 
+cat >>confdefs.h <<_ACEOF
+#define MAIL_ACL "$MAIL_ACL"
+_ACEOF
 
 
 # So far no further checks
