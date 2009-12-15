@@ -146,6 +146,11 @@ static milter_macro_t milter_sendmail_macros[] = {
 static sht_t *milter_postfix_macro_table;
 static sht_t *milter_sendmail_macro_table;
 
+/*
+ * Rwlock for reloading
+ */
+static pthread_rwlock_t milter_reload_lock = PTHREAD_RWLOCK_INITIALIZER;
+
 int milter_running = 1;
 
 
@@ -303,6 +308,7 @@ error:
 	return NULL;
 }
 
+
 static sfsistat
 milter_connect(SMFICTX * ctx, char *hostname, _SOCK_ADDR * hostaddr)
 {
@@ -312,6 +318,13 @@ milter_connect(SMFICTX * ctx, char *hostname, _SOCK_ADDR * hostaddr)
 	char *mta_version;
 	struct sockaddr_storage *ha_clean;
 	char *addrstr;
+	sfsistat r;
+
+	if (pthread_rwlock_rdlock(&milter_reload_lock))
+	{
+		log_error("milter_connect: pthread_rwlock_rdlock");
+		return SMFIS_TEMPFAIL;
+	}
 
 	if ((mp = milter_priv_create()) == NULL) {
 		log_error("milter_connect: milter_priv_create failed");
@@ -364,7 +377,15 @@ milter_connect(SMFICTX * ctx, char *hostname, _SOCK_ADDR * hostaddr)
 	log_debug("milter_connect: connection from: %s (%s)", hostname,
 		addrstr);
 
-	return milter_acl(MS_CONNECT, MSN_CONNECT, mp);
+	r = milter_acl(MS_CONNECT, MSN_CONNECT, mp);
+
+	if (pthread_rwlock_unlock(&milter_reload_lock))
+	{
+		log_error("milter_connect: pthread_rwlock_unlock");
+	}
+
+	return r;
+
 }
 
 static sfsistat
@@ -372,6 +393,13 @@ milter_unknown(SMFICTX * ctx, const char *cmd)
 {
 	milter_priv_t *mp;
 	VAR_INT_T stage = MS_UNKNOWN;
+	sfsistat r;
+
+	if (pthread_rwlock_rdlock(&milter_reload_lock))
+	{
+		log_error("milter_unknwon: pthread_rwlock_rdlock");
+		return SMFIS_TEMPFAIL;
+	}
 
 	mp = ((milter_priv_t *) smfi_getpriv(ctx));
 
@@ -389,7 +417,14 @@ milter_unknown(SMFICTX * ctx, const char *cmd)
 
 	log_debug("milter_unknown: unknown command: \"%s\"", cmd);
 
-	return milter_acl(MS_UNKNOWN, MSN_UNKNOWN, mp);
+	r = milter_acl(MS_UNKNOWN, MSN_UNKNOWN, mp);
+
+	if (pthread_rwlock_unlock(&milter_reload_lock))
+	{
+		log_error("milter_unknwon: pthread_rwlock_unlock");
+	}
+
+	return r;
 }
 
 static sfsistat
@@ -397,6 +432,13 @@ milter_helo(SMFICTX * ctx, char *helostr)
 {
 	milter_priv_t *mp;
 	VAR_INT_T stage = MS_HELO;
+	sfsistat r;
+
+	if (pthread_rwlock_rdlock(&milter_reload_lock))
+	{
+		log_error("milter_helo: pthread_rwlock_rdlock");
+		return SMFIS_TEMPFAIL;
+	}
 
 	mp = ((milter_priv_t *) smfi_getpriv(ctx));
 
@@ -413,7 +455,14 @@ milter_helo(SMFICTX * ctx, char *helostr)
 
 	log_debug("milter_helo: helo hostname: %s", helostr);
 
-	return milter_acl(MS_HELO, MSN_HELO, mp);
+	r = milter_acl(MS_HELO, MSN_HELO, mp);
+
+	if (pthread_rwlock_unlock(&milter_reload_lock))
+	{
+		log_error("milter_helo: pthread_rwlock_unlock");
+	}
+
+	return r;
 }
 
 static sfsistat
@@ -422,6 +471,13 @@ milter_envfrom(SMFICTX * ctx, char **argv)
 	milter_priv_t *mp;
 	VAR_INT_T stage = MS_ENVFROM;
 	char *envfrom;
+	sfsistat r;
+
+	if (pthread_rwlock_rdlock(&milter_reload_lock))
+	{
+		log_error("milter_envfrom: pthread_rwlock_rdlock");
+		return SMFIS_TEMPFAIL;
+	}
 
 	mp = ((milter_priv_t *) smfi_getpriv(ctx));
 
@@ -443,7 +499,14 @@ milter_envfrom(SMFICTX * ctx, char **argv)
 
 	log_debug("milter_envfrom: envelope from: %s", envfrom);
 
-	return milter_acl(MS_ENVFROM, MSN_ENVFROM, mp);
+	r = milter_acl(MS_ENVFROM, MSN_ENVFROM, mp);
+
+	if (pthread_rwlock_unlock(&milter_reload_lock))
+	{
+		log_error("milter_envfrom: pthread_rwlock_unlock");
+	}
+
+	return r;
 }
 
 static sfsistat
@@ -452,6 +515,13 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 	milter_priv_t *mp;
 	VAR_INT_T stage = MS_ENVRCPT;
 	char *envrcpt = NULL;
+	sfsistat r;
+
+	if (pthread_rwlock_rdlock(&milter_reload_lock))
+	{
+		log_error("milter_envrpt: pthread_rwlock_rdlock");
+		return SMFIS_TEMPFAIL;
+	}
 
 	mp = ((milter_priv_t *) smfi_getpriv(ctx));
 
@@ -487,7 +557,14 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 
 	log_debug("milter_envrcpt: envelope recipient: %s", envrcpt);
 
-	return milter_acl(MS_ENVRCPT, MSN_ENVRCPT, mp);
+	r = milter_acl(MS_ENVRCPT, MSN_ENVRCPT, mp);
+
+	if (pthread_rwlock_unlock(&milter_reload_lock))
+	{
+		log_error("milter_envrcpt: pthread_rwlock_unlock");
+	}
+
+	return r;
 }
 
 static sfsistat
@@ -495,6 +572,13 @@ milter_data(SMFICTX * ctx)
 {
 	milter_priv_t *mp;
 	VAR_INT_T stage = MS_DATA;
+	sfsistat r;
+
+	if (pthread_rwlock_rdlock(&milter_reload_lock))
+	{
+		log_error("milter_data: pthread_rwlock_rdlock");
+		return SMFIS_TEMPFAIL;
+	}
 
 	mp = ((milter_priv_t *) smfi_getpriv(ctx));
 
@@ -510,7 +594,14 @@ milter_data(SMFICTX * ctx)
 		return SMFIS_TEMPFAIL;
 	}
 
-	return milter_acl(MS_DATA, MSN_DATA, mp);
+	r = milter_acl(MS_DATA, MSN_DATA, mp);
+
+	if (pthread_rwlock_unlock(&milter_reload_lock))
+	{
+		log_error("milter_data: pthread_rwlock_unlock");
+	}
+
+	return r;
 }
 
 
@@ -520,6 +611,13 @@ milter_header(SMFICTX * ctx, char *headerf, char *headerv)
 	milter_priv_t *mp;
 	VAR_INT_T stage = MS_HEADER;
 	int32_t len;
+	sfsistat r;
+
+	if (pthread_rwlock_rdlock(&milter_reload_lock))
+	{
+		log_error("milter_header: pthread_rwlock_rdlock");
+		return SMFIS_TEMPFAIL;
+	}
 
 	mp = ((milter_priv_t *) smfi_getpriv(ctx));
 
@@ -557,7 +655,14 @@ milter_header(SMFICTX * ctx, char *headerf, char *headerv)
 		return SMFIS_TEMPFAIL;
 	}
 
-	return milter_acl(MS_HEADER, MSN_HEADER, mp);
+	r = milter_acl(MS_HEADER, MSN_HEADER, mp);
+
+	if (pthread_rwlock_unlock(&milter_reload_lock))
+	{
+		log_error("milter_header: pthread_rwlock_unlock");
+	}
+
+	return r;
 }
 
 static sfsistat
@@ -565,6 +670,13 @@ milter_eoh(SMFICTX * ctx)
 {
 	milter_priv_t *mp;
 	VAR_INT_T stage = MS_EOH;
+	sfsistat r;
+
+	if (pthread_rwlock_rdlock(&milter_reload_lock))
+	{
+		log_error("milter_eoh: pthread_rwlock_rdlock");
+		return SMFIS_TEMPFAIL;
+	}
 
 	mp = ((milter_priv_t *) smfi_getpriv(ctx));
 
@@ -583,7 +695,14 @@ milter_eoh(SMFICTX * ctx)
 
 	log_debug("milter_eom: header size: %d", mp->mp_headerlen);
 
-	return milter_acl(MS_EOH, MSN_EOH, mp);
+	r = milter_acl(MS_EOH, MSN_EOH, mp);
+
+	if (pthread_rwlock_unlock(&milter_reload_lock))
+	{
+		log_error("milter_eoh: pthread_rwlock_unlock");
+	}
+
+	return r;
 }
 
 static sfsistat
@@ -591,6 +710,13 @@ milter_body(SMFICTX * ctx, unsigned char *body, size_t len)
 {
 	milter_priv_t *mp;
 	VAR_INT_T stage = MS_BODY;
+	sfsistat r;
+
+	if (pthread_rwlock_rdlock(&milter_reload_lock))
+	{
+		log_error("milter_body: pthread_rwlock_rdlock");
+		return SMFIS_TEMPFAIL;
+	}
 
 	mp = ((milter_priv_t *) smfi_getpriv(ctx));
 
@@ -616,7 +742,14 @@ milter_body(SMFICTX * ctx, unsigned char *body, size_t len)
 		return SMFIS_TEMPFAIL;
 	}
 
-	return milter_acl(MS_BODY, MSN_BODY, mp);
+	r = milter_acl(MS_BODY, MSN_BODY, mp);
+
+	if (pthread_rwlock_unlock(&milter_reload_lock))
+	{
+		log_error("milter_body: pthread_rwlock_unlock");
+	}
+
+	return r;
 }
 
 static sfsistat
@@ -624,6 +757,13 @@ milter_eom(SMFICTX * ctx)
 {
 	milter_priv_t *mp;
 	VAR_INT_T stage = MS_EOM;
+	sfsistat r;
+
+	if (pthread_rwlock_rdlock(&milter_reload_lock))
+	{
+		log_error("milter_eom: pthread_rwlock_rdlock");
+		return SMFIS_TEMPFAIL;
+	}
 
 	mp = ((milter_priv_t *) smfi_getpriv(ctx));
 
@@ -642,7 +782,14 @@ milter_eom(SMFICTX * ctx)
 
 	log_debug("milter_eom: body size: %d", mp->mp_bodylen);
 
-	return milter_acl(MS_EOM, MSN_EOM, mp);
+	r = milter_acl(MS_EOM, MSN_EOM, mp);
+
+	if (pthread_rwlock_unlock(&milter_reload_lock))
+	{
+		log_error("milter_eom: pthread_rwlock_unlock");
+	}
+
+	return r;
 }
 
 
@@ -650,6 +797,12 @@ static sfsistat
 milter_close(SMFICTX * ctx)
 {
 	milter_priv_t *mp;
+
+	if (pthread_rwlock_rdlock(&milter_reload_lock))
+	{
+		log_error("milter_close: pthread_rwlock_rdlock");
+		return SMFIS_TEMPFAIL;
+	}
 
 	mp = ((milter_priv_t *) smfi_getpriv(ctx));
 
@@ -662,6 +815,11 @@ milter_close(SMFICTX * ctx)
 	smfi_setpriv(ctx, NULL);
 
 	log_debug("milter_close: connection closed");
+
+	if (pthread_rwlock_unlock(&milter_reload_lock))
+	{
+		log_error("milter_close: pthread_rwlock_unlock");
+	}
 
 	return SMFIS_CONTINUE;
 }
@@ -764,8 +922,19 @@ milter_clear(void)
 void
 milter_reload(int signal)
 {
+	if (pthread_rwlock_wrlock(&milter_reload_lock))
+	{
+		log_die(EX_SOFTWARE, "milter_reload: pthread_rwlock_wrlock");
+	}
+
 	milter_clear();
+	sleep(10);
 	milter_init();
+
+	if (pthread_rwlock_unlock(&milter_reload_lock))
+	{
+		log_die(EX_SOFTWARE, "milter_reload: pthread_rwlock_unlock");
+	}
 
 	return;
 }
