@@ -32,7 +32,7 @@ statements	: statements statement
 
 statement	: key '=' value
 	  	  {
-			cf_set(NULL, $1, $3);
+			cf_set_keylist(NULL, $1, $3);
 		  }
 		;
 

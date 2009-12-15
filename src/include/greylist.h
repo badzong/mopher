@@ -1,6 +1,8 @@
 #ifndef _GREYLIST_H_
 #define _GREYLIST_H_
 
+#include "exp.h"
+
 enum greylist_response
 {
 	GL_ERROR	= -1,
@@ -12,9 +14,9 @@ enum greylist_response
 typedef enum greylist_response greylist_response_t;
 
 struct greylist {
-	int gl_delay;
-	int gl_visa;
-	int gl_valid;
+	exp_t *gl_delay;
+	exp_t *gl_visa;
+	exp_t *gl_valid;
 };
 
 typedef struct greylist greylist_t;
@@ -23,10 +25,9 @@ typedef struct greylist greylist_t;
  * Prototypes
  */
 
-greylist_t * greylist_delay(greylist_t *gl, int delay);
-greylist_t * greylist_visa(greylist_t *gl, int visa);
-greylist_t * greylist_valid(greylist_t *gl, int valid);
-greylist_t * greylist_create(void);
+greylist_t * greylist_visa(greylist_t *gl, exp_t *visa);
+greylist_t * greylist_valid(greylist_t *gl, exp_t *valid);
+greylist_t * greylist_create(exp_t *delay);
 void greylist_delete(greylist_t *gl);
 void greylist_init(void);
 acl_action_type_t greylist(milter_stage_t stage, char *stagename, var_t *attrs, greylist_t *gl);

@@ -23,9 +23,8 @@ typedef struct cf_function {
  */
 
 extern char		*cf_module_path;
-extern VAR_INT_T	 cf_greylist_default_delay;
-extern VAR_INT_T	 cf_greylist_default_visa;
-extern VAR_INT_T	 cf_greylist_default_valid;
+extern VAR_INT_T	 cf_greylist_visa;
+extern VAR_INT_T	 cf_greylist_valid;
 extern char		*cf_acl_path;
 extern VAR_INT_T	 cf_acl_log_level;
 extern char		*cf_milter_socket;
@@ -49,8 +48,9 @@ extern VAR_INT_T	 cf_delivered_valid;
 void cf_run_parser(void);
 int cf_yyinput(char *buffer, int size);
 void cf_clear(void);
-void cf_init(char *file);
-void cf_set(var_t *table, ll_t *keys, var_t *v);
+void cf_path(char *path);
+void cf_init(void);
+void cf_set_new(var_type_t type, char *name, void *data, int flags);
+void cf_set_keylist(var_t *table, ll_t *keys, var_t *v);
 var_t * cf_get(var_type_t type, ...);
-
 #endif /* _CF_H_ */
