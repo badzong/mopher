@@ -919,7 +919,7 @@ milter_clear(void)
 }
 
 
-void
+static void
 milter_reload(int signal)
 {
 	if (pthread_rwlock_wrlock(&milter_reload_lock))
@@ -927,9 +927,12 @@ milter_reload(int signal)
 		log_die(EX_SOFTWARE, "milter_reload: pthread_rwlock_wrlock");
 	}
 
+	util_block_signals(SIGUSR1, 0);
+
 	milter_clear();
-	sleep(10);
 	milter_init();
+
+	util_unblock_signals(SIGUSR1, 0);
 
 	if (pthread_rwlock_unlock(&milter_reload_lock))
 	{
@@ -983,9 +986,9 @@ milter(void)
 	}
 
 	/*
-	 * Reload on SIGHUP
+	 * Reload on SIGUSR1
 	 */
-	if (util_signal(SIGHUP, milter_reload))
+	if (util_signal(SIGUSR1, milter_reload))
 	{
 		log_die(EX_SOFTWARE, "milter: util_signal failed");
 	}
