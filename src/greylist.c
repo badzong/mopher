@@ -97,39 +97,15 @@ greylist_init(void)
 
 
 static int
-greylist_add(var_t *mailspec, VAR_INT_T gl_delay, VAR_INT_T gl_valid,
-    VAR_INT_T gl_visa)
+greylist_add(struct sockaddr_storage *hostaddr, char *envfrom, char *envrcpt,
+    VAR_INT_T received, VAR_INT_T delay, VAR_INT_T valid, VAR_INT_T visa)
 {
 	var_t *record;
-	void *hostaddr;
-	char *envfrom;
-	char *envrcpt;
-	time_t now;
-	VAR_INT_T created, updated, delay, visa, valid, retries, passed;
+	VAR_INT_T retries = 1;
+	VAR_INT_T passed = 0;
 	
-	if (vtable_dereference(mailspec, "milter_hostaddr", &hostaddr,
-	    "milter_envfrom", &envfrom, "milter_envrcpt", &envrcpt, NULL))
-	{
-		log_error("greylist_add: vtable_dereference failed");
-		return -1;
-	}
-
-	now = time(NULL);
-	if (now == -1) {
-		log_warning("greylist_add: time");
-		return -1;
-	}
-
-	created = now;
-	updated = now;
-	delay = gl_delay;
-	visa = 0;
-	valid = gl_valid;
-	retries = 1;
-	passed = 0;
-
 	record = vlist_record(greylist_dbt.dbt_scheme, hostaddr, envfrom,
-	    envrcpt, &created, &updated, &valid, &delay, &retries, &visa,
+	    envrcpt, &received, &received, &valid, &delay, &retries, &visa,
 	    &passed);
 
 	if (record == NULL) {
@@ -146,7 +122,10 @@ greylist_add(var_t *mailspec, VAR_INT_T gl_delay, VAR_INT_T gl_valid,
 	
 	var_delete(record);
 
-	return 0;
+	log_info("greylist_add: from: %s to: %s: delay: %d", envfrom, envrcpt,
+	    delay);
+
+	return 1;
 }
 
 
@@ -224,158 +203,264 @@ greylist_eval(greylist_t *gl, var_t *mailspec, VAR_INT_T *delay,
 }
 
 
-acl_action_type_t
-greylist(milter_stage_t stage, char *stagename, var_t *mailspec,
-    greylist_t *gl)
+static int
+greylist_recipient(struct sockaddr_storage *hostaddr, char *envfrom,
+    char *envrcpt, VAR_INT_T received, VAR_INT_T delay, VAR_INT_T valid,
+    VAR_INT_T visa)
 {
-	var_t *record = NULL;
-	time_t now;
-	VAR_INT_T *created;
-	VAR_INT_T *updated;
-	VAR_INT_T *delay;
-	VAR_INT_T *retries;
-	VAR_INT_T *visa;
-	VAR_INT_T *passed;
-	VAR_INT_T *valid;
-	acl_action_type_t action = ACL_GREYLIST;
-	VAR_INT_T gl_delay, gl_valid, gl_visa;
+	var_t *lookup = NULL, *record = NULL;
+	VAR_INT_T *rec_created;
+	VAR_INT_T *rec_updated;
+	VAR_INT_T *rec_delay;
+	VAR_INT_T *rec_retries;
+	VAR_INT_T *rec_visa;
+	VAR_INT_T *rec_passed;
+	VAR_INT_T *rec_valid;
+	int defer;
 
 	/*
-	 * Evaluate expressions
+	 * Lookup greylist record
 	 */
-	if (greylist_eval(gl, mailspec, &gl_delay, &gl_valid, &gl_visa))
+	lookup = vlist_record(greylist_dbt.dbt_scheme, hostaddr, envfrom,
+	    envrcpt, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+
+	if (lookup == NULL)
 	{
-		log_error("greylist: greylist_eval failed");
+		log_error("greylist_recipient: vlist_record failed");
 		goto error;
 	}
 
-	if (dbt_db_get_from_table(&greylist_dbt, mailspec, &record))
+	if (dbt_db_get(&greylist_dbt, lookup, &record))
 	{
-		log_error("greylist: dbt_db_get_from_table failed");
+		log_error("greylist_recipient: dbt_db_get failed");
 		goto error;
 	}
 
+	var_delete(lookup);
+	lookup = NULL;
+
 	/*
-	 * Greylist GREYLISTED
+	 * Dont't greylist if no record exists (GREYLISTED)
 	 */
-	if (gl_delay == -1 && record == NULL)
+	if (record == NULL && delay == -1)
 	{
-		log_debug("greylist: not greylisted yet: continue evaluation");
-		return ACL_NONE;
+		return 0;
 	}
 
+	/*
+	 * No record found: create new record
+	 */
 	if (record == NULL)
 	{
-		log_info("greylist: create new record");
 		goto add;
 	}
 
-	if (vlist_dereference(record, NULL, NULL, NULL, &created, &updated,
-	    &valid, &delay, &retries, &visa, &passed))
+	/*
+	 * Get record properties
+	 */
+	if (vlist_dereference(record, NULL, NULL, NULL, &rec_created,
+	    &rec_updated, &rec_valid, &rec_delay, &rec_retries, &rec_visa,
+	    &rec_passed))
 	{
-		log_warning("greylist: vlist_dereference failed");
+		log_error("greylist_recipient: vlist_dereference failed");
 		goto error;
 	}
 
 	/*
-	 * Greylist GREYLISTED
+	 * Greylist if record exists
 	 */
-	if (gl_delay == -1)
+	if (delay == -1)
 	{
-		gl_delay = *delay;
-		gl_valid = *valid;
-		gl_visa  = *visa;
-	}
-
-	now = time(NULL);
-	if (now == -1)
-	{
-		log_warning("greylist: time");
-		goto error;
+		delay = *rec_delay;
+		valid = *rec_valid;
+		visa  = *rec_visa;
 	}
 
 	/*
 	 * Record expired.
 	 */
-	if (*updated + *valid < now) {
-		log_info("greylist: record expired %d seconds ago",
-			now - *created - *valid);
+	if (*rec_updated + *rec_valid < received)
+	{
+		log_info("greylist: from: %s to: %s: record expired %d seconds "
+		    "ago", envfrom, envrcpt,
+		    received - *rec_created - *rec_valid);
+
 		goto add;
 	}
 
 	/*
 	 * Delay smaller than requested.
 	 */
-	if (*delay < gl_delay) {
-		log_info("greylist: record delay too small. Extension: %d"
-			" seconds", gl_delay);
-		*delay = gl_delay;
-		*visa = 0;
+	if (*rec_delay < delay)
+	{
+		log_info("greylist: from: %s to: %s: record delay too small: "
+		    "extended %d seconds", envfrom, envrcpt,
+		    delay - *rec_delay);
+
+		*rec_delay = delay;
+		*rec_passed = 0;
+		defer = 1;
 		goto update;
 	}
 
 	/*
 	 * Valid visa
 	 */
-	if (*visa) {
-		log_info("greylist: valid visa found. expiry: %d seconds",
-			*updated + *valid - now);
-		*passed += 1;
-		action = ACL_NONE;
+	if (*rec_passed > 0)
+	{
+		log_info("greylist: from: %s to: %s: valid visa found. "
+		    "expiry: %d seconds", envfrom, envrcpt,
+		    *rec_updated + *rec_valid - received);
+
+		*rec_passed += 1;
+		defer = 0;
 		goto update;
 	}
 
 	/*
 	 * Delay passed
 	 */
-	if (*created + *delay < now) {
-		log_info("greylist: delay passed. create visa for %d seconds",
-		    gl_visa);
-		*visa = gl_visa;
-		*valid = gl_visa;
-		*passed = 1;
-		action = ACL_NONE;
+	if (*rec_created + *rec_delay < received)
+	{
+		log_info("greylist: from: %s to: %s: delay passed. create "
+		    "visa for %d seconds", envfrom, envrcpt, visa);
+
+		*rec_visa = visa;
+		*rec_valid = visa;
+		*rec_passed = 1;
+		defer = 0;
 		goto update;
 	}
 
-	*retries += 1;
+	/*
+	 * Greylisting in action
+	 */
+	*rec_retries += 1;
+	defer = 1;
 
-	log_info("greylist: remaining delay: %d seconds retries: %d",
-		*created + *delay - now, *retries);
+	log_info("greylist: from: %s to: %s: remaining delay: %d seconds "
+	    "retries: %d", envfrom, envrcpt,
+	    *rec_created + *rec_delay - received, *rec_retries);
 
 
 update:
-	*updated = now;
+	*rec_updated = received;
 
-	if (dbt_db_set(&greylist_dbt, record)) {
-		log_warning("greylist: DBT_DB_SET failed");
+	if (dbt_db_set(&greylist_dbt, record))
+	{
+		log_error("greylist: DBT_DB_SET failed");
 		goto error;
 	}
 
-	if (record) {
+	if (record)
+	{
 		var_delete(record);
 	}
 
-	return action;
+	return defer;
 
 add:
-
-	if (greylist_add(mailspec, gl_delay, gl_valid, gl_visa)) {
-		log_warning("greylist: greylist_add failed");
-		goto error;
-	}
-
 	if (record) {
 		var_delete(record);
 	}
 
-	return action;
+	return greylist_add(hostaddr, envfrom, envrcpt, received,
+	    delay, valid, visa);
 
 error:
 
-	if (record) {
+	if (lookup)
+	{
+		var_delete(lookup);
+	}
+
+	if (record)
+	{
 		var_delete(record);
 	}
 
-	return ACL_ERROR;
+	return -1;
+}
+
+
+acl_action_type_t
+greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
+{
+	greylist_t *gl = data;
+	struct sockaddr_storage *hostaddr;
+	char *envfrom;
+	char *envrcpt;
+	ll_t *recipients;
+	var_t *vrcpt;
+	VAR_INT_T *received;
+	VAR_INT_T delay;
+	VAR_INT_T valid;
+	VAR_INT_T visa;
+	int defer = 0, r;
+
+	/*
+	 * Evaluate expressions
+	 */
+	if (greylist_eval(gl, mailspec, &delay, &valid, &visa))
+	{
+		log_error("greylist: greylist_eval failed");
+		return ACL_ERROR;
+	}
+
+	/*
+	 * Get hostaddr, enfrom, envrcpt, recipients and received
+	 */
+	if (vtable_dereference(mailspec, "milter_hostaddr", &hostaddr,
+	    "milter_envfrom", &envfrom, "milter_envrcpt", &envrcpt,
+	    "milter_recipient_list", &recipients, "milter_received", &received,
+	    NULL))
+	{
+		log_error("greylist: vtable_dereference failed");
+		return ACL_ERROR;
+	}
+
+	/*
+	 * Check stage: In envrcpt we only need to check envrcpt; in all other
+	 * stages we need to check all recipients.
+	 */
+	if (stage == MS_ENVRCPT)
+	{
+		defer = greylist_recipient(hostaddr, envfrom, envrcpt,
+		    *received, delay, valid, visa);
+	}
+	else
+	{
+		ll_rewind(recipients);
+		while ((vrcpt = ll_next(recipients)))
+		{
+			/*
+			 * vlist stores var_t pointers!
+			 */
+			envrcpt = vrcpt->v_data;
+
+			r = greylist_recipient(hostaddr, envfrom,
+			    envrcpt, *received, delay, valid, visa);
+
+			if (r == -1)
+			{
+				break;
+			}
+
+			defer += r;
+		}
+	}
+
+	if (defer == -1)
+	{
+		log_error("greylist: greylist_recipient failed");
+		return ACL_ERROR;
+	}
+
+	if (defer)
+	{
+		log_debug("greylist: %d recipients need greylisting", defer);
+		return ACL_GREYLIST;
+	}
+
+	return ACL_NONE;
 }

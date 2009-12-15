@@ -27,8 +27,10 @@ sudo chmod 777 /var/spool/postfix/milter.sock
 	read
 	echo "rcpt to: <$RCPT>"
 	read
-	#echo "rcpt to: <orders@badzong.com>"
-	#read
+	echo "rcpt to: <orders@badzong.com>"
+	read
+	echo "rcpt to: <lists@badzong.com>"
+	read
     echo "data"
     read
     echo "Subject: MAIL.SH"

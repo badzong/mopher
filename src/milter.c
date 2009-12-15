@@ -569,16 +569,6 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 
 	++mp->mp_recipients;
 
-	/*
-	 * Append recipient to recipient_list
-	 */
-	if (vtable_list_append_new
-	    (mp->mp_table, VT_STRING, "milter_recipient_list", envrcpt,
-	     VF_KEEP)) {
-		log_error("milter_envrcpt: vtable_list_append_new failed");
-		return SMFIS_TEMPFAIL;
-	}
-
 	if (vtable_setv(mp->mp_table,
 	    VT_POINTER, "milter_ctx", ctx, VF_KEEP,
 	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
@@ -595,6 +585,21 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 	log_debug("milter_envrcpt: envelope recipient: %s", envrcpt);
 
 	r = milter_acl(MS_ENVRCPT, MSN_ENVRCPT, mp);
+
+	/*
+	 * Add accepted recipients to recipient_list
+	 */
+	if (r == SMFIS_CONTINUE || r == SMFIS_ACCEPT)
+	{
+		if (vtable_list_append_new(mp->mp_table, VT_STRING,
+		    "milter_recipient_list", envrcpt,
+		    VF_KEEPNAME | VF_COPYDATA))
+		{
+			log_error(
+			    "milter_envrcpt: vtable_list_append_new failed");
+			return SMFIS_TEMPFAIL;
+		}
+	}
 
 	if (pthread_rwlock_unlock(&milter_reload_lock))
 	{

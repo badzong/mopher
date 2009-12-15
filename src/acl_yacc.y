@@ -10,8 +10,8 @@ int acl_lex(void);
 %}
 
 %token ID INTEGER FLOAT STRING ADDR VARIABLE CONTINUE XREJECT DISCARD ACCEPT
-%token TEMPFAIL GREYLIST TARPIT SET LOG LEVEL VALID VISA MULTIPLIER EQ NE LE GE
-%token AND OR DEFINE
+%token TEMPFAIL GREYLIST DELAY TARPIT SET LOG LEVEL VALID VISA MULTIPLIER EQ
+%token NE LE GE AND OR DEFINE
 
 %union {
 	char			 c;
@@ -65,10 +65,9 @@ action		: CONTINUE		{ $$ = acl_action(ACL_CONTINUE, NULL); }
 		| set			{ $$ = acl_action(ACL_SET, $1); }
 		;
 
-greylist	: greylist VALID number	{ $$ = greylist_valid($1, $3); }
-		| greylist VISA number	{ $$ = greylist_visa($1, $3); }
-		| greylist number	{ $$ = greylist_delay($1, $2); }
-		| GREYLIST		{ $$ = greylist_create(); }
+greylist	: greylist VALID exp	{ $$ = greylist_valid($1, $3); }
+		| greylist VISA exp	{ $$ = greylist_visa($1, $3); }
+		| GREYLIST exp		{ $$ = greylist_create($2); }
 		;
 
 tarpit		: TARPIT exp		{ $$ = $2; }

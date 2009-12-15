@@ -5,8 +5,9 @@
 
 
 acl_action_type_t
-tarpit(milter_stage_t stage, char *stagename, var_t *mailspec, exp_t *exp)
+tarpit(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 {
+	exp_t *exp = data;
 	int delay;
 	int nap;
 	var_t *v;

@@ -15,6 +15,7 @@ log		log
 set		set
 valid		valid
 visa		visa
+delay		delay
 
 eq		==
 ne		!=
@@ -58,6 +59,7 @@ comment		#.*$
 {log}		return LOG;
 {valid}		return VALID;
 {visa}		return VISA;
+{delay}		return DELAY;
 {eq}		return EQ;
 {ne}		return NE;
 {le}		return LE;

@@ -30,5 +30,5 @@ greylist_t * greylist_valid(greylist_t *gl, exp_t *valid);
 greylist_t * greylist_create(exp_t *delay);
 void greylist_delete(greylist_t *gl);
 void greylist_init(void);
-acl_action_type_t greylist(milter_stage_t stage, char *stagename, var_t *attrs, greylist_t *gl);
+acl_action_type_t greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data);
 #endif /* _GREYLIST_H_ */

@@ -480,8 +480,9 @@ acl_log_level(acl_log_t *al, int level)
 
 
 acl_action_type_t
-acl_log(milter_stage_t stage, char *stagename, var_t *mailspec, acl_log_t *al)
+acl_log(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 {
+	acl_log_t *al = data;
 	var_t *v;
 	char buffer[ACL_LOGLEN];
 
@@ -509,8 +510,9 @@ acl_log(milter_stage_t stage, char *stagename, var_t *mailspec, acl_log_t *al)
 
 
 acl_action_type_t
-acl_jump(milter_stage_t stage, char *stagename, var_t *mailspec, char *table)
+acl_jump(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 {
+	char *table = data;
 	log_debug("acl_jump: jump to \"%s\"", table);
 
 	return acl(stage, table, mailspec);
@@ -518,8 +520,9 @@ acl_jump(milter_stage_t stage, char *stagename, var_t *mailspec, char *table)
 
 
 acl_action_type_t
-acl_set(milter_stage_t stage, char *stagename, var_t *mailspec, exp_t *exp)
+acl_set(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 {
+	exp_t *exp = data;
 	var_t *v;
 
 	v = exp_eval(exp, mailspec);
@@ -605,7 +608,7 @@ acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 		 */
 		if ((acl_action_handlers[aa->aa_type].ah_stages & stage) == 0)
 		{
-			log_debug("acl: rule %d in \"%s\": forbidden action",
+			log_debug("acl: rule %d in %s: bad action",
 			    i, stagename);
 			return ACL_ERROR;
 		}

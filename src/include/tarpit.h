@@ -5,5 +5,5 @@
  * Prototypes
  */
 
-acl_action_type_t tarpit(milter_stage_t stage, char *stagename, var_t *mailspec, exp_t *exp);
+acl_action_type_t tarpit(milter_stage_t stage, char *stagename, var_t *mailspec, void *data);
 #endif /* _TARPIT_H_ */
