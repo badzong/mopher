@@ -39,6 +39,7 @@
  */
 static milter_symbol_t milter_symbols[] = {
 	{ "milter_ctx", MS_ANY },
+	{ "milter_id", MS_ANY },
 	{ "milter_mta_version", MS_ANY },
 	{ "milter_stage", MS_ANY },
 	{ "milter_stagename", MS_ANY }, 
@@ -151,7 +152,35 @@ static sht_t *milter_sendmail_macro_table;
  */
 static pthread_rwlock_t milter_reload_lock = PTHREAD_RWLOCK_INITIALIZER;
 
+/*
+ * Milter id
+ */
+static VAR_INT_T milter_id;
+static pthread_mutex_t milter_id_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 int milter_running = 1;
+
+
+static int
+milter_get_id(void)
+{
+	VAR_INT_T id;
+
+	if (pthread_mutex_lock(&milter_id_mutex))
+	{
+		log_error("milter_id: pthread_mutex_lock");
+		return -1;
+	}
+
+	id = ++milter_id;
+
+	if (pthread_mutex_unlock(&milter_id_mutex))
+	{
+		log_error("milter_id: pthread_mutex_unlock");
+	}
+
+	return id;
+}
 
 
 static int
@@ -318,6 +347,7 @@ milter_connect(SMFICTX * ctx, char *hostname, _SOCK_ADDR * hostaddr)
 	char *mta_version;
 	struct sockaddr_storage *ha_clean;
 	char *addrstr;
+	VAR_INT_T id;
 	sfsistat r;
 
 	if (pthread_rwlock_rdlock(&milter_reload_lock))
@@ -332,6 +362,12 @@ milter_connect(SMFICTX * ctx, char *hostname, _SOCK_ADDR * hostaddr)
 	}
 
 	smfi_setpriv(ctx, mp);
+
+	if ((id = milter_get_id()) == -1)
+	{
+		log_error("milter_connect: milter_id failed");
+		return SMFIS_TEMPFAIL;
+	}
 
 	if ((now = (VAR_INT_T) time(NULL)) == -1) {
 		log_error("milter_connect: time");
@@ -359,6 +395,7 @@ milter_connect(SMFICTX * ctx, char *hostname, _SOCK_ADDR * hostaddr)
 
 	if (vtable_setv(mp->mp_table,
 	    VT_POINTER, "milter_ctx", ctx, VF_KEEP,
+	    VT_INT, "milter_id", &id, VF_KEEPNAME | VF_COPYDATA,
 	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "milter_stagename", MSN_CONNECT,
 		VF_KEEPNAME | VF_KEEPDATA,

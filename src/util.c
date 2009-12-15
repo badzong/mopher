@@ -281,7 +281,42 @@ util_block_signals(int sig, ...)
 	
 	if (pthread_sigmask(SIG_BLOCK, &sigset, NULL))
 	{
-		log_error("client_main: pthread_sigmask");
+		log_error("util_block_signals: pthread_sigmask");
+		return -1;
+	}
+
+	va_end(ap);
+
+	return 0;
+}
+
+int
+util_unblock_signals(int sig, ...)
+{
+	sigset_t	sigset;
+	int		signal;
+	va_list		ap;
+
+	if (sigemptyset(&sigset))
+	{
+		log_error("util_unblock_signals: sigemptyset");
+		return -1;
+	}
+
+	va_start(ap, sig);
+
+	while ((signal = va_arg(ap, int)))
+	{
+		if (sigaddset(&sigset, signal))
+		{
+			log_error("util_unblock_signals: sigaddset");
+			return -1;
+		}
+	}
+	
+	if (pthread_sigmask(SIG_UNBLOCK, &sigset, NULL))
+	{
+		log_error("util_unblock_signals: pthread_sigmask");
 		return -1;
 	}
 
