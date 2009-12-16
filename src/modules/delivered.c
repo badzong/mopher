@@ -7,6 +7,10 @@
 
 #include "mopher.h"
 
+
+#define KEYLEN 128
+
+
 typedef int (*delivered_add_t)(dbt_t *dbt, var_t *mailspec);
 
 static dbt_t delivered_relay;
@@ -16,48 +20,56 @@ static dbt_t delivered_penpal;
 static int
 delivered_lookup(milter_stage_t stage, char *name, var_t *mailspec)
 {
-	var_t *record;
-	VAR_INT_T count, *countp;
 	dbt_t *dbt;
+	VAR_INT_T *recipients;
+	char prefix[] = "delivered_penpal";
 
-	if (strcmp(name, "delivered_penpal") == 0)
+	if (strncmp(name, prefix, sizeof prefix - 1) == 0)
 	{
 		dbt = &delivered_penpal;
+
+		/*
+		 * Penpal symbols are ambiguous for multi recipient messages
+		 * in stages other than MS_ENVRCPT.
+		 */
+		if (stage == MS_ENVRCPT)
+		{
+			goto load;
+		}
+
+		recipients = vtable_get(mailspec, "milter_recipients");
+		if (recipients == NULL)
+		{
+			log_error("delivered_lookup: vtable_get failed");
+			return -1;
+		}
+
+		if (*recipients == 1)
+		{
+			goto load;
+		}
+
+		log_error("delivered_lookup: message has %ld recipients: "
+		    "symbol \"%s\" abiguous", *recipients, name);
+
+		if (vtable_set_new(mailspec, VT_INT, name, NULL, VF_COPYNAME))
+		{
+			log_error("delivered_lookup: vtable_set_new failed");
+			return -1;
+		}
 	}
 	else
 	{
 		dbt = &delivered_relay;
 	}
 
-	if (dbt_db_get_from_table(dbt, mailspec, &record))
+
+load:
+
+	if (dbt_db_load_into_table(dbt, mailspec))
 	{
 		log_error(
-		    "delivered_lookup: dbt_db_get_from_table failed");
-		return -1;
-	}
-
-	if (record == NULL)
-	{
-		count = 0;
-	}	
-	else
-	{
-		countp = vlist_record_get(record, "count");
-		if (countp == NULL)
-		{
-			log_error("delivered_lookup: count not set");
-			var_delete(record);
-			return -1;
-		}
-
-		count = *countp;
-
-		var_delete(record);
-	}
-
-	if (vtable_setv(mailspec, VT_STRING, name, &count, VF_COPY, VT_NULL))
-	{
-		log_error("delivered_lookup: vtable_setv failed");
+		    "delivered_lookup: dbt_db_load_into_table failed");
 		return -1;
 	}
 
@@ -151,10 +163,25 @@ delivered_add_penpal(dbt_t *dbt, var_t *mailspec)
 
 
 static int
-delivered_update_record(dbt_t *dbt, var_t *mailspec, delivered_add_t add)
+delivered_update_record(dbt_t *dbt, char *prefix, var_t *mailspec,
+    delivered_add_t add)
 {
 	var_t *record = NULL;
 	VAR_INT_T *updated, *valid, *count, *received, r;
+	char updated_key[KEYLEN], valid_key[KEYLEN];
+	int err;
+
+	err  = (snprintf(updated_key, sizeof updated_key, "%s_updated", prefix)
+	    >= sizeof updated_key);
+
+	err |= (snprintf(valid_key, sizeof valid_key, "%s_valid", prefix)
+	    >= sizeof valid_key);
+
+	if (err)
+	{
+		log_error("delivered_update_record: buffer exhausted");
+		goto error;
+	}
 
 	if (dbt_db_get_from_table(dbt, mailspec, &record))
 	{
@@ -176,9 +203,9 @@ delivered_update_record(dbt_t *dbt, var_t *mailspec, delivered_add_t add)
 		goto error;
 	}
 
-	updated	= vlist_record_get(record, "updated");
-	valid	= vlist_record_get(record, "valid");
-	count	= vlist_record_get(record, "count");
+	updated	= vlist_record_get(record, updated_key);
+	valid	= vlist_record_get(record, valid_key);
+	count	= vlist_record_get(record, prefix);
 
 	if (updated == NULL || valid == NULL || count == NULL)
 	{
@@ -236,8 +263,8 @@ delivered_update(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 		return 0;
 	}
 
-	count = delivered_update_record(&delivered_relay, mailspec,
-	    delivered_add_relay);
+	count = delivered_update_record(&delivered_relay, "delivered_relay",
+	    mailspec, delivered_add_relay);
 
 	if (count == -1)
 	{
@@ -247,8 +274,8 @@ delivered_update(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 
 	log_debug("delivered_update: relay seen %d times", count);
 
-	count = delivered_update_record(&delivered_penpal, mailspec,
-	    delivered_add_penpal);
+	count = delivered_update_record(&delivered_penpal, "delivered_penpal",
+	    mailspec, delivered_add_penpal);
 
 	if (count == -1)
 	{
@@ -270,20 +297,20 @@ delivered_init(void)
 
 	relay_scheme = vlist_scheme("delivered_relay",
 		"milter_hostaddr",	VT_ADDR,	VF_KEEPNAME | VF_KEY,
-		"created",		VT_INT,		VF_KEEPNAME,
-		"updated",		VT_INT,		VF_KEEPNAME,
-		"valid",		VT_INT,		VF_KEEPNAME,
-		"count",		VT_INT,		VF_KEEPNAME,
+		"delivered_relay_created",	VT_INT,		VF_KEEPNAME,
+		"delivered_relay_updated",	VT_INT,		VF_KEEPNAME,
+		"delivered_relay_valid",	VT_INT,		VF_KEEPNAME,
+		"delivered_relay",		VT_INT,		VF_KEEPNAME,
 		NULL);
 
 	penpal_scheme = vlist_scheme("delivered_penpal",
 		"milter_hostaddr",	VT_ADDR,	VF_KEEPNAME | VF_KEY,
 		"milter_envfrom",	VT_STRING,	VF_KEEPNAME | VF_KEY,
 		"milter_envrcpt",	VT_STRING,	VF_KEEPNAME | VF_KEY,
-		"created",		VT_INT,		VF_KEEPNAME,
-		"updated",		VT_INT,		VF_KEEPNAME,
-		"valid",		VT_INT,		VF_KEEPNAME,
-		"count",		VT_INT,		VF_KEEPNAME,
+		"delivered_penpal_created",	VT_INT,		VF_KEEPNAME,
+		"delivered_penpal_updated",	VT_INT,		VF_KEEPNAME,
+		"delivered_penpal_valid",	VT_INT,		VF_KEEPNAME,
+		"delivered_penpal",		VT_INT,		VF_KEEPNAME,
 		NULL);
 
 	if (relay_scheme == NULL ||
@@ -303,9 +330,15 @@ delivered_init(void)
 	dbt_register("delivered_relay", &delivered_relay);
 	dbt_register("delivered_penpal", &delivered_penpal);
 
-	acl_symbol_register("delivered_relay", MS_ANY, delivered_lookup);
+	acl_symbol_register("delivered_relay", MS_ANY, delivered_lookup,
+	    AS_CACHE);
+
+	/*
+	 * delivered penpal is not cached due to abiguity in multi recipient
+	 * messages.
+	 */
 	acl_symbol_register("delivered_penpal", MS_OFF_ENVRCPT,
-	    delivered_lookup);
+	    delivered_lookup, AS_NOCACHE);
 
 	acl_update_callback(delivered_update);
 

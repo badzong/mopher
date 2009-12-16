@@ -193,7 +193,7 @@ acl_symbol_delete(acl_symbol_t *as)
 
 static acl_symbol_t *
 acl_symbol_create(acl_symbol_type_t type, char *name, milter_stage_t stages,
-    void *data)
+    void *data, acl_symbol_flag_t flags)
 {
 	acl_symbol_t *as;
 
@@ -206,6 +206,7 @@ acl_symbol_create(acl_symbol_type_t type, char *name, milter_stage_t stages,
 	as->as_type = type;
 	as->as_stages = stages;
 	as->as_data = data;
+	as->as_flags = flags;
 
 	return as;
 }
@@ -225,11 +226,11 @@ acl_symbol_insert(char *symbol, acl_symbol_t *as)
 
 void
 acl_symbol_register(char *name, milter_stage_t stages,
-    acl_symbol_callback_t callback)
+    acl_symbol_callback_t callback, acl_symbol_flag_t flags)
 {
 	acl_symbol_t *as;
 
-	as = acl_symbol_create(AS_SYMBOL, name, stages, callback);
+	as = acl_symbol_create(AS_SYMBOL, name, stages, callback, flags);
 	acl_symbol_insert(name, as);
 	
 	log_debug("acl_symbol_register: \"%s\" registered", name);
@@ -251,7 +252,7 @@ acl_constant_register(var_type_t type, char *name, void *data, int flags)
 		    "failed");
 	}
 
-	as = acl_symbol_create(AS_CONSTANT, name, MS_ANY, v);
+	as = acl_symbol_create(AS_CONSTANT, name, MS_ANY, v, AS_NONE);
 	acl_symbol_insert(name, as);
 	
 	log_debug("acl_constant_register: \"%s\" registered", name);
@@ -264,7 +265,7 @@ acl_function_register(char *name, acl_function_callback_t callback)
 {
 	acl_symbol_t *as;
 
-	as = acl_symbol_create(AS_FUNCTION, name, MS_ANY, callback);
+	as = acl_symbol_create(AS_FUNCTION, name, MS_ANY, callback, AS_NONE);
 	acl_symbol_insert(name, as);
 	
 	log_debug("acl_function_register: \"%s\" registered", name);
@@ -369,12 +370,15 @@ acl_symbol_get(var_t *mailspec, char *name)
 	}
 
 	/*
-	 * Lookup symbol
+	 * Lookup symbol if caching is allowed
 	 */
-	v = vtable_lookup(mailspec, name);
-	if (v)
+	if ((as->as_flags & AS_NOCACHE) == 0)
 	{
-		return v;
+		v = vtable_lookup(mailspec, name);
+		if (v)
+		{
+			return v;
+		}
 	}
 
 	callback = as->as_data;

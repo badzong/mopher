@@ -46,6 +46,7 @@ typedef struct dbt {
 	int			  dbt_cleanup_schedule;
 	int			  dbt_cleanup_deleted;
 	char			 *dbt_sql_invalid_where;
+	int			  dbt_sql_invalid_free;
 	int			(*dbt_validate)(struct dbt *, var_t *);
 	char			 *dbt_drivername;
 	dbt_driver_t		 *dbt_driver;
@@ -59,7 +60,7 @@ typedef int (*dbt_validate_t)(dbt_t *dbt, var_t *record);
 #define DBT_VALIDATE(dbt, var) (dbt)->dbt_validate(dbt, var)
 #define DBT_SCHEDULE_CLEANUP(dbt, now) ((dbt)->dbt_cleanup_schedule = now + (dbt)->dbt_cleanup_interval)
 
-#define DBT_COMMON_INVALID_SQL "`valid` + `created` < unix_timestamp()"
+#define DBT_COMMON_INVALID_SQL "COMMON"
 
 /*
  * Prototypes

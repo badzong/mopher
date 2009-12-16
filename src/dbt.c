@@ -9,6 +9,8 @@
 #include "mopher.h"
 
 #define DBT_BUCKETS 32
+#define BUFLEN 1024
+#define KEYLEN 128
 
 static sht_t *dbt_drivers;
 static sht_t *dbt_tables;
@@ -52,6 +54,11 @@ dbt_close(dbt_t *dbt)
 	if (dbt->dbt_scheme)
 	{
 		var_delete(dbt->dbt_scheme);
+	}
+
+	if (dbt->dbt_sql_invalid_free)
+	{
+		free(dbt->dbt_sql_invalid_where);
 	}
 
 	return;
@@ -279,6 +286,76 @@ dbt_db_get_from_table(dbt_t *dbt, var_t *attrs, var_t **record)
 }
 
 
+int
+dbt_db_load_into_table(dbt_t *dbt, var_t *table)
+{
+	var_t *record;
+	ll_t *list;
+	var_t *v;
+	void *data;
+
+	if (dbt_db_get_from_table(dbt, table, &record))
+	{
+		log_error("dbt_db_load_into_tabe: dbt_db_get_from_table "
+		    "failed");
+		return -1;
+	}
+
+	list = record == NULL ? dbt->dbt_scheme->v_data : record->v_data;
+
+	ll_rewind(list);
+	while ((v = ll_next(list)))
+	{
+		/*
+		 * Keys are already stored in the table
+		 */
+		if ((v->v_flags & VF_KEY))
+		{
+			continue;
+		}
+
+		/*
+	 	 * If not found set table entries to NULL
+	 	 */
+		data = record == NULL ? NULL : v->v_data;
+
+		if (vtable_set_new(table, v->v_type, v->v_name, data, VF_COPY))
+		{
+			log_error("dbt_db_load_into_table: var_table_set_new "
+			    "failed");
+
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+
+static char *
+dbt_common_sql(char *name)
+{
+	char buffer[BUFLEN], *p;
+	int len;
+
+	len = snprintf(buffer, sizeof buffer,
+	    "`%s_valid` + `%s_created` < unix_timestamp()", name, name);
+
+	if (len >= sizeof buffer)
+	{
+		log_die(EX_SOFTWARE, "dbt_common_sql: buffer exhausted");
+	}
+
+	p = strdup(buffer);
+	
+	if (p == NULL)
+	{
+		log_die(EX_OSERR, "dbt_common_sql: strdup");
+	}
+
+	return p;
+}
+
 void
 dbt_register(char *name, dbt_t *dbt)
 {
@@ -331,6 +408,16 @@ dbt_register(char *name, dbt_t *dbt)
 		dbt->dbt_cleanup_interval = cf_dbt_cleanup_interval;
 	}
 
+	if (dbt->dbt_sql_invalid_where)
+	{
+		if (strcmp(dbt->dbt_sql_invalid_where, "COMMON") == 0)
+		{
+			dbt->dbt_sql_invalid_where =
+			    dbt_common_sql(dbt->dbt_name);
+			dbt->dbt_sql_invalid_free = 1;
+		}
+	}
+
 	/*
 	 * Lock janitor mutex in case the janitor is already working
 	 */
@@ -358,31 +445,33 @@ dbt_register(char *name, dbt_t *dbt)
 int
 dbt_common_validate(dbt_t *dbt, var_t *record)
 {
-	var_t *attr;
+	char created_key[KEYLEN];
+	char valid_key[KEYLEN];
 	VAR_INT_T *created = NULL;
 	VAR_INT_T *valid = NULL;
 
 	/*
+	 * created key example: greylist_created
+	 */
+	if (snprintf(created_key, sizeof created_key, "%s_created",
+	    dbt->dbt_name) >= sizeof created_key ||
+	    snprintf(valid_key, sizeof valid_key, "%s_valid",
+	    dbt->dbt_name) >= sizeof valid_key)
+	{
+		log_error("dbt_common_validate: buffer exhausted");
+	}
+
+	/*
 	 * Lookup created and valid in record.
 	 */
-	ll_rewind(record->v_data);
-	while ((attr = ll_next(record->v_data)))
-	{
-		if (strcmp(attr->v_name, "created") == 0)
-		{
-			created = attr->v_data;
-		}
-		else if (strcmp(attr->v_name, "valid") == 0)
-		{
-			valid = attr->v_data;
-		}
-	}
+	created = vlist_record_get(record, created_key);
+	valid   = vlist_record_get(record, valid_key);
 
 	if (created == NULL || valid == NULL)
 	{
 		log_die(EX_SOFTWARE, "dbt_common_vaildate: table \"%s\" must "
-		    "have created and valid to use dbt_common_validate",
-		    dbt->dbt_name);
+		    "have %s_created and %s_valid to use dbt_common_validate",
+		    dbt->dbt_name, dbt->dbt_name, dbt->dbt_name);
 	}
 
 	/*

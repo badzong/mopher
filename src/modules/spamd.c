@@ -333,7 +333,7 @@ spamd_init(void)
 	char **p;
 
 	for (p = spamd_symbols; *p; ++p) {
-		acl_symbol_register(*p, MS_EOM, spamd_query);
+		acl_symbol_register(*p, MS_EOM, spamd_query, AS_CACHE);
 	}
 
 	return 0;

@@ -63,11 +63,20 @@ enum acl_symbol_type
 typedef enum acl_symbol_type acl_symbol_type_t;
 
 
+enum acl_symbol_flag
+{
+	AS_NONE		= 0,
+	AS_CACHE	= 0,
+	AS_NOCACHE	= 1
+};
+typedef enum acl_symbol_flag acl_symbol_flag_t;
+
 struct acl_symbol
 {
 	acl_symbol_type_t	 as_type;
 	milter_stage_t		 as_stages;
 	void			*as_data;
+	acl_symbol_flag_t	 as_flags;
 };
 typedef struct acl_symbol acl_symbol_t;
 
@@ -91,7 +100,7 @@ typedef int (*acl_update_t)(milter_stage_t stage, acl_action_type_t at,
 
 acl_action_t * acl_action(acl_action_type_t type, void *data);
 void acl_append(char *table, exp_t *exp, acl_action_t *aa);
-void acl_symbol_register(char *name, milter_stage_t stages,acl_symbol_callback_t callback);
+void acl_symbol_register(char *name, milter_stage_t stages,acl_symbol_callback_t callback, acl_symbol_flag_t flags);
 void acl_constant_register(var_type_t type, char *name, void *data, int flags);
 void acl_function_register(char *name, acl_function_callback_t callback);
 acl_function_callback_t acl_function_lookup(char *name);

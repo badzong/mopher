@@ -9,6 +9,13 @@
 
 static dbt_t greylist_dbt;
 
+/*
+ * Greylist symbols and db translation
+ */
+static char *greylist_tuple_symbols[] = { "greylist_created", "greylist_updated",
+    "greylist_valid", "greylist_delay", "greylist_retries", "greylist_visa",
+    "greylist_passed", NULL };
+
 greylist_t *
 greylist_visa(greylist_t *gl, exp_t *visa)
 {
@@ -53,23 +60,161 @@ greylist_delete(greylist_t *gl)
 }
 
 
+static int
+greylist_delayed(milter_stage_t stage, char *name, var_t *mailspec)
+{
+	/*
+	 * greylist_delayed is set by greylist. if greylist() isn't called,
+	 * greylist_delayed is null.
+	 */
+
+	if (vtable_set_new(mailspec, VT_INT, name, NULL, VF_COPYNAME))
+	{
+		log_error("greylist_delayed: vtable_set_new failed");
+		return -1;
+	}
+
+	return 0;
+}
+
+
+static int
+greylist_listed(milter_stage_t stage, char *name, var_t *mailspec)
+{
+	var_t *record;
+	VAR_INT_T i = 0, *p = &i;
+	VAR_INT_T *recipients;
+
+	/*
+	 * greylist_listed is amibuous for multi recipient messages in stages
+	 * other than MS_ENVRCPT.
+	 */
+	if (stage == MS_ENVFROM)
+	{
+		goto load;
+	}
+
+	recipients = vtable_get(mailspec, "milter_recipients");
+	if (recipients == NULL)
+	{
+		log_error("greylist_listed: vtable_get failed");
+		return -1;
+	}
+
+	if (*recipients == 1)
+	{
+		goto load;
+	}
+
+	/*
+	 * In a multi recipient message the greylist symbols are set to zero
+	 */
+	log_error("greylist_listed: message has %ld recipients: symbol "
+	    "\"%s\" abiguous", *recipients, name);
+
+	p = NULL;
+
+	goto exit;
+		
+
+load:
+
+	if (dbt_db_get_from_table(&greylist_dbt, mailspec, &record))
+	{
+		log_error("greylist_listed_delayed: dbt_db_get_from_table "
+		    "failed");
+		return -1;
+	}
+
+	if (record)
+	{
+		i = 1;
+		var_delete(record);
+	}
+
+exit:
+
+	if (vtable_set_new(mailspec, VT_INT, name, p, VF_COPY))
+	{
+		log_error("greylist_listed: vtable_set_new failed");
+		return -1;
+	}
+
+	return 0;
+}
+
+
+static int
+greylist_tuple_symbol(milter_stage_t stage, char *name, var_t *mailspec)
+{
+	VAR_INT_T *recipients;
+
+	if (stage == MS_ENVRCPT)
+	{
+		goto load;
+	}
+
+	recipients = vtable_get(mailspec, "milter_recipients");
+	if (recipients == NULL)
+	{
+		log_error("greylist_tuple_symbol: vtable_get failed");
+		return -1;
+	}
+
+	if (*recipients == 1)
+	{
+		goto load;
+	}
+
+	/*
+	 * In a multi recipient message the greylist symbols are set to zero
+	 */
+	log_error("greylist_tuple_load: message has %ld recipients: symbol "
+	    "\"%s\" abiguous", *recipients, name);
+
+	if (vtable_set_new(mailspec, VT_INT, name, NULL, VF_COPYNAME))
+	{
+		log_error("greylist_tuple_symbol: vtable_set_new failed");
+		return -1;
+	}
+
+	return 0;
+
+load:
+	/*
+	 * Load greylist tuple if we are in envrcpt or if the massage has only
+	 * 1 recipient.
+	 */
+	if (dbt_db_load_into_table(&greylist_dbt, mailspec))
+	{
+		log_error("greylist_tuple_symbol: dbt_db_load_into_table "
+		    "failed");
+
+		return -1;
+	}
+
+	return 0;
+}
+
+
 void
 greylist_init(void)
 {
 	var_t *scheme;
 	VAR_INT_T i = -1;
+	char **p;
 
 	scheme = vlist_scheme("greylist",
 		"milter_hostaddr",	VT_ADDR,	VF_KEEPNAME | VF_KEY, 
 		"milter_envfrom",	VT_STRING,	VF_KEEPNAME | VF_KEY,
 		"milter_envrcpt",	VT_STRING,	VF_KEEPNAME | VF_KEY,
-		"created",		VT_INT,		VF_KEEPNAME,
-		"updated",		VT_INT,		VF_KEEPNAME,
-		"valid",		VT_INT,		VF_KEEPNAME,
-		"delay",		VT_INT,		VF_KEEPNAME,
-		"retries",		VT_INT,		VF_KEEPNAME,
-		"visa",			VT_INT,		VF_KEEPNAME,
-		"passed",		VT_INT,		VF_KEEPNAME,
+		"greylist_created",	VT_INT,		VF_KEEPNAME,
+		"greylist_updated",	VT_INT,		VF_KEEPNAME,
+		"greylist_valid",	VT_INT,		VF_KEEPNAME,
+		"greylist_delay",	VT_INT,		VF_KEEPNAME,
+		"greylist_retries",	VT_INT,		VF_KEEPNAME,
+		"greylist_visa",	VT_INT,		VF_KEEPNAME,
+		"greylist_passed",	VT_INT,		VF_KEEPNAME,
 		NULL);
 
 	if (scheme == NULL)
@@ -91,6 +236,21 @@ greylist_init(void)
 	 */
 	acl_constant_register(VT_INT, "GREYLISTED", &i,
 	    VF_KEEPNAME | VF_COPYDATA);
+
+	/*
+	 * Register symbols. Symbols are not cached due to abiguity.
+	 */
+	for (p = greylist_tuple_symbols; *p; ++p)
+	{
+		acl_symbol_register(*p, MS_OFF_ENVFROM, greylist_tuple_symbol,
+		    AS_NOCACHE);
+	}
+
+	acl_symbol_register("greylist_listed", MS_OFF_ENVFROM, greylist_listed,
+	    AS_NOCACHE);
+
+	acl_symbol_register("greylist_delayed", MS_OFF_ENVFROM,
+	    greylist_delayed, AS_CACHE);
 
 	return;
 }
@@ -204,9 +364,9 @@ greylist_eval(greylist_t *gl, var_t *mailspec, VAR_INT_T *delay,
 
 
 static int
-greylist_recipient(struct sockaddr_storage *hostaddr, char *envfrom,
-    char *envrcpt, VAR_INT_T received, VAR_INT_T delay, VAR_INT_T valid,
-    VAR_INT_T visa)
+greylist_recipient(VAR_INT_T *delayed, struct sockaddr_storage *hostaddr,
+    char *envfrom, char *envrcpt, VAR_INT_T received, VAR_INT_T delay,
+    VAR_INT_T valid, VAR_INT_T visa)
 {
 	var_t *lookup = NULL, *record = NULL;
 	VAR_INT_T *rec_created;
@@ -217,6 +377,11 @@ greylist_recipient(struct sockaddr_storage *hostaddr, char *envfrom,
 	VAR_INT_T *rec_passed;
 	VAR_INT_T *rec_valid;
 	int defer;
+
+	/*
+	 * Set delayed to zero
+	 */
+	*delayed = 0;
 
 	/*
 	 * Lookup greylist record
@@ -294,12 +459,12 @@ greylist_recipient(struct sockaddr_storage *hostaddr, char *envfrom,
 	if (*rec_delay < delay)
 	{
 		log_info("greylist: from: %s to: %s: record delay too small: "
-		    "extended %d seconds", envfrom, envrcpt,
-		    delay - *rec_delay);
+		    "extended to %d seconds", envfrom, envrcpt, delay);
 
 		*rec_delay = delay;
 		*rec_passed = 0;
 		defer = 1;
+
 		goto update;
 	}
 
@@ -314,6 +479,7 @@ greylist_recipient(struct sockaddr_storage *hostaddr, char *envfrom,
 
 		*rec_passed += 1;
 		defer = 0;
+
 		goto update;
 	}
 
@@ -329,6 +495,12 @@ greylist_recipient(struct sockaddr_storage *hostaddr, char *envfrom,
 		*rec_valid = visa;
 		*rec_passed = 1;
 		defer = 0;
+
+		/*
+		 * Set delayed
+		 */
+		*delayed = received - *rec_created;
+
 		goto update;
 	}
 
@@ -396,6 +568,8 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 	VAR_INT_T delay;
 	VAR_INT_T valid;
 	VAR_INT_T visa;
+	VAR_INT_T delayed;
+	VAR_INT_T min_delayed = 0;
 	int defer = 0, r;
 
 	/*
@@ -425,8 +599,8 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 	 */
 	if (stage == MS_ENVRCPT)
 	{
-		defer = greylist_recipient(hostaddr, envfrom, envrcpt,
-		    *received, delay, valid, visa);
+		defer = greylist_recipient(&min_delayed, hostaddr, envfrom,
+		    envrcpt, *received, delay, valid, visa);
 	}
 	else
 	{
@@ -438,12 +612,21 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 			 */
 			envrcpt = vrcpt->v_data;
 
-			r = greylist_recipient(hostaddr, envfrom,
+			r = greylist_recipient(&delayed, hostaddr, envfrom,
 			    envrcpt, *received, delay, valid, visa);
 
 			if (r == -1)
 			{
 				break;
+			}
+
+			if (delayed && min_delayed == 0)
+			{
+				min_delayed = delayed;
+			}
+			else if (delayed && delayed < min_delayed)
+			{
+				min_delayed = delayed;
 			}
 
 			defer += r;
@@ -460,6 +643,19 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 	{
 		log_debug("greylist: %d recipients need greylisting", defer);
 		return ACL_GREYLIST;
+	}
+
+	/*
+	 * Set greylist delayed
+	 */
+	if (min_delayed)
+	{
+		if (vtable_set_new(mailspec, VT_INT, "greylist_delayed",
+		    &min_delayed, VF_KEEPNAME | VF_COPYDATA))
+		{
+			log_error("greylist: vtables_set_new failed");
+			return -1;
+		}
 	}
 
 	return ACL_NONE;

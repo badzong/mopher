@@ -879,7 +879,7 @@ milter_load_symbols(void)
 	 */
 	for (ms = milter_symbols; ms->ms_name; ++ms)
 	{
-		acl_symbol_register(ms->ms_name, ms->ms_stage, NULL);
+		acl_symbol_register(ms->ms_name, ms->ms_stage, NULL, AS_CACHE);
 	}
 
 	/*
@@ -919,7 +919,8 @@ milter_load_symbols(void)
 
 	for (macro = milter_macros; *macro; ++macro)
 	{
-		acl_symbol_register(*macro, MS_ANY, milter_macro_lookup);
+		acl_symbol_register(*macro, MS_ANY, milter_macro_lookup,
+		    AS_CACHE);
 	}
 
 	return;
@@ -933,6 +934,7 @@ milter_init(void)
 	dbt_init();
 	acl_init();
 	greylist_init();
+	tarpit_init();
 	module_init();
 	milter_load_symbols();
 

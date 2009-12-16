@@ -182,7 +182,8 @@ rbl_init(void)
 			return -1;
 		}
 		
-		acl_symbol_register(v->v_name, MS_OFF_CONNECT, rbl_query);
+		acl_symbol_register(v->v_name, MS_OFF_CONNECT, rbl_query,
+		    AS_CACHE);
 	}
 
 	return 0;
