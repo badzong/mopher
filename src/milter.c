@@ -1001,7 +1001,8 @@ milter(void)
 
 	smfid.xxfi_name = __FILE__;
 	smfid.xxfi_version = SMFI_VERSION;
-	smfid.xxfi_flags = SMFIF_ADDHDRS;
+	smfid.xxfi_flags = SMFIF_ADDHDRS | SMFIF_CHGHDRS | SMFIF_CHGFROM |
+	    SMFIF_ADDRCPT | SMFIF_ADDRCPT_PAR | SMFIF_DELRCPT | SMFIF_CHGBODY;
 	smfid.xxfi_connect = milter_connect;
 	smfid.xxfi_unknown = milter_unknown;
 	smfid.xxfi_helo = milter_helo;

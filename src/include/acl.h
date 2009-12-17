@@ -19,7 +19,8 @@ enum acl_action_type
 	ACL_SET,
 	ACL_LOG,
 	ACL_GREYLIST,
-	ACL_TARPIT
+	ACL_TARPIT,
+	ACL_MOD
 };
 
 typedef enum acl_action_type acl_action_type_t;
@@ -93,6 +94,7 @@ typedef struct acl_log acl_log_t;
 
 typedef int (*acl_update_t)(milter_stage_t stage, acl_action_type_t at,
     var_t *mailspec);
+
 
 /*
  * Prototypes

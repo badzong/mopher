@@ -16,6 +16,19 @@ set		set
 valid		valid
 visa		visa
 delay		delay
+add		add
+header		header
+value		value
+insert		insert
+change		change
+index		index
+from		from
+esmtp		esmtp
+jump		jump
+rcpt		rcpt
+body		body
+size		size
+delete		delete
 
 eq		==
 ne		!=
@@ -66,6 +79,19 @@ comment		#.*$
 {ge}		return GE;
 {and}		return AND;
 {or}		return OR;
+{add}		return ADD;
+{header}	return HEADER;
+{value}		return VALUE;
+{insert}	return INSERT;
+{change}	return CHANGE;
+{index}		return INDEX;
+{from}		return FROM;
+{esmtp}		return ESMTP;
+{rcpt}		return RCPT;
+{jump}		return JUMP;
+{body}		return BODY;
+{size}		return SIZE;
+{delete}	return DELETE;
 
 {op}		return acl_text[0];
 {multiplier}	return acl_text[0];

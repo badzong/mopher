@@ -26,5 +26,6 @@
 #include "server.h"
 #include "exp.h"
 #include "tarpit.h"
+#include "msgmod.h"
 
 #endif /* _MOPHER_H */
