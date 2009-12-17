@@ -182,9 +182,18 @@ acl_append(char *table, exp_t *exp, acl_action_t *aa)
 static void
 acl_symbol_delete(acl_symbol_t *as)
 {
-	if (as->as_type == AS_CONSTANT)
+	switch (as->as_type)
 	{
+	case AS_CONSTANT:
 		var_delete(as->as_data);
+		break;
+
+	case AS_FUNCTION:
+		acl_function_delete(as->as_data);
+		break;
+
+	default:
+		break;
 	}
 
 	free(as);
@@ -261,12 +270,96 @@ acl_constant_register(var_type_t type, char *name, void *data, int flags)
 	return;
 }
 
+
 void
-acl_function_register(char *name, acl_function_callback_t callback)
+acl_function_delete(acl_function_t *af)
+{
+	if (af->af_types)
+	{
+		free(af->af_types);
+	}
+
+	free(af);
+
+	return;
+}
+
+
+acl_function_t *
+acl_function_create(acl_function_type_t type, acl_function_callback_t callback,
+    int argc, var_type_t *types)
+{
+	acl_function_t * af = NULL;
+
+	af = (acl_function_t *) malloc(sizeof (acl_function_t));
+	if (af == NULL)
+	{
+		log_die(EX_OSERR, "acl_function_create: malloc");
+	}
+
+	memset(af, 0, sizeof (acl_function_t));
+
+	af->af_type = type;
+	af->af_callback = callback;
+	af->af_argc = argc;
+	af->af_types = types;
+
+	return af;
+}
+
+
+static var_type_t *
+acl_function_argv_types(int *argc, va_list ap)
+{
+	var_type_t type;
+	var_type_t *types = NULL;
+	int size;
+
+	*argc = 0;
+
+	for (*argc = 0; (type = va_arg(ap, var_type_t)); ++(*argc))
+	{
+		size = (*argc + 1) * sizeof (var_type_t);
+
+		/*
+		 * Probably slow. However this is executed only once at
+		 * startup and functions usually have only a few arguments.
+		 */
+		types = (var_type_t *) realloc(types, size);
+		if (types == NULL)
+		{
+			log_die(EX_OSERR, "acl_function_argv_types: realloc");
+		}
+
+		types[*argc] = type;
+	}
+
+	types[*argc + 1] = 0;
+
+	return types;
+}
+
+
+void
+acl_function_register(char *name, acl_function_type_t type,
+    acl_function_callback_t callback, ...)
 {
 	acl_symbol_t *as;
+	acl_function_t *af;
+	va_list ap;
+	var_type_t *types = NULL;
+	int argc = 0;
 
-	as = acl_symbol_create(AS_FUNCTION, name, MS_ANY, callback, AS_NONE);
+	if (type == AF_SIMPLE)
+	{
+		va_start(ap, callback);
+		types = acl_function_argv_types(&argc, ap);
+		va_end(ap);
+	}
+
+	af = acl_function_create(type, callback, argc, types);
+	as = acl_symbol_create(AS_FUNCTION, name, MS_ANY, af, AS_NONE);
+
 	acl_symbol_insert(name, as);
 	
 	log_debug("acl_function_register: \"%s\" registered", name);
@@ -275,7 +368,7 @@ acl_function_register(char *name, acl_function_callback_t callback)
 }
 
 
-acl_function_callback_t
+acl_function_t *
 acl_function_lookup(char *name)
 {
 	acl_symbol_t *as;

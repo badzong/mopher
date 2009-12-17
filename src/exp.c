@@ -316,58 +316,182 @@ error:
 }
 
 
+static var_t *
+exp_eval_function_complex(char *name, acl_function_t *af, ll_t *args)
+{
+	var_t *v;
+
+	v = af->af_callback.fc_complex(args->ll_size, args);
+
+	return v;
+}
+
+
+static var_t *
+exp_eval_function_simple(char *name, acl_function_t *af, ll_t *args)
+{
+	ll_t garbage;
+	void **argv = NULL;
+	var_t *v;
+	int argc;
+	int size;
+	int i;
+	var_t *arg;
+
+	/*
+	 * Initialize garbage
+	 */
+	ll_init(&garbage);
+
+	/*
+	 * Check argc
+	 */
+	argc = args->ll_size;
+	if (argc != af->af_argc)
+	{
+		log_error("exp_eval_function_simple: function \"%s\" requires "
+		    "%d arguments", name, af->af_argc);
+		return NULL;
+	}
+
+	size = (argc + 1) * sizeof (void *);
+
+	argv = (void **) malloc(size);
+	if (argv == NULL)
+	{
+		log_error("exp_eval_function_simple: malloc");
+		return NULL;
+	}
+
+	memset(argv, 0, size);
+
+	/*
+	 * Prepare argv
+	 */
+	for (i = 0; (arg = ll_next(args)); ++i)
+	{
+		if (af->af_types[i] == arg->v_type)
+		{
+			argv[i] = arg->v_data;
+			continue;
+		}
+
+		/*
+		 * Type casting required. Don't care about the remains of arg
+		 * (freed with args!).
+		 */
+		arg = var_cast_copy(af->af_types[i], arg);
+		if (arg == NULL)
+		{
+			log_error("exp_eval_function_simple: var_cast_copy "
+			    "failed");
+
+			goto error;
+		}
+
+		/*
+		 * Need to free copy later
+		 */
+		if (LL_INSERT(&garbage, arg) == -1)
+		{
+			log_error("exp_eval_function_simlpe: LL_INSERT "
+			    "failed");
+
+			var_delete(arg);
+			goto error;
+		}
+
+		argv[i] = arg->v_data;
+	}
+
+	v = af->af_callback.fc_simple(argc, argv);
+
+
+error:
+	ll_clear(&garbage, (ll_delete_t) var_delete);
+
+	if (argv)
+	{
+		free(argv);
+	}
+
+	return v;
+}
+
+
 var_t *
 exp_eval_function(exp_t *exp, var_t *mailspec)
 {
-	acl_function_callback_t function;
 	exp_function_t *ef = exp->ex_data;
-	var_t *args, *v;
+	acl_function_t *af;
+	var_t *args = NULL;
+	ll_t *single = NULL;
+	var_t *v;
 
-	function = acl_function_lookup(ef->ef_name);
-	if (function == NULL)
+	af = acl_function_lookup(ef->ef_name);
+	if (af == NULL)
 	{
 		log_error("exp_eval_function: unknown function \"%s\"",
 		    ef->ef_name);
-		return NULL;
+		goto error;
 	}
 
 	args = exp_eval(ef->ef_args, mailspec);
 	if (args == NULL)
 	{
 		log_error("exp_eval_function: exp_eval failed");
-		return NULL;
+		goto error;
 	}
 
+	/*
+	 * Convert single argument into list.
+	 */
 	if (args->v_type != VT_LIST)
 	{
-		v = args;
-
-		args = vlist_create(NULL, VF_EXP_FREE);
-		if (args == NULL)
+		single = ll_create();
+		if (single == NULL)
 		{
-			log_error("exp_eval_function: var_create failed");
-			return NULL;
+			log_error("exp_eval_function: ll_create failed");
+			goto error;
 		}
 
-		if (vlist_append(args, v))
+		if (LL_INSERT(single, args) == -1)
 		{
-			log_error("exp_eval_function: vlist_append failed");
-			var_delete(args);
-			return NULL;
+			log_error("exp_eval_function: LL_INSERT failed");
+			goto error;
 		}
 	}
 
-	ll_rewind(args->v_data);
-	v = function(args->v_data);
+	if (af->af_type == AF_SIMPLE)
+	{
+		v = exp_eval_function_simple(ef->ef_name, af,
+		    single ? single : args->v_data);
+	}
+	else
+	{
+		v = exp_eval_function_complex(ef->ef_name, af,
+		    single ? single : args->v_data);
+	}
+
 	if (v == NULL)
 	{
-		log_error("exp_eval_function: function callback \"%s\" failed",
+		log_error("exp_eval_function: function \"%s\" failed",
 		    ef->ef_name);
+		goto error;
 	}
 
-	exp_free(args);
-
 	v->v_flags |= VF_EXP_FREE;
+
+error:
+	if (single)
+	{
+		ll_delete(single, NULL);
+	}
+
+	if (args)
+	{
+		exp_free(args);
+	}
 
 	return v;
 }

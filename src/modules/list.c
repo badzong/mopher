@@ -2,7 +2,7 @@
 
 
 static var_t *
-list_contains(ll_t *args)
+list_contains(int argc, ll_t *args)
 {
 	var_t *haystack, *needle, *v;
 	ll_t *list;
@@ -11,17 +11,19 @@ list_contains(ll_t *args)
 	haystack = ll_next(args);
 	needle = ll_next(args);
 
+	if (argc != 2)
+	{
+		goto usage;
+	}
+
 	if (haystack == NULL || needle == NULL)
 	{
-		log_error(
-		    "list_contains: usage: list_contains(haystack, needle)");
-		return NULL;
+		goto usage;
 	}
 
 	if (haystack->v_type != VT_LIST)
 	{
-		log_error("list_contains: first argument needs to be a list");
-		return NULL;
+		goto usage;
 	}
 
 	list = haystack->v_data;
@@ -40,17 +42,24 @@ list_contains(ll_t *args)
 	if (v == NULL)
 	{
 		log_error("list_contains: var_create failed");
-		return NULL;
+		goto error;
 	}
 
 	return v;
+
+
+usage:
+	log_error( "list_contains: usage: list_contains(haystack, needle)");
+
+error:
+	return NULL;
 }
 
 
 int
 list_init(void)
 {
-	acl_function_register("list_contains",
+	acl_function_register("list_contains", AF_COMPLEX,
 	    (acl_function_callback_t) list_contains);
 
 	return 0;

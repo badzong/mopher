@@ -7,13 +7,18 @@ static char *cast_keys[] = { "INT", "FLOAT", "STRING", NULL };
 static var_type_t cast_values[] = { VT_INT, VT_FLOAT, VT_STRING, VT_NULL };
 
 static var_t *
-cast(ll_t *args)
+cast(int argc, ll_t *args)
 {
 	var_t *type, *var;
 	VAR_INT_T *vt;
 
 	type = ll_next(args);
 	var = ll_next(args);
+
+	if (argc != 2)
+	{
+		goto error;
+	}
 
 	if (type == NULL || var == NULL)
 	{
@@ -44,7 +49,8 @@ cast_init(void)
 	var_type_t *v;
 	VAR_INT_T i;
 
-	acl_function_register("cast", (acl_function_callback_t) cast);
+	acl_function_register("cast", AF_COMPLEX,
+	    (acl_function_callback_t) cast);
 
 	for (k = cast_keys, v = cast_values; *k && *v; ++k, ++v)
 	{

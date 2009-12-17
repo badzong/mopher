@@ -82,7 +82,6 @@ struct acl_symbol
 typedef struct acl_symbol acl_symbol_t;
 
 typedef int (*acl_symbol_callback_t)(milter_stage_t stage, char *name, var_t *mailspec);
-typedef var_t *(*acl_function_callback_t)(ll_t *args);
 
 struct acl_log
 {
@@ -95,6 +94,28 @@ typedef struct acl_log acl_log_t;
 typedef int (*acl_update_t)(milter_stage_t stage, acl_action_type_t at,
     var_t *mailspec);
 
+typedef var_t *(*acl_function_simple_t)(int argc, void **argv);
+typedef var_t *(*acl_function_complex_t)(int argc, ll_t *argv);
+
+union acl_function_callback
+{
+	acl_function_simple_t	 fc_simple;
+	acl_function_complex_t	 fc_complex;
+};
+typedef union acl_function_callback acl_function_callback_t;
+
+enum acl_function_type { AF_SIMPLE, AF_COMPLEX };
+typedef enum acl_function_type acl_function_type_t;
+
+struct acl_function
+{
+	acl_function_type_t		 af_type;
+	acl_function_callback_t		 af_callback;
+	int				 af_argc;
+	var_type_t			*af_types;
+};
+
+typedef struct acl_function acl_function_t;
 
 /*
  * Prototypes
@@ -104,8 +125,10 @@ acl_action_t * acl_action(acl_action_type_t type, void *data);
 void acl_append(char *table, exp_t *exp, acl_action_t *aa);
 void acl_symbol_register(char *name, milter_stage_t stages,acl_symbol_callback_t callback, acl_symbol_flag_t flags);
 void acl_constant_register(var_type_t type, char *name, void *data, int flags);
-void acl_function_register(char *name, acl_function_callback_t callback);
-acl_function_callback_t acl_function_lookup(char *name);
+void acl_function_delete(acl_function_t *af);
+acl_function_t * acl_function_create(acl_function_type_t type, acl_function_callback_t callback,int argc, var_type_t *types);
+void acl_function_register(char *name, acl_function_type_t type,acl_function_callback_t callback, ...);
+acl_function_t * acl_function_lookup(char *name);
 acl_symbol_t * acl_symbol_lookup(char *name);
 var_t * acl_symbol_get(var_t *mailspec, char *name);
 int acl_symbol_dereference(var_t *mailspec, ...);
