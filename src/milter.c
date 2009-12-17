@@ -507,7 +507,6 @@ milter_envfrom(SMFICTX * ctx, char **argv)
 {
 	milter_priv_t *mp;
 	VAR_INT_T stage = MS_ENVFROM;
-	char *envfrom;
 	sfsistat r;
 
 	if (pthread_rwlock_rdlock(&milter_reload_lock))
@@ -518,23 +517,18 @@ milter_envfrom(SMFICTX * ctx, char **argv)
 
 	mp = ((milter_priv_t *) smfi_getpriv(ctx));
 
-	if ((envfrom = util_strdupenc(argv[0], "<>")) == NULL) {
-		log_error("milter_envfrom: util_strdupenc failed");
-		return SMFIS_TEMPFAIL;
-	}
-
 	if (vtable_setv(mp->mp_table,
 	    VT_POINTER, "milter_ctx", ctx, VF_KEEP,
 	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "milter_stagename", MSN_ENVFROM, VF_KEEP,
-	    VT_STRING, "milter_envfrom", envfrom, VF_KEEPNAME,
+	    VT_STRING, "milter_envfrom", argv[0], VF_KEEPNAME | VF_COPYDATA,
 	    VT_NULL))
 	{
 		log_error("milter_envfrom: vtable_setv failed");
 		return SMFIS_TEMPFAIL;
 	}
 
-	log_debug("milter_envfrom: envelope from: %s", envfrom);
+	log_debug("milter_envfrom: envelope from: %s", argv[0]);
 
 	r = milter_acl(MS_ENVFROM, MSN_ENVFROM, mp);
 
@@ -551,7 +545,6 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 {
 	milter_priv_t *mp;
 	VAR_INT_T stage = MS_ENVRCPT;
-	char *envrcpt = NULL;
 	sfsistat r;
 
 	if (pthread_rwlock_rdlock(&milter_reload_lock))
@@ -562,18 +555,13 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 
 	mp = ((milter_priv_t *) smfi_getpriv(ctx));
 
-	if ((envrcpt = util_strdupenc(argv[0], "<>")) == NULL) {
-		log_error("milter_envrcpt: util_strdupenc failed");
-		return SMFIS_TEMPFAIL;
-	}
-
 	++mp->mp_recipients;
 
 	if (vtable_setv(mp->mp_table,
 	    VT_POINTER, "milter_ctx", ctx, VF_KEEP,
 	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "milter_stagename", MSN_ENVRCPT, VF_KEEP,
-	    VT_STRING, "milter_envrcpt", envrcpt, VF_KEEPNAME,
+	    VT_STRING, "milter_envrcpt", argv[0], VF_KEEPNAME | VF_COPYDATA,
 	    VT_INT, "milter_recipients", &mp->mp_recipients,
 		VF_KEEPNAME | VF_COPYDATA,
 	    VT_NULL))
@@ -582,7 +570,7 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 		return SMFIS_TEMPFAIL;
 	}
 
-	log_debug("milter_envrcpt: envelope recipient: %s", envrcpt);
+	log_debug("milter_envrcpt: envelope recipient: %s", argv[0]);
 
 	r = milter_acl(MS_ENVRCPT, MSN_ENVRCPT, mp);
 
@@ -592,7 +580,7 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 	if (r == SMFIS_CONTINUE || r == SMFIS_ACCEPT)
 	{
 		if (vtable_list_append_new(mp->mp_table, VT_STRING,
-		    "milter_recipient_list", envrcpt,
+		    "milter_recipient_list", argv[0],
 		    VF_KEEPNAME | VF_COPYDATA))
 		{
 			log_error(
