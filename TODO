@@ -1,6 +1,7 @@
 MOPHER TODO
 ===========
 
+  * Bug: mopherd.conf cannot be empty
   * Run mopherd as regular user
   * Control socket permissions vi chmod
   * Domain greylisting

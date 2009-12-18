@@ -52,8 +52,7 @@ statements	: statements statement
 		| statement
 		;
 
-statement	: /* empty */
-		| ID exp action		{ acl_append($1, $2, $3); }
+statement	: ID exp action		{ acl_append($1, $2, $3); }
 		| ID action		{ acl_append($1, NULL, $2); }
 		| DEFINE ID exp		{ exp_define($2, $3); }
 		;

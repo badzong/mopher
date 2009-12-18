@@ -56,12 +56,15 @@ void
 sock_unix_unlink(char *uri)
 {
 	if(strncmp(uri, "unix:", 5)) {
+		log_error("sock_unix_unlink: bad socket name \"%s\"", uri + 5);
 		return;
 	}
 
 	if(unlink(uri + 5)) {
-		log_error("sock_unix_unlink: unlink '%s'", uri + 5);
+		log_error("sock_unix_unlink: unlink %s", uri + 5);
 	}
+
+	log_debug("sock_unix_unlink: %s removed", uri + 5);
 
 	return;
 }

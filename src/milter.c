@@ -1009,7 +1009,7 @@ milter(void)
 	 */
 	bzero(&smfid, sizeof(struct smfiDesc));
 
-	smfid.xxfi_name = __FILE__;
+	smfid.xxfi_name = "libmilter";
 	smfid.xxfi_version = SMFI_VERSION;
 	smfid.xxfi_flags = SMFIF_ADDHDRS | SMFIF_CHGHDRS | SMFIF_CHGFROM |
 	    SMFIF_ADDRCPT | SMFIF_ADDRCPT_PAR | SMFIF_DELRCPT | SMFIF_CHGBODY;
@@ -1052,14 +1052,15 @@ milter(void)
 
 	r = smfi_main();
 
-	if (r == MI_SUCCESS)
-	{
-		sock_unix_unlink(cf_milter_socket);
-	}
-	else
+	if (r != MI_SUCCESS)
 	{
 		log_error("milter: smfi_main returned with errors");
 	}
+
+	/*
+	 * Unlink socket
+	 */
+	sock_unix_unlink(cf_milter_socket);
 
 	/*
 	 * Reset umask
