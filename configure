@@ -3264,8 +3264,8 @@ fi
   MOD_ALL="\$(MODULES)"
   mod_suffix="so"
 else
-  MOD_ALL="lib.a"
-  MOD_LIBS="mod/acl/lib.a mod/db/lib.a mod/tables/lib.a"
+  MOD_ALL="lib.a \$(OBJECTS)"
+  MOD_LIBS="modules/lib.a"
   mod_suffix="o"
 fi
 
@@ -3490,20 +3490,8 @@ fi
 
 
 
-# Set configuration file path
-MOPHERD_CONF="$sysconfdir/mopher/mopherd.conf"
-MAIL_ACL="$sysconfdir/mopher/mail.acl"
-
-cat >>confdefs.h <<_ACEOF
-#define MOPHERD_CONF "$MOPHERD_CONF"
-_ACEOF
-
-cat >>confdefs.h <<_ACEOF
-#define MAIL_ACL "$MAIL_ACL"
-_ACEOF
-
-
 # So far no further checks
+
 
 # Checks for header files.
 # Checks for typedefs, structures, and compiler characteristics.

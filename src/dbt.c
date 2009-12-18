@@ -583,12 +583,14 @@ dbt_janitor_cleanup(time_t now, dbt_t *dbt)
 		{
 			deleted = dbt_janitor_cleanup_walk(dbt);
 		}
-
-		/*
-		 * No validate callback registered
-		 */
-		log_debug("dbt_janitor_cleanup: \"%s\" has no validate"
-		    " callback");
+		else
+		{
+			/*
+			 * No validate callback registered
+			 */
+			log_debug("dbt_janitor_cleanup: \"%s\" has no validate"
+			    " callback");
+		}
 
 		return 0;
 	}

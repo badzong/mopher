@@ -1,12 +1,5 @@
-connect rbl_xbl log "{milter_hostaddr} listed in XBL"
-connect rbl_sorbs log "{milter_hostaddr} listed in SORBS"
-connect rbl_spamcop log "{milter_hostaddr} listed in SPAMCOP"
-
-envrcpt rbl_xbl greylist
-envrcpt rbl_sorbs greylist
-envrcpt rbl_spamcop greylist
-
-envrcpt spf == SPF_PASS accept
-envrcpt spf == SPF_FAIL greylist 30m
-eom spamd_spam greylist
-eom spamd_score > 5.0 reject
+connect tarpit 5s
+envrcpt log "from: " + string_mailaddr(milter_envfrom) + " to: " + string_mailaddr(milter_envrcpt)
+envrcpt greylist 15m
+eom tarpit_delayed add header "X-Tarpit" value tarpit_delayed
+eom greylist_delayed add header "X-Greylist" value greylist_delayed

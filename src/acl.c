@@ -795,7 +795,7 @@ acl_read(void)
 	mail_acl = (char *) cf_get(VT_STRING, "acl_path", NULL);
 	if(mail_acl == NULL)
 	{
-		mail_acl = MAIL_ACL;
+		mail_acl = defs_mail_acl;
 		log_warning("acl_read: acl_path not set: using \"%s\"",
 		    mail_acl);
 	}

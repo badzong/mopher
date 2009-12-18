@@ -1,0 +1,7 @@
+MOPHER TODO
+===========
+
+  * Run mopherd as regular user
+  * Control socket permissions vi chmod
+  * Domain greylisting
+  * Greylisting: cleanup email adresses

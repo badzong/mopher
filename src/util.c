@@ -20,6 +20,7 @@
 
 #define ADDR6_LEN 16
 #define ADDR6_STRLEN 40
+#define BUFLEN 1024
 
 char *
 util_strdupenc(const char *src, const char *encaps)
@@ -45,6 +46,43 @@ util_strdupenc(const char *src, const char *encaps)
 
 	return dup;
 }
+
+
+int
+util_strmail(char *buffer, int size, const char *src)
+{
+	char *start, *end;
+	int len;
+
+	start = strchr(src, '<');
+	if (start == NULL)
+	{
+		return -1;
+	}
+
+	end = strchr(start, '>');
+	if (end == NULL)
+	{
+		return -1;
+	}
+
+	/*
+	 * end - start - '<' - '>' + '\0'
+	 */ 
+	len = end - start - 1;
+
+	if (len >= size)
+	{
+		return -1;
+	}
+
+	strncpy(buffer, start + 1, len);
+
+	buffer[len] = 0;
+
+	return len; 
+}
+
 
 struct sockaddr_storage*
 util_strtoaddr(const char *str)

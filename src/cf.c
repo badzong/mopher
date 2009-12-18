@@ -303,7 +303,7 @@ cf_init(void)
 {
 	if (cf_filename == NULL)
 	{
-		cf_filename = MOPHERD_CONF;
+		cf_filename = defs_mopherd_conf;
 	}
 
 	//char buffer[4096];

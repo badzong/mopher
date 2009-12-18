@@ -1,7 +1,4 @@
 /* Global definitions */
-#undef BINNAME
-#undef MOPHERD_CONF
-#undef MAIL_ACL
 #undef DYNAMIC
 
 /* Package properties */

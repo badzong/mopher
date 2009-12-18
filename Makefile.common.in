@@ -26,6 +26,11 @@ LDFLAGS=-rdynamic @LIBS@ @MOD_LIBS@
 ARFLAGS=rcs
 
 
+# Paths (defs.c)
+MOPHERD_DIR=@libdir@/mopher
+MOPHERD_CONF=@sysconfdir@/mopher/mopherd.conf
+MAIL_ACL=@sysconfdir@/mopher/mail.acl
+
 # Files
 
 ACFILES=config.h Makefile Makefile.common src/Makefile src/modules/Makefile

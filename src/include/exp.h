@@ -46,6 +46,7 @@ typedef struct exp_function exp_function_t;
 
 void exp_delete(exp_t *exp);
 void exp_define(char *name, exp_t *exp);
+exp_t * exp_parentheses(exp_t *exp);
 exp_t * exp_symbol(char *symbol);
 exp_t * exp_variable(char *variable);
 exp_t * exp_list(exp_t *list, exp_t *exp);

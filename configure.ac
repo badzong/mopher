@@ -81,8 +81,8 @@ then
   MOD_ALL="\$(MODULES)"
   mod_suffix="so"
 else
-  MOD_ALL="lib.a"
-  MOD_LIBS="mod/acl/lib.a mod/db/lib.a mod/tables/lib.a"
+  MOD_ALL="lib.a \$(OBJECTS)"
+  MOD_LIBS="modules/lib.a"
   mod_suffix="o"
 fi
 
@@ -148,19 +148,18 @@ AC_SUBST([MOD_LIBS])
 AC_SUBST([MOD_ALL])
 
 
-# Set configuration file path
-MOPHERD_CONF="$sysconfdir/mopher/mopherd.conf"
-MAIL_ACL="$sysconfdir/mopher/mail.acl"
-
-AC_DEFINE_UNQUOTED([MOPHERD_CONF], ["$MOPHERD_CONF"])
-AC_DEFINE_UNQUOTED([MAIL_ACL], ["$MAIL_ACL"])
-
 # So far no further checks
+
 
 # Checks for header files.
 # Checks for typedefs, structures, and compiler characteristics.
 # Checks for library functions.
 
-AC_CONFIG_FILES([Makefile Makefile.common src/Makefile src/modules/Makefile])
+AC_CONFIG_FILES([
+	Makefile
+	Makefile.common
+	src/Makefile
+	src/modules/Makefile
+])
 
 AC_OUTPUT

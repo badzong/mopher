@@ -22,4 +22,4 @@ lib.a: $(OBJECTS)
 	$(AR) $(ARFLAGS) $@ $^
 
 clean:
-	-rm lib.a $(OBJECTS) $(MODULES)
+	-rm $(MOD_ALL)

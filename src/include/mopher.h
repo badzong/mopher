@@ -5,6 +5,7 @@
 #define BINNAME "mopher"
 #endif
 
+#include "defs.h"
 #include "acl.h"
 #include "cf.h"
 #include "dbt.h"

@@ -74,6 +74,7 @@ int dbt_db_walk(dbt_t *dbt, dbt_db_callback_t callback);
 int dbt_db_sync(dbt_t *dbt);
 int dbt_db_cleanup(dbt_t *dbt);
 int dbt_db_get_from_table(dbt_t *dbt, var_t *attrs, var_t **record);
+int dbt_db_load_into_table(dbt_t *dbt, var_t *table);
 void dbt_register(char *name, dbt_t *dbt);
 int dbt_common_validate(dbt_t *dbt, var_t *record);
 void dbt_open_databases(void);

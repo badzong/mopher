@@ -918,6 +918,8 @@ milter_load_symbols(void)
 void
 milter_init(void)
 {
+	char *workdir;
+
 	/*
 	 * Load configuration
 	 */
@@ -926,7 +928,11 @@ milter_init(void)
 	/*
 	 * Change working directory
 	 */
-	if (chdir(cf_workdir_path))
+	workdir = cf_workdir_path ? cf_workdir_path : defs_mopherd_dir;
+
+	log_debug("new working directory: %s", workdir);
+
+	if (chdir(workdir))
 	{
 		log_die(EX_OSERR, "milter_init: chdir to \"%s\"",
 		    cf_workdir_path);
@@ -1023,6 +1029,8 @@ milter(void)
 	 * Control socket permissions via umask
 	 */
 	mask = umask(cf_milter_socket_umask);
+
+	log_debug("milter: using socket: %s", cf_milter_socket);
 
 	if (smfi_setconn(cf_milter_socket) == MI_FAILURE) {
 		log_die(EX_SOFTWARE, "milter: smfi_setconn failed");
