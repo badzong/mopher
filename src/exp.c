@@ -32,6 +32,9 @@ exp_delete(exp_t *exp)
 {
 	switch (exp->ex_type)
 	{
+	case EX_PARENTHESES:
+		break;
+
 	case EX_CONSTANT:
 		var_delete(exp->ex_data);
 		break;
@@ -98,6 +101,21 @@ exp_define(char *name, exp_t *exp)
 
 
 exp_t *
+exp_parentheses(exp_t *exp)
+{
+	exp_t *p;
+
+	p = exp_create(EX_PARENTHESES, exp);
+	if (p == NULL)
+	{
+		log_die(EX_SOFTWARE, "exp_parentheses: exp_create failed");
+	}
+
+	return p;
+}
+
+
+exp_t *
 exp_symbol(char *symbol)
 {
 	exp_t *exp;
@@ -151,6 +169,10 @@ exp_list(exp_t *list, exp_t *exp)
 		}
 
 		list = exp_create(EX_LIST, ll);
+	}
+	else
+	{
+		ll = list->ex_data;
 	}
 
 	if (LL_INSERT(ll, exp) == -1)
@@ -436,28 +458,46 @@ exp_eval_function(exp_t *exp, var_t *mailspec)
 		goto error;
 	}
 
-	args = exp_eval(ef->ef_args, mailspec);
-	if (args == NULL)
-	{
-		log_error("exp_eval_function: exp_eval failed");
-		goto error;
-	}
-
 	/*
-	 * Convert single argument into list.
+	 * Function has arguments
 	 */
-	if (args->v_type != VT_LIST)
+	if (ef->ef_args)
 	{
+		args = exp_eval(ef->ef_args, mailspec);
+		if (args == NULL)
+		{
+			log_error("exp_eval_function: exp_eval failed");
+			goto error;
+		}
+
+		/*
+		 * Convert single argument into list.
+		 */
+		if (args->v_type != VT_LIST)
+		{
+			single = ll_create();
+			if (single == NULL)
+			{
+				log_error("exp_eval_function: ll_create failed");
+				goto error;
+			}
+
+			if (LL_INSERT(single, args) == -1)
+			{
+				log_error("exp_eval_function: LL_INSERT failed");
+				goto error;
+			}
+		}
+	}
+	else
+	{
+		/*
+		 * Function has no arguments -> empty list
+		 */
 		single = ll_create();
 		if (single == NULL)
 		{
 			log_error("exp_eval_function: ll_create failed");
-			goto error;
-		}
-
-		if (LL_INSERT(single, args) == -1)
-		{
-			log_error("exp_eval_function: LL_INSERT failed");
 			goto error;
 		}
 	}
@@ -850,6 +890,7 @@ exp_eval(exp_t *exp, var_t *mailspec)
 
 	switch (exp->ex_type)
 	{
+	case EX_PARENTHESES:	return exp_eval(exp->ex_data, mailspec);
 	case EX_CONSTANT:	return exp->ex_data;
 	case EX_LIST:		return exp_eval_list(exp, mailspec);
 	case EX_SYMBOL:		return acl_symbol_get(mailspec, exp->ex_data);

@@ -7,6 +7,7 @@
 enum exp_type
 {
 	EX_NULL,
+	EX_PARENTHESES,
 	EX_CONSTANT,
 	EX_LIST,
 	EX_SYMBOL,

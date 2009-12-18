@@ -32,7 +32,7 @@ string_init(void)
 	acl_function_register("string_strlen", AF_SIMPLE,
 	    (acl_function_callback_t) string_strlen, VT_STRING, 0);
 	acl_function_register("string_strcmp", AF_SIMPLE,
-	    (acl_function_callback_t) string_strcmp, VT_STRING, 0);
+	    (acl_function_callback_t) string_strcmp, VT_STRING, VT_STRING, 0);
 
 	return 0;
 }

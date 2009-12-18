@@ -111,7 +111,7 @@ mod		: ADD HEADER exp VALUE exp
 					{ $$ = msgmod_create(MM_CHGBODY, $3, $5, NULL); }
 		;
 
-exp		: '(' exp ')'		{ $$ = $2; }
+exp		: '(' exp ')'		{ $$ = exp_parentheses($2); }
 		| exp ',' exp		{ $$ = exp_list($1, $3); }
 		| '!' exp		{ $$ = exp_operation('!', $2, NULL); }
 		| exp '+' exp		{ $$ = exp_operation('+', $1, $3); }
@@ -134,6 +134,7 @@ exp		: '(' exp ')'		{ $$ = $2; }
 		;
 
 function	: ID '(' exp ')'	{ $$ = exp_function($1, $3); }
+		| ID '(' ')'		{ $$ = exp_function($1, NULL); }
 		;
 
 symbol		: ID 			{ $$ = exp_symbol($1); }

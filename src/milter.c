@@ -918,7 +918,23 @@ milter_load_symbols(void)
 void
 milter_init(void)
 {
+	/*
+	 * Load configuration
+	 */
 	cf_init();
+
+	/*
+	 * Change working directory
+	 */
+	if (chdir(cf_workdir_path))
+	{
+		log_die(EX_OSERR, "milter_init: chdir to \"%s\"",
+		    cf_workdir_path);
+	}
+		
+	/*
+	 * Other initializations
+	 */
 	dbt_init();
 	acl_init();
 	greylist_init();

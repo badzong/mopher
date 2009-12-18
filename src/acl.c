@@ -319,7 +319,10 @@ acl_function_argv_types(int *argc, va_list ap)
 
 	for (*argc = 0; (type = va_arg(ap, var_type_t)); ++(*argc))
 	{
-		size = (*argc + 1) * sizeof (var_type_t);
+		/*
+		 * Store 0 at the end -> argc + 2
+		 */
+		size = (*argc + 2) * sizeof (var_type_t);
 
 		/*
 		 * Probably slow. However this is executed only once at
@@ -334,7 +337,7 @@ acl_function_argv_types(int *argc, va_list ap)
 		types[*argc] = type;
 	}
 
-	types[*argc + 1] = 0;
+	types[*argc] = 0;
 
 	return types;
 }

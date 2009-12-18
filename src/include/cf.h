@@ -22,6 +22,7 @@ typedef struct cf_function {
  * Global configuration variables
  */
 
+extern char		*cf_workdir_path;
 extern char		*cf_module_path;
 extern VAR_INT_T	 cf_greylist_visa;
 extern VAR_INT_T	 cf_greylist_valid;

@@ -13,16 +13,19 @@ list_contains(int argc, ll_t *args)
 
 	if (argc != 2)
 	{
+		printf("copunt = %d\n", argc);
 		goto usage;
 	}
 
 	if (haystack == NULL || needle == NULL)
 	{
+		printf("value\n");
 		goto usage;
 	}
 
 	if (haystack->v_type != VT_LIST)
 	{
+		printf("list\n");
 		goto usage;
 	}
 
