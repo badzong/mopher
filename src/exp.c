@@ -646,7 +646,7 @@ exp_math_int(int op, var_t *left, var_t *right)
 	case '*':	x = *l * *r;	break;
 	case '/':	x = *l / *r;	break;
 	case '<':	x = *l < *r;	break;
-	case '>':	x = *l + *r;	break;
+	case '>':	x = *l > *r;	break;
 	case '!':	x = ! *l;	break;
 	case EQ:	x = *l == *r;	break;
 	case NE:	x = *l != *r;	break;

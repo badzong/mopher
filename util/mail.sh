@@ -1,6 +1,6 @@
 RCPT=manuel@fredastaire.ch
 FROM=manuel@badzong.com
-FIFO=mail.fifo
+FIFO=mail.fifo_$$
 HOST=127.0.0.1
 
 if [ ! -z "$1" ]; then
@@ -15,8 +15,6 @@ if [ ! -p "$FIFO" ]; then
 	echo $FIFO is not a FIFO
 	exit 255
 fi
-
-sudo chmod 777 /var/spool/postfix/milter.sock
 
 (
 	echo "helo localhost"

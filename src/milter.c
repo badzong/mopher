@@ -1036,7 +1036,10 @@ milter(void)
 		log_die(EX_SOFTWARE, "milter: smfi_setconn failed");
 	}
 
-	smfi_settimeout(cf_milter_socket_timeout);
+	if (cf_milter_socket_timeout >= 0)
+	{
+		smfi_settimeout(cf_milter_socket_timeout);
+	}
 
 	if (smfi_register(smfid) == MI_FAILURE) {
 		log_die(EX_SOFTWARE, "milter: smfi_register failed");
@@ -1052,15 +1055,19 @@ milter(void)
 
 	r = smfi_main();
 
-	if (r != MI_SUCCESS)
+	if (r == MI_SUCCESS)
+	{
+		log_debug("milter: smfi_main returned successful");
+
+		/*
+		 * Unlink socket
+		 */
+		sock_unix_unlink(cf_milter_socket);
+	}
+	else
 	{
 		log_error("milter: smfi_main returned with errors");
 	}
-
-	/*
-	 * Unlink socket
-	 */
-	sock_unix_unlink(cf_milter_socket);
 
 	/*
 	 * Reset umask
