@@ -497,7 +497,7 @@ greylist_recipient(VAR_INT_T *delayed, struct sockaddr_storage *hostaddr,
 		defer = 0;
 
 		/*
-		 * Set delayed
+		 * Set delayed (set only here!)
 		 */
 		*delayed = received - *rec_created;
 
@@ -569,7 +569,7 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 	VAR_INT_T valid;
 	VAR_INT_T visa;
 	VAR_INT_T delayed;
-	VAR_INT_T min_delayed = 0;
+	VAR_INT_T max_delay = 0;
 	int defer = 0, r;
 
 	/*
@@ -599,7 +599,7 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 	 */
 	if (stage == MS_ENVRCPT)
 	{
-		defer = greylist_recipient(&min_delayed, hostaddr, envfrom,
+		defer = greylist_recipient(&max_delay, hostaddr, envfrom,
 		    envrcpt, *received, delay, valid, visa);
 	}
 	else
@@ -620,13 +620,9 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 				break;
 			}
 
-			if (delayed && min_delayed == 0)
+			if (delayed > max_delay)
 			{
-				min_delayed = delayed;
-			}
-			else if (delayed && delayed < min_delayed)
-			{
-				min_delayed = delayed;
+				max_delay = delayed;
 			}
 
 			defer += r;
@@ -648,10 +644,10 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 	/*
 	 * Set greylist delayed
 	 */
-	if (min_delayed)
+	if (max_delay)
 	{
 		if (vtable_set_new(mailspec, VT_INT, "greylist_delayed",
-		    &min_delayed, VF_KEEPNAME | VF_COPYDATA))
+		    &max_delay, VF_KEEPNAME | VF_COPYDATA))
 		{
 			log_error("greylist: vtables_set_new failed");
 			return -1;
