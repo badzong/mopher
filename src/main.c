@@ -65,7 +65,9 @@ main(int argc, char **argv)
 	 */
 	if (check_config)
 	{
+		milter_clear();
 		printf("%s: configuration ok.\n", BINNAME);
+
 		return 0;
 	}
 
