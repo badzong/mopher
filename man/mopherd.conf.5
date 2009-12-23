@@ -1,0 +1,38 @@
+.TH "MOPHERD.CONF" "5" "December 9 2009" "mopher 1.0" "mopher user manual"
+.SH NAME
+.B mopherd.conf \- configuration for mopherd
+.SH INTRODUCTION
+The mopher daemon
+.BR mopherd (1)
+uses 2 configuration files
+.BR mopherd.conf (5)
+and
+.BR mail.acl (5).
+The former controls the behaviour of the daemon itself while the latter
+controls how incoming mail is filtered. By default
+.B mopherd
+looks for both configuration files in
+.I /etc/mopher
+\&. Alternative locations may be specified using the
+.B mopherd
+command line argument -c for
+.B mopherd.conf
+or the configuration directive acl_path for
+.B mail.acl
+\&. For more information see the respective man pages.
+.SH DESCRIPTION
+The file
+.B mopherd.conf
+contains information about how
+.B mopherd
+should filter incoming email. A statement is either a rule or a definition.
+Statements may spawn multiple lines. Multiple whitespaces and emtpy lines are
+ignored. # starts a comment until the end of the line.
+.SH PARAMETERS
+.SH EXAMPLES
+.SH SEE ALSO
+.BR mopherd (1),
+.BR mopherd.conf (5)
+.SH AUTHORS
+This manuel page was written by Manuel Badzong <manuel@mopher.net>.
+Binary file ./modules/lib.a matches
