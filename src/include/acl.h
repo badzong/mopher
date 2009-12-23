@@ -85,11 +85,17 @@ typedef int (*acl_symbol_callback_t)(milter_stage_t stage, char *name, var_t *ma
 
 struct acl_log
 {
-	exp_t	*al_exp;
-	int	 al_level;
+	exp_t	*al_message;
+	exp_t	*al_level;
 };
-
 typedef struct acl_log acl_log_t;
+
+struct acl_log_level
+{
+	VAR_INT_T	 ll_level;
+	char		*ll_name;
+};
+typedef struct acl_log_level acl_log_level_t;
 
 typedef int (*acl_update_t)(milter_stage_t stage, acl_action_type_t at,
     var_t *mailspec);
@@ -133,8 +139,8 @@ acl_symbol_t * acl_symbol_lookup(char *name);
 var_t * acl_symbol_get(var_t *mailspec, char *name);
 int acl_symbol_dereference(var_t *mailspec, ...);
 void acl_log_delete(acl_log_t *al);
-acl_log_t * acl_log_create(exp_t *exp);
-acl_log_t * acl_log_level(acl_log_t *al, int level);
+acl_log_t * acl_log_create(exp_t *message);
+acl_log_t * acl_log_level(acl_log_t *al, exp_t *level);
 acl_action_type_t acl_log(milter_stage_t stage, char *stagename, var_t *mailspec, void *data);
 acl_action_type_t acl_jump(milter_stage_t stage, char *stagename, var_t *mailspec, void *data);
 acl_action_type_t acl_set(milter_stage_t stage, char *stagename, var_t *mailspec, void *data);

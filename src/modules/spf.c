@@ -170,8 +170,7 @@ spf_init(void)
 
 	for (k = spf_static_keys, v = spf_static_values; *k && *v; ++k, ++v)
 	{
-		acl_constant_register(VT_STRING, *k, *v,
-		    VF_KEEPNAME | VF_KEEPDATA);
+		acl_constant_register(VT_STRING, *k, *v, VF_KEEP);
 	}
 
 

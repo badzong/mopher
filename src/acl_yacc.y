@@ -83,7 +83,7 @@ set		: SET VARIABLE '=' exp	{ $$ = exp_operation('=', exp_variable($2), $4); }
 
 jump		: JUMP ID		{ $$ = $2; }
 
-log		: log LEVEL number	{ $$ = acl_log_level($1, $3); }
+log		: log LEVEL exp		{ $$ = acl_log_level($1, $3); }
 		| LOG exp		{ $$ = acl_log_create($2); }
 		;
 

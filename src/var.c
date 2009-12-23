@@ -1132,3 +1132,29 @@ var_cast_copy(var_type_t type, var_t *v)
 
 	return NULL;
 }
+
+
+VAR_INT_T
+var_intval(var_t *v)
+{
+	var_t *copy;
+	VAR_INT_T i;
+
+	if (v->v_type == VT_INT)
+	{
+		return * (VAR_INT_T *) v->v_data;
+	}
+
+	copy = var_cast_copy(VT_INT, v);
+	if (copy == NULL)
+	{
+		log_error("var_intval: var_cast_copy failed");
+		return 0;
+	}
+
+	i = * (VAR_INT_T *) copy->v_data;
+
+	var_delete(copy);
+
+	return i;
+}

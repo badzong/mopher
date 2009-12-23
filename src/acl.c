@@ -34,6 +34,19 @@ static acl_handler_stage_t acl_action_handlers[] = {
 };
 
 
+static acl_log_level_t acl_log_levels[] = {
+    { LOG_EMERG,	"LOG_EMERG" },
+    { LOG_ALERT,	"LOG_ALERT" },
+    { LOG_CRIT,		"LOG_CRIT" },
+    { LOG_ERR,		"LOG_ERR" },
+    { LOG_WARNING,	"LOG_WARNING" },
+    { LOG_NOTICE,	"LOG_NOTICE" },
+    { LOG_INFO,		"LOG_INFO" },
+    { LOG_DEBUG,	"LOG_DEBUG" },
+    { 0,		NULL }
+};
+
+
 static void
 acl_action_delete(acl_action_t *aa)
 {
@@ -544,9 +557,14 @@ acl_symbol_dereference(var_t *mailspec, ...)
 void
 acl_log_delete(acl_log_t *al)
 {
-	if (al->al_exp)
+	if (al->al_message)
 	{
-		exp_delete(al->al_exp);
+		exp_delete(al->al_message);
+	}
+
+	if (al->al_level)
+	{
+		exp_delete(al->al_level);
 	}
 
 	free(al);
@@ -554,7 +572,7 @@ acl_log_delete(acl_log_t *al)
 
 
 acl_log_t *
-acl_log_create(exp_t *exp)
+acl_log_create(exp_t *message)
 {
 	acl_log_t *al;
 
@@ -564,15 +582,16 @@ acl_log_create(exp_t *exp)
 		log_die(EX_OSERR, "acl_log: malloc");
 	}
 
-	al->al_exp = exp;
-	al->al_level = cf_acl_log_level;
+	memset(al, 0, sizeof (acl_log_t));
+
+	al->al_message = message;
 
 	return al;
 }
 
 
 acl_log_t *
-acl_log_level(acl_log_t *al, int level)
+acl_log_level(acl_log_t *al, exp_t *level)
 {
 	al->al_level = level;
 
@@ -584,10 +603,35 @@ acl_action_type_t
 acl_log(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 {
 	acl_log_t *al = data;
-	var_t *v;
+	var_t *v = NULL;
 	char buffer[ACL_LOGLEN];
+	VAR_INT_T level;
 
-	v = exp_eval(al->al_exp, mailspec);
+	/*
+	 * Evaluate log level
+	 */
+	if (al->al_level)
+	{
+		v = exp_eval(al->al_level, mailspec);
+		if (v == NULL)
+		{
+			log_error("acl_log: exp_eval failed");
+			goto error;
+		}
+
+		level = var_intval(v);
+
+		exp_free(v);
+	}
+	else
+	{
+		level = cf_acl_log_level;
+	}
+
+	/*
+	 * Evaluate message
+	 */
+	v = exp_eval(al->al_message, mailspec);
 	if (v == NULL)
 	{
 		log_error("acl_log: exp_eval failed");
@@ -596,17 +640,32 @@ acl_log(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 
 	if (v->v_type != VT_STRING)
 	{
-		var_dump_data(v, buffer, sizeof buffer);
-		log_log(al->al_level, buffer);
+		if (var_dump_data(v, buffer, sizeof buffer))
+		{
+			log_error("acl_log: var_dump_data failed");
+			goto error;
+		}
+
+		log_log(level, buffer);
 	}
 	else
 	{
-		log_log(al->al_level, v->v_data);
+		log_log(level, v->v_data);
 	}
 
 	exp_free(v);
 
 	return ACL_NONE;
+
+
+error:
+
+	if (v)
+	{
+		exp_free(v);
+	}
+
+	return ACL_ERROR;
 }
 
 
@@ -757,6 +816,8 @@ acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 void
 acl_init(void)
 {
+	acl_log_level_t *ll;
+
 	acl_tables = sht_create(ACL_BUCKETS, (sht_delete_t) acl_rules_delete);
 	if (acl_tables == NULL)
 	{
@@ -780,6 +841,15 @@ acl_init(void)
 	 */
 	exp_init();
 
+	/*
+	 * Load log symbols
+	 */
+	for (ll = acl_log_levels; ll->ll_name; ++ll)
+	{
+		acl_constant_register(VT_INT, ll->ll_name, &ll->ll_level,
+		    VF_KEEP);
+	}
+	
 	return;
 }
 
