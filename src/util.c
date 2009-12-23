@@ -15,6 +15,8 @@
 #include <signal.h>
 #include <stdarg.h>
 #include <sys/time.h>
+#include <pwd.h>
+#include <grp.h>
 
 #include "log.h"
 
@@ -532,4 +534,52 @@ util_concat(char *buffer, int size, ...)
 	va_end(ap);
 
 	return len;
+}
+
+
+void
+util_setgid(char *name)
+{
+	struct group *gr;
+
+	/*
+	 * util_setgid is not thread safe. It's used only once at startup by
+	 * the initial program thread.
+	 */
+	gr = getgrnam(name);
+	if (gr == NULL)
+	{
+		log_die(EX_SOFTWARE, "util_setgid: getgrnam");
+	}
+
+	if (setgid(gr->gr_gid))
+	{
+		log_die(EX_OSERR, "util_setgid: setgid");
+	}
+
+	return;
+}
+
+
+void
+util_setuid(char *name)
+{
+	struct passwd *pw;
+
+	/*
+	 * util_setuid is not thread safe. It's used only once at startup by
+	 * the initial program thread.
+	 */
+	pw = getpwnam(name);
+	if (pw == NULL)
+	{
+		log_die(EX_SOFTWARE, "util_setuid: getpwnam");
+	}
+
+	if (setuid(pw->pw_uid))
+	{
+		log_die(EX_OSERR, "util_setuid: setuid");
+	}
+
+	return;
 }

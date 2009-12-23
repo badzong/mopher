@@ -48,6 +48,8 @@ static char *cf_file_buffer;
  * Extern configuration symbols
  */
 char		*cf_workdir_path;
+char		*cf_mopherd_group;
+char		*cf_mopherd_user;
 char		*cf_module_path;
 VAR_INT_T	 cf_greylist_visa;
 VAR_INT_T	 cf_greylist_valid;
@@ -72,6 +74,8 @@ VAR_INT_T	 cf_delivered_valid;
  */
 static cf_symbol_t cf_symbols[] = {
 	{ "workdir_path", &cf_workdir_path },
+	{ "mopherd_group", &cf_mopherd_group },
+	{ "mopherd_user", &cf_mopherd_user },
 	{ "module_path", &cf_module_path },
 	{ "greylist_visa", &cf_greylist_visa },
 	{ "greylist_valid", &cf_greylist_valid },

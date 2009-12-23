@@ -925,6 +925,21 @@ milter_init(void)
 	 */
 	cf_init();
 
+
+	/*
+	 * Drop privileges
+	 */
+	if (cf_mopherd_group)
+	{
+		log_debug("group: %s", cf_mopherd_group);
+		util_setgid(cf_mopherd_group);
+	}
+	if (cf_mopherd_user)
+	{
+		log_debug("user: %s", cf_mopherd_user);
+		util_setuid(cf_mopherd_user);
+	}
+
 	/*
 	 * Change working directory
 	 */

@@ -24,15 +24,15 @@ install: all
 	@echo 
 	@echo creating directories
 	$(INSTALL) -m 755 -o root -g root -d $(sysconfdir)/mopher
-	$(INSTALL) -m 755 -o root -g root -d $(libdir)/mopher
-	$(INSTALL) -m 755 -o root -g root -d $(libdir)/mopher/db
-	$(INSTALL) -m 755 -o root -g root -d $(libdir)/mopher/modules
+	$(INSTALL) -m 755 -o root -g root -d $(MOPHERD_DIR)
+	$(INSTALL) -m 755 -o root -g root -d $(MOPHERD_DIR)/db
+	$(INSTALL) -m 755 -o root -g root -d $(MOPHERD_DIR)/modules
 	@echo 
 	@echo installing mopherd in $(sbindir)
 	$(INSTALL) -m 755 -o root -g root @top_srcdir@/src/mopherd $(sbindir)
 	@echo 
-	@echo installing modules in $(libdir)/mopher
-	-$(INSTALL) -m 755 -o root -g root @top_srcdir@/src/modules/*.so $(libdir)/mopher/modules
+	@echo installing modules in $(MOPHERD_DIR)
+	-$(INSTALL) -m 755 -o root -g root @top_srcdir@/src/modules/*.so $(MOPHERD_DIR)/modules
 	@echo 
 	@echo installing configuration files in $(sysconfdir)
 	$(INSTALL) -m 640 -o root -g root @top_srcdir@/config/mopherd.conf $(sysconfdir)/mopher
@@ -41,7 +41,7 @@ install: all
 uninstall:
 	@echo removing $(DIST) files
 	@rm -rf $(sysconfdir)/mopher
-	@rm -rf $(libdir)/mopher
+	@rm -rf $(MOPHERD_DIR)
 	@rm -f $(sbindir)/mopherd
 
 $(SUBDIRS):

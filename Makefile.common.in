@@ -2,7 +2,7 @@
 prefix=@prefix@
 exec_prefix=@exec_prefix@
 sbindir=@sbindir@
-libdir=@libdir@
+localstatedir=@localstatedir@
 sysconfdir=@sysconfdir@
 
 # Program paths
@@ -27,7 +27,7 @@ ARFLAGS=rcs
 
 
 # Paths (defs.c)
-MOPHERD_DIR=@libdir@/mopher
+MOPHERD_DIR=@localstatedir@/lib/mopher
 MOPHERD_CONF=@sysconfdir@/mopher/mopherd.conf
 MAIL_ACL=@sysconfdir@/mopher/mail.acl
 
