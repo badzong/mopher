@@ -16,9 +16,8 @@
 
 static int		server_socket;
 static int		server_clients[MAX_CLIENTS + 1];
-static int		server_running = 1;
+static int		server_running;
 static pthread_t	server_thread;
-static pthread_attr_t	server_attr;
 
 
 static void
@@ -125,6 +124,11 @@ server_main(void *arg)
 	int ready;
 	fd_set master;
 	fd_set rs;
+
+	/*
+	 * Server is running
+	 */
+	server_running = 1;
 
 	/*
 	 * Use SIGUSR2 to get out of select
@@ -313,7 +317,7 @@ server_init()
 	/*
 	 * Start server thread
 	 */
-	if (util_thread_create(&server_thread, &server_attr, server_main))
+	if (util_thread_create(&server_thread, server_main))
 	{
 		log_error("server_init: util_thread_create failed");
 		return -1;
@@ -334,6 +338,14 @@ server_clear(void)
 	}
 
 	util_thread_join(server_thread);
+
+	/*
+	 * Remove SIGUSR2 handler (to avoid an error on reload)
+	 */
+	if (util_signal(SIGUSR2, SIG_DFL))
+	{
+		log_error("server_main: util_signal failed");
+	}
 
 	return;
 }

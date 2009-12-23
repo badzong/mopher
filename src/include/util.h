@@ -21,7 +21,8 @@ int util_addrcmp(struct sockaddr_storage *ss1, struct sockaddr_storage *ss2);
 int util_block_signals(int sig, ...);
 int util_unblock_signals(int sig, ...);
 int util_signal(int signum, void (*handler)(int));
-int util_thread_create(pthread_t *thread, pthread_attr_t *attr,void *callback);
+int util_thread_create(pthread_t *thread, void *callback);
+void util_thread_join(pthread_t thread);
 int util_now(struct timespec *ts);
 int util_concat(char *buffer, int size, ...);
 #endif /* _UTIL_H_ */

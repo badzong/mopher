@@ -21,7 +21,6 @@ static ll_t		*client_queue;
 static pthread_t	 client_thread;
 static pthread_mutex_t	 client_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t	 client_cond = PTHREAD_COND_INITIALIZER;
-static pthread_attr_t	 client_attr;
 
 
 static void
@@ -495,7 +494,7 @@ client_init()
 	/*
 	 * Start thread
 	 */
-	if (util_thread_create(&client_thread, &client_attr, client_main))
+	if (util_thread_create(&client_thread, client_main))
 	{
 		log_error("client_init: util_thread_create failed");
 		return -1;

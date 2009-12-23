@@ -416,16 +416,17 @@ util_thread_init(void *arg)
 
 
 int
-util_thread_create(pthread_t *thread, pthread_attr_t *attr,
-    void *callback)
+util_thread_create(pthread_t *thread, void *callback)
 {
-	if (pthread_attr_init(attr))
+	pthread_attr_t attr;
+
+	if (pthread_attr_init(&attr))
 	{
 		log_error("util_thread_create: pthread_attr_init");
 		return -1;
 	}
 
-	if (pthread_attr_setdetachstate(attr, PTHREAD_CREATE_JOINABLE))
+	if (pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE))
 	{
 		log_error("util_thread_create: pthread_attr_setdetachstate");
 		return -1;
@@ -437,13 +438,11 @@ util_thread_create(pthread_t *thread, pthread_attr_t *attr,
 		return -1;
 	}
 
-	/*
-	if (pthread_detach(*thread))
+	if (pthread_attr_destroy(&attr))
 	{
-		log_error("util_thread_create: pthread_detach");
+		log_error("util_thread_create: pthread_attr_destroy");
 		return -1;
 	}
-	*/
 
 	return 0;
 }

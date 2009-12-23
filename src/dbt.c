@@ -17,7 +17,6 @@ static sht_t *dbt_tables;
 
 static int		dbt_janitor_running;
 static pthread_t	dbt_janitor_thread;
-static pthread_attr_t	dbt_janitor_attr;
 static pthread_mutex_t	dbt_janitor_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t	dbt_janitor_cond = PTHREAD_COND_INITIALIZER;
 
@@ -812,8 +811,7 @@ dbt_init(void)
 	/*
 	 * Start table janitor thread
 	 */
-	if (util_thread_create(&dbt_janitor_thread, &dbt_janitor_attr,
-	    dbt_janitor))
+	if (util_thread_create(&dbt_janitor_thread, dbt_janitor))
 	{
 		log_die(EX_SOFTWARE, "dbt_init: util_thread_create failed");
 	}
