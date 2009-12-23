@@ -929,15 +929,22 @@ milter_init(void)
 	/*
 	 * Drop privileges
 	 */
-	if (cf_mopherd_group)
+	if (getuid() == 0)
 	{
-		log_debug("group: %s", cf_mopherd_group);
-		util_setgid(cf_mopherd_group);
+		if (cf_mopherd_group)
+		{
+			log_debug("group: %s", cf_mopherd_group);
+			util_setgid(cf_mopherd_group);
+		}
+		if (cf_mopherd_user)
+		{
+			log_debug("user: %s", cf_mopherd_user);
+			util_setuid(cf_mopherd_user);
+		}
 	}
-	if (cf_mopherd_user)
+	else
 	{
-		log_debug("user: %s", cf_mopherd_user);
-		util_setuid(cf_mopherd_user);
+		log_error("milter_init: already running as unprivileged user");
 	}
 
 	/*
