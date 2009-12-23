@@ -437,13 +437,45 @@ util_thread_create(pthread_t *thread, pthread_attr_t *attr,
 		return -1;
 	}
 
+	/*
 	if (pthread_detach(*thread))
 	{
 		log_error("util_thread_create: pthread_detach");
 		return -1;
 	}
+	*/
 
 	return 0;
+}
+
+
+void
+util_thread_join(pthread_t thread)
+{
+	static char *edeadlk = "Deadlock";
+	static char *einval  = "Thread not joinable";
+	static char *esrch   = "No such thread";
+	static char *enknwn  = "Unknown error";
+
+	char *e = NULL;
+	int r;
+
+	r = pthread_join(thread, NULL);
+	switch (r)
+	{
+	case 0:				break;
+	case EDEADLK:	e = edeadlk;	break;
+	case EINVAL:	e = einval;	break;
+	case ESRCH:	e = esrch;	break;
+	default:	e = enknwn;
+	}
+
+	if (e)
+	{
+		log_error("dbt_clear: pthread_mutex_join: %s", e);
+	}
+
+	return;
 }
 
 

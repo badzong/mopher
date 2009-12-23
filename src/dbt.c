@@ -855,10 +855,7 @@ dbt_clear()
 		log_error("dbt_janitor_clear: pthread_mutex_unlock");
 	}
 
-	if (pthread_join(dbt_janitor_thread, NULL))
-	{
-		log_error("dbt_clear: pthread_mutex_join");
-	}
+	util_thread_join(dbt_janitor_thread);
 
 	client_clear();
 	server_clear();

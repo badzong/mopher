@@ -333,10 +333,7 @@ server_clear(void)
 		log_error("server_clear: pthread_kill");
 	}
 
-	if (pthread_join(server_thread, NULL))
-	{
-		log_error("server_clear: pthread_mutex_join");
-	}
+	util_thread_join(server_thread);
 
 	return;
 }
