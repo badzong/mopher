@@ -169,7 +169,7 @@ rbl_init(void)
 	rbl = cf_get(VT_TABLE, "rbl", NULL);
 	if (rbl == NULL)
 	{
-		log_warning("rbl: init: no RBLs configured");
+		log_notice("rbl: init: no RBLs configured");
 		return 0;
 	}
 

@@ -25,4 +25,6 @@ int util_thread_create(pthread_t *thread, void *callback);
 void util_thread_join(pthread_t thread);
 int util_now(struct timespec *ts);
 int util_concat(char *buffer, int size, ...);
+void util_setgid(char *name);
+void util_setuid(char *name);
 #endif /* _UTIL_H_ */

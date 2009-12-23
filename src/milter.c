@@ -998,6 +998,8 @@ milter_clear(void)
 static void
 milter_reload(int signal)
 {
+	log_error("received SIGUSR1: reload");
+
 	if (pthread_rwlock_wrlock(&milter_reload_lock))
 	{
 		log_die(EX_SOFTWARE, "milter_reload: pthread_rwlock_wrlock");

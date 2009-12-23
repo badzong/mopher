@@ -72,6 +72,8 @@ main(int argc, char **argv)
 		return 0;
 	}
 
+	log_error("started");
+
 	r = milter();
 
 	/*
@@ -79,6 +81,8 @@ main(int argc, char **argv)
 	 */
 	milter_clear();
 	log_close();
+
+	log_error("terminated");
 
 	return r;
 }
