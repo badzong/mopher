@@ -363,7 +363,7 @@ dbt_register(char *name, dbt_t *dbt)
 	/*
 	 * Load config table
 	 */
-	config = cf_get(VT_TABLE, "tables", name, NULL);
+	config = cf_get(VT_TABLE, "table", name, NULL);
 	if (config == NULL) {
 		log_die(EX_CONFIG, "dbt_register: missing database "
 			"configuration for \"%s\"", name);

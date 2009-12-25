@@ -315,6 +315,15 @@ int
 server_init()
 {
 	/*
+	 * Don't start the server if server_socket is empty
+	 */
+	if (!cf_server_socket)
+	{
+		log_debug("server_init: server_socket is empty: exit");
+		return 0;
+	}
+
+	/*
 	 * Start server thread
 	 */
 	if (util_thread_create(&server_thread, server_main))
@@ -330,6 +339,11 @@ server_init()
 void
 server_clear(void)
 {
+	if (!cf_server_socket)
+	{
+		return;
+	}
+
 	server_running = 0;
 
 	if (pthread_kill(server_thread, SIGUSR2))

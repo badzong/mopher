@@ -64,7 +64,6 @@ VAR_INT_T	 cf_foreground;
 VAR_INT_T	 cf_dbt_cleanup_interval;
 char		*cf_hostname;
 char		*cf_spamd_socket;
-char		*cf_sync_socket;
 VAR_INT_T	 cf_client_retry_interval;
 char		*cf_server_socket;
 VAR_INT_T	 cf_tarpit_progress_interval;
@@ -87,10 +86,8 @@ static cf_symbol_t cf_symbols[] = {
 	{ "milter_socket_timeout", &cf_milter_socket_timeout },
 	{ "milter_socket_umask", &cf_milter_socket_umask },
 	{ "cleanup_interval", &cf_dbt_cleanup_interval },
-	{ "default_cleanup_interval", &cf_dbt_cleanup_interval },
 	{ "hostname", &cf_hostname },
 	{ "spamd_socket", &cf_spamd_socket },
-	{ "sync_socket", &cf_sync_socket },
 	{ "client_retry_interval", &cf_client_retry_interval },
 	{ "server_socket", &cf_server_socket },
 	{ "tarpit_progress_interval", &cf_tarpit_progress_interval },

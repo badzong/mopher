@@ -1,5 +1,5 @@
 connect tarpit 5s
 envrcpt log "from: " + string_mailaddr(milter_envfrom) + " to: " + string_mailaddr(milter_envrcpt)
-envrcpt greylist 15m
+envrcpt greylist delay 15m
 eom tarpit_delayed add header "X-Tarpit" value tarpit_delayed
 eom greylist_delayed add header "X-Greylist" value greylist_delayed
