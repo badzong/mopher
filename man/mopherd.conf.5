@@ -23,11 +23,7 @@ or the configuration directive acl_path for
 .SH DESCRIPTION
 The file
 .B mopherd.conf
-contains information about how
-.B mopherd
-should filter incoming email. A statement is either a rule or a definition.
-Statements may spawn multiple lines. Multiple whitespaces and emtpy lines are
-ignored. # starts a comment until the end of the line.
+contains the configuration for the mopher mail filter deamon.
 .SH PARAMETERS
 Description of all mopherd.conf parameters. Default values are shown after the
 parameter name in parentheses.
@@ -71,12 +67,22 @@ Hostname can be used to overwrite the value returned by
 \&. The hostname is used for example to to build a received header for spamd
 or when connecting another mopherd server.
 .SS milter_socket (default: unix:mopherd.sock)
-Path where mopherd will listen for incoming MTA connections.
+Socket where mopherd will listen for incoming MTA connections. Relative paths
+for UNIX domain sockets start at
+.I workdir_path
+(see below).
+.PP
+Examples:
+.PP
+.nf
+milter_socket = "inet:1025@127.0.0.1"
+milter_socket = "unix:/var/spool/mail/mopherd.sock"
+.fi
 .SS milter_socket_timeout (default: -1)
-Timeout in seconds libmilter will for MTA communication (see libmilter
+Timeout in seconds libmilter will wait for MTA communication (see libmilter
 documentation). If set to -1 the libmilter default of 7210 seconds is used.
 .SS milter_socket_umask (default: 007)
-The umask mopherd uses when creating a unix domain socket.
+The umask mopherd uses when creating a UNIX domain socket.
 .I milter_socket_umask
 can be used to control the permissions of the
 .I milter_socket
@@ -87,18 +93,144 @@ can be used to control the permissions of the
 and
 .I mopherd_group
 ).
-.SS module_path
-mopherd_group
-mopherd_user
-server_socket
-spamd_socket
-sync_socket
-tarpit_progress_interval
-workdir_path
+.SS module_path (default: modules)
+Filesystem path where mopherd looks for modules.
+.SS mopherd_group (default: unspecified)
+Set mopherd's UNIX group id to the specified group. On most systems mopherd
+will be started by the root user and group and inherit their privileges. It's
+good practice to drop these privileges on startup.
+.PP
+Note: If you're using UNIX domain sockets you probably want to set
+.I mopherd_group
+to the same group as your MTA.
+.SS mopherd_user (default: unspecified)
+Set mopherd's UNIX user id to the specified user. On most systems mopherd
+will be started by the root user and group and inherit their privileges. It's
+good practice to drop these privileges on startup.
+.PP
+On most systems you want to create an unprivileged user to run mopherd.
+.SS server (default: unspecified)
+.I server
+is a hash table containing all servers to sync database records with. Each
+server must have path set.
+.PP
+Examples:
+.PP
+.nf
+server[horus][path] = "inet:80.126.16.77:9025"
+server[anubis]      = {
+    path            = "inet:10.1.1.17:25001"
+}
+.fi
+.SS server_socket (default: unspecified)
+Socket where mopherd will listen for database table updates by other mopherd
+peers.
+.PP
+Examples:
+.PP
+.nf
+server_socket = "inet:10.40.124.8:9000"
+server_socket = "inet:fe80::21d:60fe:33c1:a62d:9000"
+server_socket = "inet::::20025"
+.fi
+.PP
+Note: To listen on all IP4 and IP6 addresses you have to use 4 colons!
+.SS spamd_socket (default: "inet:localhost:783")
+.PP
+Socket where mopherd will send SpamAssassin requests to.
+.PP
+Note: You need to load the SpamAssassin module (spamd.so) for this setting to
+take effect.
+.SS tables
+Database configuration for mopherd tables. Each table has the following
+subkeys:
+.PP
+.nf
+.BR driver "   : database driver:
+.BR path "     : filesystem path of the database or the UNIX domain socket"
+.BR host "     : database server"
+.BR port "     : database server port"
+.BR database " : database name"
+.BR table "    : table name"
+.fi
+.PP
+Note: the default database driver is bdb and the database path is db/table.bdb
+(e.g. db/greylist.bdb).
+.PP
+Examples:
+.PP
+.nf
+table[greylist] = {
+    driver      = "mysql",
+    path        = "/tmp/mysql.sock",
+    user        = "dbuser",
+    pass        = "secret"
+}
+
+table[greylist] = {
+    driver      = "mysql",
+    host        = 127.0.0.1,
+    port        = 3307,
+    user        = "mopher",
+    pass        = "P455w0RD",
+    database    = "mopherd",
+    table       = "gl_table"
+}
+.fi
+.PP
+Note: currently 3 tables exist:
+.BR greylist ", " delivered_relays " and " delivered_penpals
+.SS tarpit_progress_interval (default: 10)
+Interval in seconds mopherd will notify the MTA while tarpitting.
+.SS workdir_path (default: /usr/local/var/lib/mopher)
+Filesytem path where mopherd will
+.BR chdir (2)
+to after startup.
 .SH EXAMPLES
+.nf
+# MOPHERD.CONF EXAMPLE
+
+
+# mopherd user and group
+
+mopherd_user    = "mopherd"
+mopherd_group   = "postfix"
+
+
+# database configuration for MySQL database
+
+table[greylist] = {
+    driver      = "mysql",
+    path        = "/tmp/mysql.sock",
+    user        = "mopher",
+    pass        = "secret"
+}
+
+table[delivered_relays] = {
+    driver      = "mysql",
+    path        = "/tmp/mysql.sock",
+    user        = "mopher",
+    pass        = "secret"
+}
+    
+table[delivered_penpals] = {
+    driver      = "mysql",
+    path        = "/tmp/mysql.sock",
+    user        = "mopher",
+    pass        = "secret"
+}
+    
+    
+# peer database records with server mx2
+
+server_socket   = "inet::::9025"
+server[mx2]     = {
+    socket      = "inet:10.40.41.8:9025"
+}
+
+.fi
 .SH SEE ALSO
 .BR mopherd (1),
-.BR mopherd.conf (5)
+.BR mail.acl (5)
 .SH AUTHORS
 This manuel page was written by Manuel Badzong <manuel@mopher.net>.
-Binary file ./modules/lib.a matches
