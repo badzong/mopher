@@ -26,6 +26,7 @@ extern char		*cf_workdir_path;
 extern char		*cf_mopherd_group;
 extern char		*cf_mopherd_user;
 extern char		*cf_module_path;
+extern VAR_INT_T	 cf_greylist_delay;
 extern VAR_INT_T	 cf_greylist_visa;
 extern VAR_INT_T	 cf_greylist_valid;
 extern char		*cf_acl_path;

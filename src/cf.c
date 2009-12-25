@@ -51,6 +51,7 @@ char		*cf_workdir_path;
 char		*cf_mopherd_group;
 char		*cf_mopherd_user;
 char		*cf_module_path;
+VAR_INT_T	 cf_greylist_delay;
 VAR_INT_T	 cf_greylist_visa;
 VAR_INT_T	 cf_greylist_valid;
 char		*cf_acl_path;
@@ -77,6 +78,7 @@ static cf_symbol_t cf_symbols[] = {
 	{ "mopherd_group", &cf_mopherd_group },
 	{ "mopherd_user", &cf_mopherd_user },
 	{ "module_path", &cf_module_path },
+	{ "greylist_delay", &cf_greylist_delay },
 	{ "greylist_visa", &cf_greylist_visa },
 	{ "greylist_valid", &cf_greylist_valid },
 	{ "acl_path", &cf_acl_path },

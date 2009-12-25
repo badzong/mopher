@@ -72,7 +72,8 @@ action		: CONTINUE		{ $$ = acl_action(ACL_CONTINUE, NULL); }
 
 greylist	: greylist VALID exp	{ $$ = greylist_valid($1, $3); }
 		| greylist VISA exp	{ $$ = greylist_visa($1, $3); }
-		| GREYLIST exp		{ $$ = greylist_create($2); }
+		| greylist DELAY exp	{ $$ = greylist_delay($1, $3); }
+		| GREYLIST		{ $$ = greylist_create(); }
 		;
 
 tarpit		: TARPIT exp		{ $$ = $2; }

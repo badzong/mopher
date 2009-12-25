@@ -33,7 +33,15 @@ greylist_valid(greylist_t *gl, exp_t *valid)
 
 
 greylist_t *
-greylist_create(exp_t *delay)
+greylist_delay(greylist_t *gl, exp_t *delay)
+{
+	gl->gl_delay = delay;
+	return gl;
+}
+
+
+greylist_t *
+greylist_create(void)
 {
 	greylist_t *gl;
 
@@ -44,8 +52,6 @@ greylist_create(exp_t *delay)
 	}
 
 	memset(gl, 0, sizeof (greylist_t));
-
-	gl->gl_delay = delay;
 
 	return gl;
 }
@@ -201,7 +207,6 @@ void
 greylist_init(void)
 {
 	var_t *scheme;
-	VAR_INT_T i = -1;
 	char **p;
 
 	scheme = vlist_scheme("greylist",
@@ -232,12 +237,6 @@ greylist_init(void)
 	dbt_register("greylist", &greylist_dbt);
 
 	/*
-	 * Register GREYLISTED
-	 */
-	acl_constant_register(VT_INT, "GREYLISTED", &i,
-	    VF_KEEPNAME | VF_COPYDATA);
-
-	/*
 	 * Register symbols. Symbols are not cached due to abiguity.
 	 */
 	for (p = greylist_tuple_symbols; *p; ++p)
@@ -261,9 +260,28 @@ greylist_add(struct sockaddr_storage *hostaddr, char *envfrom, char *envrcpt,
     VAR_INT_T received, VAR_INT_T delay, VAR_INT_T valid, VAR_INT_T visa)
 {
 	var_t *record;
-	VAR_INT_T retries = 1;
+	VAR_INT_T retries = 0;
 	VAR_INT_T passed = 0;
 	
+	/*
+	 * Use default values if not set.
+	 */
+	if (delay == 0)
+	{
+		delay = cf_greylist_delay;
+	}
+	if (valid == 0)
+	{
+		valid = cf_greylist_valid;
+	}
+	if (visa == 0)
+	{
+		visa = cf_greylist_visa;
+	}
+
+	/*
+	 * Create and store record
+	 */
 	record = vlist_record(greylist_dbt.dbt_scheme, hostaddr, envfrom,
 	    envrcpt, &received, &received, &valid, &delay, &retries, &visa,
 	    &passed);
@@ -282,44 +300,10 @@ greylist_add(struct sockaddr_storage *hostaddr, char *envfrom, char *envrcpt,
 	
 	var_delete(record);
 
-	log_info("greylist_add: from: %s to: %s: delay: %d", envfrom, envrcpt,
-	    delay);
+	log_info("greylist_add: from: %s to: %s: delay: %d seconds", envfrom,
+	    envrcpt, delay);
 
 	return 1;
-}
-
-
-static int
-greylist_eval_int(exp_t *exp, var_t *mailspec, VAR_INT_T *i)
-{
-	var_t *result;
-	VAR_INT_T *p;
-
-	/*
-	 * Set to zero in case something goes wrong
-	 */
-	*i = 0;
-
-	result = exp_eval(exp, mailspec);
-	if (result == NULL)
-	{
-		log_error("greylist_eval_int: exp_eval failed");
-		return -1;
-	}
-
-	if (result->v_type != VT_INT)
-	{
-		log_error("greylist_eval: bad type");
-		exp_free(result);
-		return -1;
-	}
-
-	p = result->v_data;
-	*i = *p;
-
-	exp_free(result);
-
-	return 0;
 }
 
 
@@ -327,36 +311,43 @@ static int
 greylist_eval(greylist_t *gl, var_t *mailspec, VAR_INT_T *delay,
     VAR_INT_T *valid, VAR_INT_T *visa)
 {
-	if (greylist_eval_int(gl->gl_delay, mailspec, delay))
-	{
-		log_error("greylist_eval: greylist_eval_int failed");
-		return -1;
-	}
+	/*
+	 * Arrays are used to loop over delay, valid and visa
+	 */
+	VAR_INT_T *ip[] = { delay, valid, visa, NULL };
+	exp_t *ep[] = { gl->gl_delay, gl->gl_valid, gl->gl_visa, NULL };
+	VAR_INT_T **i;
+	exp_t **e;
+	var_t *v;
 
-	if (gl->gl_valid == NULL)
+	/*
+	 * Set all values to zero
+	 */
+	*delay = *valid = *visa = 0;
+
+	for (i = ip, e = ep; *i; ++i, ++e)
 	{
-		*valid = cf_greylist_valid;
-	}
-	else
-	{
-		if (greylist_eval_int(gl->gl_valid, mailspec, valid))
+		/*
+		 * No expression set (*i = 0)
+		 */
+		if (*e == NULL)
 		{
-			log_error("greylist_eval: greylist_eval_int failed");
+			continue;
+		}
+
+		v = exp_eval(*e, mailspec);
+		if (v == NULL)
+		{
+			log_error("grelist_eval: exp_eval failed");
 			return -1;
 		}
-	}
 
-	if (gl->gl_visa == NULL)
-	{
-		*visa = cf_greylist_visa;
-	}
-	else
-	{
-		if (greylist_eval_int(gl->gl_visa, mailspec, visa))
-		{
-			log_error("greylist_eval: greylist_eval_int failed");
-			return -1;
-		}
+		/*
+		 * Dereferencing double pointer
+		 */
+		**i = var_intval(v);
+
+		exp_free(v);
 	}
 
 	return 0;
@@ -405,9 +396,9 @@ greylist_recipient(VAR_INT_T *delayed, struct sockaddr_storage *hostaddr,
 	lookup = NULL;
 
 	/*
-	 * Dont't greylist if no record exists (GREYLISTED)
+	 * Dont't greylist if no record exists and no delay was specified
 	 */
-	if (record == NULL && delay == -1)
+	if (record == NULL && delay == 0)
 	{
 		return 0;
 	}
@@ -432,17 +423,7 @@ greylist_recipient(VAR_INT_T *delayed, struct sockaddr_storage *hostaddr,
 	}
 
 	/*
-	 * Greylist if record exists
-	 */
-	if (delay == -1)
-	{
-		delay = *rec_delay;
-		valid = *rec_valid;
-		visa  = *rec_visa;
-	}
-
-	/*
-	 * Record expired.
+	 * Record expired. After the greylist period, valid becomes visa!
 	 */
 	if (*rec_updated + *rec_valid < received)
 	{
@@ -454,33 +435,25 @@ greylist_recipient(VAR_INT_T *delayed, struct sockaddr_storage *hostaddr,
 	}
 
 	/*
-	 * Delay smaller than requested.
+	 * Update requested properties
 	 */
-	if (*rec_delay < delay)
+	if (delay && *rec_delay != delay)
 	{
-		log_info("greylist: from: %s to: %s: record delay too small: "
-		    "extended to %d seconds", envfrom, envrcpt, delay);
-
+		log_info("greylist: from: %s to: %s: delay changed from %d to "
+		    "%d seconds", envfrom, envrcpt, *rec_delay, delay);
 		*rec_delay = delay;
-		*rec_passed = 0;
-		defer = 1;
-
-		goto update;
 	}
-
-	/*
-	 * Valid visa
-	 */
-	if (*rec_passed > 0)
+	if (valid && *rec_valid != valid)
 	{
-		log_info("greylist: from: %s to: %s: valid visa found. "
-		    "expiry: %d seconds", envfrom, envrcpt,
-		    *rec_updated + *rec_valid - received);
-
-		*rec_passed += 1;
-		defer = 0;
-
-		goto update;
+		log_info("greylist: from: %s to: %s: valid changed from %d to "
+		    "%d seconds", envfrom, envrcpt, *rec_valid, valid);
+		*rec_valid = valid;
+	}
+	if (visa && *rec_visa != visa)
+	{
+		log_info("greylist: from: %s to: %s: visa changed from %d to "
+		    "%d seconds", envfrom, envrcpt, *rec_visa, visa);
+		*rec_visa = visa;
 	}
 
 	/*
@@ -488,18 +461,20 @@ greylist_recipient(VAR_INT_T *delayed, struct sockaddr_storage *hostaddr,
 	 */
 	if (*rec_created + *rec_delay < received)
 	{
-		log_info("greylist: from: %s to: %s: delay passed. create "
-		    "visa for %d seconds", envfrom, envrcpt, visa);
-
-		*rec_visa = visa;
-		*rec_valid = visa;
-		*rec_passed = 1;
+		*rec_valid = *rec_visa;
+		*rec_passed += 1;
 		defer = 0;
 
 		/*
-		 * Set delayed (set only here!)
+		 * Set delayed for the first message (set only here!)
 		 */
-		*delayed = received - *rec_created;
+		if (*rec_passed == 1)
+		{
+			*delayed = received - *rec_created;
+		}
+
+		log_info("greylist: from: %s to: %s: delay passed. visa: %d "
+		    "seconds", envfrom, envrcpt, *rec_visa);
 
 		goto update;
 	}

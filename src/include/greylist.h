@@ -27,7 +27,8 @@ typedef struct greylist greylist_t;
 
 greylist_t * greylist_visa(greylist_t *gl, exp_t *visa);
 greylist_t * greylist_valid(greylist_t *gl, exp_t *valid);
-greylist_t * greylist_create(exp_t *delay);
+greylist_t * greylist_delay(greylist_t *gl, exp_t *delay);
+greylist_t * greylist_create(void);
 void greylist_delete(greylist_t *gl);
 void greylist_init(void);
 acl_action_type_t greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data);
