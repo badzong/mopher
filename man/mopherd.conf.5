@@ -29,6 +29,72 @@ should filter incoming email. A statement is either a rule or a definition.
 Statements may spawn multiple lines. Multiple whitespaces and emtpy lines are
 ignored. # starts a comment until the end of the line.
 .SH PARAMETERS
+Description of all mopherd.conf parameters. Default values are shown after the
+parameter name in parentheses.
+.SS acl_log_level (default: LOG_ERR)
+Default log level for ACL log statements if level is not specified in
+.BR mail.acl (5)
+target.
+.SS acl_path (default: /etc/mail.acl)
+Filesystem path for mail.acl. Starting point for relative paths is
+.I workdir_path
+(see
+.I workdir_path
+below).
+.SS cleanup_interval (default: 300)
+Mopherd stores all data in database tables.
+.I cleanup_interval
+controls the cleanup interval in seconds for stale records in the tables.
+.SS client_retry_interval (default: 10)
+If mopherd.conf specifies database servers (see
+.I server
+below) the
+.I client_retry_interval
+controls the retry interval if a server is unreachable.
+.SS greylist_delay (default: 1800)
+Default greylist delay in seconds if not specified in
+.BR mail.acl (5)
+target.
+.SS greylist_valid (default: 86400)
+Default period in seconds a greylist record is kept in the database if not
+specified in
+.BR mail.acl (5)
+target. Every time a host retries a message the valid timeout is reset.
+.SS greylist_visa (default: 604800)
+Default period in seconds a greylist record is kept in the database after
+successful greylisting if not specified in
+.BR mail.acl (5)
+\&. Message triplets (host, from, rcpt) holding a visa are no longer greylisted.
+.SS hostname (default: unspecified)
+Hostname can be used to overwrite the value returned by
+.BR gethostname (3)
+\&. The hostname is used for example to to build a received header for spamd
+or when connecting another mopherd server.
+.SS milter_socket (default: unix:mopherd.sock)
+Path where mopherd will listen for incoming MTA connections.
+.SS milter_socket_timeout (default: -1)
+Timeout in seconds libmilter will for MTA communication (see libmilter
+documentation). If set to -1 the libmilter default of 7210 seconds is used.
+.SS milter_socket_umask (default: 007)
+The umask mopherd uses when creating a unix domain socket.
+.I milter_socket_umask
+can be used to control the permissions of the
+.I milter_socket
+(see also
+.I mopherd_socket
+,
+.I mopherd_user
+and
+.I mopherd_group
+).
+.SS module_path
+mopherd_group
+mopherd_user
+server_socket
+spamd_socket
+sync_socket
+tarpit_progress_interval
+workdir_path
 .SH EXAMPLES
 .SH SEE ALSO
 .BR mopherd (1),
