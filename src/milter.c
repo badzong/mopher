@@ -24,6 +24,7 @@
 #define MSN_EOH		"eoh"
 #define MSN_BODY	"body"
 #define MSN_EOM		"eom"
+#define MSN_CLOSE	"close"
 
 #define BUCKETS 64
 
@@ -839,6 +840,11 @@ milter_close(SMFICTX * ctx)
 	if (mp == NULL) {
 		return SMFIS_CONTINUE;
 	}
+
+	/*
+	 * milter_acl is called. Useful for logging
+	 */
+	milter_acl(MS_CLOSE, MSN_CLOSE, mp);
 
 	milter_priv_delete(mp);
 

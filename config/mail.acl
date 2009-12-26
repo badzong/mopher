@@ -1,5 +1,19 @@
-connect tarpit 5s
-envrcpt log "from: " + string_mailaddr(milter_envfrom) + " to: " + string_mailaddr(milter_envrcpt)
-envrcpt greylist delay 15m
-eom tarpit_delayed add header "X-Tarpit" value tarpit_delayed
-eom greylist_delayed add header "X-Greylist" value greylist_delayed
+#
+# mail.acl - example mail.acl for mopherd
+#
+# See mail.acl(5) for ACL file syntax
+#
+
+connect log milter_id + ":: new connection: hostname=" + milter_hostname + " (" + milter_hostaddr + ")"
+connect tarpit 10s
+
+envrcpt log milter_id + ":: envelope: from=" + string_mailaddr(milter_envfrom) + " rcpt=" + string_mailaddr(milter_envrcpt)
+envrcpt tarpit (milter_recipients - 1) * 2s
+envrcpt rbl_example greylist delay 15m
+
+eom spamd_score > 2 greylist delay 2h
+eom log milter_id + ":: message: queue_id=" + milter_queueid + " message_size=" + (milter_header_size + milter_body_size)
+eom tarpit_delayed add header "X-Tarpit" value "message tarpitted for " + tarpit_delayed + " seconds"
+eom greylist_delayed add header "X-Greylist" value "message greylisted for " + greylist_delayed + " seconds"
+
+close log milter_id + ":: connection: closed"

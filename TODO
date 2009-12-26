@@ -1,10 +1,9 @@
 MOPHER TODO
 ===========
 
-  * Bug: mopherd.conf cannot be empty
   * Control socket permissions vi chmod
   * Domain greylisting
   * Greylisting: cleanup email adresses
-  * Greylist: retry count
+  * Greylist: retry count greylisting!
   * cf_yacc.y and acl_yacc.y should both support tables
   * Database driver for memory hash tables

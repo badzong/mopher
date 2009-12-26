@@ -109,6 +109,9 @@ will be started by the root user and group and inherit their privileges. It's
 good practice to drop these privileges on startup.
 .PP
 On most systems you want to create an unprivileged user to run mopherd.
+.PP
+Note: the user specified by \fImopherd_user\fR needs access to
+\fIworkdir_path\fR!
 .SS rbl (default: unspecified)
 \fIrbl\fR is a hashtable of used DNS Blockhole lists.
 .PP
@@ -202,7 +205,9 @@ Filesytem path where mopherd will
 to after startup.
 .SH EXAMPLES
 .nf
+#
 # MOPHERD.CONF EXAMPLE
+#
 
 
 # mopherd user and group
@@ -234,8 +239,14 @@ table[delivered_penpals] = {
     pass        = "secret"
 }
     
+
+# load RBL symbols
+
+rbl[rbl_example] = "rbl.example.tld"
+rbl[rbl_blacklist] = "bl.blacklist.tld"
+
     
-# peer database records with server mx2
+# synchronize database records with server mx2
 
 server_socket   = "inet::::9025"
 server[mx2]     = {
