@@ -109,6 +109,20 @@ will be started by the root user and group and inherit their privileges. It's
 good practice to drop these privileges on startup.
 .PP
 On most systems you want to create an unprivileged user to run mopherd.
+.SS rbl (default: unspecified)
+\fIrbl\fR is a hashtable of used DNS Blockhole lists.
+.PP
+Examples:
+.PP
+.nf
+rbl[rbl_example] = "dnsbl.example.tld"
+.fi
+.PP
+Note: Mopherd looks up RBLs on demand. If \fIrbl_example\fR is not used in any
+\fBmail.acl\fR rule for a particular message no query is made.
+.PP
+Note: You need to load the rbl module (rbl.so) for this setting to
+take effect.
 .SS server (default: unspecified)
 .I server
 is a hash table containing all servers to sync database records with. Each
