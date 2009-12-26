@@ -4,6 +4,9 @@ exec_prefix=@exec_prefix@
 sbindir=@sbindir@
 localstatedir=@localstatedir@
 sysconfdir=@sysconfdir@
+mandir=@datarootdir@/man
+man1dir=$(mandir)/man1
+man5dir=$(mandir)/man5
 
 # Program paths
 
@@ -13,8 +16,9 @@ YACC=@YACC@
 OBJCOPY=@OBJCOPY@
 AR=@AR@
 TAR=@TAR@
-BZIP2=@BZIP2@
+GZIP=@GZIP@
 INSTALL=@INSTALL@
+SED=@SED@
 
 
 # Flags
@@ -26,22 +30,36 @@ LDFLAGS=-rdynamic @LIBS@ @MOD_LIBS@
 ARFLAGS=rcs
 
 
+# CONF_DIR is used in man pages
+
+CONF_DIR=@sysconfdir@/mopher
+
+
 # Paths (defs.c)
+
 MOPHERD_DIR=@localstatedir@/lib/mopher
 MOPHERD_CONF=@sysconfdir@/mopher/mopherd.conf
 MAIL_ACL=@sysconfdir@/mopher/mail.acl
 
+
 # Files
 
-ACFILES=config.h Makefile Makefile.common src/Makefile src/modules/Makefile
+ACFILES=config.h Makefile Makefile.common src/Makefile src/modules/Makefile src/man/Makefile
 
 
 # Targets
 
-.SUFFIXES: .c .o .so
+.SUFFIXES: .c .o .so .man .gz
 
 .c.so:
 	$(CC) $(CFLAGS) $(SOFLAGS) -o $@ $<
 
 .c.o:
 	$(CC) $(CFLAGS) -c $<
+
+.man.gz:
+	$(SED) -e "s|\$$MOPHERD_DIR|$(MOPHERD_DIR)|g" $< \
+	| $(SED) -e "s|\$$MOPHERD_CONF|$(MOPHERD_CONF)|g" \
+	| $(SED) -e "s|\$$MAIL_ACL|$(MAIL_ACL)|g" \
+	| $(SED) -e "s|\$$CONF_DIR|$(CONF_DIR)|g" \
+	| $(GZIP) -c > $@

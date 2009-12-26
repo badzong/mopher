@@ -5,7 +5,7 @@ DISTDIR=@top_srcdir@/$(DIST)
 ARCHIVE=$(DIST).tar
 TARBALL=$(ARCHIVE).bz2
 
-SUBDIRS=src
+SUBDIRS=src man
 
 DISTFILES=configure Makefile.common.in Makefile.in config.h.in config $(SUBDIRS)
 
@@ -37,6 +37,12 @@ install: all
 	@echo installing configuration files in $(sysconfdir)
 	$(INSTALL) -m 640 -o root -g root @top_srcdir@/config/mopherd.conf $(sysconfdir)/mopher
 	$(INSTALL) -m 640 -o root -g root @top_srcdir@/config/mail.acl $(sysconfdir)/mopher
+	@echo
+	@echo installing man pages in $(mandir)
+	$(INSTALL) -m 755 -o root -g root -d $(man1dir)
+	$(INSTALL) -m 755 -o root -g root -d $(man5dir)
+	$(INSTALL) -m 644 -o root -g root @top_srcdir@/man/*.1.gz $(man1dir)
+	$(INSTALL) -m 644 -o root -g root @top_srcdir@/man/*.5.gz $(man5dir)
 
 uninstall:
 	@echo removing $(DIST) files
@@ -62,7 +68,7 @@ $(DISTDIR):
 
 $(TARBALL): $(ARCHIVE)
 	@-rm -f $@
-	@$(BZIP2) $<
+	@$(GZIP) $<
 
 $(ARCHIVE): $(DISTDIR)
 	@$(TAR) cf $@ $(DISTDIR)

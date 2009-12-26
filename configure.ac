@@ -28,11 +28,11 @@ then
   AC_MSG_ERROR([ar not found. Make sure you have GNU binutils installed.])
 fi
 
-# tar and bzip2 are used to make dist.
-AC_PATH_PROG([BZIP2], [bzip2])
-if test -z "$BZIP2"
+# tar and gzip are used to make dist.
+AC_PATH_PROG([GZIP], [gzip])
+if test -z "$GZIP"
 then
-  AC_MSG_WARN([bzip not found.])
+  AC_MSG_WARN([gzip not found.])
 fi
 
 AC_PATH_PROG([TAR], [tar])
@@ -46,6 +46,13 @@ AC_PATH_PROG([INSTALL], [install])
 if test -z "$INSTALL"
 then
   AC_MSG_WARN([install not found.])
+fi
+
+# check for sed
+AC_PATH_PROG([SED], [sed])
+if test -z "$SED"
+then
+  AC_MSG_WARN([sed not found.])
 fi
 
 # Checks for libraries.
@@ -160,6 +167,7 @@ AC_CONFIG_FILES([
 	Makefile.common
 	src/Makefile
 	src/modules/Makefile
+	man/Makefile
 ])
 
 AC_OUTPUT

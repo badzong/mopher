@@ -1,0 +1,6 @@
+.TH "MOPHERD" "1" "December 9 2009" "mopher 1.0" "mopher user manual"
+.SH NAME
+.B mopherd \- mopherd mail filter daemon
+.SH INTRODUCTION
+.SH AUTHORS
+This manuel page was written by Manuel Badzong <manuel@mopher.net>.

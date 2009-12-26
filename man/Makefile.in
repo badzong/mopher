@@ -1,0 +1,10 @@
+include @top_srcdir@/Makefile.common
+
+.PHONY: clean
+
+MANPAGES=mopherd.1.gz mopherd.conf.5.gz mail.acl.5.gz
+
+all: $(MANPAGES)
+
+clean:
+	-rm $(MANPAGES)

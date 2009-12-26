@@ -12,7 +12,7 @@ The former controls the behaviour of the daemon itself while the latter
 controls how incoming mail is filtered. By default
 .B mopherd
 looks for both configuration files in
-.I /etc/mopher
+.I $CONF_DIR
 \&. Alternative locations may be specified using the
 .B mopherd
 command line argument -c for
@@ -31,7 +31,7 @@ parameter name in parentheses.
 Default log level for ACL log statements if level is not specified in
 .BR mail.acl (5)
 target.
-.SS acl_path (default: /etc/mail.acl)
+.SS acl_path (default: $MAIL_ACL)
 Filesystem path for mail.acl. Starting point for relative paths is
 .I workdir_path
 (see
@@ -182,7 +182,7 @@ Note: currently 3 tables exist:
 .BR greylist ", " delivered_relays " and " delivered_penpals
 .SS tarpit_progress_interval (default: 10)
 Interval in seconds mopherd will notify the MTA while tarpitting.
-.SS workdir_path (default: /usr/local/var/lib/mopher)
+.SS workdir_path (default: $MOPHERD_DIR)
 Filesytem path where mopherd will
 .BR chdir (2)
 to after startup.
