@@ -23,26 +23,26 @@ all: $(SUBDIRS)
 install: all
 	@echo 
 	@echo creating directories
-	$(INSTALL) -m 755 -o root -g root -d $(sysconfdir)/mopher
-	$(INSTALL) -m 755 -o root -g root -d $(MOPHERD_DIR)
-	$(INSTALL) -m 755 -o root -g root -d $(MOPHERD_DIR)/db
-	$(INSTALL) -m 755 -o root -g root -d $(MOPHERD_DIR)/modules
+	$(INSTALL) -m 755 -o 0 -g 0 -d $(sysconfdir)/mopher
+	$(INSTALL) -m 755 -o 0 -g 0 -d $(MOPHERD_DIR)
+	$(INSTALL) -m 755 -o 0 -g 0 -d $(MOPHERD_DIR)/db
+	$(INSTALL) -m 755 -o 0 -g 0 -d $(MOPHERD_DIR)/modules
 	@echo 
 	@echo installing mopherd in $(sbindir)
-	$(INSTALL) -m 755 -o root -g root @top_srcdir@/src/mopherd $(sbindir)
+	$(INSTALL) -m 755 -o 0 -g 0 @top_srcdir@/src/mopherd $(sbindir)
 	@echo 
 	@echo installing modules in $(MOPHERD_DIR)
-	-$(INSTALL) -m 755 -o root -g root @top_srcdir@/src/modules/*.so $(MOPHERD_DIR)/modules
+	-$(INSTALL) -m 755 -o 0 -g 0 @top_srcdir@/src/modules/*.so $(MOPHERD_DIR)/modules
 	@echo 
 	@echo installing configuration files in $(sysconfdir)
-	$(INSTALL) -m 640 -o root -g root @top_srcdir@/config/mopherd.conf $(sysconfdir)/mopher
-	$(INSTALL) -m 640 -o root -g root @top_srcdir@/config/mail.acl $(sysconfdir)/mopher
+	$(INSTALL) -m 640 -o 0 -g 0 @top_srcdir@/config/mopherd.conf $(sysconfdir)/mopher
+	$(INSTALL) -m 640 -o 0 -g 0 @top_srcdir@/config/mail.acl $(sysconfdir)/mopher
 	@echo
 	@echo installing man pages in $(mandir)
-	$(INSTALL) -m 755 -o root -g root -d $(man1dir)
-	$(INSTALL) -m 755 -o root -g root -d $(man5dir)
-	$(INSTALL) -m 644 -o root -g root @top_srcdir@/man/*.1.gz $(man1dir)
-	$(INSTALL) -m 644 -o root -g root @top_srcdir@/man/*.5.gz $(man5dir)
+	$(INSTALL) -m 755 -o 0 -g 0 -d $(man1dir)
+	$(INSTALL) -m 755 -o 0 -g 0 -d $(man5dir)
+	$(INSTALL) -m 644 -o 0 -g 0 @top_srcdir@/man/*.1.gz $(man1dir)
+	$(INSTALL) -m 644 -o 0 -g 0 @top_srcdir@/man/*.5.gz $(man5dir)
 
 uninstall:
 	@echo removing $(DIST) files
@@ -60,16 +60,16 @@ distclean: clean
 	@-rm -f $(ACFILES)
 	@-rm -f $(TARBALL)
 
-dist: clean $(TARBALL) $(DISTDIR)
+dist: clean $(TARBALL)
 
 $(DISTDIR):
-	@mkdir $(DISTDIR)
-	@cp -dpr $(DISTFILES) $(DISTDIR)
+	mkdir $(DISTDIR)
+	cp -dpr $(DISTFILES) $(DISTDIR)
 
 $(TARBALL): $(ARCHIVE)
-	@-rm -f $@
-	@$(GZIP) $<
+	-rm -f $@
+	$(GZIP) $<
 
 $(ARCHIVE): $(DISTDIR)
-	@$(TAR) cf $@ $(DISTDIR)
-	@rm -rf $(DISTDIR)
+	$(TAR) cf $@ $(DISTDIR)
+	rm -rf $(DISTDIR)
