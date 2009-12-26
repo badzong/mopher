@@ -1,4 +1,4 @@
-.TH "MOPHERD.CONF" "5" "December 9 2009" "mopher 1.0" "mopher user manual"
+.TH "MOPHERD.CONF" "5" "December 2009"
 .SH NAME
 .B mopherd.conf \- configuration for mopherd
 .SH INTRODUCTION
@@ -93,7 +93,7 @@ can be used to control the permissions of the
 and
 .I mopherd_group
 ).
-.SS module_path (default: modules)
+.SS module_path (default: $MOPHERD_DIR/modules)
 Filesystem path where mopherd looks for modules.
 .SS mopherd_group (default: unspecified)
 Set mopherd's UNIX group id to the specified group. On most systems mopherd
@@ -229,8 +229,13 @@ server[mx2]     = {
 }
 
 .fi
+Manuel Badzong <manuel@andev.ch>
+.SH FILES
+$MOPHERD_CONF, $MAIL_ACL
 .SH SEE ALSO
-.BR mopherd (1),
-.BR mail.acl (5)
+.nf
+.BR mopherd "(1), mopherd mail filter daemon"
+.BR mail.acl "(5), mopher mail access control list"
+.fi
 .SH AUTHORS
-This manuel page was written by Manuel Badzong <manuel@mopher.net>.
+Manuel Badzong <manuel@andev.ch>

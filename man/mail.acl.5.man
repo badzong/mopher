@@ -1,6 +1,6 @@
-.TH "MAIL.ACL" "5" "December 9 2009" "mopher 1.0" "mopher user manual"
+.TH "MAIL.ACL" "5" "December 2009"
 .SH NAME
-.B mail.acl \- access control list for mopher
+.B mail.acl \- mail access control list for mopher
 .SH INTRODUCTION
 The mopher daemon
 .BR mopherd (1)
