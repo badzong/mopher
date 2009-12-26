@@ -44,7 +44,7 @@ MAIL_ACL=@sysconfdir@/mopher/mail.acl
 
 # Files
 
-ACFILES=config.h Makefile Makefile.common src/Makefile src/modules/Makefile src/man/Makefile
+ACFILES=config.h Makefile Makefile.common src/Makefile src/modules/Makefile man/Makefile
 
 
 # Targets
@@ -58,7 +58,8 @@ ACFILES=config.h Makefile Makefile.common src/Makefile src/modules/Makefile src/
 	$(CC) $(CFLAGS) -c $<
 
 .man.gz:
-	$(SED) -e "s|\$$MOPHERD_DIR|$(MOPHERD_DIR)|g" $< \
+	@echo prepare man page: $@
+	@$(SED) -e "s|\$$MOPHERD_DIR|$(MOPHERD_DIR)|g" $< \
 	| $(SED) -e "s|\$$MOPHERD_CONF|$(MOPHERD_CONF)|g" \
 	| $(SED) -e "s|\$$MAIL_ACL|$(MAIL_ACL)|g" \
 	| $(SED) -e "s|\$$CONF_DIR|$(CONF_DIR)|g" \

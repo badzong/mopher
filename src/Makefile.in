@@ -7,11 +7,8 @@ OBJECTS=defs.o main.o cf_yacc.o cf_lex.o cf.o cf_defaults.o acl_yacc.o acl_lex.o
 GENSRC=cf_yacc.c cf_yacc.h cf_lex.c acl_yacc.c acl_yacc.h acl_lex.c
 SUBDIRS=modules
 
-
 .PHONY: clean
-.PHONY: distclean
 .PHONY: $(SUBDIRS)
-
 
 all: $(SUBDIRS) mopherd
 

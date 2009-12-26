@@ -5,5 +5,6 @@ MOPHER TODO
   * Control socket permissions vi chmod
   * Domain greylisting
   * Greylisting: cleanup email adresses
+  * Greylist: retry count
   * cf_yacc.y and acl_yacc.y should both support tables
   * Database driver for memory hash tables
