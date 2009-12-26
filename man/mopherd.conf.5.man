@@ -229,7 +229,6 @@ server[mx2]     = {
 }
 
 .fi
-Manuel Badzong <manuel@andev.ch>
 .SH FILES
 $MOPHERD_CONF, $MAIL_ACL
 .SH SEE ALSO

@@ -26,6 +26,10 @@ extern var_t *cf_config;
 
 %%
 
+configuration	: /*empty*/
+		| statements
+		;
+
 statements	: statements statement
 		| statement
 		;
