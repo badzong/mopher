@@ -26,7 +26,7 @@ SED=@SED@
 YFLAGS=-d
 CFLAGS=-Wall -g @CFLAGS@
 SOFLAGS=-shared -nostartfiles -fPIC
-LDFLAGS=-rdynamic @LIBS@ @MOD_LIBS@
+LDFLAGS=-rdynamic @LDFLAGS@ @LIBS@ @MOD_LIBS@
 ARFLAGS=rcs
 
 

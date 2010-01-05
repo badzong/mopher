@@ -110,7 +110,7 @@ sock_inet_listen(char *bindaddr, char *port, int backlog)
 
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_PASSIVE | AI_ADDRCONFIG;
+	hints.ai_flags = AI_PASSIVE;
 
 	e = getaddrinfo(bindaddr, port, &hints, &res);
 	if (e) {
@@ -164,9 +164,8 @@ sock_inet_connect(char *host, char *port)
 	int fd = -1;
 
 
-	bzero(&hints, sizeof(hints));
+	memset(&hints, 0, sizeof(hints));
 	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_ADDRCONFIG;
 
 	if((e = getaddrinfo(host, port, &hints, &ai))) {
 		log_error("sock_inet_connect: getaddrinfo %s:%s: %s",

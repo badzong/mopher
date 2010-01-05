@@ -8,7 +8,7 @@
 
 #include <mopher.h>
 
-#include <cf_yacc.h>
+#include "cf_yacc.h"
 
 #define BUCKETS 256
 

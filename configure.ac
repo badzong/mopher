@@ -13,8 +13,6 @@ AC_PROG_CC
 AC_PROG_LEX
 AC_PROG_MAKE_SET
 
-# Override AC_PROG_CC CFLAGS
-CFLAGS=""
 
 AC_PATH_PROG([OBJCOPY], [objcopy])
 if test -z "$OBJCOPY"
