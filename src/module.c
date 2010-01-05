@@ -1,4 +1,4 @@
-#include "config.h"
+#include <config.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,7 +6,7 @@
 #include <glob.h>
 #include <string.h>
 
-#include "mopher.h"
+#include <mopher.h>
 
 #define BUFLEN 1024
 

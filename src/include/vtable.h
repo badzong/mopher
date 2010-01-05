@@ -1,7 +1,7 @@
 #ifndef _VTABLE_H_
 #define _VTABLE_H_
 
-#include "var.h"
+#include <var.h>
 
 
 /*

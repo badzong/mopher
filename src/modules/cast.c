@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "mopher.h"
+#include <mopher.h>
 
 static char *cast_keys[] = { "INT", "FLOAT", "STRING", NULL };
 static var_type_t cast_values[] = { VT_INT, VT_FLOAT, VT_STRING, VT_NULL };

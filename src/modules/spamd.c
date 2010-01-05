@@ -5,7 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "mopher.h"
+#include <mopher.h>
 
 #define BUFLEN 1024
 

@@ -3,8 +3,8 @@
 
 #include <stdarg.h>
 
-#include "hash.h"
-#include "ht.h"
+#include <hash.h>
+#include <ht.h>
 
 #define VAR_INT_T long
 #define VAR_FLOAT_T double

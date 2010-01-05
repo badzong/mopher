@@ -3,7 +3,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include "mopher.h"
+#include <mopher.h>
 
 #define BUFLEN 1024
 

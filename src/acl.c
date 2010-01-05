@@ -1,9 +1,9 @@
-#include "config.h"
+#include <config.h>
 
 #include <stdlib.h>
 #include <string.h>
 
-#include "mopher.h"
+#include <mopher.h>
 
 #define ACL_BUCKETS 256
 #define ACL_LOGLEN 1024

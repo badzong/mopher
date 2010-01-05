@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "mopher.h"
+#include <mopher.h>
 
 #define TARPIT_SYMBOL "tarpit_delayed"
 

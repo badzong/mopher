@@ -1,4 +1,4 @@
-#include "config.h"
+#include <config.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -18,7 +18,7 @@
 #include <pwd.h>
 #include <grp.h>
 
-#include "log.h"
+#include <log.h>
 
 #define ADDR6_LEN 16
 #define ADDR6_STRLEN 40

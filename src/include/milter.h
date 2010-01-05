@@ -3,7 +3,7 @@
 
 #include <libmilter/mfapi.h>
 
-#include "var.h"
+#include <var.h>
 
 //typedef enum milter_stage { MS_NONE = 0, MS_CONNECT, MS_HELO, MS_FROM,
 //    MS_RCPT, MS_HEADER, MS_EOH, MS_BODY, MS_EOM } milter_stage_t;

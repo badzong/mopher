@@ -1,4 +1,4 @@
-#include "mopher.h"
+#include <mopher.h>
 
 
 static var_t *

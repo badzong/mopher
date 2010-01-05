@@ -5,7 +5,7 @@
  * Includes
  */
 #include <sys/types.h>
-#include "hash.h"
+#include <hash.h>
 
 /*
  * Types

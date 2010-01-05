@@ -1,11 +1,11 @@
-#include "config.h"
+#include <config.h>
 
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "mopher.h"
+#include <mopher.h>
 
 
 #define KEYLEN 128

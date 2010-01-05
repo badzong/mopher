@@ -1,4 +1,4 @@
-#include "config.h"
+#include <config.h>
 
 #include <stdio.h>
 #include <unistd.h>
@@ -9,7 +9,7 @@
 #include <errno.h>
 #include <sys/time.h>
 
-#include "mopher.h"
+#include <mopher.h>
 
 #define SYNC_BACKLOG 16
 #define SEND_BUFFER 4096

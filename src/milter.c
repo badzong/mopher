@@ -1,4 +1,4 @@
-#include "config.h"
+#include <config.h>
 
 #include <stdlib.h>
 #include <sys/types.h>
@@ -12,7 +12,7 @@
 #include <arpa/inet.h>
 #include <time.h>
 
-#include "mopher.h"
+#include <mopher.h>
 
 #define MSN_CONNECT	"connect"
 #define MSN_UNKNOWN	"unknown"

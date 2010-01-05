@@ -1,13 +1,13 @@
-#include "config.h"
+#include <config.h>
 
 #include <stdlib.h>
 #include <sys/types.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "ht.h"
-#include "hash.h"
-#include "log.h"
+#include <ht.h>
+#include <hash.h>
+#include <log.h>
 
 int
 ht_init(ht_t *ht, hash_t buckets, ht_hash_t hash, ht_match_t match,

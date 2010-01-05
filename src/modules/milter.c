@@ -2,7 +2,7 @@
 #include <string.h>
 #include <libmilter/mfapi.h>
 
-#include "mopher.h"
+#include <mopher.h>
 
 
 #define BUCKETS 64

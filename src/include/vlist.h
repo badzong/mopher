@@ -1,7 +1,7 @@
 #ifndef _VLIST_H_
 #define _VLIST_H_
 
-#include "var.h"
+#include <var.h>
 
 /*
  * Prototypes

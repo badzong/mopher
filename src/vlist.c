@@ -1,7 +1,7 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include "mopher.h"
+#include <mopher.h>
 
 
 var_t *

@@ -1,4 +1,4 @@
-#include "config.h"
+#include <config.h>
 
 #include <stdio.h>
 #include <errno.h>
@@ -8,7 +8,7 @@
 #include <syslog.h>
 #include <string.h>
 
-#include "cf.h"
+#include <cf.h>
 
 #define BUFLEN 1024
 

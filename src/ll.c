@@ -1,8 +1,8 @@
-#include "config.h"
+#include <config.h>
 
 #include <stdlib.h>
 
-#include "ll.h"
+#include <ll.h>
 
 void
 ll_init(ll_t * ll)

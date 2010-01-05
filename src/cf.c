@@ -1,4 +1,4 @@
-#include "config.h"
+#include <config.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -6,9 +6,9 @@
 #include <stdarg.h>
 #include <unistd.h>
 
-#include "mopher.h"
+#include <mopher.h>
 
-#include "cf_yacc.h"
+#include <cf_yacc.h>
 
 #define BUCKETS 256
 

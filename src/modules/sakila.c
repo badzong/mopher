@@ -8,7 +8,7 @@
 #include <errno.h>
 #include <mysql/mysql.h>
 
-#include "mopher.h"
+#include <mopher.h>
 
 #define MY_QUERY_LEN 2048
 #define MY_STRING_LEN 320

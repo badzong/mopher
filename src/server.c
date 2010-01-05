@@ -8,7 +8,7 @@
 #include <signal.h>
 #include <string.h>
 
-#include "mopher.h"
+#include <mopher.h>
 
 #define MAX_CLIENTS 10
 #define BACKLOG 16

@@ -1,4 +1,4 @@
-#include "config.h"
+#include <config.h>
 
 #include <stdlib.h>
 #include <arpa/inet.h>
@@ -12,7 +12,7 @@
 #include <errno.h>
 #include <stdarg.h>
 
-#include "mopher.h"
+#include <mopher.h>
 
 #define BUCKETS 256
 #define BUFLEN 1024

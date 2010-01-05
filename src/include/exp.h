@@ -1,8 +1,8 @@
 #ifndef _EXP_H_
 #define _EXP_H_
 
-#include "var.h"
-#include "ll.h"
+#include <var.h>
+#include <ll.h>
 
 enum exp_type
 {

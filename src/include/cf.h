@@ -1,8 +1,8 @@
 #ifndef _CF_H_
 #define _CF_H_
 
-#include "ll.h"
-#include "var.h"
+#include <ll.h>
+#include <var.h>
 
 typedef struct cf_symbol {
 	char		*cs_name;

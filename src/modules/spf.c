@@ -8,11 +8,11 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
-#include "config.h"
+#include <config.h>
 
 #include <spf2/spf.h>
 
-#include "mopher.h"
+#include <mopher.h>
 
 static SPF_server_t *spf_server;
 

@@ -3,7 +3,7 @@
 #include <db.h>
 #include <errno.h>
 
-#include "mopher.h"
+#include <mopher.h>
 
 
 static dbt_driver_t dbt_driver;

@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "mopher.h"
+#include <mopher.h>
 
 
 static var_type_t msgmod_args_addhdr[] = { VT_STRING, VT_STRING, VT_NULL };

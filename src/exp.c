@@ -1,8 +1,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "mopher.h"
-#include "acl_yacc.h"
+#include <mopher.h>
+#include <acl_yacc.h>
 
 #define EXP_BUCKETS 128
 #define EXP_STRLEN 1024

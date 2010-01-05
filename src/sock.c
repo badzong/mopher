@@ -1,4 +1,4 @@
-#include "config.h"
+#include <config.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -10,7 +10,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
-#include "log.h"
+#include <log.h>
 
 static int
 sock_unix_listen(char *path, int backlog)

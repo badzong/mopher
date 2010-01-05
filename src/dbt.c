@@ -1,4 +1,4 @@
-#include "config.h"
+#include <config.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -6,7 +6,7 @@
 #include <errno.h>
 #include <signal.h>
 
-#include "mopher.h"
+#include <mopher.h>
 
 #define DBT_BUCKETS 32
 #define BUFLEN 1024

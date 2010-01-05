@@ -1,8 +1,8 @@
-#include "config.h"
+#include <config.h>
 
 #include <sys/types.h>
 
-#include "hash.h"
+#include <hash.h>
 
 hash_t
 hash_one_at_a_time(char *key, u_int32_t len)

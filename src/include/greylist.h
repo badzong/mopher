@@ -1,7 +1,7 @@
 #ifndef _GREYLIST_H_
 #define _GREYLIST_H_
 
-#include "exp.h"
+#include <exp.h>
 
 enum greylist_response
 {

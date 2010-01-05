@@ -3,7 +3,7 @@
 
 #include <pthread.h>
 
-#include "var.h"
+#include <var.h>
 
 
 #define DBT_LOCK	1<<0
