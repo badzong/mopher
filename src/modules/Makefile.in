@@ -12,13 +12,13 @@ MOD_ALL=@MOD_ALL@
 all: $(MOD_ALL)
 
 bdb.so: bdb.c Makefile
-	$(CC) $(CFLAGS) $(SOFLAGS) -ldb -o $@ $<
+	$(CC) $(CFLAGS) $(SOFLAGS) $(LDFLAGS) -ldb -o $@ $<
 
 sakila.so: sakila.c Makefile
-	$(CC) $(CFLAGS) $(SOFLAGS) -lmysqlclient -o $@ $<
+	$(CC) $(CFLAGS) $(SOFLAGS) $(LDFLAGS) -lmysqlclient -o $@ $<
 
 spf.so: spf.c
-	$(CC) $(CFLAGS) $(SOFLAGS) -lspf2 -o $@ $<
+	$(CC) $(CFLAGS) $(SOFLAGS) $(LDFLAGS) -lspf2 -o $@ $<
 
 lib.a: $(OBJECTS)
 	$(AR) $(ARFLAGS) $@ $^

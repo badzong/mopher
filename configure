@@ -2864,7 +2864,7 @@ fi
 
 
 # Override AC_PROG_CC CFLAGS
-CFLAGS=""
+#CFLAGS=""
 
 # Extract the first word of "objcopy", so it can be a program name with args.
 set dummy objcopy; ac_word=$2
