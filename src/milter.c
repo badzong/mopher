@@ -1116,13 +1116,12 @@ milter(void)
 	if (r == MI_SUCCESS)
 	{
 		log_debug("milter: smfi_main returned successful");
+		milter_unlink_socket();
 	}
 	else
 	{
 		log_error("milter: smfi_main returned with errors");
 	}
-
-	milter_unlink_socket();
 
 	/*
 	 * Reset umask

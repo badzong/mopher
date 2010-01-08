@@ -835,16 +835,19 @@ var_dump_data(var_t * v, char *buffer, int size)
 int
 var_dump(var_t * v, char *buffer, int size)
 {
-	int len;
+	int len = 0;
 
-	len = strlen(v->v_name);
+	if (v->v_name)
+	{
+		len = strlen(v->v_name);
 
-	if (len >= size) {
-		log_warning("var_dump: buffer exhasted");
-		return -1;
+		if (len >= size) {
+			log_warning("var_dump: buffer exhasted");
+			return -1;
+		}
+
+		strncpy(buffer, v->v_name, len);
 	}
-
-	strncpy(buffer, v->v_name, len);
 
 	buffer[len] = '=';
 	buffer[++len] = 0;

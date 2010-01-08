@@ -639,6 +639,12 @@ exp_math_int(int op, var_t *left, var_t *right)
 	l = left->v_data;
 	r = right->v_data;
 
+	if (l == NULL || r == NULL)
+	{
+		log_debug("exp_math_int: empty value");
+		return NULL;
+	}
+
 	switch (op)
 	{
 	case '+':	x = *l + *r;	break;
@@ -808,6 +814,13 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 		{
 			log_error("exp_eval_operation: exp_eval for "
 			    "right-hand value failed");
+			return NULL;
+		}
+
+		if (right->v_data == NULL)
+		{
+			log_debug("exp_eval_operation: exp_eval for "
+			     "right-hand value returned no data");
 			return NULL;
 		}
 
