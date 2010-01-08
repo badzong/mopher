@@ -11,12 +11,13 @@ int
 main(int argc, char **argv)
 {
 	int r, opt, foreground, loglevel, check_config;
+	char *pidfile = NULL;
 
 	check_config = 0;
 	foreground = 0;
 	loglevel = LOG_WARNING;
 
-	while ((opt = getopt(argc, argv, "fhCd:c:")) != -1) {
+	while ((opt = getopt(argc, argv, "fhCd:c:p:")) != -1) {
 		switch(opt) {
 		case 'f':
 			foreground = 1;
@@ -35,6 +36,10 @@ main(int argc, char **argv)
 			loglevel = 0;
 			break;
 
+		case 'p':
+			pidfile = optarg;
+			break;
+
 		default:
 			fprintf(stderr, "Usage: %s [-c file] [-d N] [-f] [-h]\n", 
 				BINNAME);
@@ -45,10 +50,19 @@ main(int argc, char **argv)
 			fprintf(stderr, "  -d N       Set log verbosity level\n");
 			fprintf(stderr, "  -f         Don't detach into background\n");
 			fprintf(stderr, "  -h         Show this message\n");
+			fprintf(stderr, "  -p file    Write PID to file\n");
 			fprintf(stderr, "\nTry man %s (1) for more information.\n", BINNAME);
 
 			exit(EX_USAGE);
 		}
+	}
+
+	/*
+	 * Daemonize
+	 */
+	if (foreground == 0 && check_config == 0)
+	{
+		util_daemonize();
 	}
 
 	/*
@@ -72,9 +86,25 @@ main(int argc, char **argv)
 		return 0;
 	}
 
+	/*
+	 * Write PID file.
+	 */
+	if (pidfile)
+	{
+		util_pidfile(pidfile);
+	}
+
 	log_error("started");
 
 	r = milter();
+
+	/*
+	 * Remove PID file
+	 */
+	if (pidfile)
+	{
+		unlink(pidfile);
+	}
 
 	/*
 	 * Cleanup

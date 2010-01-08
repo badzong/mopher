@@ -583,3 +583,89 @@ util_setuid(char *name)
 
 	return;
 }
+
+
+void
+util_daemonize(void)
+{
+	pid_t pid;
+	int r;
+
+	/*
+	 * Fork into background.
+	 */
+	pid = fork();
+	if(pid == -1)
+	{
+		/*
+		 * log is probably not initialized yet.
+		 */
+		perror("util_daemonize: fork");
+		_exit(EX_OSERR);
+	}
+
+	if(pid)
+	{
+		_exit(EX_OK);
+	}
+
+	if(setsid() == -1)
+	{
+		perror("util_daemonize: setsid");
+		_exit(EX_OSERR);
+	}
+
+	/*
+	 * Redirect stdin, stdout, stderr to /dev/null
+	 */
+	close(STDIN_FILENO);
+	close(STDOUT_FILENO);
+	close(STDERR_FILENO);
+
+	r  = (open("/dev/null", O_RDONLY) == -1);
+	r |= (open("/dev/null", O_WRONLY) == -1);
+	r |= (open("/dev/null", O_WRONLY) == -1);
+
+	if (r)
+	{
+		perror("util_daemonize: open");
+		_exit(EX_OSERR);
+	}
+
+	return;
+}
+
+
+void
+util_pidfile(char *path)
+{
+	pid_t pid;
+	char string[6];
+	int fd, len;
+
+	if (util_file_exists(path))
+	{
+		log_die(EX_SOFTWARE, "util_pidfile: %s exists", path);
+	}
+
+	pid = getpid();
+
+	len = snprintf(string, sizeof string, "%hu", pid);
+
+	fd = open(path, O_WRONLY | O_CREAT | O_EXCL,
+	    S_IRUSR | S_IRGRP | S_IROTH);
+	if (fd == -1)
+	{
+		log_error("util_dump: open");
+		return;
+	}
+
+	if (write(fd, string, len) == -1)
+	{
+		log_error("util_dump: write");
+	}
+
+	close(fd);
+
+	return;
+}

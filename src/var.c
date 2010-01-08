@@ -964,7 +964,7 @@ error:
 var_t *
 var_decompress(var_compact_t *vc, var_t *scheme)
 {
-	var_t *v, *item = NULL, *list = NULL;
+	var_t *v = NULL, *item = NULL, *list = NULL;
 	void *p;
 	int k = 0, d = 0;
 	int *i;

@@ -187,7 +187,7 @@ exp_list(exp_t *list, exp_t *exp)
 exp_t *
 exp_constant(var_type_t type, void *data)
 {
-	var_t *v;
+	var_t *v = NULL;
 
 	switch (type)
 	{
@@ -448,7 +448,7 @@ exp_eval_function(exp_t *exp, var_t *mailspec)
 	acl_function_t *af;
 	var_t *args = NULL;
 	ll_t *single = NULL;
-	var_t *v;
+	var_t *v = NULL;
 
 	af = acl_function_lookup(ef->ef_name);
 	if (af == NULL)
@@ -779,7 +779,7 @@ exp_math_string(int op, var_t *left, var_t *right)
 var_t *
 exp_eval_operation(exp_t *exp, var_t *mailspec)
 {
-	var_t *left, *right, *copy;
+	var_t *left = NULL, *right = NULL, *copy;
 	exp_operation_t *eo = exp->ex_data;
 	var_t *result;
 	var_type_t type;
@@ -873,7 +873,11 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 	}
 
 	exp_free(left);
-	exp_free(right);
+
+	if (right)
+	{
+		exp_free(right);
+	}
 
 	return result;
 }

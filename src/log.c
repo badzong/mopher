@@ -8,7 +8,7 @@
 #include <syslog.h>
 #include <string.h>
 
-#include <cf.h>
+#include <mopher.h>
 
 #define BUFLEN 1024
 
@@ -82,7 +82,8 @@ log_die(int r, char *f, ...)
 	va_end(ap);
 
 	syslog(LOG_ERR, buffer);
-	closelog();
+
+	log_close();
 
 	exit(r);
 

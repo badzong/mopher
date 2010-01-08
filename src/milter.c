@@ -1088,11 +1088,6 @@ milter(void)
 	if (r == MI_SUCCESS)
 	{
 		log_debug("milter: smfi_main returned successful");
-
-		/*
-		 * Unlink socket
-		 */
-		sock_unix_unlink(cf_milter_socket);
 	}
 	else
 	{
