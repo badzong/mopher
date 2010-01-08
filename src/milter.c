@@ -1066,6 +1066,14 @@ milter(void)
 		log_die(EX_SOFTWARE, "milter: smfi_setconn failed");
 	}
 
+	if (strncmp(cf_milter_socket, "unix", 4) == 0)
+	{
+		if (smfi_opensocket(1))
+		{
+			log_die(EX_SOFTWARE, "milter: smfi_opensocket failed");
+		}
+	}
+
 	if (cf_milter_socket_timeout >= 0)
 	{
 		smfi_settimeout(cf_milter_socket_timeout);
