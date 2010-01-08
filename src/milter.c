@@ -1027,6 +1027,34 @@ milter_reload(int signal)
 }
 
 
+static void
+milter_unlink_socket(void)
+{
+	char *path;
+
+	if (strncmp(cf_milter_socket, "unix:", 5))
+	{
+		return;
+	}
+
+	path = cf_milter_socket + 5;
+
+	if (!util_file_exists(path))
+	{
+		return;
+	}
+
+	log_debug("milter_unlink_socket: unlink \"%s\"", path);
+
+	if (unlink(path))
+	{
+		log_error("milter_unlink_socket: unlink");
+	}
+
+	return;
+}
+
+
 int8_t
 milter(void)
 {
@@ -1093,6 +1121,8 @@ milter(void)
 	{
 		log_error("milter: smfi_main returned with errors");
 	}
+
+	milter_unlink_socket();
 
 	/*
 	 * Reset umask
