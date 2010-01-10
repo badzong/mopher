@@ -783,6 +783,42 @@ exp_math_string(int op, var_t *left, var_t *right)
 
 
 var_t *
+exp_math_addr(int op, var_t *left, var_t *right)
+{
+	struct sockaddr_storage *l, *r;
+	VAR_INT_T i;
+	var_t *v;
+
+	l = left->v_data;
+	r = right->v_data;
+
+	switch (op)
+	{
+	case '<':	i = util_addrcmp(l, r) == -1;		break;
+	case '>':	i = util_addrcmp(l, r) == 1;		break;
+	case EQ:	i = util_addrcmp(l, r) == 0;		break;
+	case NE:	i = util_addrcmp(l, r) != 0;		break;
+	case LE:	i = util_addrcmp(l, r) <= 0;		break;
+	case GE:	i = util_addrcmp(l, r) >= 0;		break;
+	case AND:	i = var_true(left) && var_true(right);	break;
+	case OR:	i = var_true(left) || var_true(right);	break;
+
+	default:
+		log_error("exp_math_addr: bad operation");
+		return NULL;
+	}
+
+	v = var_create(VT_INT , NULL, &i, VF_COPYDATA | VF_EXP_FREE);
+	if (v == NULL)
+	{
+		log_error("exp_math_addr: var_create failed");
+	}
+
+	return v;
+}
+
+
+var_t *
 exp_eval_operation(exp_t *exp, var_t *mailspec)
 {
 	var_t *left = NULL, *right = NULL, *copy;
@@ -878,6 +914,10 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 
 	case VT_STRING:
 		result = exp_math_string(eo->eo_operator, left, right);
+		break;
+
+	case VT_ADDR:
+		result = exp_math_addr(eo->eo_operator, left, right);
 		break;
 
 	default:

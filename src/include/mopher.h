@@ -2,7 +2,7 @@
 #define _MOPHER_H
 
 #ifndef BINNAME
-#define BINNAME "mopher"
+#define BINNAME "mopherd"
 #endif
 
 #include <defs.h>
