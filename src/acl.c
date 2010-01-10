@@ -751,12 +751,19 @@ acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 	ll_rewind(rules);
 	for (i = 1; (ar = ll_next(rules)); ++i)
 	{
+		switch (exp_true(ar->ar_expression, mailspec))
+		{
 		/*
 		 * Expression doesn't match
 		 */
-		if (!exp_true(ar->ar_expression, mailspec))
-		{
-			continue;
+		case 0:		continue;
+
+		/*
+		 * Expression failed
+		 */
+		case -1:	return ACL_ERROR;
+
+		default:	break;
 		}
 
 		log_debug("acl: rule %d in \"%s\" matched", i, stagename);

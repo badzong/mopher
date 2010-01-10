@@ -979,7 +979,7 @@ exp_true(exp_t *exp, var_t *mailspec)
 	if (v == NULL)
 	{
 		log_notice("exp_true: evaluation failed");
-		return 0;
+		return -1;
 	}
 
 	r = var_true(v);
