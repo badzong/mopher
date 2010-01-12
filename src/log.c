@@ -13,13 +13,20 @@
 #define BUFLEN 1024
 
 static int log_level;
+static int log_syslog;
 
 void
-log_init(char *name, int level, int foreground)
+log_init(char *name, int level, int syslog, int foreground)
 {
 	int option;
 
+	log_syslog = syslog;
 	log_level = level;
+
+	if (!syslog)
+	{
+		return;
+	}
 
 	option = foreground ? LOG_PID | LOG_PERROR : LOG_PID;
 
@@ -31,7 +38,10 @@ log_init(char *name, int level, int foreground)
 void
 log_close(void)
 {
-	closelog();
+	if (log_syslog)
+	{
+		closelog();
+	}
 
 	return;
 }
@@ -53,38 +63,53 @@ log_assemble(char *buffer, int32_t buflen, char *f, va_list ap)
 }
 
 void
-log_log(int type, char *f, ...)
+log_logv(int type, char *f, va_list ap)
 {
 	char buffer[BUFLEN];
-	va_list ap;
 
 	if (type > log_level) {
 		return;
 	}
 
-	va_start(ap, f);
 	log_assemble(buffer, sizeof(buffer), f, ap);
-	va_end(ap);
 
-	syslog(type, buffer);
+	if (log_syslog)
+	{
+		syslog(type, buffer);
+	}
+	else
+	{
+		fprintf(stderr, buffer);
+		fputc('\n', stderr);
+	}
 
 	return;
 }
 
+
 void
-log_die(int r, char *f, ...)
+log_log(int type, char *f, ...)
 {
-	char buffer[BUFLEN];
 	va_list ap;
 
 	va_start(ap, f);
-	log_assemble(buffer, BUFLEN, f, ap);
+	log_logv(type, f, ap);
 	va_end(ap);
 
-	syslog(LOG_ERR, buffer);
+	return;
+}
+
+
+void
+log_die(int r, char *f, ...)
+{
+	va_list ap;
+
+	va_start(ap, f);
+	log_logv(LOG_ERR, f, ap);
+	va_end(ap);
 
 	log_close();
-
 	exit(r);
 
 	return;

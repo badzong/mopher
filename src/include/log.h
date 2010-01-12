@@ -8,7 +8,7 @@
  * Prototypes
  */
 
-void log_init(char *name, int level, int foreground);
+void log_init(char *name, int level, int syslog, int foreground);
 void log_close(void);
 void log_log(int type, char *f, ...);
 void log_die(int r, char *f, ...);

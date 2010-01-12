@@ -66,9 +66,9 @@ main(int argc, char **argv)
 	}
 
 	/*
-	 * Open syslog
+	 * Open log (syslog == 1)
 	 */
-	log_init(BINNAME, loglevel, foreground);
+	log_init(BINNAME, loglevel, 1, foreground);
 
 	/*
 	 * Initialize milter

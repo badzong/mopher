@@ -3,7 +3,7 @@ include @top_srcdir@/Makefile.common
 INCLUDE=-I@top_srcdir@ -I@top_srcdir@/src/include
 CFLAGS+=$(INCLUDE)
 
-OBJECTS=defs.o main.o cf_yacc.o cf_lex.o cf.o cf_defaults.o acl_yacc.o acl_lex.o acl.o milter.o module.o ll.o ht.o sht.o var.o vlist.o vtable.o log.o hash.o util.o dbt.o greylist.o sock.o client.o server.o exp.o parser.o tarpit.o msgmod.o
+OBJECTS=defs.o mopherd.o cf_yacc.o cf_lex.o cf.o cf_defaults.o acl_yacc.o acl_lex.o acl.o milter.o module.o ll.o ht.o sht.o var.o vlist.o vtable.o log.o hash.o util.o dbt.o greylist.o sock.o client.o server.o exp.o parser.o tarpit.o msgmod.o
 GENSRC=cf_yacc.c cf_yacc.h cf_lex.c acl_yacc.c acl_yacc.h acl_lex.c
 SUBDIRS=modules
 
