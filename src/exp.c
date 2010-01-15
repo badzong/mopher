@@ -633,7 +633,7 @@ exp_assign(exp_t *left, exp_t *right, var_t *mailspec)
 var_t *
 exp_math_int(int op, var_t *left, var_t *right)
 {
-	VAR_INT_T *l, *r, x;
+	VAR_INT_T *l, *r, x, *p = NULL;
 	var_t *v;
 
 	l = left->v_data;
@@ -642,7 +642,7 @@ exp_math_int(int op, var_t *left, var_t *right)
 	if (l == NULL || r == NULL)
 	{
 		log_debug("exp_math_int: empty value");
-		return NULL;
+		goto exit;
 	}
 
 	switch (op)
@@ -666,7 +666,10 @@ exp_math_int(int op, var_t *left, var_t *right)
 		return NULL;
 	}
 
-	v = var_create(VT_INT, NULL, &x, VF_COPYDATA | VF_EXP_FREE);
+	p = &x;
+
+exit:
+	v = var_create(VT_INT, NULL, p, VF_COPYDATA | VF_EXP_FREE);
 	if (v == NULL)
 	{
 		log_error("exp_math_int: var_create failed");
