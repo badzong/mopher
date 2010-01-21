@@ -2,7 +2,10 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+
+#define __USE_GNU
 #include <netdb.h>
+
 #include <arpa/inet.h>
 #include <stdlib.h>
 
@@ -93,7 +96,7 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	hints.ai_socktype = SOCK_DGRAM;
 
 	e = getaddrinfo(query, NULL, &hints, &ai);
-	if(e && e != EAI_NONAME)
+	if(e && e != EAI_NONAME && e != EAI_NODATA)
 	{
 		log_error("rbl_query: getaddrinfo: %s", gai_strerror(e));
 		goto error;

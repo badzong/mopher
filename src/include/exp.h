@@ -40,6 +40,9 @@ struct exp_function
 typedef struct exp_function exp_function_t;
 
 
+extern var_t exp_empty;
+#define EXP_EMPTY &exp_empty;
+
 /*
  * Prototypes
  */

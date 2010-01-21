@@ -14,6 +14,8 @@
 static sht_t *exp_defs;
 static ll_t *exp_garbage;
 
+var_t exp_empty = { VT_INT, NULL, NULL, VF_KEEP };
+
 
 static void
 exp_function_delete(exp_t *exp)
