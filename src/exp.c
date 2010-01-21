@@ -554,7 +554,7 @@ exp_eval_variable(exp_t *exp, var_t *mailspec)
 	if (variables == NULL)
 	{
 		log_error("exp_eval_variable: no variables set");
-		return NULL;
+		return EXP_EMPTY;
 	}
 
 	value = vtable_lookup(variables, exp->ex_data);
@@ -562,6 +562,7 @@ exp_eval_variable(exp_t *exp, var_t *mailspec)
 	{
 		log_error("exp_eval_variable: unknown variable \"%s\"",
 		    exp->ex_data);
+		return EXP_EMPTY;
 	}
 
 	return value;
