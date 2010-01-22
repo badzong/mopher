@@ -103,40 +103,36 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	}
 
 	/*
-	 * Early free, to return clean in any case.
-	 */
-	free(addrstr);
-	freeaddrinfo(ai);
-
-	addrstr = NULL;
-	ai = NULL;
-
-	/*
 	 * EAI_NONAME || EAI_NODATA
 	 */
 	if (e)
 	{
 		log_debug("rbl_query: RBL record \"%s\" not found", query);
-		return EXP_EMPTY;
 	}
 
-	/*
-	 * Hit: Copy first address
-	 */
-	data = util_hostaddr((struct sockaddr_storage *) ai->ai_addr);
-	if (data == NULL)
+	else
 	{
-		log_error("rbl_query: util_hostaddr failed");
-		goto error;
+		/*
+		 * Hit: Copy first address
+		 */
+		data = util_hostaddr((struct sockaddr_storage *) ai->ai_addr);
+		if (data == NULL)
+		{
+			log_error("rbl_query: util_hostaddr failed");
+			goto error;
+		}
+
+		log_debug("rbl_query: RBL record \"%s\" exists", query);
+
+		if (vtable_setv(attrs, VT_ADDR, name, data, VF_COPYNAME, VT_NULL))
+		{
+			log_error("rbl_query: vtable_setv failed");
+			goto error;
+		}
 	}
 
-	log_debug("rbl_query: RBL record \"%s\" exists", query);
-
-	if (vtable_setv(attrs, VT_ADDR, name, data, VF_COPYNAME, VT_NULL))
-	{
-		log_error("rbl_query: vtable_setv failed");
-		goto error;
-	}
+	free(addrstr);
+	freeaddrinfo(ai);
 
 	return 0;
 

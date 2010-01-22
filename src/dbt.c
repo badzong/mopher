@@ -779,10 +779,21 @@ dbt_open_databases(void)
 {
 	dbt_t *dbt;
 
+	/*
+	 * Open all tables
+	 */
 	sht_rewind(dbt_tables);
 	while ((dbt = sht_next((dbt_tables))))
 	{
 		dbt_open_database(dbt);
+	}
+
+	/*
+	 * Start table janitor thread
+	 */
+	if (util_thread_create(&dbt_janitor_thread, dbt_janitor))
+	{
+		log_die(EX_SOFTWARE, "dbt_init: util_thread_create failed");
 	}
 
 	return;
@@ -806,14 +817,6 @@ dbt_init(void)
 	dbt_tables = sht_create(DBT_BUCKETS, (sht_delete_t) dbt_close);
 	if (dbt_tables == NULL) {
 		log_die(EX_SOFTWARE, "dbt_init: ht_init failed");
-	}
-
-	/*
-	 * Start table janitor thread
-	 */
-	if (util_thread_create(&dbt_janitor_thread, dbt_janitor))
-	{
-		log_die(EX_SOFTWARE, "dbt_init: util_thread_create failed");
 	}
 
 	/*
