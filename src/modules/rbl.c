@@ -108,6 +108,7 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	if (e)
 	{
 		log_debug("rbl_query: RBL record \"%s\" not found", query);
+		goto error;
 	}
 
 	else
