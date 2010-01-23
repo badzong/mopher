@@ -96,8 +96,14 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	hints.ai_socktype = SOCK_DGRAM;
 
 	e = getaddrinfo(query, NULL, &hints, &ai);
-	if(e && e != EAI_NONAME && e != EAI_NODATA)
+	switch (e)
 	{
+	case 0:
+	case EAI_NONAME:
+	case EAI_NODATA:
+		break;
+
+	default:
 		log_error("rbl_query: getaddrinfo: %s", gai_strerror(e));
 		goto error;
 	}
@@ -132,7 +138,11 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	}
 
 	free(addrstr);
-	freeaddrinfo(ai);
+
+	if (ai)
+	{
+		freeaddrinfo(ai);
+	}
 
 	return 0;
 
