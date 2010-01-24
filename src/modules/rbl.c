@@ -114,6 +114,12 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	if (e)
 	{
 		log_debug("rbl_query: RBL record \"%s\" not found", query);
+
+		if (vtable_setv(attrs, VT_ADDR, name, NULL, VF_COPYNAME | VF_KEEPDATA, VT_NULL))
+		{
+			log_error("rbl_query: vtable_setv failed");
+			goto error;
+		}
 	}
 
 	else
