@@ -31,6 +31,7 @@ spf(milter_stage_t stage, char *name, var_t *attrs)
 	char *envfrom;
 	char *envrcpt;
 	char *spfstr;
+	char *spfreason;
 	struct sockaddr_storage *ss;
 	struct sockaddr_in *sin;
 	struct sockaddr_in6 *sin6;
@@ -118,11 +119,18 @@ result:
 		goto error;
 	}
 
-	log_debug("spf: helo:%s envfrom:%s spf:%s", helo,
-		envfrom, spfstr);
+	spfreason = (char *) SPF_strreason(SPF_response_result(res));
+	if (spfreason == NULL)
+	{
+		log_error("spf: SPF_strreason failed");
+		goto error;
+	}
 
-	if (vtable_setv(attrs, VT_STRING, "spf", spfstr,
-	    VF_KEEPNAME | VF_KEEPDATA, VT_NULL))
+	log_debug("spf: helo:%s envfrom:%s spf:%s (%s)", helo,
+		envfrom, spfstr, spfreason);
+
+	if (vtable_setv(attrs, VT_STRING, "spf", spfstr, VF_KEEP, VT_STRING,
+	    "spf_reason", spfreason, VF_KEEP, VT_NULL))
 	{
 		log_error("spf: vtable_setv failed");
 		goto error;
@@ -167,6 +175,7 @@ spf_init(void)
 	}
 
 	acl_symbol_register("spf", MS_OFF_ENVFROM, spf, AS_CACHE);
+	acl_symbol_register("spf_reason", MS_OFF_ENVFROM, spf, AS_CACHE);
 
 	for (k = spf_static_keys, v = spf_static_values; *k && *v; ++k, ++v)
 	{
