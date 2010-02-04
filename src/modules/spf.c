@@ -29,7 +29,9 @@ spf(milter_stage_t stage, char *name, var_t *attrs)
 	SPF_response_t *res_2mx = NULL;
 	char *helo;
 	char *envfrom;
+	char from[321];
 	char *envrcpt;
+	char rcpt[321];
 	char *spfstr;
 	char *spfreason;
 	struct sockaddr_storage *ss;
@@ -46,6 +48,13 @@ spf(milter_stage_t stage, char *name, var_t *attrs)
 	}
 	sin = (struct sockaddr_in *) ss;
 	sin6 = (struct sockaddr_in6 *) ss;
+
+	if (util_strmail(from, sizeof from, envfrom) == -1 ||
+	    util_strmail(rcpt, sizeof rcpt, envrcpt) == -1)
+	{
+		log_error("spf: util_strmail failed");
+		goto error;
+	}
 
 	req = SPF_request_new(spf_server);
 	if (req == NULL) {
@@ -80,7 +89,7 @@ spf(milter_stage_t stage, char *name, var_t *attrs)
 	/*
 	 * Set envelope from
 	 */
-	r = SPF_request_set_env_from(req, envfrom);
+	r = SPF_request_set_env_from(req, from);
 	if (r) {
 		log_error("spf_query: SPF_request_set_env_from failed");
 		goto error;
@@ -98,7 +107,7 @@ spf(milter_stage_t stage, char *name, var_t *attrs)
 	/*
 	 * If SPF fails check if we received the email from a secondary mx.
 	 */
-	SPF_request_query_rcptto(req, &res_2mx, envrcpt);
+	SPF_request_query_rcptto(req, &res_2mx, rcpt);
 
 	if(SPF_response_result(res_2mx) != SPF_RESULT_PASS) {
 		goto result;
@@ -107,7 +116,7 @@ spf(milter_stage_t stage, char *name, var_t *attrs)
 	/*
 	 * Secondary mx
 	 */
-	log_notice("spf: \"%s\" is a secodary mx for \"%s\"", helo, envrcpt);
+	log_notice("spf: \"%s\" is a secodary mx for \"%s\"", helo, rcpt);
 
 	goto exit;
 
@@ -126,8 +135,8 @@ result:
 		goto error;
 	}
 
-	log_debug("spf: helo:%s envfrom:%s spf:%s (%s)", helo,
-		envfrom, spfstr, spfreason);
+	log_debug("spf: helo:%s from:%s spf:%s (%s)", helo,
+		from, spfstr, spfreason);
 
 	if (vtable_setv(attrs, VT_STRING, "spf", spfstr, VF_KEEP, VT_STRING,
 	    "spf_reason", spfreason, VF_KEEP, VT_NULL))
