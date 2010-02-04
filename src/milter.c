@@ -26,7 +26,7 @@
 #define MSN_EOM		"eom"
 #define MSN_CLOSE	"close"
 
-#define BUCKETS 64
+#define BUCKETS 127
 
 #define POSTFIX "Postfix"
 #define POSTFIX_LEN 7

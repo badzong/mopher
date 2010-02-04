@@ -3,8 +3,8 @@ include @top_srcdir@/Makefile.common
 INCLUDE=-I@top_srcdir@ -I@top_srcdir@/src/include
 CFLAGS+=$(INCLUDE)
 
-OBJECTS=cast.o string.o list.o spamd.o rbl.o delivered.o @MOD_ACL_SPF@ @MOD_DB_BDB@ @MOD_DB_MYSQL@
-MODULES=cast.so string.so list.so spamd.so rbl.so delivered.so @MOD_ACL_SPF@ @MOD_DB_BDB@ @MOD_DB_MYSQL@
+OBJECTS=cast.o string.o list.o spamd.o rbl.o delivered.o memdb.o @MOD_ACL_SPF@ @MOD_DB_BDB@ @MOD_DB_MYSQL@
+MODULES=cast.so string.so list.so spamd.so rbl.so delivered.so memdb.so @MOD_ACL_SPF@ @MOD_DB_BDB@ @MOD_DB_MYSQL@
 MOD_ALL=@MOD_ALL@
 
 .PHONY: clean

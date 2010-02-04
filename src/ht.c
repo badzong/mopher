@@ -137,6 +137,7 @@ ht_insert(ht_t *ht, void *data)
 {
 	ht_record_t *record;
 	hash_t bucket;
+	float lf, cf;
 
 	if(ht_lookup(ht, data) != NULL) {
 		log_debug("ht_insert: duplicate entry");
@@ -158,6 +159,14 @@ ht_insert(ht_t *ht, void *data)
 
 	if(record->htr_next != NULL) {
 		++ht->ht_collisions;
+		
+		/*
+		 * First record in collision chain needs to be counted too.
+		 */
+		if (record->htr_next->htr_next == NULL)
+		{
+			++ht->ht_collisions;
+		}
 	}
 	++ht->ht_records;
 
@@ -170,6 +179,19 @@ ht_insert(ht_t *ht, void *data)
 	 */
 	ht_rewind(ht);
 
+
+	lf = HT_LOADFACTOR(ht);
+	if (lf > 70)
+	{
+		log_error("ht_insert: load %.1f%", lf);
+	}
+
+	cf = HT_COLLFACTOR(ht);
+	if (cf > 10)
+	{
+		log_error("ht_insert: collisions %.1f%", cf);
+	}
+
 	return 0;
 }
 
@@ -180,6 +202,7 @@ ht_remove(ht_t *ht, void *data)
 	ht_record_t *record;
 	ht_record_t **prev;
 	hash_t bucket;
+	int collision = 0;
 
 	bucket = ht->ht_hash(data) % ht->ht_buckets;
 
@@ -188,13 +211,22 @@ ht_remove(ht_t *ht, void *data)
 		return;
 	}
 	
-	for(record = ht->ht_table[bucket], prev = &ht->ht_table[bucket];
-		record != NULL;
-		prev = &(*prev)->htr_next, record = record->htr_next)
+	record = ht->ht_table[bucket];
+	prev = &ht->ht_table[bucket];
+
+	if (record->htr_next != NULL)
+	{
+		collision = 1;
+	}
+
+	while (record != NULL)
 	{
 		if(ht->ht_match(data, record->htr_data)) {
 			break;
 		}
+
+		record = record->htr_next;
+		prev = &(*prev)->htr_next;
 	}
 
 	/*
@@ -228,6 +260,14 @@ ht_remove(ht_t *ht, void *data)
 	 * Rewind on insert and remove
 	 */
 	ht_rewind(ht);
+
+	/*
+	 * Adjust collision counter
+	 */
+	if (collision)
+	{
+		--ht->ht_collisions;
+	}
 
 	return;
 }
