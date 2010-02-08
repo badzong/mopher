@@ -171,7 +171,7 @@ delivered_update_record(dbt_t *dbt, char *prefix, var_t *mailspec,
 	char updated_key[KEYLEN];
 
 	if (snprintf(updated_key, sizeof updated_key, "%s_updated", prefix)
-	    >= sizeof updated_key);
+	    >= sizeof updated_key)
 	{
 		log_error("delivered_update_record: buffer exhausted");
 		goto error;
