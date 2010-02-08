@@ -589,9 +589,8 @@ dbt_janitor_cleanup(time_t now, dbt_t *dbt)
 			 */
 			log_debug("dbt_janitor_cleanup: \"%s\" has no validate"
 			    " callback");
+			return -1;
 		}
-
-		return 0;
 	}
 
 	else

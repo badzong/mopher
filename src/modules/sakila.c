@@ -987,7 +987,7 @@ sakila_create_table(MYSQL *db, char *table, var_t *scheme)
 	}
 
 	/*
-	 * Create primary key
+	 * Create primary key.
 	 */
 	len += snprintf(query + len, sizeof query - len, "PRIMARY KEY (");
 
@@ -1004,7 +1004,8 @@ sakila_create_table(MYSQL *db, char *table, var_t *scheme)
 			break;
 		}
 	}
-	len += snprintf(query + len - 2, sizeof query - len - 2, "))");
+	len += snprintf(query + len - 2, sizeof query - len - 2,
+	    ")) CHARACTER SET ascii ENGINE=InnoDB");
 	
 	if (len >= sizeof query) {
 		log_error("sakila_create_table: buffer exhausted");
