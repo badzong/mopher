@@ -692,6 +692,12 @@ exp_math_float(int op, var_t *left, var_t *right)
 	l = left->v_data;
 	r = right->v_data;
 
+	if (l == NULL || r == NULL)
+	{
+		log_debug("exp_math_float: empty value");
+		goto error;
+	}
+
 	switch (op)
 	{
 	case '+':	x = *l + *r;	break;
@@ -733,6 +739,17 @@ exp_math_float(int op, var_t *left, var_t *right)
 	}
 
 	return v;
+
+
+error:
+
+	v = var_create(VT_INT, NULL, NULL, VF_KEEP | VF_EXP_FREE);
+	if (v == NULL)
+	{
+		log_error("exp_math_float: var_create failed");
+	}
+
+	return v;
 }
 
 
@@ -745,6 +762,15 @@ exp_math_string(int op, var_t *left, var_t *right)
 
 	l = left->v_data;
 	r = right->v_data;
+
+	if (l == NULL)
+	{
+		l = "(null)";
+	}
+	if (r == NULL)
+	{
+		r = "(null)";
+	}
 
 	switch (op)
 	{
@@ -797,6 +823,12 @@ exp_math_addr(int op, var_t *left, var_t *right)
 
 	l = left->v_data;
 	r = right->v_data;
+
+	if (l == NULL || r == NULL)
+	{
+		log_debug("exp_math_addr: empty value");
+		return NULL;
+	}
 
 	switch (op)
 	{
@@ -863,7 +895,6 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 		{
 			log_debug("exp_eval_operation: exp_eval for "
 			     "right-hand value returned no data");
-			return NULL;
 		}
 
 		/*

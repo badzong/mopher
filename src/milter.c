@@ -40,6 +40,7 @@
  */
 static milter_symbol_t milter_symbols[] = {
 	{ "milter_ctx", MS_ANY },
+	{ "milter_action", MS_OFF_CONNECT },
 	{ "milter_id", MS_ANY },
 	{ "milter_mta_version", MS_ANY },
 	{ "milter_stage", MS_ANY },
@@ -252,10 +253,20 @@ milter_macro_lookup(milter_stage_t stage, char *name, var_t *attrs)
 static sfsistat
 milter_acl(milter_stage_t stage, char *stagename, milter_priv_t * mp)
 {
+	VAR_INT_T action;
+
+	action = acl(stage, stagename, mp->mp_table);
+	if (vtable_setv(mp->mp_table, VT_INT, "milter_action", &action,
+	    VF_KEEPNAME | VF_COPYDATA, VT_NULL))
+	{
+		log_error("milter_acl: vtable_setv failed");
+		return SMFIS_TEMPFAIL;
+	}
+
 	/*
 	 * Translate acl_action_type into sfsistat
 	 */
-	switch (acl(stage, stagename, mp->mp_table))
+	switch (action)
 	{
 	case ACL_CONTINUE:
 		return SMFIS_CONTINUE;

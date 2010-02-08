@@ -744,8 +744,8 @@ acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 	rules = sht_lookup(acl_tables, stagename);
 	if (rules == NULL)
 	{
-		log_info("acl: no rules for \"%s\": continue", stagename);
-		return ACL_CONTINUE;
+		log_info("acl: no rules for \"%s\"", stagename);
+		goto exit;
 	}
 
 	ll_rewind(rules);
@@ -810,6 +810,7 @@ acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 		return response;
 	}
 
+exit:
 	/*
 	 * No rule matched
 	 */

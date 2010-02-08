@@ -247,13 +247,21 @@ static int
 delivered_update(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 {
 	int count;
+	VAR_INT_T *action;
 
-	if (stage != MS_EOM)
+	if (stage != MS_CLOSE)
 	{
 		return 0;
 	}
 
-	switch (at)
+	action = vtable_get(mailspec, "milter_action");
+	if (action == NULL)
+	{
+		log_error("delivered_update: milter_action not set");
+		return -1;
+	}
+
+	switch (*action)
 	{
 	case ACL_ACCEPT:
 	case ACL_CONTINUE:
