@@ -167,17 +167,11 @@ delivered_update_record(dbt_t *dbt, char *prefix, var_t *mailspec,
     delivered_add_t add)
 {
 	var_t *record = NULL;
-	VAR_INT_T *updated, *valid, *count, *received, r;
-	char updated_key[KEYLEN], valid_key[KEYLEN];
-	int err;
+	VAR_INT_T *updated, *count, *received, r;
+	char updated_key[KEYLEN];
 
-	err  = (snprintf(updated_key, sizeof updated_key, "%s_updated", prefix)
+	if (snprintf(updated_key, sizeof updated_key, "%s_updated", prefix)
 	    >= sizeof updated_key);
-
-	err |= (snprintf(valid_key, sizeof valid_key, "%s_valid", prefix)
-	    >= sizeof valid_key);
-
-	if (err)
 	{
 		log_error("delivered_update_record: buffer exhausted");
 		goto error;
@@ -204,10 +198,9 @@ delivered_update_record(dbt_t *dbt, char *prefix, var_t *mailspec,
 	}
 
 	updated	= vlist_record_get(record, updated_key);
-	valid	= vlist_record_get(record, valid_key);
 	count	= vlist_record_get(record, prefix);
 
-	if (updated == NULL || valid == NULL || count == NULL)
+	if (updated == NULL || count == NULL)
 	{
 		log_error("delivered_update_record: vlist_record_get failed");
 		goto error;
@@ -215,7 +208,6 @@ delivered_update_record(dbt_t *dbt, char *prefix, var_t *mailspec,
 
 	*updated = *received;
 	*count += 1;
-	*valid = *received + cf_delivered_valid;
 
 	/*
 	 * Return value used for logging

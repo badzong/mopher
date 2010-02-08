@@ -646,14 +646,14 @@ dbt_janitor(void *arg)
 
 		now = ts.tv_sec;
 
-		if (dbt->dbt_cleanup_schedule == 0)
-		{
-			dbt->dbt_cleanup_schedule = now;
-		}
-
 		sht_rewind(dbt_tables);
 		while ((dbt = sht_next(dbt_tables)))
 		{
+			if (dbt->dbt_cleanup_schedule == 0)
+			{
+				dbt->dbt_cleanup_schedule = now;
+			}
+
 			/*
 			 * Check if table needs a clean up
 			 */
