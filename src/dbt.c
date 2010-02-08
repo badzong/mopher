@@ -640,11 +640,16 @@ dbt_janitor(void *arg)
 	{
 		if (util_now(&ts))
 		{
-			log_error("client_main: util_now failed");
+			log_error("dbt_janitor: util_now failed");
 			return NULL;
 		}
 
 		now = ts.tv_sec;
+
+		if (dbt->dbt_cleanup_schedule == 0)
+		{
+			dbt->dbt_cleanup_schedule = now;
+		}
 
 		sht_rewind(dbt_tables);
 		while ((dbt = sht_next(dbt_tables)))

@@ -94,7 +94,7 @@ delivered_add_relay(dbt_t *dbt, var_t *mailspec)
 
 	created = *received;
 	updated = *received;
-	valid   = *received + cf_delivered_valid;
+	valid   = cf_delivered_valid;
 	count   = 1;
 
 	record = vlist_record(dbt->dbt_scheme, hostaddr, &created, &updated,
@@ -138,7 +138,7 @@ delivered_add_penpal(dbt_t *dbt, var_t *mailspec)
 
 	created = *received;
 	updated = *received;
-	valid   = *received + cf_delivered_valid;
+	valid   = cf_delivered_valid;
 	count   = 1;
 
 	record = vlist_record(dbt->dbt_scheme, hostaddr, envfrom, envrcpt,
