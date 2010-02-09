@@ -337,6 +337,11 @@ dbt_db_load_into_table(dbt_t *dbt, var_t *table)
 		}
 	}
 
+	if (record)
+	{
+		var_delete(record);
+	}
+
 	return 0;
 }
 

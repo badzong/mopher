@@ -177,6 +177,32 @@ vtable_setv(var_t *table, ...)
 }
 
 
+int
+vtable_rename(var_t *table, char *old, char *new)
+{
+	var_t *record;
+	ht_t *ht = table->v_data;
+
+	record = vtable_lookup(table, old);
+	if (record == NULL)
+	{
+		log_debug("vtable_rename: \"%s\" not in table", old);
+		return -1;
+	}
+
+	if (vtable_set_new(table, record->v_type, new, record->v_data,
+	    VF_COPY))
+	{
+		log_error("vtable_rename: vtable_set_new failed");
+		return -1;
+	}
+
+	ht_remove(ht, record);
+
+	return 0;
+}
+
+
 var_t *
 vtable_list_get(var_t *table, char *listname)
 {

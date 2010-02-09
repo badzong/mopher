@@ -240,26 +240,26 @@ delivered_update(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 {
 	int count;
 	VAR_INT_T *action;
+	VAR_INT_T *laststage;
 
 	if (stage != MS_CLOSE)
 	{
 		return 0;
 	}
 
-	action = vtable_get(mailspec, "milter_action");
-	if (action == NULL)
+	if (vtable_dereference(mailspec, "milter_action", &action,
+	    "milter_laststage", &laststage, NULL))
 	{
-		log_error("delivered_update: milter_action not set");
+		log_error("delivered_update: vtable_dereference failed");
 		return -1;
 	}
 
-	switch (*action)
+	/*
+	 * Action needs to be ACCEPT in any stage or CONTINUE at EOM
+	 */
+	if (!(*action == ACL_ACCEPT ||
+	    (*laststage == MS_EOM && *action == ACL_CONTINUE)))
 	{
-	case ACL_ACCEPT:
-	case ACL_CONTINUE:
-		break;
-	
-	default:
 		return 0;
 	}
 

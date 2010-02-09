@@ -350,67 +350,171 @@ error:
 }
 
 
-static sfsistat
-milter_connect(SMFICTX * ctx, char *hostname, _SOCK_ADDR * hostaddr)
+static milter_priv_t *
+milter_common_init(SMFICTX *ctx, VAR_INT_T stage, char *stagename)
 {
-	milter_priv_t *mp;
+	milter_priv_t *mp = NULL;
+
+	if (pthread_rwlock_rdlock(&milter_reload_lock))
+	{
+		log_error("milter_common_init: pthread_rwlock_rdlock");
+		return NULL;
+	}
+
+	if (stage == MS_CONNECT)
+	{
+		mp = milter_priv_create();
+	}
+	else
+	{
+		mp = ((milter_priv_t *) smfi_getpriv(ctx));
+	}
+
+	if (mp == NULL)
+	{
+		log_error("milter_common_init: failed to load private data in "
+		    "\"%s\"", stagename);
+		goto error;
+	}
+
+	/*
+	 * Call smfi_setpriv on connect
+	 */
+	if (stage == MS_CONNECT)
+	{
+		smfi_setpriv(ctx, mp);
+	}
+
+	/*
+	 * Save last stage (used for example if client unexpectedly cloeses 
+	 * connection).
+	 */
+	else
+	{
+		if (vtable_rename(mp->mp_table, "milter_stage",
+		    "milter_laststage"))
+		{
+			log_error("milter_common_init: vtable_rename failed");
+			goto error;
+		}
+	}
+
+	if (vtable_setv(mp->mp_table,
+	    VT_POINTER, "milter_ctx", ctx, VF_KEEP,
+	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
+	    VT_STRING, "milter_stagename", stagename, VF_KEEP,
+	    VT_NULL))
+	{
+		log_error("milter_common_init: vtable_setv failed");
+		goto error;
+	}
+
+	return mp;
+
+
+error:
+
+	/*
+	 * Make sure reload_lock is released
+	 */
+	if (pthread_rwlock_unlock(&milter_reload_lock))
+	{
+		log_error("milter_common_init: pthread_rwlock_unlock");
+	}
+
+	/*
+	 * Free milter_priv if an error occures. The calling routine should
+	 * return SMFIS_TEMPFAIL!
+	 */
+	if (mp)
+	{
+		milter_priv_delete(mp);
+		smfi_setpriv(ctx, NULL);
+	}
+
+	return NULL;
+}
+
+
+static void
+milter_common_fini(SMFICTX *ctx, milter_priv_t *mp, milter_stage_t stage)
+{
+	/*
+	 * If mp is null theres no lock and nothing to free.
+	 */
+	if (mp == NULL)
+	{
+		log_error("milter_common_fini: milter_priv is null");
+		return;
+	}
+
+	/*
+	 * Free resources at close
+	 */
+	if (stage == MS_CLOSE)
+	{
+		milter_priv_delete(mp);
+		smfi_setpriv(ctx, NULL);
+	}
+
+	if (pthread_rwlock_unlock(&milter_reload_lock))
+	{
+		log_error("milter_common_clear: pthread_rwlock_unlock");
+	}
+
+	return;
+}
+
+static sfsistat
+milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
+{
+	milter_priv_t *mp = NULL;
 	VAR_INT_T now;
-	VAR_INT_T stage = MS_CONNECT;
 	char *mta_version;
 	struct sockaddr_storage *ha_clean;
 	char *addrstr;
 	VAR_INT_T id;
-	sfsistat r;
+	sfsistat stat = SMFIS_TEMPFAIL;
 
-	if (pthread_rwlock_rdlock(&milter_reload_lock))
+	mp = milter_common_init(ctx, MS_CONNECT, MSN_CONNECT);
+	if (mp == NULL)
 	{
-		log_error("milter_connect: pthread_rwlock_rdlock");
-		return SMFIS_TEMPFAIL;
+		log_error("milter_connect: milter_common_init failed");
+		goto exit;
 	}
-
-	if ((mp = milter_priv_create()) == NULL) {
-		log_error("milter_connect: milter_priv_create failed");
-		return SMFIS_TEMPFAIL;
-	}
-
-	smfi_setpriv(ctx, mp);
 
 	if ((id = milter_get_id()) == -1)
 	{
 		log_error("milter_connect: milter_id failed");
-		return SMFIS_TEMPFAIL;
+		goto exit;
 	}
 
 	if ((now = (VAR_INT_T) time(NULL)) == -1) {
 		log_error("milter_connect: time");
-		return SMFIS_TEMPFAIL;
+		goto exit;
 	}
 
 	mta_version = smfi_getsymval(ctx, "v");
 	if (mta_version == NULL)
 	{
 		log_error("milter_connect: smfi_getsymval for \"v\" failed");
-		return SMFIS_TEMPFAIL;
+		goto exit;
 	}
 
 	ha_clean = util_hostaddr((struct sockaddr_storage *) hostaddr);
 	if (ha_clean == NULL) {
 		log_error("milter_conect: util_hostaddr failed");
-		return SMFIS_TEMPFAIL;
+		goto exit;
 	}
 
 	addrstr = util_addrtostr(ha_clean);
 	if (addrstr == NULL) {
 		log_error("milter_conect: util_addrtostr failed");
-		return SMFIS_TEMPFAIL;
+		goto exit;
 	}
 
 	if (vtable_setv(mp->mp_table,
-	    VT_POINTER, "milter_ctx", ctx, VF_KEEP,
 	    VT_INT, "milter_id", &id, VF_KEEPNAME | VF_COPYDATA,
-	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
-	    VT_STRING, "milter_stagename", MSN_CONNECT,
-		VF_KEEPNAME | VF_KEEPDATA,
 	    VT_INT, "milter_received", &now, VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "milter_mta_version", mta_version,
 		VF_KEEPNAME | VF_COPYDATA,
@@ -420,230 +524,192 @@ milter_connect(SMFICTX * ctx, char *hostname, _SOCK_ADDR * hostaddr)
 	    VT_NULL))
 	{
 		log_error("milter_connect: vtable_setv failed");
-		return SMFIS_TEMPFAIL;
+		goto exit;
 	}
 
 	log_debug("milter_connect: connection from: %s (%s)", hostname,
 		addrstr);
 
-	r = milter_acl(MS_CONNECT, MSN_CONNECT, mp);
+	stat = milter_acl(MS_CONNECT, MSN_CONNECT, mp);
 
-	if (pthread_rwlock_unlock(&milter_reload_lock))
-	{
-		log_error("milter_connect: pthread_rwlock_unlock");
-	}
+exit:
+	milter_common_fini(ctx, mp, MS_CONNECT);
 
-	return r;
-
+	return stat;
 }
 
 static sfsistat
 milter_unknown(SMFICTX * ctx, const char *cmd)
 {
 	milter_priv_t *mp;
-	VAR_INT_T stage = MS_UNKNOWN;
-	sfsistat r;
+	sfsistat stat = SMFIS_TEMPFAIL;
 
-	if (pthread_rwlock_rdlock(&milter_reload_lock))
+	mp = milter_common_init(ctx, MS_UNKNOWN, MSN_UNKNOWN);
+	if (mp == NULL)
 	{
-		log_error("milter_unknwon: pthread_rwlock_rdlock");
-		return SMFIS_TEMPFAIL;
+		log_error("milter_unknown: milter_common_init failed");
+		goto exit;
 	}
-
-	mp = ((milter_priv_t *) smfi_getpriv(ctx));
-
-	if (vtable_setv(mp->mp_table,
-	    VT_POINTER, "milter_ctx", ctx, VF_KEEP,
-	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
-	    VT_STRING, "milter_stagename", MSN_UNKNOWN, VF_KEEP,
-	    VT_STRING, "milter_unknown_command", cmd,
-		VF_KEEPNAME | VF_COPYDATA,
-	    VT_NULL))
+		
+	if (vtable_set_new(mp->mp_table, VT_STRING, "milter_unknown_command",
+	    (char *) cmd, VF_KEEPNAME | VF_COPYDATA))
 	{
-		log_error("milter_unknown: vtable_setv failed");
-		return SMFIS_TEMPFAIL;
+		log_error("milter_unknown: vtable_set_new failed");
+		goto exit;
 	}
 
 	log_debug("milter_unknown: unknown command: \"%s\"", cmd);
 
-	r = milter_acl(MS_UNKNOWN, MSN_UNKNOWN, mp);
+	stat = milter_acl(MS_UNKNOWN, MSN_UNKNOWN, mp);
 
-	if (pthread_rwlock_unlock(&milter_reload_lock))
-	{
-		log_error("milter_unknwon: pthread_rwlock_unlock");
-	}
+exit:
+	milter_common_fini(ctx, mp, MS_UNKNOWN);
 
-	return r;
+	return stat;
 }
 
 static sfsistat
 milter_helo(SMFICTX * ctx, char *helostr)
 {
 	milter_priv_t *mp;
-	VAR_INT_T stage = MS_HELO;
-	sfsistat r;
+	sfsistat stat = SMFIS_TEMPFAIL;
 
-	if (pthread_rwlock_rdlock(&milter_reload_lock))
+	mp = milter_common_init(ctx, MS_HELO, MSN_HELO);
+	if (mp == NULL)
 	{
-		log_error("milter_helo: pthread_rwlock_rdlock");
-		return SMFIS_TEMPFAIL;
+		log_error("milter_helo: milter_common_init failed");
+		goto exit;
 	}
 
-	mp = ((milter_priv_t *) smfi_getpriv(ctx));
-
-	if (vtable_setv(mp->mp_table,
-	    VT_POINTER, "milter_ctx", ctx, VF_KEEP,
-	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
-	    VT_STRING, "milter_stagename", MSN_HELO, VF_KEEP,
-	    VT_STRING, "milter_helo", helostr, VF_KEEPNAME | VF_COPYDATA,
-	    VT_NULL))
+	if (vtable_set_new(mp->mp_table, VT_STRING, "milter_helo", helostr,
+	    VF_KEEPNAME | VF_COPYDATA))
 	{
-		log_error("milter_helo: vtable_setv failed");
-		return SMFIS_TEMPFAIL;
+		log_error("milter_helo: vtable_set_new failed");
+		goto exit;
 	}
 
 	log_debug("milter_helo: helo hostname: %s", helostr);
 
-	r = milter_acl(MS_HELO, MSN_HELO, mp);
+	stat = milter_acl(MS_HELO, MSN_HELO, mp);
 
-	if (pthread_rwlock_unlock(&milter_reload_lock))
-	{
-		log_error("milter_helo: pthread_rwlock_unlock");
-	}
+exit:
+	milter_common_fini(ctx, mp, MS_HELO);
 
-	return r;
+	return stat;
 }
 
 static sfsistat
 milter_envfrom(SMFICTX * ctx, char **argv)
 {
 	milter_priv_t *mp;
-	VAR_INT_T stage = MS_ENVFROM;
-	sfsistat r;
+	sfsistat stat = SMFIS_TEMPFAIL;
 
-	if (pthread_rwlock_rdlock(&milter_reload_lock))
+	mp = milter_common_init(ctx, MS_ENVFROM, MSN_ENVFROM);
+	if (mp == NULL)
 	{
-		log_error("milter_envfrom: pthread_rwlock_rdlock");
-		return SMFIS_TEMPFAIL;
+		log_error("milter_envfrom: milter_common_init failed");
+		goto exit;
 	}
 
-	mp = ((milter_priv_t *) smfi_getpriv(ctx));
-
-	if (vtable_setv(mp->mp_table,
-	    VT_POINTER, "milter_ctx", ctx, VF_KEEP,
-	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
-	    VT_STRING, "milter_stagename", MSN_ENVFROM, VF_KEEP,
-	    VT_STRING, "milter_envfrom", argv[0], VF_KEEPNAME | VF_COPYDATA,
-	    VT_NULL))
+	if (vtable_set_new(mp->mp_table, VT_STRING, "milter_envfrom", argv[0],
+	    VF_KEEPNAME | VF_COPYDATA))
 	{
-		log_error("milter_envfrom: vtable_setv failed");
-		return SMFIS_TEMPFAIL;
+		log_error("milter_envfrom: vtable_set_new failed");
+		goto exit;
 	}
 
 	log_debug("milter_envfrom: envelope from: %s", argv[0]);
 
-	r = milter_acl(MS_ENVFROM, MSN_ENVFROM, mp);
+	stat = milter_acl(MS_ENVFROM, MSN_ENVFROM, mp);
 
-	if (pthread_rwlock_unlock(&milter_reload_lock))
-	{
-		log_error("milter_envfrom: pthread_rwlock_unlock");
-	}
+exit:
+	milter_common_fini(ctx, mp, MS_ENVFROM);
 
-	return r;
+	return stat;
 }
 
 static sfsistat
 milter_envrcpt(SMFICTX * ctx, char **argv)
 {
 	milter_priv_t *mp;
-	VAR_INT_T stage = MS_ENVRCPT;
-	sfsistat r;
+	sfsistat stat = SMFIS_TEMPFAIL;
 
-	if (pthread_rwlock_rdlock(&milter_reload_lock))
+	mp = milter_common_init(ctx, MS_ENVRCPT, MSN_ENVRCPT);
+	if (mp == NULL)
 	{
-		log_error("milter_envrpt: pthread_rwlock_rdlock");
-		return SMFIS_TEMPFAIL;
+		log_error("milter_envrcpt: milter_common_init failed");
+		goto exit;
 	}
-
-	mp = ((milter_priv_t *) smfi_getpriv(ctx));
 
 	++mp->mp_recipients;
 
 	if (vtable_setv(mp->mp_table,
-	    VT_POINTER, "milter_ctx", ctx, VF_KEEP,
-	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
-	    VT_STRING, "milter_stagename", MSN_ENVRCPT, VF_KEEP,
 	    VT_STRING, "milter_envrcpt", argv[0], VF_KEEPNAME | VF_COPYDATA,
 	    VT_INT, "milter_recipients", &mp->mp_recipients,
 		VF_KEEPNAME | VF_COPYDATA,
 	    VT_NULL))
 	{
 		log_error("milter_envrcpt: vtable_setv failed");
-		return SMFIS_TEMPFAIL;
+		goto exit;
 	}
 
 	log_debug("milter_envrcpt: envelope recipient: %s", argv[0]);
 
-	r = milter_acl(MS_ENVRCPT, MSN_ENVRCPT, mp);
+	stat = milter_acl(MS_ENVRCPT, MSN_ENVRCPT, mp);
 
 	/*
 	 * Add accepted recipients to recipient_list
 	 */
-	if (r == SMFIS_CONTINUE || r == SMFIS_ACCEPT)
+	switch (stat)
 	{
-		if (vtable_list_append_new(mp->mp_table, VT_STRING,
-		    "milter_recipient_list", argv[0],
-		    VF_KEEPNAME | VF_COPYDATA))
-		{
-			log_error(
-			    "milter_envrcpt: vtable_list_append_new failed");
-			return SMFIS_TEMPFAIL;
-		}
+	case SMFIS_CONTINUE:
+	case SMFIS_ACCEPT:
+		break;
+
+	default:
+		goto exit;
 	}
 
-	if (pthread_rwlock_unlock(&milter_reload_lock))
+	if (vtable_list_append_new(mp->mp_table, VT_STRING,
+	    "milter_recipient_list", argv[0], VF_KEEPNAME | VF_COPYDATA))
 	{
-		log_error("milter_envrcpt: pthread_rwlock_unlock");
+		log_error("milter_envrcpt: vtable_list_append_new failed");
+		stat = SMFIS_TEMPFAIL;
+		goto exit;
 	}
 
-	return r;
+exit:
+	milter_common_fini(ctx, mp, MS_ENVRCPT);
+
+	return stat;
 }
 
 static sfsistat
 milter_data(SMFICTX * ctx)
 {
 	milter_priv_t *mp;
-	VAR_INT_T stage = MS_DATA;
-	sfsistat r;
+	sfsistat stat = SMFIS_TEMPFAIL;
 
-	if (pthread_rwlock_rdlock(&milter_reload_lock))
+	mp = milter_common_init(ctx, MS_DATA, MSN_DATA);
+	if (mp == NULL)
 	{
-		log_error("milter_data: pthread_rwlock_rdlock");
-		return SMFIS_TEMPFAIL;
+		log_error("milter_data: milter_common_init failed");
+		goto exit;
 	}
 
-	mp = ((milter_priv_t *) smfi_getpriv(ctx));
-
-	if (vtable_setv(mp->mp_table,
-	    VT_POINTER, "milter_ctx", ctx, VF_KEEP,
-	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
-	    VT_STRING, "milter_stagename", MSN_DATA, VF_KEEP,
-	    VT_INT, "milter_recipients", &mp->mp_recipients,
-		VF_KEEPNAME | VF_COPYDATA,
-	    VT_NULL))
+	if (vtable_set_new(mp->mp_table, VT_INT, "milter_recipients",
+	    &mp->mp_recipients, VF_KEEPNAME | VF_COPYDATA))
 	{
-		log_error("milter_data: vtable_setv failed");
-		return SMFIS_TEMPFAIL;
+		log_error("milter_data: vtable_set_new failed");
+		goto exit;
 	}
 
-	r = milter_acl(MS_DATA, MSN_DATA, mp);
+	stat = milter_acl(MS_DATA, MSN_DATA, mp);
 
-	if (pthread_rwlock_unlock(&milter_reload_lock))
-	{
-		log_error("milter_data: pthread_rwlock_unlock");
-	}
+exit:
+	milter_common_fini(ctx, mp, MS_DATA);
 
-	return r;
+	return stat;
 }
 
 
@@ -651,17 +717,15 @@ static sfsistat
 milter_header(SMFICTX * ctx, char *headerf, char *headerv)
 {
 	milter_priv_t *mp;
-	VAR_INT_T stage = MS_HEADER;
 	int32_t len;
-	sfsistat r;
+	sfsistat stat = SMFIS_TEMPFAIL;
 
-	if (pthread_rwlock_rdlock(&milter_reload_lock))
+	mp = milter_common_init(ctx, MS_HEADER, MSN_HEADER);
+	if (mp == NULL)
 	{
-		log_error("milter_header: pthread_rwlock_rdlock");
-		return SMFIS_TEMPFAIL;
+		log_error("milter_header: milter_common_init failed");
+		goto exit;
 	}
-
-	mp = ((milter_priv_t *) smfi_getpriv(ctx));
 
 	/*
 	 * headerf: headerv\r\n
@@ -672,7 +736,7 @@ milter_header(SMFICTX * ctx, char *headerf, char *headerv)
 	    mp->mp_headerlen + len)) == NULL)
 	{
 		log_error("milter_header: realloc");
-		return SMFIS_TEMPFAIL;
+		goto exit;
 	}
 
 	snprintf(mp->mp_header + mp->mp_headerlen, len, "%s: %s\r\n", headerf,
@@ -684,48 +748,38 @@ milter_header(SMFICTX * ctx, char *headerf, char *headerv)
 	mp->mp_headerlen += len - 1;
 
 	if (vtable_setv(mp->mp_table,
-	    VT_POINTER, "milter_ctx", ctx, VF_KEEP,
-	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
-	    VT_STRING, "milter_stagename", MSN_HEADER, VF_KEEP,
 	    VT_STRING, "milter_header_name", headerf,
 		VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "milter_header_value", headerv,
 		VF_KEEPNAME | VF_COPYDATA,
 	    VT_NULL))
 	{
-		log_error("milter_envrcpt: vtable_setv failed");
-		return SMFIS_TEMPFAIL;
+		log_error("milter_header: vtable_setv failed");
+		goto exit;
 	}
 
-	r = milter_acl(MS_HEADER, MSN_HEADER, mp);
+	stat = milter_acl(MS_HEADER, MSN_HEADER, mp);
 
-	if (pthread_rwlock_unlock(&milter_reload_lock))
-	{
-		log_error("milter_header: pthread_rwlock_unlock");
-	}
+exit:
+	milter_common_fini(ctx, mp, MS_HEADER);
 
-	return r;
+	return stat;
 }
 
 static sfsistat
 milter_eoh(SMFICTX * ctx)
 {
 	milter_priv_t *mp;
-	VAR_INT_T stage = MS_EOH;
-	sfsistat r;
+	sfsistat stat = SMFIS_TEMPFAIL;
 
-	if (pthread_rwlock_rdlock(&milter_reload_lock))
+	mp = milter_common_init(ctx, MS_EOH, MSN_EOH);
+	if (mp == NULL)
 	{
-		log_error("milter_eoh: pthread_rwlock_rdlock");
-		return SMFIS_TEMPFAIL;
+		log_error("milter_eoh: milter_common_init failed");
+		goto exit;
 	}
 
-	mp = ((milter_priv_t *) smfi_getpriv(ctx));
-
 	if (vtable_setv(mp->mp_table,
-	    VT_POINTER, "milter_ctx", ctx, VF_KEEP,
-	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
-	    VT_STRING, "milter_stagename", MSN_EOH, VF_KEEP,
 	    VT_STRING, "milter_header", mp->mp_header, VF_KEEP,
 	    VT_INT, "milter_header_size", &mp->mp_headerlen,
 		VF_KEEPNAME | VF_COPYDATA,
@@ -735,38 +789,34 @@ milter_eoh(SMFICTX * ctx)
 		return SMFIS_TEMPFAIL;
 	}
 
-	log_debug("milter_eom: header size: %d", mp->mp_headerlen);
+	log_debug("milter_eoh: header size: %d", mp->mp_headerlen);
 
-	r = milter_acl(MS_EOH, MSN_EOH, mp);
+	stat = milter_acl(MS_EOH, MSN_EOH, mp);
 
-	if (pthread_rwlock_unlock(&milter_reload_lock))
-	{
-		log_error("milter_eoh: pthread_rwlock_unlock");
-	}
+exit:
+	milter_common_fini(ctx, mp, MS_EOH);
 
-	return r;
+	return stat;
 }
 
 static sfsistat
 milter_body(SMFICTX * ctx, unsigned char *body, size_t len)
 {
 	milter_priv_t *mp;
-	VAR_INT_T stage = MS_BODY;
-	sfsistat r;
+	sfsistat stat = SMFIS_TEMPFAIL;
 
-	if (pthread_rwlock_rdlock(&milter_reload_lock))
+	mp = milter_common_init(ctx, MS_BODY, MSN_BODY);
+	if (mp == NULL)
 	{
-		log_error("milter_body: pthread_rwlock_rdlock");
-		return SMFIS_TEMPFAIL;
+		log_error("milter_body: milter_common_init failed");
+		goto exit;
 	}
-
-	mp = ((milter_priv_t *) smfi_getpriv(ctx));
 
 	if ((mp->mp_body = (char *) realloc(mp->mp_body,
 	    mp->mp_bodylen + len + 1)) == NULL)
 	{
 		log_error("milter_body: realloc");
-		return SMFIS_TEMPFAIL;
+		goto exit;
 	}
 
 	memcpy(mp->mp_body + mp->mp_bodylen, body, len);
@@ -774,64 +824,46 @@ milter_body(SMFICTX * ctx, unsigned char *body, size_t len)
 	mp->mp_bodylen += len;
 	mp->mp_body[mp->mp_bodylen] = 0;
 
-	if (vtable_setv(mp->mp_table,
-	    VT_POINTER, "milter_ctx", ctx, VF_KEEP,
-	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
-	    VT_STRING, "milter_stagename", MSN_BODY, VF_KEEP,
-	    VT_NULL))
-	{
-		log_error("milter_body: vtable_setv failed");
-		return SMFIS_TEMPFAIL;
-	}
+	stat = milter_acl(MS_BODY, MSN_BODY, mp);
 
-	r = milter_acl(MS_BODY, MSN_BODY, mp);
+exit:
+	milter_common_fini(ctx, mp, MS_BODY);
 
-	if (pthread_rwlock_unlock(&milter_reload_lock))
-	{
-		log_error("milter_body: pthread_rwlock_unlock");
-	}
-
-	return r;
+	return stat;
 }
+
 
 static sfsistat
 milter_eom(SMFICTX * ctx)
 {
 	milter_priv_t *mp;
-	VAR_INT_T stage = MS_EOM;
-	sfsistat r;
+	sfsistat stat = SMFIS_TEMPFAIL;
 
-	if (pthread_rwlock_rdlock(&milter_reload_lock))
+	mp = milter_common_init(ctx, MS_EOM, MSN_EOM);
+	if (mp == NULL)
 	{
-		log_error("milter_eom: pthread_rwlock_rdlock");
-		return SMFIS_TEMPFAIL;
+		log_error("milter_eom: milter_common_init failed");
+		goto exit;
 	}
 
-	mp = ((milter_priv_t *) smfi_getpriv(ctx));
-
 	if (vtable_setv(mp->mp_table,
-	    VT_POINTER, "milter_ctx", ctx, VF_KEEP,
-	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
-	    VT_STRING, "milter_stagename", MSN_EOM, VF_KEEP,
 	    VT_INT, "milter_body_size", &mp->mp_bodylen,
 		VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "milter_body", mp->mp_body, VF_KEEP,
 	    VT_NULL))
 	{
-		log_error("milter_body: vtable_setv failed");
-		return SMFIS_TEMPFAIL;
+		log_error("milter_eom: vtable_setv failed");
+		goto exit;
 	}
 
 	log_debug("milter_eom: body size: %d", mp->mp_bodylen);
 
-	r = milter_acl(MS_EOM, MSN_EOM, mp);
+	stat = milter_acl(MS_EOM, MSN_EOM, mp);
 
-	if (pthread_rwlock_unlock(&milter_reload_lock))
-	{
-		log_error("milter_eom: pthread_rwlock_unlock");
-	}
+exit:
+	milter_common_fini(ctx, mp, MS_EOM);
 
-	return r;
+	return stat;
 }
 
 
@@ -840,16 +872,11 @@ milter_close(SMFICTX * ctx)
 {
 	milter_priv_t *mp;
 
-	if (pthread_rwlock_rdlock(&milter_reload_lock))
+	mp = milter_common_init(ctx, MS_CLOSE, MSN_CLOSE);
+	if (mp == NULL)
 	{
-		log_error("milter_close: pthread_rwlock_rdlock");
-		return SMFIS_TEMPFAIL;
-	}
-
-	mp = ((milter_priv_t *) smfi_getpriv(ctx));
-
-	if (mp == NULL) {
-		return SMFIS_CONTINUE;
+		log_error("milter_close: milter_common_init failed");
+		goto exit;
 	}
 
 	/*
@@ -857,16 +884,10 @@ milter_close(SMFICTX * ctx)
 	 */
 	milter_acl(MS_CLOSE, MSN_CLOSE, mp);
 
-	milter_priv_delete(mp);
-
-	smfi_setpriv(ctx, NULL);
-
 	log_debug("milter_close: connection closed");
 
-	if (pthread_rwlock_unlock(&milter_reload_lock))
-	{
-		log_error("milter_close: pthread_rwlock_unlock");
-	}
+exit:
+	milter_common_fini(ctx, mp, MS_CLOSE);
 
 	return SMFIS_CONTINUE;
 }
