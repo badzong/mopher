@@ -247,17 +247,18 @@ dbt_db_get_from_table(dbt_t *dbt, var_t *attrs, var_t **record)
 
 		if (v->v_data != NULL)
 		{
-			log_die(EX_SOFTWARE,
+			log_error(
 			    "dbt_db_get_from_table: scheme contains data");
+			goto error;
 		}
 
 		v->v_data = vtable_get(attrs, v->v_name);
 		if (v->v_data == NULL)
 		{
-			log_die(EX_SOFTWARE,
-			    "dbt_db_get_from_table: required key attribute "
-			    "\"%s\" for table \"%s\" not set", v->v_name,
-			    dbt->dbt_name);
+			log_error("dbt_db_get_from_table: required key "
+			    "attribute \"%s\" for table \"%s\" not set",
+			    v->v_name, dbt->dbt_name);
+			goto error;
 		}
 
 		v->v_flags |= VF_KEEPDATA;
@@ -266,8 +267,7 @@ dbt_db_get_from_table(dbt_t *dbt, var_t *attrs, var_t **record)
 	if (dbt_db_get(dbt, lookup, record))
 	{
 		log_warning("dbt_db_get_from_table: dbt_db_get failed");
-		var_delete(lookup);
-		return -1;
+		goto error;
 	}
 
 	if (*record)
@@ -282,6 +282,16 @@ dbt_db_get_from_table(dbt_t *dbt, var_t *attrs, var_t **record)
 	var_delete(lookup);
 
 	return 0;
+
+
+error:
+
+	if (lookup)
+	{
+		var_delete(lookup);
+	}
+
+	return -1;
 }
 
 
