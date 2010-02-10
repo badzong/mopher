@@ -473,8 +473,10 @@ greylist_recipient(VAR_INT_T *delayed, struct sockaddr_storage *hostaddr,
 			*delayed = received - *rec_created;
 		}
 
-		log_info("greylist: from: %s to: %s: delay passed. visa: %d "
-		    "seconds", envfrom, envrcpt, *rec_visa);
+		log_info("greylist: from: %s to: %s: delay of %d seconds "
+		    "passed %d seconds ago. visa: %d seconds", envfrom,
+		    envrcpt, *rec_delay, received - *rec_created - *rec_delay,
+		    *rec_visa);
 
 		goto update;
 	}

@@ -207,6 +207,7 @@ memdb_init(void)
 	dbt_driver.dd_set	= (dbt_db_set_t)	memdb_set;
 	dbt_driver.dd_del	= (dbt_db_del_t)	memdb_del;
 	dbt_driver.dd_walk	= (dbt_db_walk_t)	memdb_walk;
+	dbt_driver.dd_flags	= DBT_LOCK;
 
 	dbt_driver_register("memdb", &dbt_driver);
 
