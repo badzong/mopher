@@ -50,9 +50,12 @@ static milter_symbol_t milter_symbols[] = {
 	{ "milter_hostaddr", MS_ANY },
 	{ "milter_addrstr", MS_ANY },
 	{ "milter_hostname", MS_ANY },
+	{ "milter_greylist_src", MS_ANY },
 	{ "milter_helo", MS_OFF_HELO },
 	{ "milter_envfrom", MS_OFF_ENVFROM },
+	{ "milter_envfrom_addr", MS_OFF_ENVFROM },
 	{ "milter_envrcpt", MS_OFF_ENVRCPT },
+	{ "milter_envrcpt_addr", MS_OFF_ENVRCPT },
 	{ "milter_recipients", MS_OFF_ENVRCPT },
 	{ "milter_recipient_list", MS_OFF_DATA },
 	{ "milter_header_name", MS_HEADER },
@@ -473,6 +476,7 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 	char *mta_version;
 	struct sockaddr_storage *ha_clean;
 	char *addrstr;
+	char source[256];
 	VAR_INT_T id;
 	sfsistat stat = SMFIS_TEMPFAIL;
 
@@ -503,15 +507,23 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 
 	ha_clean = util_hostaddr((struct sockaddr_storage *) hostaddr);
 	if (ha_clean == NULL) {
-		log_error("milter_conect: util_hostaddr failed");
+		log_error("milter_connect: util_hostaddr failed");
 		goto exit;
 	}
 
 	addrstr = util_addrtostr(ha_clean);
-	if (addrstr == NULL) {
-		log_error("milter_conect: util_addrtostr failed");
+	if (addrstr == NULL)
+	{
+		log_error("milter_connect: util_addrtostr failed");
 		goto exit;
 	}
+
+	if (greylist_source(source, sizeof source, hostname, addrstr) == -1)
+	{
+		log_error("milter_connect: greylist_source failed");
+		goto exit;
+	}
+
 
 	if (vtable_setv(mp->mp_table,
 	    VT_INT, "milter_id", &id, VF_KEEPNAME | VF_COPYDATA,
@@ -521,6 +533,8 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 	    VT_STRING, "milter_hostname", hostname, VF_KEEPNAME | VF_COPYDATA,
 	    VT_ADDR, "milter_hostaddr", ha_clean, VF_KEEPNAME,
 	    VT_STRING, "milter_addrstr", addrstr, VF_KEEPNAME,
+	    VT_STRING, "milter_greylist_src", source,
+		VF_KEEPNAME | VF_COPYDATA,
 	    VT_NULL))
 	{
 		log_error("milter_connect: vtable_setv failed");
@@ -603,6 +617,7 @@ milter_envfrom(SMFICTX * ctx, char **argv)
 {
 	milter_priv_t *mp;
 	sfsistat stat = SMFIS_TEMPFAIL;
+	char from[321];
 
 	mp = milter_common_init(ctx, MS_ENVFROM, MSN_ENVFROM);
 	if (mp == NULL)
@@ -611,10 +626,18 @@ milter_envfrom(SMFICTX * ctx, char **argv)
 		goto exit;
 	}
 
-	if (vtable_set_new(mp->mp_table, VT_STRING, "milter_envfrom", argv[0],
-	    VF_KEEPNAME | VF_COPYDATA))
+	if (util_strmail(from, sizeof from, argv[0]) == -1)
 	{
-		log_error("milter_envfrom: vtable_set_new failed");
+		log_error("milter_envfrom: util_strmail failed");
+		goto exit;
+	}
+
+	if (vtable_setv(mp->mp_table,
+	    VT_STRING, "milter_envfrom", argv[0], VF_KEEPNAME | VF_COPYDATA,
+	    VT_STRING, "milter_envfrom_addr", from, VF_KEEPNAME | VF_COPYDATA,
+	    VT_NULL))
+	{
+		log_error("milter_envfrom: vtable_setv failed");
 		goto exit;
 	}
 
@@ -633,6 +656,7 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 {
 	milter_priv_t *mp;
 	sfsistat stat = SMFIS_TEMPFAIL;
+	char rcpt[321];
 
 	mp = milter_common_init(ctx, MS_ENVRCPT, MSN_ENVRCPT);
 	if (mp == NULL)
@@ -643,8 +667,15 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 
 	++mp->mp_recipients;
 
+	if (util_strmail(rcpt, sizeof rcpt, argv[0]) == -1)
+	{
+		log_error("milter_envrcpt: util_strmail failed");
+		goto exit;
+	}
+
 	if (vtable_setv(mp->mp_table,
 	    VT_STRING, "milter_envrcpt", argv[0], VF_KEEPNAME | VF_COPYDATA,
+	    VT_STRING, "milter_envrcpt_addr", rcpt, VF_KEEPNAME | VF_COPYDATA,
 	    VT_INT, "milter_recipients", &mp->mp_recipients,
 		VF_KEEPNAME | VF_COPYDATA,
 	    VT_NULL))

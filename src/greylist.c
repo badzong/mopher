@@ -12,9 +12,43 @@ static dbt_t greylist_dbt;
 /*
  * Greylist symbols and db translation
  */
-static char *greylist_tuple_symbols[] = { "greylist_created", "greylist_updated",
-    "greylist_valid", "greylist_delay", "greylist_retries", "greylist_visa",
-    "greylist_passed", NULL };
+static char *greylist_tuple_symbols[] = { "greylist_created",
+    "greylist_updated", "greylist_valid", "greylist_delay", "greylist_retries",
+    "greylist_visa", "greylist_passed", NULL };
+
+
+int
+greylist_source(char *buffer, int size, char *hostname, char *hostaddr)
+{
+	char *p;
+	int len;
+
+	/*
+	 * Save only the domainname in the greylist tuple. Useful for
+	 * greylisting mail farms.
+	 */
+	p = strchr(hostname, '.');
+	if (p == NULL)
+	{
+		p = hostaddr;
+	}
+	else
+	{
+		++p;
+	}
+
+	len = strlen(p);
+	if (len >= size)
+	{
+		log_error("greylist_hostid: buffer exhausted");
+		return -1;
+	}
+
+	strcpy(buffer, p);
+
+	return len;
+}
+
 
 greylist_t *
 greylist_visa(greylist_t *gl, exp_t *visa)
@@ -210,9 +244,9 @@ greylist_init(void)
 	char **p;
 
 	scheme = vlist_scheme("greylist",
-		"milter_hostaddr",	VT_ADDR,	VF_KEEPNAME | VF_KEY, 
-		"milter_envfrom",	VT_STRING,	VF_KEEPNAME | VF_KEY,
-		"milter_envrcpt",	VT_STRING,	VF_KEEPNAME | VF_KEY,
+		"milter_greylist_src",	VT_STRING,	VF_KEEPNAME | VF_KEY, 
+		"milter_envfrom_addr",	VT_STRING,	VF_KEEPNAME | VF_KEY,
+		"milter_envrcpt_addr",	VT_STRING,	VF_KEEPNAME | VF_KEY,
 		"greylist_created",	VT_INT,		VF_KEEPNAME,
 		"greylist_updated",	VT_INT,		VF_KEEPNAME,
 		"greylist_valid",	VT_INT,		VF_KEEPNAME,
@@ -256,8 +290,8 @@ greylist_init(void)
 
 
 static int
-greylist_add(struct sockaddr_storage *hostaddr, char *envfrom, char *envrcpt,
-    VAR_INT_T received, VAR_INT_T delay, VAR_INT_T valid, VAR_INT_T visa)
+greylist_add(char *source, char *envfrom, char *envrcpt, VAR_INT_T received,
+    VAR_INT_T delay, VAR_INT_T valid, VAR_INT_T visa)
 {
 	var_t *record;
 	VAR_INT_T retries = 0;
@@ -282,7 +316,7 @@ greylist_add(struct sockaddr_storage *hostaddr, char *envfrom, char *envrcpt,
 	/*
 	 * Create and store record
 	 */
-	record = vlist_record(greylist_dbt.dbt_scheme, hostaddr, envfrom,
+	record = vlist_record(greylist_dbt.dbt_scheme, source, envfrom,
 	    envrcpt, &received, &received, &valid, &delay, &retries, &visa,
 	    &passed);
 
@@ -355,9 +389,9 @@ greylist_eval(greylist_t *gl, var_t *mailspec, VAR_INT_T *delay,
 
 
 static int
-greylist_recipient(VAR_INT_T *delayed, struct sockaddr_storage *hostaddr,
-    char *envfrom, char *envrcpt, VAR_INT_T received, VAR_INT_T delay,
-    VAR_INT_T valid, VAR_INT_T visa)
+greylist_recipient(VAR_INT_T *delayed, char *source, char *envfrom,
+    char *envrcpt, VAR_INT_T received, VAR_INT_T delay, VAR_INT_T valid,
+    VAR_INT_T visa)
 {
 	var_t *lookup = NULL, *record = NULL;
 	VAR_INT_T *rec_created;
@@ -377,7 +411,7 @@ greylist_recipient(VAR_INT_T *delayed, struct sockaddr_storage *hostaddr,
 	/*
 	 * Lookup greylist record
 	 */
-	lookup = vlist_record(greylist_dbt.dbt_scheme, hostaddr, envfrom,
+	lookup = vlist_record(greylist_dbt.dbt_scheme, source, envfrom,
 	    envrcpt, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 	if (lookup == NULL)
@@ -513,7 +547,7 @@ add:
 		var_delete(record);
 	}
 
-	return greylist_add(hostaddr, envfrom, envrcpt, received,
+	return greylist_add(source, envfrom, envrcpt, received,
 	    delay, valid, visa);
 
 error:
@@ -536,7 +570,7 @@ acl_action_type_t
 greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 {
 	greylist_t *gl = data;
-	struct sockaddr_storage *hostaddr;
+	char *source;
 	char *envfrom;
 	char *envrcpt;
 	ll_t *recipients;
@@ -560,10 +594,10 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 	}
 
 	/*
-	 * Get hostaddr, enfrom, envrcpt, recipients and received
+	 * Get source, enfrom, envrcpt, recipients and received
 	 */
-	if (vtable_dereference(mailspec, "milter_hostaddr", &hostaddr,
-	    "milter_envfrom", &envfrom, "milter_envrcpt", &envrcpt,
+	if (vtable_dereference(mailspec, "milter_greylist_src", &source,
+	    "milter_envfrom_addr", &envfrom, "milter_envrcpt_addr", &envrcpt,
 	    "milter_recipient_list", &recipients, "milter_received", &received,
 	    NULL))
 	{
@@ -577,7 +611,7 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 	 */
 	if (stage == MS_ENVRCPT)
 	{
-		defer = greylist_recipient(&max_delay, hostaddr, envfrom,
+		defer = greylist_recipient(&max_delay, source, envfrom,
 		    envrcpt, *received, delay, valid, visa);
 	}
 	else
@@ -590,7 +624,7 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 			 */
 			envrcpt = vrcpt->v_data;
 
-			r = greylist_recipient(&delayed, hostaddr, envfrom,
+			r = greylist_recipient(&delayed, source, envfrom,
 			    envrcpt, *received, delay, valid, visa);
 
 			if (r == -1)

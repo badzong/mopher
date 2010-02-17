@@ -78,7 +78,13 @@ util_strmail(char *buffer, int size, const char *src)
 		return -1;
 	}
 
-	strncpy(buffer, start + 1, len);
+	/*
+	 * Check for <>
+	 */
+	if (len > 0)
+	{
+		strncpy(buffer, start + 1, len);
+	}
 
 	buffer[len] = 0;
 

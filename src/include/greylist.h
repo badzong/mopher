@@ -25,6 +25,7 @@ typedef struct greylist greylist_t;
  * Prototypes
  */
 
+int greylist_source(char *buffer, int size, char *hostname, char *hostaddr);
 greylist_t * greylist_visa(greylist_t *gl, exp_t *visa);
 greylist_t * greylist_valid(greylist_t *gl, exp_t *valid);
 greylist_t * greylist_delay(greylist_t *gl, exp_t *delay);
