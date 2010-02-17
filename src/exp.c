@@ -267,9 +267,10 @@ void
 exp_free_list(ll_t *list)
 {
 	var_t *item;
+	ll_entry_t *pos;
 
-	ll_rewind(list);
-	while ((item = ll_next(list)))
+	pos = LL_START(list);
+	while ((item = ll_next(list, &pos)))
 	{
 		exp_free(item);
 	}
@@ -301,12 +302,10 @@ exp_free(var_t *v)
 var_t *
 exp_eval_list(exp_t *exp, var_t *mailspec)
 {
-	ll_t *exp_list;
+	ll_t *exp_list = exp->ex_data;
+	ll_entry_t *pos;
 	exp_t *exp_item;
 	var_t *var_item, *var_list = NULL;
-
-	exp_list = exp->ex_data;
-	ll_rewind(exp_list);
 
 	var_list = vlist_create(NULL, VF_EXP_FREE);
 	if (var_list == NULL)
@@ -315,7 +314,8 @@ exp_eval_list(exp_t *exp, var_t *mailspec)
 		goto error;
 	}
 
-	while ((exp_item = ll_next(exp_list)))
+	pos = LL_START(exp_list);
+	while ((exp_item = ll_next(exp_list, &pos)))
 	{
 		var_item = exp_eval(exp_item, mailspec);
 
@@ -355,6 +355,7 @@ static var_t *
 exp_eval_function_simple(char *name, acl_function_t *af, ll_t *args)
 {
 	ll_t garbage;
+	ll_entry_t *pos;
 	void **argv = NULL;
 	var_t *v;
 	int argc;
@@ -392,7 +393,8 @@ exp_eval_function_simple(char *name, acl_function_t *af, ll_t *args)
 	/*
 	 * Prepare argv
 	 */
-	for (i = 0; (arg = ll_next(args)); ++i)
+	pos = LL_START(args);
+	for (i = 0; (arg = ll_next(args, &pos)); ++i)
 	{
 		if (af->af_types[i] == arg->v_type)
 		{

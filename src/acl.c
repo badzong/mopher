@@ -712,9 +712,10 @@ static void
 acl_update(milter_stage_t stage, acl_action_type_t action, var_t *mailspec)
 {
 	acl_update_t callback;
+	ll_entry_t *pos;
 
-	ll_rewind(acl_update_callbacks);
-	while ((callback = ll_next(acl_update_callbacks)))
+	pos = LL_START(acl_update_callbacks);
+	while ((callback = ll_next(acl_update_callbacks, &pos)))
 	{
 		if (callback(stage, action, mailspec))
 		{
@@ -730,6 +731,7 @@ acl_action_type_t
 acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 {
 	ll_t *rules;
+	ll_entry_t *pos;
 	acl_rule_t *ar;
 	acl_action_t *aa;
 	acl_action_type_t response;
@@ -748,8 +750,8 @@ acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 		goto exit;
 	}
 
-	ll_rewind(rules);
-	for (i = 1; (ar = ll_next(rules)); ++i)
+	pos = LL_START(rules);
+	for (i = 1; (ar = ll_next(rules, &pos)); ++i)
 	{
 		switch (exp_true(ar->ar_expression, mailspec))
 		{

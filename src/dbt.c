@@ -217,6 +217,8 @@ dbt_db_get_from_table(dbt_t *dbt, var_t *attrs, var_t **record)
 {
 	var_t *lookup = NULL;
 	var_t *v, *template;
+	ll_t *scheme_ll, *lookup_ll;
+	ll_entry_t *scheme_pos, *lookup_pos;
 
 	lookup = VAR_COPY(dbt->dbt_scheme);
 	if (lookup == NULL)
@@ -225,13 +227,16 @@ dbt_db_get_from_table(dbt_t *dbt, var_t *attrs, var_t **record)
 		return -1;
 	}
 
-	ll_rewind(lookup->v_data);
-	ll_rewind(dbt->dbt_scheme->v_data);
+	scheme_ll = dbt->dbt_scheme->v_data;
+	scheme_pos = LL_START(scheme_ll);
+
+	lookup_ll = lookup->v_data;
+	lookup_pos = LL_START(lookup_ll);
 
 	for (;;)
 	{
-		template = ll_next(dbt->dbt_scheme->v_data);
-		v = ll_next(lookup->v_data);
+		template = ll_next(scheme_ll, &scheme_pos);
+		v = ll_next(lookup_ll, &lookup_pos);
 
 		if (v == NULL || template == NULL)
 		{
@@ -300,6 +305,7 @@ dbt_db_load_into_table(dbt_t *dbt, var_t *table)
 {
 	var_t *record;
 	ll_t *list;
+	ll_entry_t *pos;
 	var_t *v;
 	void *data;
 
@@ -312,8 +318,8 @@ dbt_db_load_into_table(dbt_t *dbt, var_t *table)
 
 	list = record == NULL ? dbt->dbt_scheme->v_data : record->v_data;
 
-	ll_rewind(list);
-	while ((v = ll_next(list)))
+	pos = LL_START(list);
+	while ((v = ll_next(list, &pos)))
 	{
 		/*
 		 * Keys are already stored in the table
@@ -640,6 +646,7 @@ dbt_janitor(void *arg)
 	unsigned long schedule;
 	struct timespec	ts;
 	int r;
+	ht_pos_t pos;
 
 	log_debug("dbt_janitor: janitor thread running");
 
@@ -661,8 +668,8 @@ dbt_janitor(void *arg)
 
 		now = ts.tv_sec;
 
-		sht_rewind(dbt_tables);
-		while ((dbt = sht_next(dbt_tables)))
+		sht_start(dbt_tables, &pos);
+		while ((dbt = sht_next(dbt_tables, &pos)))
 		{
 			if (dbt->dbt_cleanup_schedule == 0)
 			{
@@ -695,8 +702,8 @@ dbt_janitor(void *arg)
 		 */
 		schedule = 0xffffffff;
 
-		sht_rewind(dbt_tables);
-		while ((dbt = sht_next(dbt_tables)))
+		sht_start(dbt_tables, &pos);
+		while ((dbt = sht_next(dbt_tables, &pos)))
 		{
 			if (dbt->dbt_cleanup_schedule < schedule)
 			{
@@ -781,7 +788,8 @@ dbt_open_database(dbt_t *dbt)
 	/*
 	 * Open database
 	 */
-	log_debug("dbt_open_database: open \"%s\"", dbt->dbt_name);
+	log_debug("dbt_open_database: open \"%s\" using \"%s\"", dbt->dbt_name,
+	    dbt->dbt_drivername);
 
 	if (DBT_DB_OPEN(dbt))
 	{
@@ -797,12 +805,13 @@ void
 dbt_open_databases(void)
 {
 	dbt_t *dbt;
+	ht_pos_t pos;
 
 	/*
 	 * Open all tables
 	 */
-	sht_rewind(dbt_tables);
-	while ((dbt = sht_next((dbt_tables))))
+	sht_start(dbt_tables, &pos);
+	while ((dbt = sht_next(dbt_tables, &pos)))
 	{
 		dbt_open_database(dbt);
 	}

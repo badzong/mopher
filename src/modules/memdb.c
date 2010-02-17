@@ -175,11 +175,12 @@ int
 memdb_walk(dbt_t *dbt, dbt_db_callback_t callback)
 {
 	ht_t *ht = dbt->dbt_handle;
+	ht_pos_t pos;
 	var_compact_t *vc;
 	var_t *record;
 
-	ht_rewind(ht);
-	while ((vc = ht_next(ht)))
+	ht_start(ht, &pos);
+	while ((vc = ht_next(ht, &pos)))
 	{
 		record = var_decompress(vc, dbt->dbt_scheme);
 		if (record == NULL) {

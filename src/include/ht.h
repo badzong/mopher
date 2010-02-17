@@ -30,25 +30,28 @@ typedef struct ht {
 	ht_match_t		  ht_match;
 	ht_delete_t		  ht_delete;
 	int			  ht_head;
-	int			  ht_current_bucket;
-	ht_record_t		 *ht_current_record;
 } ht_t;
+
+typedef struct ht_pos {
+	int			  htp_bucket;
+	ht_record_t		 *htp_record;
+} ht_pos_t;
 
 /*
  * Prototypes
  */
 
-int ht_init(ht_t * ht,hash_t buckets, ht_hash_t hash, ht_match_t match, ht_delete_t delete);
+int ht_init(ht_t *ht, hash_t buckets, ht_hash_t hash, ht_match_t match,ht_delete_t delete);
 ht_t * ht_create(hash_t buckets, ht_hash_t hash, ht_match_t match, ht_delete_t delete);
-void ht_clear(ht_t * ht);
-void ht_delete(ht_t * ht);
-void * ht_lookup(ht_t * ht, void *data);
-void ht_rewind(ht_t * ht);
-int8_t ht_insert(ht_t * ht, void *data);
-void ht_remove(ht_t * ht, void *data);
-void ht_dump(ht_t * ht, void (*print_data) (void *data));
-int ht_walk(ht_t * ht, int (*callback) (void *data));
-void * ht_next(ht_t * ht);
+void ht_clear(ht_t *ht);
+void ht_delete(ht_t *ht);
+void * ht_lookup(ht_t *ht, void *data);
+void ht_start(ht_t *ht, ht_pos_t *pos);
+int8_t ht_insert(ht_t *ht, void *data);
+void ht_remove(ht_t *ht, void *data);
+void ht_dump(ht_t *ht, void (*print_data)(void *data));
+int ht_walk(ht_t *ht, int (*callback)(void *data));
+void * ht_next(ht_t *ht, ht_pos_t *pos);
 
 /*
  * Macros

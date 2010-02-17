@@ -26,6 +26,7 @@ module_t module_table[] = {
 	{ "spamd-static",	spamd_init,	NULL,		NULL },
 	{ "cast-static",	cast_init,	NULL,		NULL },
 	{ "string-static",	string_init,	NULL,		NULL },
+	{ "memdb-static",	memdb_init,	NULL,		NULL },
 #ifdef WITH_MOD_SPF
 	{ "spf-static",		spf_init,	spf_fini,	NULL },
 #endif

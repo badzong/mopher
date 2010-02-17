@@ -6,10 +6,13 @@ list_contains(int argc, ll_t *args)
 {
 	var_t *haystack, *needle, *v;
 	ll_t *list;
+	ll_entry_t *pos;
 	VAR_INT_T match = 0;
 
-	haystack = ll_next(args);
-	needle = ll_next(args);
+	pos = LL_START(args);
+
+	haystack = ll_next(args, &pos);
+	needle = ll_next(args, &pos);
 
 	if (argc != 2)
 	{
@@ -30,9 +33,9 @@ list_contains(int argc, ll_t *args)
 	}
 
 	list = haystack->v_data;
-	ll_rewind(list);
 
-	while ((v = ll_next(list)))
+	pos = LL_START(list);
+	while ((v = ll_next(list, &pos)))
 	{
 		if (var_compare(needle, v) == 0)
 		{

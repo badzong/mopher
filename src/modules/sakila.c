@@ -217,6 +217,7 @@ sakila_query_create(MYSQL *db, char *query, ht_t *storage, ll_t *params,
 	int i;
 	char *key;
 	sakila_buffer_t lookup, *mb;
+	ll_entry_t *pos;
 
 	log_debug("sakila_query_create: create query: %s", query);
 
@@ -285,9 +286,8 @@ sakila_query_create(MYSQL *db, char *query, ht_t *storage, ll_t *params,
 	 */
 	if (params)
 	{
-		ll_rewind(params);
-
-		for (i = 0; (key = ll_next(params)); ++i)
+		pos = LL_START(params);
+		for (i = 0; (key = ll_next(params, &pos)); ++i)
 		{
 			lookup.mb_name = key;
 			mb = ht_lookup(storage, &lookup);
@@ -321,8 +321,8 @@ sakila_query_create(MYSQL *db, char *query, ht_t *storage, ll_t *params,
 	/*
 	 * Bind results
 	 */
-	ll_rewind(results);
-	for (i = 0; (key = ll_next(results)); ++i)
+	pos = LL_START(results);
+	for (i = 0; (key = ll_next(results, &pos)); ++i)
 	{
 		lookup.mb_name = key;
 		mb = ht_lookup(storage, &lookup);
@@ -394,6 +394,7 @@ sakila_record_split(dbt_t *dbt, sakila_record_split_t rs)
 {
 	ll_t *scheme = dbt->dbt_scheme->v_data;
 	ll_t *list = NULL;
+	ll_entry_t *pos;
 	var_t *v;
 	int r = 0;
 
@@ -404,7 +405,8 @@ sakila_record_split(dbt_t *dbt, sakila_record_split_t rs)
 		goto error;
 	}
 
-	for (ll_rewind(scheme); (v = ll_next(scheme)) && r >= 0;)
+	pos = LL_START(scheme);
+	while ((v = ll_next(scheme, &pos)) && r >= 0)
 	{
 		if (rs == RS_FULL ||
 		   (rs == RS_KEYS && (v->v_flags & VF_KEY)) ||
@@ -437,6 +439,7 @@ static ll_t *
 sakila_record_reverse(ll_t *keys, ll_t *values)
 {
 	ll_t *reverse = NULL;
+	ll_entry_t *pos;
 	char *key;
 	int r = 0;
 
@@ -447,12 +450,14 @@ sakila_record_reverse(ll_t *keys, ll_t *values)
 		goto error;
 	}
 
-	while ((key = ll_next(values)) && r >= 0)
+	pos = LL_START(values);
+	while ((key = ll_next(values, &pos)) && r >= 0)
 	{
 		r = LL_INSERT(reverse, key);
 	}
 	
-	while ((key = ll_next(keys)) && r >= 0)
+	pos = LL_START(keys);
+	while ((key = ll_next(keys, &pos)) && r >= 0)
 	{
 		r = LL_INSERT(reverse, key);
 	}
@@ -485,6 +490,7 @@ sakila_prepare_select(dbt_t *dbt, ht_t *storage)
 	int len = 0;
 	ll_t *keys = NULL;
 	ll_t *full = NULL;
+	ll_entry_t *pos;
 	char *key;
 
 	len = snprintf(query, sizeof query, "SELECT * FROM `%s` WHERE ",
@@ -499,7 +505,8 @@ sakila_prepare_select(dbt_t *dbt, ht_t *storage)
 		goto error;
 	}
 	
-	while ((key = ll_next(keys)) && len < sizeof query)
+	pos = LL_START(keys);
+	while ((key = ll_next(keys, &pos)) && len < sizeof query)
 	{
 		len += snprintf(query + len, sizeof query - len,
 		    "`%s`=? and ", key);
@@ -558,12 +565,14 @@ sakila_prepare_update(dbt_t *dbt, ht_t *storage)
 	ll_t *keys = NULL;
 	ll_t *values = NULL;
 	ll_t *reverse = NULL;
+	ll_entry_t *pos;
 
 	keys = sakila_record_split(dbt, RS_KEYS);
 	values = sakila_record_split(dbt, RS_VALUES);
 	reverse = sakila_record_reverse(keys, values);
 	
-	for (ll_rewind(values); (key = ll_next(values)) && len < sizeof set;)
+	pos = LL_START(values);
+	while ((key = ll_next(values, &pos)) && len < sizeof set)
 	{
 		len += snprintf(set + len, sizeof set - len, "`%s`=?, ",
 		    key);
@@ -579,8 +588,8 @@ sakila_prepare_update(dbt_t *dbt, ht_t *storage)
 	set[len] = 0;
 
 
-	for (len = 0, ll_rewind(keys);
-	    (key = ll_next(keys)) && len < sizeof where;)
+	pos = LL_START(keys);
+	for (len = 0; (key = ll_next(keys, &pos)) && len < sizeof where;)
 	{
 		len += snprintf(where + len, sizeof where - len,
 			"`%s`=? and ", key);
@@ -650,6 +659,7 @@ sakila_prepare_insert(dbt_t *dbt, ht_t *storage)
 	char placeholders[MY_QUERY_LEN];
 	char *key;
 	ll_t *full = NULL;
+	ll_entry_t *pos;
 
 	full = sakila_record_split(dbt, RS_FULL);
 	if (full == NULL)
@@ -674,7 +684,8 @@ sakila_prepare_insert(dbt_t *dbt, ht_t *storage)
 
 	placeholders[full->ll_size * 3 - 2] = 0;
 
-	for (ll_rewind(full); (key = ll_next(full)) && len < sizeof table;)
+	pos = LL_START(full);
+	while ((key = ll_next(full, &pos)) && len < sizeof table)
 	{
 		len += snprintf(table + len, sizeof table - len, "`%s`, ",
 		    key);
@@ -733,6 +744,7 @@ sakila_prepare_delete(dbt_t *dbt, ht_t *storage)
 	char where[MY_QUERY_LEN];
 	char *key;
 	ll_t *keys;
+	ll_entry_t *pos;
 
 	keys = sakila_record_split(dbt, RS_KEYS);
 	if (keys == NULL)
@@ -741,7 +753,8 @@ sakila_prepare_delete(dbt_t *dbt, ht_t *storage)
 		goto error;
 	}
 
-	for (ll_rewind(keys); (key = ll_next(keys));)
+	pos = LL_START(keys);
+	while ((key = ll_next(keys, &pos)))
 	{
 		len += snprintf(where + len, sizeof where - len,
 		    "`%s`=? and ", key);
@@ -822,6 +835,7 @@ sakila_prepare(dbt_t *dbt)
 {
 	sakila_handle_t *mh = dbt->dbt_handle;
 	ll_t *scheme = dbt->dbt_scheme->v_data;
+	ll_entry_t *pos;
 	ht_t *storage = NULL;
 	sakila_query_type_t qt;
 	var_t *v;
@@ -840,7 +854,8 @@ sakila_prepare(dbt_t *dbt)
 		goto error;
 	}
 
-	for (ll_rewind(scheme); (v = ll_next(scheme));)
+	pos = LL_START(scheme);
+	while ((v = ll_next(scheme, &pos)))
 	{
 		mb = sakila_buffer_create(v->v_name, v->v_type);
 		if (mb == NULL)
@@ -963,6 +978,7 @@ sakila_create_table(MYSQL *db, char *table, var_t *scheme)
 	char query[MY_QUERY_LEN];
 	int len;
 	ll_t *list;
+	ll_entry_t *pos;
 	var_t *v;
 
 	if (scheme->v_type != VT_LIST) {
@@ -976,8 +992,8 @@ sakila_create_table(MYSQL *db, char *table, var_t *scheme)
 	/*
 	 * Add attributes
 	 */
-	ll_rewind(list);
-	while ((v = ll_next(list))) {
+	pos = LL_START(list);
+	while ((v = ll_next(list, &pos))) {
 		len += snprintf(query + len, sizeof query - len, "`%s` %s, ",
 			v->v_name, sakila_types[v->v_type]);
 
@@ -991,8 +1007,8 @@ sakila_create_table(MYSQL *db, char *table, var_t *scheme)
 	 */
 	len += snprintf(query + len, sizeof query - len, "PRIMARY KEY (");
 
-	ll_rewind(list);
-	while ((v = ll_next(list))) {
+	pos = LL_START(list);
+	while ((v = ll_next(list, &pos))) {
 		if ((v->v_flags & VF_KEY) == 0) {
 			continue;
 		}
@@ -1135,12 +1151,14 @@ static int
 sakila_load_storage(ht_t *storage, var_t *record)
 {
 	ll_t *list = record->v_data;
+	ll_entry_t *pos;
 	var_t *item;
 	void *src, *dst;
 	int size;
 	sakila_buffer_t lookup, *mb;
 
-	for (ll_rewind(list); (item = ll_next(list));)
+	pos = LL_START(list);
+	while ((item = ll_next(list, &pos)))
 	{
 		src = item->v_data;
 		if (src == NULL)
@@ -1172,6 +1190,7 @@ var_t *
 sakila_unload_storage(dbt_t *dbt, ht_t *storage)
 {
 	ll_t *scheme = dbt->dbt_scheme->v_data;
+	ll_entry_t *pos;
 	var_t *record = NULL;
 	var_t *v;
 	sakila_buffer_t lookup, *mb;
@@ -1185,7 +1204,8 @@ sakila_unload_storage(dbt_t *dbt, ht_t *storage)
 		goto error;
 	}
 
-	for (ll_rewind(scheme); (v = ll_next(scheme));)
+	pos = LL_START(scheme);
+	while ((v = ll_next(scheme, &pos)))
 	{
 		lookup.mb_name = v->v_name;
 		mb = ht_lookup(storage, &lookup);

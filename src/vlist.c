@@ -47,7 +47,15 @@ vlist_append_new(var_t *list, var_type_t type, char *name, void *data,
 		return -1;
 	}
 
-	return vlist_append(list, v);
+	if (vlist_append(list, v) == 0)
+	{
+		return 0;
+	}
+
+	log_error("vlist_append_new: vlist_append failed");
+	var_delete(v);
+
+	return -1;
 }
 
 
@@ -57,11 +65,15 @@ vlist_dereference(var_t *list, ...)
 	va_list ap;
 	var_t *v;
 	void **p;
+	ll_t *ll;
+	ll_entry_t *pos;
 
 	va_start(ap, list);
 
-	ll_rewind(list->v_data);
-	while ((v = ll_next(list->v_data)))
+	ll = list->v_data;
+	pos = LL_START(ll);
+
+	while ((v = ll_next(ll, &pos)))
 	{
 		p = va_arg(ap, void **);
 
@@ -132,6 +144,8 @@ vlist_record(var_t *scheme, ...)
 	var_t *record = NULL, *v;
 	int flags;
 	void *data;
+	ll_t *ll;
+	ll_entry_t *pos;
 
 	va_start(ap, scheme);
 
@@ -142,8 +156,10 @@ vlist_record(var_t *scheme, ...)
 		return NULL;
 	}
 
-	ll_rewind(scheme->v_data);
-	while ((v = ll_next(scheme->v_data)))
+	ll = scheme->v_data;
+	pos = LL_START(ll);
+
+	while ((v = ll_next(ll, &pos)))
 	{
 		flags = v->v_flags;
 		flags |= VF_KEEPDATA | VF_KEEPNAME;
@@ -171,13 +187,14 @@ void *
 vlist_record_get(var_t *record, char *key)
 {
 	ll_t *list = record->v_data;
+	ll_entry_t *pos;
 	var_t *item;
 
 	/*
 	 * Bad search: but records usually only have less than 10 values.
 	 */
-	ll_rewind(list);
-	while ((item = ll_next(list)))
+	pos = LL_START(list);
+	while ((item = ll_next(list, &pos)))
 	{
 		if (strcmp(item->v_name, key) == 0)
 		{

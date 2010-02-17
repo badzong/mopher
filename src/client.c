@@ -179,9 +179,11 @@ static int
 client_reconnect(void)
 {
 	client_t *server;
+	ll_entry_t *pos;
 	int disconnected = 0;
 
-	for (ll_rewind(client_servers); (server = ll_next(client_servers));)
+	pos = LL_START(client_servers);
+	while ((server = ll_next(client_servers, &pos)))
 	{
 		if (server->c_socket != -1)
 		{
@@ -264,12 +266,13 @@ client_update(void)
 {
 	client_t *server;
 	var_t *record;
+	ll_entry_t *pos;
 	int incomplete = 0;
 
 	while ((record = LL_DEQUEUE(client_queue)))
 	{
-		ll_rewind(client_servers);
-		while ((server = ll_next(client_servers)))
+		pos = LL_START(client_servers);
+		while ((server = ll_next(client_servers, &pos)))
 		{
 			if (client_send(server, record) == 0)
 			{
@@ -422,6 +425,7 @@ client_init()
 {
 	var_t *servers;
 	ht_t *server_table;
+	ht_pos_t pos;
 	var_t *server;
 	char *name;
 	char *path;
@@ -448,7 +452,8 @@ client_init()
 
 	server_table = servers->v_data;
 
-	for (ht_rewind(server_table); (server = ht_next(server_table));)
+	ht_start(server_table, &pos);
+	while ((server = ht_next(server_table, &pos)))
 	{
 		name = server->v_name;
 		path = vtable_get(server, "socket");

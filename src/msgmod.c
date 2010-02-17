@@ -94,6 +94,8 @@ msgmod(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 	int i;
 	VAR_INT_T *x;
 	exp_t *exp;
+	ll_t *ll;
+	ll_entry_t *pos;
 	var_type_t type;
 
 	/*
@@ -121,10 +123,12 @@ msgmod(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 
 	memset(args, 0, size);
 
-	ll_rewind(mm->mm_args);
+	ll = mm->mm_args;
+	pos = LL_START(ll);
+
 	for (i = 0; i < argc; ++i)
 	{
-		exp = ll_next(mm->mm_args);
+		exp = ll_next(ll, &pos);
 		if (exp == NULL)
 		{
 			log_die(EX_SOFTWARE, "msgmod: empty argument");

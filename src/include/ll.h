@@ -18,7 +18,6 @@ typedef struct ll_entry {
 
 typedef struct ll {
 	u_int32_t	ll_size;
-	ll_entry_t	*ll_curr;
 	ll_entry_t	*ll_head;
 	ll_entry_t	*ll_tail;
 } ll_t;
@@ -29,16 +28,15 @@ typedef void (*ll_delete_t)(void *data);
  * Prototypes
  */
 
-void ll_init(ll_t *ll);
-ll_t * ll_create(void);
-void ll_walk(ll_t *ll, void (*callback)(void *data));
-void ll_clear(ll_t *ll, void (*destroy)(void * data));
-void ll_delete(ll_t *ll, void (*destroy)(void * data));
-int32_t ll_insert_head(ll_t *ll, void *data);
-int32_t ll_insert_tail(ll_t *ll, void *data);
-void * ll_remove_head(ll_t *ll);
-void ll_rewind(ll_t *ll);
-void * ll_next(ll_t *ll);
+void ll_init(ll_t * ll);
+ll_t * ll_create();
+void ll_walk(ll_t * ll, void (*callback) (void *data));
+void ll_clear(ll_t * ll, void (*destroy) (void *data));
+void ll_delete(ll_t * ll, void (*destroy) (void *data));
+int32_t ll_insert_head(ll_t * ll, void *data);
+int32_t ll_insert_tail(ll_t * ll, void *data);
+void * ll_remove_head(ll_t * ll);
+void * ll_next(ll_t * ll, ll_entry_t **position);
 
 /*
  * Macros
@@ -50,5 +48,6 @@ void * ll_next(ll_t *ll);
 #define LL_DEQUEUE	ll_remove_head
 #define LL_PUSH		ll_insert_head
 #define LL_POP		ll_remove_head
+#define LL_START(ll)	((ll)->ll_head)
 
 #endif /* _LL_H_ */

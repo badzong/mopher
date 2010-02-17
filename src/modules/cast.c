@@ -11,9 +11,12 @@ cast(int argc, ll_t *args)
 {
 	var_t *type, *var;
 	VAR_INT_T *vt;
+	ll_entry_t *pos;
 
-	type = ll_next(args);
-	var = ll_next(args);
+	pos = LL_START(args);
+
+	type = ll_next(args, &pos);
+	var = ll_next(args, &pos);
 
 	if (argc != 2)
 	{

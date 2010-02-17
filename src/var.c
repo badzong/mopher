@@ -104,24 +104,26 @@ var_delete(var_t *v)
 static void *
 var_copy_list_or_table(var_type_t type, void *src)
 {
-	int	 is_table, r;
-	void	*copy = NULL;
-	ht_t	*ht = src;
-	ll_t	*ll = src;
-	var_t	*vo, *vc = NULL;
+	int		 is_table, r;
+	void		*copy = NULL;
+	ht_t		*ht = src;
+	ht_pos_t	 ht_pos;
+	ll_t		*ll = src;
+	ll_entry_t 	*ll_pos = NULL;
+	var_t		*vo, *vc = NULL;
 
 	is_table = (type == VT_TABLE);
 
 	if (is_table)
 	{
-		ht_rewind(ht);
+		ht_start(ht, &ht_pos);
 
 		copy = (void *) ht_create(ht->ht_buckets, ht->ht_hash,
 		    ht->ht_match, ht->ht_delete);
 	}
 	else
 	{
-		ll_rewind(ll);
+		ll_pos = LL_START(ll);
 
 		copy = (void *) ll_create();
 	}
@@ -133,7 +135,8 @@ var_copy_list_or_table(var_type_t type, void *src)
 		goto error;
 	}
 
-	while ((vo = (is_table ? ht_next(ht) : ll_next(ll)))) {
+	while ((vo = (is_table ? ht_next(ht, &ht_pos) : ll_next(ll, &ll_pos))))
+	{
 		if ((vc = var_create(vo->v_type, vo->v_name, vo->v_data,
 			VF_COPYNAME | VF_COPYDATA))
 			== NULL) {
@@ -481,6 +484,7 @@ var_scan_scheme(var_t *scheme, char *str)
 	char *p, *q;
 	int len;
 	ll_t *list;
+	ll_entry_t *pos;
 	var_t *v;
 	var_t *output = NULL;
 	void *data;
@@ -515,10 +519,9 @@ var_scan_scheme(var_t *scheme, char *str)
 	}
 
 	list = scheme->v_data;
-	
-	for (p = copy, ll_rewind(list);
-	    (v = ll_next(list)) && p != NULL;
-	    p = q)
+	pos = LL_START(list);
+
+	for (p = copy; (v = ll_next(list, &pos)) && p != NULL; p = q)
 	{
 		q = strchr(p, ',');
 		if (q != NULL)
@@ -704,6 +707,10 @@ var_dump_list_or_table(var_t * v, char *buffer, int size)
 {
 	int len, n, is_table;
 	var_t *tmp;
+	ht_t *ht;
+	ht_pos_t ht_pos;
+	ll_t *ll;
+	ll_entry_t *ll_pos;
 
 	is_table = (v->v_type == VT_TABLE);
 
@@ -713,14 +720,17 @@ var_dump_list_or_table(var_t * v, char *buffer, int size)
 	len = 1;
 
 	if(is_table) {
-		ht_rewind(v->v_data);
+		ht = v->v_data;
+		ht_start(ht, &ht_pos);
 	}
 	else {
-		ll_rewind(v->v_data);
+		ll = v->v_data;
+		ll_pos = LL_START(ll);
 	}
 
-	while ((tmp = (is_table ? ht_next(v->v_data) : ll_next(v->v_data)))
-		&& len < size) {
+	while ((tmp = (is_table ? ht_next(ht, &ht_pos) : ll_next(ll, &ll_pos)))
+		&& len < size)
+	{
 
 		if(len > 1 && size > len + 1) {
 			buffer[len] = ',';
@@ -920,6 +930,8 @@ var_compress(var_t *v)
 	var_t *item;
 	char **p;
 	int *i;
+	ll_t *ll;
+	ll_entry_t *pos;
 
 	if(v->v_type != VT_LIST) {
 		log_warning("var_compress: bad type");
@@ -935,8 +947,10 @@ var_compress(var_t *v)
 	/*
 	 * Build two buffers for keys and values.
 	 */
-	ll_rewind(v->v_data);
-	while ((item = ll_next(v->v_data))) {
+	ll = v->v_data;
+	pos = LL_START(ll);
+
+	while ((item = ll_next(ll, &pos))) {
 		if (item->v_data == NULL) {
 			continue;
 		}
@@ -971,6 +985,8 @@ var_decompress(var_compact_t *vc, var_t *scheme)
 	void *p;
 	int k = 0, d = 0;
 	int *i;
+	ll_t *ll;
+	ll_entry_t *pos;
 
 	if(scheme->v_type != VT_LIST) {
 		log_warning("var_decompress: bad type");
@@ -983,8 +999,10 @@ var_decompress(var_compact_t *vc, var_t *scheme)
 		goto error;
 	}
 
-	ll_rewind(scheme->v_data);
-	while ((item = ll_next(scheme->v_data))) {
+	ll = scheme->v_data;
+	pos = LL_START(ll);
+
+	while ((item = ll_next(ll, &pos))) {
 		p = item->v_flags & VF_KEY ? vc->vc_key : vc->vc_data;
 		i = item->v_flags & VF_KEY ? &k : &d;
 

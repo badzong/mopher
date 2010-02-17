@@ -295,10 +295,11 @@ int
 vtable_add_record(var_t *table, var_t *record)
 {
 	ll_t *list = record->v_data;
+	ll_entry_t *pos;
 	var_t *item;
 
-	ll_rewind(list);
-	while ((item = ll_next(list)))
+	pos = LL_START(list);
+	while ((item = ll_next(list, &pos)))
 	{
 		if (vtable_set_new(table, item->v_type, item->v_name,
 		    item->v_data, VF_COPY))

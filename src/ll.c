@@ -10,7 +10,6 @@ ll_init(ll_t * ll)
 	ll->ll_size = 0;
 	ll->ll_head = NULL;
 	ll->ll_tail = NULL;
-	ll->ll_curr = NULL;
 }
 
 ll_t *
@@ -86,11 +85,6 @@ ll_insert_head(ll_t * ll, void *data)
 		ll->ll_tail = ll->ll_head;
 	}
 
-	/*
-	 * Always rewind on insert.
-	 */
-	ll->ll_curr = ll->ll_head;
-
 	++ll->ll_size;
 
 	return ll->ll_size;
@@ -118,11 +112,6 @@ ll_insert_tail(ll_t * ll, void *data)
 		ll->ll_head = ll->ll_tail;
 	}
 
-	/*
-	 * Always rewind on insert.
-	 */
-	ll->ll_curr = ll->ll_head;
-
 	++ll->ll_size;
 
 	return ll->ll_size;
@@ -146,13 +135,6 @@ ll_remove_head(ll_t * ll)
 		ll->ll_tail = NULL;
 	}
 
-	/*
-	 * Rewind curr if neccessary.
-	 */
-	if (ll->ll_curr == entry) {
-		ll->ll_curr = ll->ll_head;
-	}
-
 	data = entry->lle_data;
 	free(entry);
 
@@ -161,29 +143,22 @@ ll_remove_head(ll_t * ll)
 	return data;
 }
 
-void
-ll_rewind(ll_t * ll)
-{
-	ll->ll_curr = ll->ll_head;
-
-	return;
-}
 
 void *
-ll_next(ll_t * ll)
+ll_next(ll_t * ll, ll_entry_t **position)
 {
 	ll_entry_t *entry;
 
 	/*
 	 * List end
 	 */
-	if (ll->ll_curr == NULL) {
+	if (*position == NULL) {
 		return NULL;
 	}
 
-	entry = ll->ll_curr;
+	entry = *position;
 
-	ll->ll_curr = ll->ll_curr->lle_next;
+	*position = (*position)->lle_next;
 
 	return entry->lle_data;
 }

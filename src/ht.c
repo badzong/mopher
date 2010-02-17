@@ -27,8 +27,6 @@ ht_init(ht_t *ht, hash_t buckets, ht_hash_t hash, ht_match_t match,
 	ht->ht_records = 0;
 	ht->ht_collisions = 0;
 	ht->ht_head = 0;
-	ht->ht_current_bucket = 0;
-	ht->ht_current_record = NULL;
 
 	return 0;
 }
@@ -112,21 +110,18 @@ ht_lookup(ht_t *ht, void *data)
 
 
 void
-ht_rewind(ht_t *ht)
+ht_start(ht_t *ht, ht_pos_t *pos)
 {
-	if(ht->ht_records) {
-		ht->ht_current_bucket = ht->ht_head;
-		ht->ht_current_record = ht->ht_table[ht->ht_head];
-
-		return;
+	if(ht->ht_records)
+	{
+		pos->htp_bucket = ht->ht_head;
+		pos->htp_record = ht->ht_table[ht->ht_head];
 	}
-
-	/*
-	 * Empty table
-	 */
-	ht->ht_head = 0;
-	ht->ht_current_bucket = 0;
-	ht->ht_current_record = NULL;
+	else
+	{
+		pos->htp_bucket = 0;
+		pos->htp_record = NULL;
+	}
 
 	return;
 }
@@ -173,12 +168,6 @@ ht_insert(ht_t *ht, void *data)
 	if(bucket < ht->ht_head || ht->ht_head == 0) {
 		ht->ht_head = bucket;
 	}
-
-	/*
-	 * Rewind on insert
-	 */
-	ht_rewind(ht);
-
 
 	lf = HT_LOADFACTOR(ht);
 	if (lf > 70)
@@ -237,13 +226,6 @@ ht_remove(ht_t *ht, void *data)
 		return;
 	}
 	
-	/*
-	 * If we remove the current_record advance
-	 */
-	if(record == ht->ht_current_record) {
-		ht_next(ht);
-	}
-
 	if(ht->ht_delete) {
 		ht->ht_delete(record->htr_data);
 	}
@@ -255,11 +237,6 @@ ht_remove(ht_t *ht, void *data)
 		--ht->ht_collisions;
 	}
 	--ht->ht_records;
-
-	/*
-	 * Rewind on insert and remove
-	 */
-	ht_rewind(ht);
 
 	/*
 	 * Adjust collision counter
@@ -328,7 +305,7 @@ ht_walk(ht_t *ht, int (*callback)(void *data))
 
 
 void *
-ht_next(ht_t *ht)
+ht_next(ht_t *ht, ht_pos_t *pos)
 {
 	ht_record_t *record;
 	hash_t i;
@@ -336,41 +313,46 @@ ht_next(ht_t *ht)
 	/*
 	 * End of table
 	 */
-	if(ht->ht_current_record == NULL) {
+	if(pos->htp_record == NULL)
+	{
 		return NULL;
 	}
 
 	/*
 	 * Save record
 	 */
-	record = ht->ht_current_record;
+	record = pos->htp_record;
 
 	/*
 	 * Next record in current chain
 	 */
-	if(record->htr_next) {
-		ht->ht_current_record = record->htr_next;
+	if(record->htr_next)
+	{
+		pos->htp_record = record->htr_next;
+
 		return record->htr_data;
 	}
 	
 	/*
 	 * Next bucket
 	 */
-	for(i = ht->ht_current_bucket + 1;
-		i < ht->ht_buckets && ht->ht_table[i] == NULL;
-		++i);
+	for(i = pos->htp_bucket + 1;
+	    i < ht->ht_buckets && ht->ht_table[i] == NULL;
+	    ++i);
 
-	if(ht->ht_table[i]) {
-		ht->ht_current_bucket = i;
-		ht->ht_current_record = ht->ht_table[i];
+	if(ht->ht_table[i])
+	{
+		pos->htp_bucket = i;
+		pos->htp_record = ht->ht_table[i];
+
 		return record->htr_data;
 	}
 
 	/*
 	 * Last record
 	 */
-	ht->ht_current_bucket = 0;
-	ht->ht_current_record = NULL;
+	pos->htp_bucket = 0;
+	pos->htp_record = NULL;
 
 	return record->htr_data;
 }

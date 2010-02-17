@@ -497,7 +497,7 @@ update:
 
 	if (dbt_db_set(&greylist_dbt, record))
 	{
-		log_error("greylist: DBT_DB_SET failed");
+		log_error("greylist: dbt_db_set failed");
 		goto error;
 	}
 
@@ -540,6 +540,7 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 	char *envfrom;
 	char *envrcpt;
 	ll_t *recipients;
+	ll_entry_t *pos;
 	var_t *vrcpt;
 	VAR_INT_T *received;
 	VAR_INT_T delay;
@@ -581,8 +582,8 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 	}
 	else
 	{
-		ll_rewind(recipients);
-		while ((vrcpt = ll_next(recipients)))
+		pos = LL_START(recipients);
+		while ((vrcpt = ll_next(recipients, &pos)))
 		{
 			/*
 			 * vlist stores var_t pointers!

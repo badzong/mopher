@@ -41,6 +41,7 @@ int spf_init(void);
 int string_init(void);
 int cast_init(void);
 int test_init(void);
+int memdb_init(void);
 
 int delivered_init(void);
 

@@ -178,6 +178,7 @@ rbl_init(void)
 {
 	var_t *rbl;
 	ht_t *config;
+	ht_pos_t pos;
 	var_t *v;
 
 	rbl_table = sht_create(RBL_BUCKETS, NULL);
@@ -196,7 +197,8 @@ rbl_init(void)
 	}
 
 	config = rbl->v_data;
-	for (ht_rewind(config); (v = ht_next(config));)
+	ht_start(config, &pos);
+	while ((v = ht_next(config, &pos)))
 	{
 		if (rbl_register(v->v_name, v->v_data))
 		{

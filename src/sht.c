@@ -8,9 +8,10 @@ void
 sht_clear(sht_t *sht)
 {
 	sht_record_t *sr;
+	ht_pos_t pos;
 
-	ht_rewind(sht->sht_ht);
-	while ((sr = ht_next(sht->sht_ht)))
+	ht_start(sht->sht_ht, &pos);
+	while ((sr = ht_next(sht->sht_ht, &pos)))
 	{
 		if (sht->sht_delete)
 		{
@@ -234,20 +235,20 @@ sht_replace(sht_t *sht, char *key, void *data)
 
 
 void
-sht_rewind(sht_t *sht)
+sht_start(sht_t *sht, ht_pos_t *pos)
 {
-	ht_rewind(sht->sht_ht);
+	ht_start(sht->sht_ht, pos);
 
 	return;
 }
 
 
 void *
-sht_next(sht_t *sht)
+sht_next(sht_t *sht, ht_pos_t *pos)
 {
 	sht_record_t *sr;
 
-	sr = ht_next(sht->sht_ht);
+	sr = ht_next(sht->sht_ht, pos);
 	if (sr == NULL)
 	{
 		return NULL;
