@@ -176,7 +176,7 @@ ht_insert(ht_t *ht, void *data)
 	}
 
 	cf = HT_COLLFACTOR(ht);
-	if (cf > 10)
+	if (cf > 20)
 	{
 		log_error("ht_insert: collisions %.1f%", cf);
 	}
