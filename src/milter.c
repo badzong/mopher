@@ -1191,6 +1191,14 @@ milter(void)
 
 	r = smfi_main();
 
+	/*
+	 * Wait for all threads to return and keep the lock.
+	 */
+	if (pthread_rwlock_wrlock(&milter_reload_lock))
+	{
+		log_error("milter_common_init: pthread_rwlock_wrlock");
+	}
+
 	if (r == MI_SUCCESS)
 	{
 		log_debug("milter: smfi_main returned successful");
