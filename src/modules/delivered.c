@@ -86,7 +86,7 @@ delivered_add_relay(dbt_t *dbt, var_t *mailspec)
 	VAR_INT_T created, updated, valid, count;
 
 	if (vtable_dereference(mailspec, "milter_hostaddr", &hostaddr,
-	    "milter_received", &received, NULL))
+	    "milter_received", &received, NULL) != 2)
 	{
 		log_error("delivered_add_penpal: vtable_dereference failed");
 		return -1;
@@ -130,7 +130,7 @@ delivered_add_penpal(dbt_t *dbt, var_t *mailspec)
 
 	if (vtable_dereference(mailspec, "milter_hostaddr", &hostaddr,
 	    "milter_envfrom", &envfrom, "milter_envrcpt", &envrcpt,
-	    "milter_received", &received, NULL))
+	    "milter_received", &received, NULL) != 4)
 	{
 		log_error("delivered_add_penpal: vtable_dereference failed");
 		return -1;
@@ -248,7 +248,7 @@ delivered_update(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 	}
 
 	if (vtable_dereference(mailspec, "milter_action", &action,
-	    "milter_laststage", &laststage, NULL))
+	    "milter_laststage", &laststage, NULL) != 2)
 	{
 		log_error("delivered_update: vtable_dereference failed");
 		return -1;

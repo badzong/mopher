@@ -41,7 +41,7 @@ tarpit(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 		return ACL_ERROR;
 	}
 
-	log_debug("tarpit: delay %d seconds", delay);
+	log_message(LOG_ERR, mailspec, "tarpit: delay=%d seconds", delay);
 
 	for (;;)
 	{

@@ -64,6 +64,7 @@ static milter_symbol_t milter_symbols[] = {
 	{ "milter_header_size", MS_OFF_EOH },
 	{ "milter_body", MS_EOM },
 	{ "milter_body_size", MS_EOM },
+	{ "milter_message_size", MS_EOM },
 	{ NULL, 0 }
 };
 
@@ -541,8 +542,7 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 		goto exit;
 	}
 
-	log_debug("milter_connect: connection from: %s (%s)", hostname,
-		addrstr);
+	log_message(LOG_ERR, mp->mp_table, "host=%s[%s]", hostname, addrstr);
 
 	stat = milter_acl(MS_CONNECT, MSN_CONNECT, mp);
 
@@ -572,7 +572,7 @@ milter_unknown(SMFICTX * ctx, const char *cmd)
 		goto exit;
 	}
 
-	log_debug("milter_unknown: unknown command: \"%s\"", cmd);
+	log_message(LOG_ERR, mp->mp_table, "unkown command=%s", cmd);
 
 	stat = milter_acl(MS_UNKNOWN, MSN_UNKNOWN, mp);
 
@@ -602,7 +602,7 @@ milter_helo(SMFICTX * ctx, char *helostr)
 		goto exit;
 	}
 
-	log_debug("milter_helo: helo hostname: %s", helostr);
+	log_message(LOG_ERR, mp->mp_table, "helo hostname=%s", helostr);
 
 	stat = milter_acl(MS_HELO, MSN_HELO, mp);
 
@@ -641,7 +641,7 @@ milter_envfrom(SMFICTX * ctx, char **argv)
 		goto exit;
 	}
 
-	log_debug("milter_envfrom: envelope from: %s", argv[0]);
+	log_message(LOG_ERR, mp->mp_table, "envelope from=%s", argv[0]);
 
 	stat = milter_acl(MS_ENVFROM, MSN_ENVFROM, mp);
 
@@ -684,7 +684,7 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 		goto exit;
 	}
 
-	log_debug("milter_envrcpt: envelope recipient: %s", argv[0]);
+	log_message(LOG_ERR, mp->mp_table, "envelope recipient=%s", argv[0]);
 
 	stat = milter_acl(MS_ENVRCPT, MSN_ENVRCPT, mp);
 
@@ -735,6 +735,8 @@ milter_data(SMFICTX * ctx)
 		goto exit;
 	}
 
+	log_message(LOG_DEBUG, mp->mp_table, "");
+
 	stat = milter_acl(MS_DATA, MSN_DATA, mp);
 
 exit:
@@ -771,7 +773,7 @@ milter_header(SMFICTX * ctx, char *headerf, char *headerv)
 	}
 
 	snprintf(mp->mp_header + mp->mp_headerlen, len, "%s: %s\r\n", headerf,
-		headerv);
+	    headerv);
 
 	/*
 	 * Don't count \0
@@ -788,6 +790,9 @@ milter_header(SMFICTX * ctx, char *headerf, char *headerv)
 		log_error("milter_header: vtable_setv failed");
 		goto exit;
 	}
+
+	log_message(LOG_DEBUG, mp->mp_table,
+	    "header=\"%s: %s\", size=%d bytes", headerf, headerv, len);
 
 	stat = milter_acl(MS_HEADER, MSN_HEADER, mp);
 
@@ -820,7 +825,8 @@ milter_eoh(SMFICTX * ctx)
 		return SMFIS_TEMPFAIL;
 	}
 
-	log_debug("milter_eoh: header size: %d", mp->mp_headerlen);
+	log_message(LOG_DEBUG, mp->mp_table, "total headers=%d bytes",
+	    mp->mp_headerlen);
 
 	stat = milter_acl(MS_EOH, MSN_EOH, mp);
 
@@ -855,6 +861,8 @@ milter_body(SMFICTX * ctx, unsigned char *body, size_t len)
 	mp->mp_bodylen += len;
 	mp->mp_body[mp->mp_bodylen] = 0;
 
+	log_message(LOG_DEBUG, mp->mp_table, "body part=%d bytes", len);
+
 	stat = milter_acl(MS_BODY, MSN_BODY, mp);
 
 exit:
@@ -869,6 +877,7 @@ milter_eom(SMFICTX * ctx)
 {
 	milter_priv_t *mp;
 	sfsistat stat = SMFIS_TEMPFAIL;
+	VAR_INT_T message_size;
 
 	mp = milter_common_init(ctx, MS_EOM, MSN_EOM);
 	if (mp == NULL)
@@ -877,8 +886,12 @@ milter_eom(SMFICTX * ctx)
 		goto exit;
 	}
 
+	message_size = mp->mp_bodylen + mp->mp_headerlen;
+
 	if (vtable_setv(mp->mp_table,
 	    VT_INT, "milter_body_size", &mp->mp_bodylen,
+		VF_KEEPNAME | VF_COPYDATA,
+	    VT_INT, "milter_message_size", &message_size,
 		VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "milter_body", mp->mp_body, VF_KEEP,
 	    VT_NULL))
@@ -887,7 +900,9 @@ milter_eom(SMFICTX * ctx)
 		goto exit;
 	}
 
-	log_debug("milter_eom: body size: %d", mp->mp_bodylen);
+	log_message(LOG_ERR, mp->mp_table,
+	    "message size=%d bytes, headers=%d bytes, body=%d bytes",
+	    message_size, mp->mp_headerlen, mp->mp_bodylen);
 
 	stat = milter_acl(MS_EOM, MSN_EOM, mp);
 
@@ -915,7 +930,7 @@ milter_close(SMFICTX * ctx)
 	 */
 	milter_acl(MS_CLOSE, MSN_CLOSE, mp);
 
-	log_debug("milter_close: connection closed");
+	log_message(LOG_ERR, mp->mp_table, "");
 
 exit:
 	milter_common_fini(ctx, mp, MS_CLOSE);

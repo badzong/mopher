@@ -275,6 +275,7 @@ vtable_dereference(var_t *table, ...)
 	va_list ap;
 	char *name;
 	void **p;
+	int values = 0;
 
 	va_start(ap, table);
 
@@ -283,11 +284,20 @@ vtable_dereference(var_t *table, ...)
 		p = va_arg(ap, void **);
 
 		*p = vtable_get(table, name);
+		if (*p)
+		{
+			++values;
+		}
+		else
+		{
+			log_debug("vtable_dereference: \"%s\" not found",
+			   name);
+		}
 	}
 
 	va_end(ap);
 
-	return 0;
+	return values;
 }
 
 

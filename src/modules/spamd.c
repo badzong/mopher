@@ -106,7 +106,7 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 
 	if (vtable_dereference(attrs, "milter_header", &header,
 	    "milter_header_size", &header_size, "milter_body", &body,
-	    "milter_body_size", &body_size, NULL))
+	    "milter_body_size", &body_size, NULL) != 4)
 	{
 		log_error("spamd_query: vtable_dereference failed");
 		goto error;

@@ -114,3 +114,42 @@ log_die(int r, char *f, ...)
 
 	return;
 }
+
+
+void
+log_message(int type, var_t *mailspec, char *f, ...)
+{
+	va_list ap;
+	VAR_INT_T *id;
+	char *stage;
+	char message[BUFLEN];
+
+
+	if (vtable_dereference(mailspec, "milter_id", &id, "milter_stagename",
+	    &stage, NULL) != 2)
+	{
+		log_log(LOG_ERR, "log_message: vtable_dereference failed");
+		return;
+	}
+
+	if (strlen(f) == 0)
+	{
+		log_log(type, "[%lu] %s", *id, stage);
+
+		return;
+	}
+
+	va_start(ap, f);
+
+	if (vsnprintf(message, sizeof message, f, ap) >= sizeof message)
+	{
+		log_log(LOG_ERR, "log_message: buffer exhausted");
+		return;
+	}
+
+	va_end(ap);
+
+	log_log(type, "[%lu] %s: %s", *id, stage, message);
+
+	return;
+}

@@ -27,6 +27,6 @@ int util_now(struct timespec *ts);
 int util_concat(char *buffer, int size, ...);
 void util_setgid(char *name);
 void util_setuid(char *name);
-pid_t util_daemonize(void);
+void util_daemonize(void);
 void util_pidfile(char *path);
 #endif /* _UTIL_H_ */

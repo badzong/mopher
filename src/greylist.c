@@ -334,9 +334,6 @@ greylist_add(char *source, char *envfrom, char *envrcpt, VAR_INT_T received,
 	
 	var_delete(record);
 
-	log_info("greylist_add: from: %s to: %s: delay: %d seconds", envfrom,
-	    envrcpt, delay);
-
 	return 1;
 }
 
@@ -389,9 +386,9 @@ greylist_eval(greylist_t *gl, var_t *mailspec, VAR_INT_T *delay,
 
 
 static int
-greylist_recipient(VAR_INT_T *delayed, char *source, char *envfrom,
-    char *envrcpt, VAR_INT_T received, VAR_INT_T delay, VAR_INT_T valid,
-    VAR_INT_T visa)
+greylist_recipient(var_t *mailspec, VAR_INT_T *delayed, char *source,
+    char *envfrom, char *envrcpt, VAR_INT_T received, VAR_INT_T delay,
+    VAR_INT_T valid, VAR_INT_T visa)
 {
 	var_t *lookup = NULL, *record = NULL;
 	VAR_INT_T *rec_created;
@@ -461,8 +458,8 @@ greylist_recipient(VAR_INT_T *delayed, char *source, char *envfrom,
 	 */
 	if (*rec_updated + *rec_valid < received)
 	{
-		log_info("greylist: from: %s to: %s: record expired %d seconds "
-		    "ago", envfrom, envrcpt,
+		log_message(LOG_DEBUG, mailspec,
+		    "greylist: status=expired, expiry=%d seconds ago",
 		    received - *rec_created - *rec_valid);
 
 		goto add;
@@ -473,20 +470,24 @@ greylist_recipient(VAR_INT_T *delayed, char *source, char *envfrom,
 	 */
 	if (delay && *rec_delay != delay)
 	{
-		log_info("greylist: from: %s to: %s: delay changed from %d to "
-		    "%d seconds", envfrom, envrcpt, *rec_delay, delay);
+		log_message(LOG_ERR, mailspec, "greylist: status=subst, orig "
+		    "delay=%d seconds, new delay=%d", *rec_delay, delay);
+
 		*rec_delay = delay;
 	}
 	if (valid && *rec_valid != valid)
 	{
-		log_info("greylist: from: %s to: %s: valid changed from %d to "
-		    "%d seconds", envfrom, envrcpt, *rec_valid, valid);
+		log_message(LOG_ERR, mailspec, "greylist: status=subst, orig "
+		    "valid=%d seconds, new valid=%d seconds", *rec_valid,
+		    valid);
+
 		*rec_valid = valid;
 	}
 	if (visa && *rec_visa != visa)
 	{
-		log_info("greylist: from: %s to: %s: visa changed from %d to "
-		    "%d seconds", envfrom, envrcpt, *rec_visa, visa);
+		log_message(LOG_ERR, mailspec, "greylist: status=subst, orig "
+		    "visa=%d seconds, new visa=%d seconds", *rec_visa, visa);
+
 		*rec_visa = visa;
 	}
 
@@ -507,10 +508,9 @@ greylist_recipient(VAR_INT_T *delayed, char *source, char *envfrom,
 			*delayed = received - *rec_created;
 		}
 
-		log_info("greylist: from: %s to: %s: delay of %d seconds "
-		    "passed %d seconds ago. visa: %d seconds", envfrom,
-		    envrcpt, *rec_delay, received - *rec_created - *rec_delay,
-		    *rec_visa);
+		log_message(LOG_ERR, mailspec, "greylist: status=passed, "
+		    "delay=%d(%d) seconds, visa=%d seconds", 
+		    received - *rec_created, *rec_delay, *rec_visa);
 
 		goto update;
 	}
@@ -521,8 +521,8 @@ greylist_recipient(VAR_INT_T *delayed, char *source, char *envfrom,
 	*rec_retries += 1;
 	defer = 1;
 
-	log_info("greylist: from: %s to: %s: remaining delay: %d seconds "
-	    "retries: %d", envfrom, envrcpt,
+	log_message(LOG_ERR, mailspec, "greylist: status=defer delay=%d "
+	    "seconds, remaining=%d seconds, retries=%d",  *rec_delay,
 	    *rec_created + *rec_delay - received, *rec_retries);
 
 
@@ -546,6 +546,9 @@ add:
 	if (record) {
 		var_delete(record);
 	}
+
+	log_message(LOG_ERR, mailspec, "greylist: status=defer, delay=%d "
+	    "seconds", delay);
 
 	return greylist_add(source, envfrom, envrcpt, received,
 	    delay, valid, visa);
@@ -599,7 +602,7 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 	if (vtable_dereference(mailspec, "milter_greylist_src", &source,
 	    "milter_envfrom_addr", &envfrom, "milter_envrcpt_addr", &envrcpt,
 	    "milter_recipient_list", &recipients, "milter_received", &received,
-	    NULL))
+	    NULL) < 4)
 	{
 		log_error("greylist: vtable_dereference failed");
 		return ACL_ERROR;
@@ -611,8 +614,8 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 	 */
 	if (stage == MS_ENVRCPT)
 	{
-		defer = greylist_recipient(&max_delay, source, envfrom,
-		    envrcpt, *received, delay, valid, visa);
+		defer = greylist_recipient(mailspec, &max_delay, source,
+		    envfrom, envrcpt, *received, delay, valid, visa);
 	}
 	else
 	{
@@ -624,8 +627,8 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 			 */
 			envrcpt = vrcpt->v_data;
 
-			r = greylist_recipient(&delayed, source, envfrom,
-			    envrcpt, *received, delay, valid, visa);
+			r = greylist_recipient(mailspec, &delayed, source,
+			    envfrom, envrcpt, *received, delay, valid, visa);
 
 			if (r == -1)
 			{
@@ -649,7 +652,9 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 
 	if (defer)
 	{
-		log_debug("greylist: %d recipients need greylisting", defer);
+		log_message(LOG_DEBUG, mailspec, "greylist: delayed "
+		    "recipients=%d", defer);
+
 		return ACL_GREYLIST;
 	}
 

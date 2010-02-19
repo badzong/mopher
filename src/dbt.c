@@ -391,13 +391,15 @@ dbt_register(char *name, dbt_t *dbt)
 	}
 
 	/*
-	 * Fill configuration into dbt
+	 * Fill configuration into dbt. CAVEAT: No real error checking. A bad
+	 * or incomplete configuration should be determined by the database
+	 * driver.
 	 */
 	if (vtable_dereference(config, "driver", &dbt->dbt_drivername,
 	    "path", &dbt->dbt_path, "host", &dbt->dbt_host,
 	    "port", &dbt->dbt_port, "user", &dbt->dbt_user,
 	    "pass", &dbt->dbt_pass, "database", &dbt->dbt_database,
-	    "table", &dbt->dbt_table, NULL))
+	    "table", &dbt->dbt_table, NULL) == -1)
 	{
 		log_die(EX_CONFIG,
 		    "dbt_register: vtable_dereference failed");
