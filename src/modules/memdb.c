@@ -5,12 +5,8 @@
 
 #include <mopher.h>
 
-/*
- * Static hash table. 8191 buckets should be adequate for medium size
- * installations.
- */
 
-#define MEMDB_BUCKETS 8191
+#define MEMDB_BUCKETS 4096
 
 
 static dbt_driver_t dbt_driver;

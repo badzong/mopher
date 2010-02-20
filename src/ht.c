@@ -126,13 +126,62 @@ ht_start(ht_t *ht, ht_pos_t *pos)
 	return;
 }
 
+int8_t
+ht_resize(ht_t *ht)
+{
+	ht_t new;
+	ht_record_t *record;
+	u_int32_t i, buckets;
+	
+	buckets = ht->ht_buckets * 2;
+
+	log_error("ht_resize: load exceeded %.1f %% resize from %d to %d",
+	    HT_LOADFACTOR(ht), ht->ht_buckets, buckets);
+
+	/*
+	 * Create the new hash table. ht_delete is set to NULL to prevent data
+	 * loss in case of an error.
+	 */
+	if (ht_init(&new, buckets, ht->ht_hash, ht->ht_match, NULL))
+	{
+		log_error("ht_resize: ht_init failed");
+		return -1;
+	}
+
+	for(i = 0; i < ht->ht_buckets; ++i)
+	{
+		for (record = ht->ht_table[i];
+		    record != NULL;
+		    record = record->htr_next)
+		{
+			if(ht_insert(&new, record->htr_data))
+			{
+				log_error("ht_resize: ht_insert failed");
+				ht_clear(&new);
+				return -1;
+			}
+		}
+	}
+
+	/*
+	 * Swap ht_delete
+	 */
+	new.ht_delete = ht->ht_delete;
+	ht->ht_delete = NULL;
+
+	ht_clear(ht);
+
+	memcpy(ht, &new, sizeof(ht_t));
+
+	return 0;
+}
 
 int8_t
 ht_insert(ht_t *ht, void *data)
 {
 	ht_record_t *record;
 	hash_t bucket;
-	float lf, cf;
+	float cf;
 
 	if(ht_lookup(ht, data) != NULL) {
 		log_debug("ht_insert: duplicate entry");
@@ -169,16 +218,18 @@ ht_insert(ht_t *ht, void *data)
 		ht->ht_head = bucket;
 	}
 
-	lf = HT_LOADFACTOR(ht);
-	if (lf > 70)
-	{
-		log_error("ht_insert: load %.1f%", lf);
-	}
-
 	cf = HT_COLLFACTOR(ht);
 	if (cf > 20)
 	{
-		log_error("ht_insert: collisions %.1f%", cf);
+		log_error("ht_insert: collisions %.1f %%", cf);
+	}
+
+	if (HT_LOADFACTOR(ht) > 70)
+	{
+		if (ht_resize(ht))
+		{
+			log_error("ht_insert: ht_resize failed");
+		}
 	}
 
 	return 0;
