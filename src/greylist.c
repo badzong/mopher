@@ -542,6 +542,7 @@ update:
 
 	return defer;
 
+
 add:
 	if (record) {
 		var_delete(record);
@@ -553,8 +554,8 @@ add:
 	return greylist_add(source, envfrom, envrcpt, received,
 	    delay, valid, visa);
 
-error:
 
+error:
 	if (lookup)
 	{
 		var_delete(lookup);

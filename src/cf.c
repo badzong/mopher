@@ -58,6 +58,7 @@ char		*cf_acl_path;
 char		*cf_milter_socket;
 VAR_INT_T	 cf_milter_socket_timeout;
 VAR_INT_T	 cf_milter_socket_umask;
+VAR_INT_T	 cf_milter_wait;
 VAR_INT_T	 cf_log_level;
 VAR_INT_T	 cf_acl_log_level;
 VAR_INT_T	 cf_foreground;
@@ -85,6 +86,7 @@ static cf_symbol_t cf_symbols[] = {
 	{ "milter_socket", &cf_milter_socket },
 	{ "milter_socket_timeout", &cf_milter_socket_timeout },
 	{ "milter_socket_umask", &cf_milter_socket_umask },
+	{ "milter_wait", &cf_milter_wait },
 	{ "cleanup_interval", &cf_dbt_cleanup_interval },
 	{ "hostname", &cf_hostname },
 	{ "spamd_socket", &cf_spamd_socket },

@@ -376,8 +376,8 @@ milter_common_init(SMFICTX *ctx, VAR_INT_T stage, char *stagename)
 
 	if (mp == NULL)
 	{
-		log_error("milter_common_init: failed to load private data in "
-		    "\"%s\"", stagename);
+		log_debug("milter_common_init: empty private data in \"%s\"",
+		    stagename);
 		goto error;
 	}
 
@@ -448,7 +448,7 @@ milter_common_fini(SMFICTX *ctx, milter_priv_t *mp, milter_stage_t stage)
 	 */
 	if (mp == NULL)
 	{
-		log_error("milter_common_fini: milter_priv is null");
+		log_debug("milter_common_fini: milter_priv is null");
 		return;
 	}
 
@@ -702,7 +702,7 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 	}
 
 	if (vtable_list_append_new(mp->mp_table, VT_STRING,
-	    "milter_recipient_list", argv[0], VF_KEEPNAME | VF_COPYDATA))
+	    "milter_recipient_list", rcpt, VF_KEEPNAME | VF_COPYDATA))
 	{
 		log_error("milter_envrcpt: vtable_list_append_new failed");
 		stat = SMFIS_TEMPFAIL;
@@ -1192,8 +1192,13 @@ milter(void)
 	r = smfi_main();
 
 	/*
-	 * Wait for all threads to return and keep the lock.
+	 * Wait for all threads to return and acquire milter_reload_lock.
 	 */
+	log_error("milter: waiting %d seconds for libmilter threads to close",
+	    cf_milter_wait);
+
+	sleep(cf_milter_wait);
+
 	if (pthread_rwlock_wrlock(&milter_reload_lock))
 	{
 		log_error("milter_common_init: pthread_rwlock_wrlock");
