@@ -26,9 +26,8 @@ extern char		*cf_workdir_path;
 extern char		*cf_mopherd_group;
 extern char		*cf_mopherd_user;
 extern char		*cf_module_path;
-extern VAR_INT_T	 cf_greylist_delay;
+extern VAR_INT_T	 cf_greylist_deadline;
 extern VAR_INT_T	 cf_greylist_visa;
-extern VAR_INT_T	 cf_greylist_valid;
 extern char		*cf_acl_path;
 extern VAR_INT_T	 cf_acl_log_level;
 extern char		*cf_milter_socket;
@@ -43,7 +42,9 @@ extern char		*cf_spamd_socket;
 extern VAR_INT_T	 cf_client_retry_interval;
 extern char		*cf_server_socket;
 extern VAR_INT_T	 cf_tarpit_progress_interval;
-extern VAR_INT_T	 cf_delivered_valid;
+extern VAR_INT_T	 cf_seen_expire_low;
+extern VAR_INT_T	 cf_seen_expire_high;
+extern VAR_INT_T	 cf_seen_threshold;
 
 /*
  * Prototypes

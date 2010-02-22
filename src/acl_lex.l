@@ -13,9 +13,10 @@ greylist	greylist
 tarpit		tarpit
 log		log
 set		set
-valid		valid
+deadline	deadline
 visa		visa
 delay		delay
+attempts	attempts
 add		add
 header		header
 value		value
@@ -70,9 +71,10 @@ comment		#.*$
 {tarpit}	return TARPIT;
 {set}		return SET;
 {log}		return LOG;
-{valid}		return VALID;
+{deadline}	return DEADLINE;
 {visa}		return VISA;
 {delay}		return DELAY;
+{attempts}	return ATTEMPTS;
 {eq}		return EQ;
 {ne}		return NE;
 {le}		return LE;

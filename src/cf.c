@@ -51,9 +51,8 @@ char		*cf_workdir_path;
 char		*cf_mopherd_group;
 char		*cf_mopherd_user;
 char		*cf_module_path;
-VAR_INT_T	 cf_greylist_delay;
+VAR_INT_T	 cf_greylist_deadline;
 VAR_INT_T	 cf_greylist_visa;
-VAR_INT_T	 cf_greylist_valid;
 char		*cf_acl_path;
 char		*cf_milter_socket;
 VAR_INT_T	 cf_milter_socket_timeout;
@@ -68,7 +67,9 @@ char		*cf_spamd_socket;
 VAR_INT_T	 cf_client_retry_interval;
 char		*cf_server_socket;
 VAR_INT_T	 cf_tarpit_progress_interval;
-VAR_INT_T	 cf_delivered_valid;
+VAR_INT_T	 cf_seen_expire_low;
+VAR_INT_T	 cf_seen_expire_high;
+VAR_INT_T	 cf_seen_threshold;
 
 /*
  * Symbol table
@@ -78,9 +79,8 @@ static cf_symbol_t cf_symbols[] = {
 	{ "mopherd_group", &cf_mopherd_group },
 	{ "mopherd_user", &cf_mopherd_user },
 	{ "module_path", &cf_module_path },
-	{ "greylist_delay", &cf_greylist_delay },
+	{ "greylist_deadline", &cf_greylist_deadline },
 	{ "greylist_visa", &cf_greylist_visa },
-	{ "greylist_valid", &cf_greylist_valid },
 	{ "acl_path", &cf_acl_path },
 	{ "acl_log_level", &cf_acl_log_level },
 	{ "milter_socket", &cf_milter_socket },
@@ -93,7 +93,9 @@ static cf_symbol_t cf_symbols[] = {
 	{ "client_retry_interval", &cf_client_retry_interval },
 	{ "server_socket", &cf_server_socket },
 	{ "tarpit_progress_interval", &cf_tarpit_progress_interval },
-	{ "delivered_valid", &cf_delivered_valid },
+	{ "seen_expire_low", &cf_seen_expire_low },
+	{ "seen_expire_high", &cf_seen_expire_high },
+	{ "seen_threshold", &cf_seen_threshold },
 	{ NULL, NULL }
 };
 

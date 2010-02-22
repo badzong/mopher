@@ -359,7 +359,7 @@ dbt_common_sql(char *name)
 	int len;
 
 	len = snprintf(buffer, sizeof buffer,
-	    "`%s_valid` + `%s_created` < unix_timestamp()", name, name);
+	    "`%s_expire` < unix_timestamp()", name);
 
 	if (len >= sizeof buffer)
 	{
@@ -367,7 +367,6 @@ dbt_common_sql(char *name)
 	}
 
 	p = strdup(buffer);
-	
 	if (p == NULL)
 	{
 		log_die(EX_OSERR, "dbt_common_sql: strdup");
@@ -467,39 +466,35 @@ dbt_register(char *name, dbt_t *dbt)
 int
 dbt_common_validate(dbt_t *dbt, var_t *record)
 {
-	char created_key[KEYLEN];
-	char valid_key[KEYLEN];
-	VAR_INT_T *created = NULL;
-	VAR_INT_T *valid = NULL;
+	char expire_key[KEYLEN];
+	VAR_INT_T *expire = NULL;
 
 	/*
 	 * created key example: greylist_created
 	 */
-	if (snprintf(created_key, sizeof created_key, "%s_created",
-	    dbt->dbt_name) >= sizeof created_key ||
-	    snprintf(valid_key, sizeof valid_key, "%s_valid",
-	    dbt->dbt_name) >= sizeof valid_key)
+	if (snprintf(expire_key, sizeof expire_key, "%s_expire",
+	    dbt->dbt_name) >= sizeof expire_key)
 	{
 		log_error("dbt_common_validate: buffer exhausted");
+		return -1;
 	}
 
 	/*
-	 * Lookup created and valid in record.
+	 * Lookup expiry in record.
 	 */
-	created = vlist_record_get(record, created_key);
-	valid   = vlist_record_get(record, valid_key);
+	expire = vlist_record_get(record, expire_key);
 
-	if (created == NULL || valid == NULL)
+	if (expire == NULL)
 	{
 		log_die(EX_SOFTWARE, "dbt_common_vaildate: table \"%s\" must "
-		    "have %s_created and %s_valid to use dbt_common_validate",
-		    dbt->dbt_name, dbt->dbt_name, dbt->dbt_name);
+		    "set %s_expire to use dbt_common_validate", dbt->dbt_name,
+		    dbt->dbt_name, dbt->dbt_name);
 	}
 
 	/*
 	 * dbt->dbt_cleanup_schedule == time(NULL)
 	 */
-	if (dbt->dbt_cleanup_schedule > *created + *valid)
+	if (dbt->dbt_cleanup_schedule > *expire)
 	{
 		return 0;
 	}
@@ -527,14 +522,14 @@ dbt_janitor_cleanup_sql(dbt_t *dbt)
 static int
 dbt_janitor_validate(dbt_t *dbt, var_t *record)
 {
-	int valid;
+	int expire;
 
-	valid = DBT_VALIDATE(dbt, record);
-	if (valid == -1) {
+	expire = DBT_VALIDATE(dbt, record);
+	if (expire == -1) {
 		log_error("dbt_cleanup: DBT_VALIDATE failed");
 		return -1;
 	}
-	if (valid) {
+	if (expire) {
 		return 0;
 	}
 	if (dbt_db_del(dbt, record)) {

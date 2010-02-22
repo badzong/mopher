@@ -13,8 +13,9 @@ static dbt_t greylist_dbt;
  * Greylist symbols and db translation
  */
 static char *greylist_tuple_symbols[] = { "greylist_created",
-    "greylist_updated", "greylist_valid", "greylist_delay", "greylist_retries",
-    "greylist_visa", "greylist_passed", NULL };
+    "greylist_updated", "greylist_expire", "greylist_deadline",
+    "greylist_delay", "greylist_attempts", "greylist_visa", "greylist_passed",
+    NULL };
 
 
 int
@@ -51,17 +52,10 @@ greylist_source(char *buffer, int size, char *hostname, char *hostaddr)
 
 
 greylist_t *
-greylist_visa(greylist_t *gl, exp_t *visa)
+greylist_deadline(greylist_t *gl, exp_t *deadline)
 {
-	gl->gl_visa = visa;
-	return gl;
-}
-
-
-greylist_t *
-greylist_valid(greylist_t *gl, exp_t *valid)
-{
-	gl->gl_valid = valid;
+	gl->gl_flags |= GLF_DEADLINE;
+	gl->gl_deadline = deadline;
 	return gl;
 }
 
@@ -69,7 +63,26 @@ greylist_valid(greylist_t *gl, exp_t *valid)
 greylist_t *
 greylist_delay(greylist_t *gl, exp_t *delay)
 {
+	gl->gl_flags |= GLF_DELAY;
 	gl->gl_delay = delay;
+	return gl;
+}
+
+
+greylist_t *
+greylist_attempts(greylist_t *gl, exp_t *attempts)
+{
+	gl->gl_flags |= GLF_ATTEMPTS;
+	gl->gl_attempts = attempts;
+	return gl;
+}
+
+
+greylist_t *
+greylist_visa(greylist_t *gl, exp_t *visa)
+{
+	gl->gl_flags |= GLF_VISA;
+	gl->gl_visa = visa;
 	return gl;
 }
 
@@ -126,7 +139,7 @@ greylist_listed(milter_stage_t stage, char *name, var_t *mailspec)
 	VAR_INT_T *recipients;
 
 	/*
-	 * greylist_listed is amibuous for multi recipient messages in stages
+	 * greylist_listed is amibguous for multi recipient messages in stages
 	 * other than MS_ENVRCPT.
 	 */
 	if (stage == MS_ENVFROM)
@@ -150,7 +163,7 @@ greylist_listed(milter_stage_t stage, char *name, var_t *mailspec)
 	 * In a multi recipient message the greylist symbols are set to zero
 	 */
 	log_error("greylist_listed: message has %ld recipients: symbol "
-	    "\"%s\" abiguous", *recipients, name);
+	    "\"%s\" ambiguous", *recipients, name);
 
 	p = NULL;
 
@@ -249,9 +262,11 @@ greylist_init(void)
 		"milter_envrcpt_addr",	VT_STRING,	VF_KEEPNAME | VF_KEY,
 		"greylist_created",	VT_INT,		VF_KEEPNAME,
 		"greylist_updated",	VT_INT,		VF_KEEPNAME,
-		"greylist_valid",	VT_INT,		VF_KEEPNAME,
+		"greylist_expire",	VT_INT,		VF_KEEPNAME,
+		"greylist_connections",	VT_INT,		VF_KEEPNAME,
+		"greylist_deadline",	VT_INT,		VF_KEEPNAME,
 		"greylist_delay",	VT_INT,		VF_KEEPNAME,
-		"greylist_retries",	VT_INT,		VF_KEEPNAME,
+		"greylist_attempts",	VT_INT,		VF_KEEPNAME,
 		"greylist_visa",	VT_INT,		VF_KEEPNAME,
 		"greylist_passed",	VT_INT,		VF_KEEPNAME,
 		NULL);
@@ -266,7 +281,7 @@ greylist_init(void)
 	greylist_dbt.dbt_sql_invalid_where = DBT_COMMON_INVALID_SQL;
 
 	/*
-	 * greylist_valid need to be registered at table
+	 * register greylist table
 	 */
 	dbt_register("greylist", &greylist_dbt);
 
@@ -290,37 +305,170 @@ greylist_init(void)
 
 
 static int
-greylist_add(char *source, char *envfrom, char *envrcpt, VAR_INT_T received,
-    VAR_INT_T delay, VAR_INT_T valid, VAR_INT_T visa)
+greylist_eval(exp_t *exp, var_t *mailspec, VAR_INT_T *result)
+{
+	var_t *v = NULL;
+	VAR_INT_T *i;
+
+	*result = 0;
+
+	if (exp == NULL)
+	{
+		return 0;
+	}
+
+	v = exp_eval(exp, mailspec);
+	if (v == NULL)
+	{
+		log_error("greylist_eval: exp_eval failed");
+		goto error;
+	}
+
+	if (v->v_data == NULL)
+	{
+		log_error("greylist_eval: exp_eval returned no data");
+		goto error;
+	}
+
+	if (v->v_type != VT_INT)
+	{
+		log_error("greylist_eval: bad type");
+		goto error;
+	}
+		
+	i = v->v_data;
+	*result = *i;
+
+	exp_free(v);
+
+	return 0;
+
+
+error:
+
+	if (v)
+	{
+		exp_free(v);
+	}
+
+	return -1;
+}
+
+
+static int
+greylist_properties(greylist_t *gl, var_t *mailspec, VAR_INT_T *deadline,
+    VAR_INT_T *delay, VAR_INT_T *attempts, VAR_INT_T *visa)
+{
+	static const greylist_flag_t flag[] = { GLF_DEADLINE, GLF_DELAY,
+	    GLF_ATTEMPTS, GLF_VISA, GLF_NULL };
+	exp_t *exp[] = { gl->gl_deadline, gl->gl_delay, gl->gl_attempts,
+	    gl->gl_visa };
+	VAR_INT_T *result[] = { deadline, delay, attempts, visa };
+	int i;
+
+	for (i = 0; flag[i]; ++i)
+	{
+		if ((gl->gl_flags & flag[i]) == 0)
+		{
+			continue;
+		}
+
+		if (greylist_eval(exp[i], mailspec, result[i]))
+		{
+			log_error("greylist_properties: greylist_eval failed");
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+
+static int
+greylist_tuple_counted(var_t *mailspec, char *needle)
+{
+	ll_t *haystack;
+	ll_entry_t *pos;
+	var_t *match;
+
+	haystack = vtable_get(mailspec, "greylist_tuple_counted");
+	if (haystack == NULL)
+	{
+		goto append;
+	}
+
+	pos = LL_START(haystack);
+	while ((match = ll_next(haystack, &pos)))
+	{
+		if (match->v_type != VT_STRING)
+		{
+			log_error("greylist_tuple_counted: bad type");
+			return -1;
+		}
+		
+		if (strcmp(needle, match->v_data) == 0)
+		{
+			return 1;
+		}
+	}
+
+append:
+
+	if (vtable_list_append_new(mailspec, VT_STRING,
+	    "greylist_tuple_counted", needle, VF_KEEPNAME | VF_COPYDATA))
+	{
+		log_error("greylist_tuple_counted: "
+		    "vtable_list_append_new failed");
+		return -1;
+	}
+
+	return 0;
+}
+
+
+static int
+greylist_add(greylist_t *gl, var_t *mailspec, char *source, char *envfrom,
+    char *envrcpt, VAR_INT_T received)
 {
 	var_t *record;
-	VAR_INT_T retries = 0;
+	VAR_INT_T expire;
+	VAR_INT_T connections = 1;
+	VAR_INT_T deadline = 0;
+	VAR_INT_T delay = 0;
+	VAR_INT_T attempts = 0;
+	VAR_INT_T visa = 0;
 	VAR_INT_T passed = 0;
 	
+	if (greylist_properties(gl, mailspec, &deadline, &delay, &attempts,
+	    &visa))
+	{
+		log_error("greylist_add: greylist_properties failed");
+		return -1;
+	}
+
 	/*
 	 * Use default values if not set.
 	 */
-	if (delay == 0)
+	if (deadline == 0)
 	{
-		delay = cf_greylist_delay;
-	}
-	if (valid == 0)
-	{
-		valid = cf_greylist_valid;
+		expire = cf_greylist_deadline;
 	}
 	if (visa == 0)
 	{
 		visa = cf_greylist_visa;
 	}
 
+	expire = received + deadline;
+
 	/*
 	 * Create and store record
 	 */
 	record = vlist_record(greylist_dbt.dbt_scheme, source, envfrom,
-	    envrcpt, &received, &received, &valid, &delay, &retries, &visa,
-	    &passed);
+	    envrcpt, &received, &received, &expire, &connections, &deadline,
+	    &delay, &attempts, &visa, &passed);
 
-	if (record == NULL) {
+	if (record == NULL)
+	{
 		log_warning("greylist_add: vlist_record failed");
 		return -1;
 	}
@@ -339,77 +487,30 @@ greylist_add(char *source, char *envfrom, char *envrcpt, VAR_INT_T received,
 
 
 static int
-greylist_eval(greylist_t *gl, var_t *mailspec, VAR_INT_T *delay,
-    VAR_INT_T *valid, VAR_INT_T *visa)
-{
-	/*
-	 * Arrays are used to loop over delay, valid and visa
-	 */
-	VAR_INT_T *ip[] = { delay, valid, visa, NULL };
-	exp_t *ep[] = { gl->gl_delay, gl->gl_valid, gl->gl_visa, NULL };
-	VAR_INT_T **i;
-	exp_t **e;
-	var_t *v;
-
-	/*
-	 * Set all values to zero
-	 */
-	*delay = *valid = *visa = 0;
-
-	for (i = ip, e = ep; *i; ++i, ++e)
-	{
-		/*
-		 * No expression set (*i = 0)
-		 */
-		if (*e == NULL)
-		{
-			continue;
-		}
-
-		v = exp_eval(*e, mailspec);
-		if (v == NULL)
-		{
-			log_error("grelist_eval: exp_eval failed");
-			return -1;
-		}
-
-		/*
-		 * Dereferencing double pointer
-		 */
-		**i = var_intval(v);
-
-		exp_free(v);
-	}
-
-	return 0;
-}
-
-
-static int
-greylist_recipient(var_t *mailspec, VAR_INT_T *delayed, char *source,
-    char *envfrom, char *envrcpt, VAR_INT_T received, VAR_INT_T delay,
-    VAR_INT_T valid, VAR_INT_T visa)
+greylist_recipient(greylist_t * gl, VAR_INT_T *delayed, var_t *mailspec,
+    char *source, char *envfrom, char *envrcpt, VAR_INT_T received)
 {
 	var_t *lookup = NULL, *record = NULL;
-	VAR_INT_T *rec_created;
-	VAR_INT_T *rec_updated;
-	VAR_INT_T *rec_delay;
-	VAR_INT_T *rec_retries;
-	VAR_INT_T *rec_visa;
-	VAR_INT_T *rec_passed;
-	VAR_INT_T *rec_valid;
-	int defer;
+	VAR_INT_T *created;
+	VAR_INT_T *updated;
+	VAR_INT_T *expire;
+	VAR_INT_T *connections;
+	VAR_INT_T *deadline;
+	VAR_INT_T *delay;
+	VAR_INT_T *attempts;
+	VAR_INT_T *visa;
+	VAR_INT_T *passed;
+	VAR_INT_T defer = 1;
+	int remaining_delay;
+	int remaining_attempts;
 
-	/*
-	 * Set delayed to zero
-	 */
 	*delayed = 0;
 
 	/*
 	 * Lookup greylist record
 	 */
 	lookup = vlist_record(greylist_dbt.dbt_scheme, source, envfrom,
-	    envrcpt, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+	    envrcpt, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 	if (lookup == NULL)
 	{
@@ -427,9 +528,10 @@ greylist_recipient(var_t *mailspec, VAR_INT_T *delayed, char *source,
 	lookup = NULL;
 
 	/*
-	 * Dont't greylist if no record exists and no delay was specified
+	 * Dont't greylist if no record exists and gl is empty
+	 * Empty gl means: greylist existing tuple.
 	 */
-	if (record == NULL && delay == 0)
+	if (record == NULL && gl->gl_flags == GLF_NULL)
 	{
 		return 0;
 	}
@@ -445,22 +547,29 @@ greylist_recipient(var_t *mailspec, VAR_INT_T *delayed, char *source,
 	/*
 	 * Get record properties
 	 */
-	if (vlist_dereference(record, NULL, NULL, NULL, &rec_created,
-	    &rec_updated, &rec_valid, &rec_delay, &rec_retries, &rec_visa,
-	    &rec_passed))
+	if (vlist_dereference(record, NULL, NULL, NULL, &created, &updated,
+	    &expire, &connections, &deadline, &delay, &attempts, &visa,
+	    &passed))
 	{
 		log_error("greylist_recipient: vlist_dereference failed");
 		goto error;
 	}
 
+	log_message(LOG_DEBUG, mailspec, "greylist: status=record, "
+	    "connections=%ld, deadline=%ld seconds, delay=%ld seconds, "
+	    "attempts=%ld, visa=%ld seconds, passed=%ld", *connections,
+	    *deadline, *delay, *attempts, *visa, *passed);
+
 	/*
-	 * Record expired. After the greylist period, valid becomes visa!
+	 * Record expired.
 	 */
-	if (*rec_updated + *rec_valid < received)
+	if (*expire < received)
 	{
 		log_message(LOG_DEBUG, mailspec,
-		    "greylist: status=expired, expiry=%d seconds ago",
-		    received - *rec_created - *rec_valid);
+		    "greylist: status=expired, expired=%ld seconds ago",
+		    received - *expire);
+
+		var_delete(record);
 
 		goto add;
 	}
@@ -468,49 +577,37 @@ greylist_recipient(var_t *mailspec, VAR_INT_T *delayed, char *source,
 	/*
 	 * Update requested properties
 	 */
-	if (delay && *rec_delay != delay)
+	if (greylist_properties(gl, mailspec, deadline, delay, attempts, visa))
 	{
-		log_message(LOG_ERR, mailspec, "greylist: status=subst, orig "
-		    "delay=%d seconds, new delay=%d", *rec_delay, delay);
-
-		*rec_delay = delay;
+		log_error("greylist_recipient: greylist_properties failed");
+		goto error;
 	}
-	if (valid && *rec_valid != valid)
-	{
-		log_message(LOG_ERR, mailspec, "greylist: status=subst, orig "
-		    "valid=%d seconds, new valid=%d seconds", *rec_valid,
-		    valid);
 
-		*rec_valid = valid;
-	}
-	if (visa && *rec_visa != visa)
-	{
-		log_message(LOG_ERR, mailspec, "greylist: status=subst, orig "
-		    "visa=%d seconds, new visa=%d seconds", *rec_visa, visa);
-
-		*rec_visa = visa;
-	}
 
 	/*
-	 * Delay passed
+	 * Greylisting passed (delay and attempts)
 	 */
-	if (*rec_created + *rec_delay < received)
+	if (received > *created + *delay && *connections > *attempts)
 	{
-		*rec_valid = *rec_visa;
-		*rec_passed += 1;
+		*expire = received + *visa;
 		defer = 0;
+
+		if (!greylist_tuple_counted(mailspec, envrcpt))
+		{
+			++(*passed);
+			++(*connections);
+		}
+
+		log_message(LOG_ERR, mailspec, "greylist: status=passed, "
+		    "visa=%ld seconds, passed=%ld", *visa, *passed);
 
 		/*
 		 * Set delayed for the first message (set only here!)
 		 */
-		if (*rec_passed == 1)
+		if (*passed == 1)
 		{
-			*delayed = received - *rec_created;
+			*delayed = received - *created;
 		}
-
-		log_message(LOG_ERR, mailspec, "greylist: status=passed, "
-		    "delay=%d(%d) seconds, visa=%d seconds", 
-		    received - *rec_created, *rec_delay, *rec_visa);
 
 		goto update;
 	}
@@ -518,16 +615,35 @@ greylist_recipient(var_t *mailspec, VAR_INT_T *delayed, char *source,
 	/*
 	 * Greylisting in action
 	 */
-	*rec_retries += 1;
-	defer = 1;
+	*expire = *created + *deadline;
+	*passed = 0;
 
-	log_message(LOG_ERR, mailspec, "greylist: status=defer delay=%d "
-	    "seconds, remaining=%d seconds, retries=%d",  *rec_delay,
-	    *rec_created + *rec_delay - received, *rec_retries);
+	if (!greylist_tuple_counted(mailspec, envrcpt))
+	{
+		++(*connections);
+	}
+
+	remaining_delay = *created + *delay - received;
+	if (remaining_delay < 0)
+	{
+		remaining_delay = 0;
+	}
+
+	remaining_attempts = *attempts - *connections;
+	if (remaining_attempts < 0)
+	{
+		remaining_attempts = 0;
+	}
+
+	log_message(LOG_ERR, mailspec, "greylist: status=defer, delay=%ld "
+	    "seconds, remaining delay=%ld seconds, attempts=%ld, remaining "
+	    "attempts=%ld", *delay, remaining_delay, *attempts,
+	    remaining_attempts);
 
 
 update:
-	*rec_updated = received;
+
+	*updated = received;
 
 	if (dbt_db_set(&greylist_dbt, record))
 	{
@@ -544,15 +660,8 @@ update:
 
 
 add:
-	if (record) {
-		var_delete(record);
-	}
 
-	log_message(LOG_ERR, mailspec, "greylist: status=defer, delay=%d "
-	    "seconds", delay);
-
-	return greylist_add(source, envfrom, envrcpt, received,
-	    delay, valid, visa);
+	return greylist_add(gl, mailspec, source, envfrom, envrcpt, received);
 
 
 error:
@@ -579,23 +688,11 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 	char *envrcpt;
 	ll_t *recipients;
 	ll_entry_t *pos;
-	var_t *vrcpt;
 	VAR_INT_T *received;
-	VAR_INT_T delay;
-	VAR_INT_T valid;
-	VAR_INT_T visa;
-	VAR_INT_T delayed;
-	VAR_INT_T max_delay = 0;
-	int defer = 0, r;
+	var_t *rcpt;
+	int defer;
+	VAR_INT_T delay = 0, max_delay = 0;
 
-	/*
-	 * Evaluate expressions
-	 */
-	if (greylist_eval(gl, mailspec, &delay, &valid, &visa))
-	{
-		log_error("greylist: greylist_eval failed");
-		return ACL_ERROR;
-	}
 
 	/*
 	 * Get source, enfrom, envrcpt, recipients and received
@@ -615,33 +712,35 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 	 */
 	if (stage == MS_ENVRCPT)
 	{
-		defer = greylist_recipient(mailspec, &max_delay, source,
-		    envfrom, envrcpt, *received, delay, valid, visa);
+		defer = greylist_recipient(gl, &max_delay, mailspec, source,
+		    envfrom, envrcpt, *received);
 	}
+
 	else
 	{
 		pos = LL_START(recipients);
-		while ((vrcpt = ll_next(recipients, &pos)))
+		while ((rcpt = ll_next(recipients, &pos)))
 		{
 			/*
 			 * vlist stores var_t pointers!
 			 */
-			envrcpt = vrcpt->v_data;
+			envrcpt = rcpt->v_data;
+			defer = greylist_recipient(gl, &delay, mailspec,
+			    source, envfrom, envrcpt, *received);
 
-			r = greylist_recipient(mailspec, &delayed, source,
-			    envfrom, envrcpt, *received, delay, valid, visa);
-
-			if (r == -1)
+			/*
+			 * We are in message context! Greylist if any recipient
+			 * requires to. Errors are checked below.
+			 */
+			if (defer)
 			{
 				break;
 			}
 
-			if (delayed > max_delay)
+			if (delay > max_delay)
 			{
-				max_delay = delayed;
+				max_delay = delay;
 			}
-
-			defer += r;
 		}
 	}
 
@@ -653,23 +752,21 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 
 	if (defer)
 	{
-		log_message(LOG_DEBUG, mailspec, "greylist: delayed "
-		    "recipients=%d", defer);
-
 		return ACL_GREYLIST;
 	}
 
-	/*
-	 * Set greylist delayed
-	 */
-	if (max_delay)
+	if (max_delay == 0)
 	{
-		if (vtable_set_new(mailspec, VT_INT, "greylist_delayed",
-		    &max_delay, VF_KEEPNAME | VF_COPYDATA))
-		{
-			log_error("greylist: vtables_set_new failed");
-			return -1;
-		}
+		return ACL_NONE;
+	}
+
+	/*
+	 * Set greylist_delayed if message just passed greylisting
+	 */
+	if (vtable_set_new(mailspec, VT_INT, "greylist_delayed", &max_delay,
+	    VF_KEEPNAME | VF_COPYDATA))
+	{
+		log_error("greylist: vtable_set_new failed");
 	}
 
 	return ACL_NONE;

@@ -21,7 +21,7 @@ static ll_t *module_buffers;
 
 module_t module_table[] = {
 /*	{ "test.o",	test_init,	test_fini,	NULL },*/
-	{ "delivered-static",	delivered_init,	NULL,	NULL },
+	{ "seen-static",	seen_init,	NULL,		NULL },
 	{ "rbl-static",		rbl_init,	rbl_fini,	NULL },
 	{ "spamd-static",	spamd_init,	NULL,		NULL },
 	{ "cast-static",	cast_init,	NULL,		NULL },
