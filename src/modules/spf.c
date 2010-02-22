@@ -135,8 +135,8 @@ result:
 		goto error;
 	}
 
-	log_debug("spf: helo:%s from:%s spf:%s (%s)", helo,
-		from, spfstr, spfreason);
+	log_message(LOG_ERR, attrs, "spf: helo=%s, from=%s, spf=%s, reason=%s",
+	    helo, from, spfstr, spfreason);
 
 	if (vtable_setv(attrs, VT_STRING, "spf", spfstr, VF_KEEP, VT_STRING,
 	    "spf_reason", spfreason, VF_KEEP, VT_NULL))

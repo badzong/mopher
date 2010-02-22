@@ -39,6 +39,7 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	struct addrinfo *ai = NULL;
 	struct addrinfo hints;
 	void *data = NULL;
+	char *resultstr = NULL;
 	int e;
 	char *b[4];
 	char *p;
@@ -134,7 +135,17 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 			goto error;
 		}
 
-		log_debug("rbl_query: RBL record \"%s\" exists", query);
+		resultstr = util_addrtostr(data);
+		if (resultstr == NULL)
+		{
+			log_error("rbl_query: util_addrtostr failed");
+			goto error;
+		}
+
+		log_message(LOG_ERR, attrs, "rbl_query: addr=%s, rbl=%s, "
+		    "result=%s", addrstr, domain, resultstr);
+
+		free(resultstr);
 
 		if (vtable_setv(attrs, VT_ADDR, name, data, VF_COPYNAME, VT_NULL))
 		{
@@ -160,6 +171,11 @@ error:
 	}
 
 	if (addrstr)
+	{
+		free(addrstr);
+	}
+
+	if (resultstr)
 	{
 		free(addrstr);
 	}

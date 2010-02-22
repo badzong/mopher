@@ -482,6 +482,9 @@ greylist_add(greylist_t *gl, var_t *mailspec, char *source, char *envfrom,
 	
 	var_delete(record);
 
+	log_message(LOG_ERR, mailspec, "greylist: status=defer, delay=%ld "
+	    "seconds, attempts=%ld", delay, attempts);
+
 	return 1;
 }
 
