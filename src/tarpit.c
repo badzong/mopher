@@ -34,6 +34,12 @@ tarpit(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 
 	exp_free(v);
 
+	if (delay <= 0)
+	{
+		log_debug("tarpit: delay %d seconds", delay);
+		return ACL_NONE;
+	}
+
 	ctx = vtable_get(mailspec, "milter_ctx");
 	if (ctx == NULL)
 	{

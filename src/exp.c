@@ -548,21 +548,21 @@ exp_eval_variable(exp_t *exp, var_t *mailspec)
 
 	if (exp->ex_type != EX_VARIABLE)
 	{
-		log_error("exp_eval_variable: bad type");
+		log_debug("exp_eval_variable: bad type");
 		return NULL;
 	}
 
 	variables = vtable_lookup(mailspec, EXP_VAR);
 	if (variables == NULL)
 	{
-		log_error("exp_eval_variable: no variables set");
+		log_debug("exp_eval_variable: no variables set");
 		return EXP_EMPTY;
 	}
 
 	value = vtable_lookup(variables, exp->ex_data);
 	if (value == NULL)
 	{
-		log_error("exp_eval_variable: unknown variable \"%s\"",
+		log_debug("exp_eval_variable: unknown variable \"%s\"",
 		    exp->ex_data);
 		return EXP_EMPTY;
 	}

@@ -35,6 +35,7 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	char *domain;
 	struct sockaddr_storage *addr;
 	char *addrstr = NULL;
+	char addrbytes[16];
 	char query[BUFLEN];
 	struct addrinfo *ai = NULL;
 	struct addrinfo hints;
@@ -53,7 +54,8 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 		goto error;
 	}
 
-	if (acl_symbol_dereference(attrs, "milter_hostaddr", &addr, NULL))
+	if (acl_symbol_dereference(attrs, "milter_hostaddr", &addr,
+	    "milter_addrstr", &addrstr, NULL))
 	{
 		log_error("rbl_query: acl_symbol_dereference failed");
 		goto error;
@@ -67,18 +69,14 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 		log_error("rbl_query: address family not supported");
 		goto error;
 	}
-		
-	addrstr = util_addrtostr(addr);
-	if (addrstr == NULL)
-	{
-		log_error("rbl_query: util_addrtostr failed");
-		goto error;
-	}
 
+	strncpy(addrbytes, addrstr, sizeof addrbytes);
+	addrbytes[sizeof addrbytes - 1] = 0;
+		
 	/*
 	 * Split the address bytes
 	 */
-	for(i = 0, p = addrstr; i < 4 && p != NULL; p = strchr(p, '.'), ++i) {
+	for(i = 0, p = addrbytes; i < 4 && p != NULL; p = strchr(p, '.'), ++i) {
 		if(*p == '.') {
 			*p++ = 0;
 		}
@@ -154,8 +152,6 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 		}
 	}
 
-	free(addrstr);
-
 	if (ai)
 	{
 		freeaddrinfo(ai);
@@ -168,11 +164,6 @@ error:
 	if (data)
 	{
 		free(data);
-	}
-
-	if (addrstr)
-	{
-		free(addrstr);
 	}
 
 	if (resultstr)
