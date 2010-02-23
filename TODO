@@ -2,10 +2,10 @@ MOPHER TODO
 ===========
 
   * Control socket permissions vi chmod
-  * Greylist: retry count greylisting!
   * cf_yacc.y and acl_yacc.y should both support tables
   * Log policy
   * User manual
   * Connection/Greylist limit
   * Set return code
-  * Add default log string for each stage
+  * Regex support (POSIX vs. PCRE?)
+  * Log queue and message ids

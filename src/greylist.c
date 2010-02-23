@@ -385,20 +385,20 @@ greylist_properties(greylist_t *gl, var_t *mailspec, VAR_INT_T *deadline,
 
 
 static int
-greylist_tuple_counted(var_t *mailspec, char *needle)
+greylist_tuple_counted(var_t *mailspec, char *haystack, char *needle)
 {
-	ll_t *haystack;
+	ll_t *list;
 	ll_entry_t *pos;
 	var_t *match;
 
-	haystack = vtable_get(mailspec, "greylist_tuple_counted");
-	if (haystack == NULL)
+	list = vtable_get(mailspec, haystack);
+	if (list == NULL)
 	{
 		goto append;
 	}
 
-	pos = LL_START(haystack);
-	while ((match = ll_next(haystack, &pos)))
+	pos = LL_START(list);
+	while ((match = ll_next(list, &pos)))
 	{
 		if (match->v_type != VT_STRING)
 		{
@@ -414,8 +414,8 @@ greylist_tuple_counted(var_t *mailspec, char *needle)
 
 append:
 
-	if (vtable_list_append_new(mailspec, VT_STRING,
-	    "greylist_tuple_counted", needle, VF_KEEPNAME | VF_COPYDATA))
+	if (vtable_list_append_new(mailspec, VT_STRING, haystack, needle,
+	    VF_KEEPNAME | VF_COPYDATA))
 	{
 		log_error("greylist_tuple_counted: "
 		    "vtable_list_append_new failed");
@@ -586,19 +586,27 @@ greylist_recipient(greylist_t * gl, VAR_INT_T *delayed, var_t *mailspec,
 		goto error;
 	}
 
+	/*
+	 * Increment the connection counter only once per connection.
+	 */
+	if (!greylist_tuple_counted(mailspec, "greylist_connection_counted",
+	    envrcpt))
+	{
+		++(*connections);
+	}
 
 	/*
-	 * Greylisting passed (delay and attempts)
+	 * Greylisting passed (delay and attempts).
 	 */
 	if (received > *created + *delay && *connections > *attempts)
 	{
 		*expire = received + *visa;
 		defer = 0;
 
-		if (!greylist_tuple_counted(mailspec, envrcpt))
+		if (!greylist_tuple_counted(mailspec,
+		    "greylist_passed_counted", envrcpt))
 		{
 			++(*passed);
-			++(*connections);
 		}
 
 		log_message(LOG_ERR, mailspec, "greylist: status=passed, "
@@ -621,10 +629,6 @@ greylist_recipient(greylist_t * gl, VAR_INT_T *delayed, var_t *mailspec,
 	*expire = *created + *deadline;
 	*passed = 0;
 
-	if (!greylist_tuple_counted(mailspec, envrcpt))
-	{
-		++(*connections);
-	}
 
 	remaining_delay = *created + *delay - received;
 	if (remaining_delay < 0)
@@ -632,7 +636,7 @@ greylist_recipient(greylist_t * gl, VAR_INT_T *delayed, var_t *mailspec,
 		remaining_delay = 0;
 	}
 
-	remaining_attempts = *attempts - *connections;
+	remaining_attempts = *attempts - *connections + 1;
 	if (remaining_attempts < 0)
 	{
 		remaining_attempts = 0;
