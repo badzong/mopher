@@ -36,7 +36,7 @@ tarpit(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 
 	if (delay <= 0)
 	{
-		log_debug("tarpit: delay %d seconds", delay);
+		log_debug("tarpit: delay=%d", delay);
 		return ACL_NONE;
 	}
 
@@ -47,7 +47,7 @@ tarpit(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 		return ACL_ERROR;
 	}
 
-	log_message(LOG_ERR, mailspec, "tarpit: delay=%d seconds", delay);
+	log_message(LOG_ERR, mailspec, "tarpit: delay=%d", delay);
 
 	for (;;)
 	{

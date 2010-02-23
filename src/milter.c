@@ -542,7 +542,8 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 		goto exit;
 	}
 
-	log_message(LOG_ERR, mp->mp_table, "host=%s[%s]", hostname, addrstr);
+	log_message(LOG_ERR, mp->mp_table, "host=%s addr=%s", hostname,
+	    addrstr);
 
 	stat = milter_acl(MS_CONNECT, MSN_CONNECT, mp);
 
@@ -572,7 +573,7 @@ milter_unknown(SMFICTX * ctx, const char *cmd)
 		goto exit;
 	}
 
-	log_message(LOG_ERR, mp->mp_table, "unkown command=%s", cmd);
+	log_message(LOG_ERR, mp->mp_table, "command=%s", cmd);
 
 	stat = milter_acl(MS_UNKNOWN, MSN_UNKNOWN, mp);
 
@@ -602,7 +603,7 @@ milter_helo(SMFICTX * ctx, char *helostr)
 		goto exit;
 	}
 
-	log_message(LOG_ERR, mp->mp_table, "helo hostname=%s", helostr);
+	log_message(LOG_ERR, mp->mp_table, "name=%s", helostr);
 
 	stat = milter_acl(MS_HELO, MSN_HELO, mp);
 
@@ -641,7 +642,7 @@ milter_envfrom(SMFICTX * ctx, char **argv)
 		goto exit;
 	}
 
-	log_message(LOG_ERR, mp->mp_table, "envelope from=%s", argv[0]);
+	log_message(LOG_ERR, mp->mp_table, "envfrom=%s", argv[0]);
 
 	stat = milter_acl(MS_ENVFROM, MSN_ENVFROM, mp);
 
@@ -684,7 +685,7 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 		goto exit;
 	}
 
-	log_message(LOG_ERR, mp->mp_table, "envelope recipient=%s", argv[0]);
+	log_message(LOG_ERR, mp->mp_table, "envrcpt=%s", argv[0]);
 
 	stat = milter_acl(MS_ENVRCPT, MSN_ENVRCPT, mp);
 
@@ -792,7 +793,7 @@ milter_header(SMFICTX * ctx, char *headerf, char *headerv)
 	}
 
 	log_message(LOG_DEBUG, mp->mp_table,
-	    "header=\"%s: %s\", size=%d bytes", headerf, headerv, len);
+	    "header=%s, size=%d", headerf, len);
 
 	stat = milter_acl(MS_HEADER, MSN_HEADER, mp);
 
@@ -825,7 +826,7 @@ milter_eoh(SMFICTX * ctx)
 		return SMFIS_TEMPFAIL;
 	}
 
-	log_message(LOG_DEBUG, mp->mp_table, "total headers=%d bytes",
+	log_message(LOG_DEBUG, mp->mp_table, "headers=%d",
 	    mp->mp_headerlen);
 
 	stat = milter_acl(MS_EOH, MSN_EOH, mp);
@@ -861,7 +862,7 @@ milter_body(SMFICTX * ctx, unsigned char *body, size_t len)
 	mp->mp_bodylen += len;
 	mp->mp_body[mp->mp_bodylen] = 0;
 
-	log_message(LOG_DEBUG, mp->mp_table, "body part=%d bytes", len);
+	log_message(LOG_DEBUG, mp->mp_table, "body=%d", len);
 
 	stat = milter_acl(MS_BODY, MSN_BODY, mp);
 
@@ -901,7 +902,7 @@ milter_eom(SMFICTX * ctx)
 	}
 
 	log_message(LOG_ERR, mp->mp_table,
-	    "message size=%d bytes, headers=%d bytes, body=%d bytes",
+	    "message=%d, headers=%d, body=%d",
 	    message_size, mp->mp_headerlen, mp->mp_bodylen);
 
 	stat = milter_acl(MS_EOM, MSN_EOM, mp);

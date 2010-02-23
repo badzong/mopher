@@ -482,8 +482,8 @@ greylist_add(greylist_t *gl, var_t *mailspec, char *source, char *envfrom,
 	
 	var_delete(record);
 
-	log_message(LOG_ERR, mailspec, "greylist: status=defer, delay=%ld "
-	    "seconds, attempts=%ld", delay, attempts);
+	log_message(LOG_ERR, mailspec, "greylist: status=defer, delay=%ld, "
+	    "attempts=%ld", delay, attempts);
 
 	return 1;
 }
@@ -559,9 +559,9 @@ greylist_recipient(greylist_t * gl, VAR_INT_T *delayed, var_t *mailspec,
 	}
 
 	log_message(LOG_DEBUG, mailspec, "greylist: status=record, "
-	    "connections=%ld, deadline=%ld seconds, delay=%ld seconds, "
-	    "attempts=%ld, visa=%ld seconds, passed=%ld", *connections,
-	    *deadline, *delay, *attempts, *visa, *passed);
+	    "connections=%ld, deadline=%ld, delay=%ld, attempts=%ld, "
+	    "visa=%ld, passed=%ld", *connections, *deadline, *delay,
+	    *attempts, *visa, *passed);
 
 	/*
 	 * Record expired.
@@ -569,7 +569,7 @@ greylist_recipient(greylist_t * gl, VAR_INT_T *delayed, var_t *mailspec,
 	if (*expire < received)
 	{
 		log_message(LOG_DEBUG, mailspec,
-		    "greylist: status=expired, expired=%ld seconds ago",
+		    "greylist: status=expired, late=%ld",
 		    received - *expire);
 
 		var_delete(record);
@@ -610,7 +610,7 @@ greylist_recipient(greylist_t * gl, VAR_INT_T *delayed, var_t *mailspec,
 		}
 
 		log_message(LOG_ERR, mailspec, "greylist: status=passed, "
-		    "visa=%ld seconds, passed=%ld", *visa, *passed);
+		    "visa=%ld, passed=%ld", *visa, *passed);
 
 		/*
 		 * Set delayed for the first message (set only here!)
@@ -642,10 +642,9 @@ greylist_recipient(greylist_t * gl, VAR_INT_T *delayed, var_t *mailspec,
 		remaining_attempts = 0;
 	}
 
-	log_message(LOG_ERR, mailspec, "greylist: status=defer, delay=%ld "
-	    "seconds, remaining delay=%ld seconds, attempts=%ld, remaining "
-	    "attempts=%ld", *delay, remaining_delay, *attempts,
-	    remaining_attempts);
+	log_message(LOG_ERR, mailspec, "greylist: status=defer, delay=%ld, "
+	    "remaining=%ld, attempts=%ld, remaining=%ld", *delay,
+	    remaining_delay, *attempts, remaining_attempts);
 
 
 update:

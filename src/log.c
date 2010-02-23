@@ -134,7 +134,7 @@ log_message(int type, var_t *mailspec, char *f, ...)
 
 	if (strlen(f) == 0)
 	{
-		log_log(type, "[%lu] %s", *id, stage);
+		log_log(type, "%lu: %s", *id, stage);
 
 		return;
 	}
@@ -149,7 +149,7 @@ log_message(int type, var_t *mailspec, char *f, ...)
 
 	va_end(ap);
 
-	log_log(type, "[%lu] %s: %s", *id, stage, message);
+	log_log(type, "%lu: %s: %s", *id, stage, message);
 
 	return;
 }
