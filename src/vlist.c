@@ -204,3 +204,28 @@ vlist_record_get(var_t *record, char *key)
 
 	return NULL;
 }
+
+
+int
+vlist_record_keys_missing(var_t *record, var_t *table)
+{
+	ll_t *list = record->v_data;
+	ll_entry_t *pos;
+	var_t *item;
+
+	pos = LL_START(list);
+	while ((item = ll_next(list, &pos)))
+	{
+		if ((item->v_flags & VF_KEY) == 0)
+		{
+			continue;
+		}
+
+		if (vtable_lookup(table, item->v_name) == NULL)
+		{
+			return -1;
+		}
+	}
+
+	return 0;
+}

@@ -180,6 +180,13 @@ seen_update_record(dbt_t *dbt, char *prefix, var_t *mailspec, seen_add_t add)
 	char updated_key[KEYLEN];
 	char expire_key[KEYLEN];
 
+	if (vlist_record_keys_missing(dbt->dbt_scheme, mailspec))
+	{
+		log_debug("seen_update_record: required keys for "
+		    "dbt_db_get_from_table() missing");
+		return 0;
+	}
+
 	r  = snprintf(updated_key, sizeof updated_key, "%s_updated", prefix)
 	    >= sizeof updated_key;
 	r |= snprintf(expire_key, sizeof expire_key, "%s_expire", prefix)
@@ -199,7 +206,8 @@ seen_update_record(dbt_t *dbt, char *prefix, var_t *mailspec, seen_add_t add)
 
 	if (record == NULL)
 	{
-		log_info("seen_update_record: create new record ");
+		log_info("seen_update_record: create new record in %s",
+		    prefix);
 		return add(dbt, mailspec);
 	}
 

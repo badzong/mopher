@@ -68,6 +68,7 @@ log_logv(int type, char *f, va_list ap)
 	char buffer[BUFLEN];
 
 	if (type > log_level) {
+		errno = 0;
 		return;
 	}
 

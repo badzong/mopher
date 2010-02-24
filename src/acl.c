@@ -141,6 +141,8 @@ acl_action_create(acl_action_type_t type, void *data)
 		return NULL;
 	}
 
+	memset(aa, 0, sizeof (acl_action_t));
+
 	aa->aa_type = type;
 	aa->aa_data = data;
 
