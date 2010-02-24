@@ -56,7 +56,7 @@ VAR_INT_T	 cf_greylist_visa;
 char		*cf_acl_path;
 char		*cf_milter_socket;
 VAR_INT_T	 cf_milter_socket_timeout;
-VAR_INT_T	 cf_milter_socket_umask;
+VAR_INT_T	 cf_milter_socket_permissions;
 VAR_INT_T	 cf_milter_wait;
 VAR_INT_T	 cf_log_level;
 VAR_INT_T	 cf_acl_log_level;
@@ -85,7 +85,7 @@ static cf_symbol_t cf_symbols[] = {
 	{ "acl_log_level", &cf_acl_log_level },
 	{ "milter_socket", &cf_milter_socket },
 	{ "milter_socket_timeout", &cf_milter_socket_timeout },
-	{ "milter_socket_umask", &cf_milter_socket_umask },
+	{ "milter_socket_permissions", &cf_milter_socket_permissions },
 	{ "milter_wait", &cf_milter_wait },
 	{ "cleanup_interval", &cf_dbt_cleanup_interval },
 	{ "hostname", &cf_hostname },

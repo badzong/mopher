@@ -32,7 +32,7 @@ extern char		*cf_acl_path;
 extern VAR_INT_T	 cf_acl_log_level;
 extern char		*cf_milter_socket;
 extern VAR_INT_T	 cf_milter_socket_timeout;
-extern VAR_INT_T	 cf_milter_socket_umask;
+extern VAR_INT_T	 cf_milter_socket_permissions;
 extern VAR_INT_T	 cf_milter_wait;
 extern VAR_INT_T	 cf_log_level;
 extern VAR_INT_T	 cf_foreground;

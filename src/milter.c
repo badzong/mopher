@@ -1161,7 +1161,6 @@ milter(void)
 {
 	int8_t r;
 	struct smfiDesc smfid;
-	mode_t mask;
 
 	/*
 	 * Prepare smfiDesc
@@ -1184,10 +1183,6 @@ milter(void)
 	smfid.xxfi_eom = milter_eom;
 	smfid.xxfi_close = milter_close;
 
-	/*
-	 * Control socket permissions via umask
-	 */
-	mask = umask(cf_milter_socket_umask);
 
 	log_debug("milter: using socket: %s", cf_milter_socket);
 
@@ -1202,6 +1197,23 @@ milter(void)
 
 	if (smfi_register(smfid) == MI_FAILURE) {
 		log_die(EX_SOFTWARE, "milter: smfi_register failed");
+	}
+
+	/*
+	 * Set socket permissions
+	 */
+	if (strncmp(cf_milter_socket, "unix:", 5) == 0)
+	{
+		if (smfi_opensocket(1) != MI_SUCCESS)
+		{
+			log_die(EX_SOFTWARE, "milter: smfi_opensocket failed");
+		}
+
+		if (util_chmod(cf_milter_socket + 5,
+		    cf_milter_socket_permissions))
+		{
+			log_die(EX_SOFTWARE, "milter: util_chmod failed");
+		}
 	}
 
 	/*
@@ -1236,11 +1248,6 @@ milter(void)
 	{
 		log_error("milter: smfi_main returned with errors");
 	}
-
-	/*
-	 * Reset umask
-	 */
-	umask(mask);
 
 	milter_running = 0;
 

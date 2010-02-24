@@ -675,3 +675,38 @@ util_pidfile(char *path)
 
 	return;
 }
+
+
+int
+util_chmod(char *path, int mode_decimal)
+{
+	char user;
+	char group;
+	char others;
+	mode_t mode = 0;
+
+	user   = (mode_decimal / 100) & 7;
+	group  = ((mode_decimal / 10) % 10) & 7;
+	others = (mode_decimal % 10) & 7;
+
+	/*
+	 * FIXME: Is this translation neccessary?
+	 */
+	if (user   & 1<<2)	mode |= S_IRUSR;
+	if (user   & 1<<1)	mode |= S_IWUSR;
+	if (user   & 1<<0)	mode |= S_IXUSR;
+	if (group  & 1<<2)	mode |= S_IRGRP;
+	if (group  & 1<<1)	mode |= S_IWGRP;
+	if (group  & 1<<0)	mode |= S_IXGRP;
+	if (others & 1<<2)	mode |= S_IROTH;
+	if (others & 1<<1)	mode |= S_IWOTH;
+	if (others & 1<<0)	mode |= S_IXOTH;
+
+	if (chmod(path, mode))
+	{
+		log_error("util_chmod: chmod: %s", path);
+		return -1;
+	}
+
+	return 0;
+}
