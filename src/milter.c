@@ -358,6 +358,7 @@ static milter_priv_t *
 milter_common_init(SMFICTX *ctx, VAR_INT_T stage, char *stagename)
 {
 	milter_priv_t *mp = NULL;
+	char *queueid;
 
 	if (pthread_rwlock_rdlock(&milter_reload_lock))
 	{
@@ -411,6 +412,27 @@ milter_common_init(SMFICTX *ctx, VAR_INT_T stage, char *stagename)
 	{
 		log_error("milter_common_init: vtable_setv failed");
 		goto error;
+	}
+
+	/*
+	 * Try to lookup queueid if neccessary.
+	 */
+	if (vtable_lookup(mp->mp_table, "milter_queueid"))
+	{
+		return mp;
+	}
+
+	queueid = smfi_getsymval(ctx, "i");
+	if (queueid)
+	{
+		if (vtable_set_new(mp->mp_table, VT_STRING, "milter_queueid",
+		    queueid, VF_KEEPNAME | VF_COPYDATA))
+		{
+			log_error("milter_common_init: vtable_set_new failed");
+			goto error;
+		}
+
+		log_message(LOG_ERR, mp->mp_table, "queueid=%s", queueid);
 	}
 
 	return mp;
