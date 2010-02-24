@@ -103,7 +103,10 @@ main(int argc, char **argv)
 	 */
 	if (pidfile)
 	{
-		unlink(pidfile);
+		if (unlink(pidfile))
+		{
+			log_error("mopherd: unlink");
+		}
 	}
 
 	/*
