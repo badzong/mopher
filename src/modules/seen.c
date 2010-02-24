@@ -94,7 +94,13 @@ seen_add_relay(dbt_t *dbt, var_t *mailspec)
 	created = *received;
 	updated = *received;
 	expire   = cf_seen_expire_low;
-	count   = 1;
+
+	/*
+	 * Count gets a head start by 1. Because update is called when the
+	 * connection closes. Next time we use this tuple, we've seen this
+	 * host for the second time.
+	 */
+	count   = 2;
 
 	record = vlist_record(dbt->dbt_scheme, hostaddr, &created, &updated,
 	    &expire, &count);
@@ -137,8 +143,13 @@ seen_add_penpal(dbt_t *dbt, var_t *mailspec)
 
 	created = *received;
 	updated = *received;
-	expire   = cf_seen_expire_low;
-	count   = 1;
+	expire  = cf_seen_expire_low;
+	/*
+	 * Count gets a head start by 1. Because update is called when the
+	 * connection closes. Next time we use this tuple, we've seen this
+	 * penpal for the second time.
+	 */
+	count   = 2;
 
 	record = vlist_record(dbt->dbt_scheme, hostaddr, envfrom, envrcpt,
 	    &created, &updated, &expire, &count);
@@ -202,6 +213,8 @@ seen_update_record(dbt_t *dbt, char *prefix, var_t *mailspec, seen_add_t add)
 	updated	= vlist_record_get(record, updated_key);
 	expire	= vlist_record_get(record, expire_key);
 	count	= vlist_record_get(record, prefix);
+
+	log_message(LOG_ERR, mailspec, "seen: %s=%ld", prefix, *count);
 
 	if (updated == NULL || expire == NULL || count == NULL)
 	{
@@ -284,8 +297,6 @@ seen_update(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 		return -1;
 	}
 
-	log_debug("seen_update: relay seen %d times", count);
-
 	count = seen_update_record(&seen_penpal, "seen_penpal", mailspec,
 	    seen_add_penpal);
 
@@ -294,8 +305,6 @@ seen_update(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 		log_error("seen_update: seen_update_record failed");
 		return -1;
 	}
-
-	log_debug("seen_update: penpal seen %d times", count);
 
 	return 0;
 }
