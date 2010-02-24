@@ -1246,3 +1246,28 @@ milter(void)
 
 	return r;
 }
+
+
+int
+milter_set_reply(var_t *mailspec, char *code, char *xcode, char *message)
+{
+	SMFICTX *ctx;
+
+	ctx = vtable_get(mailspec, "milter_ctx");
+	if (ctx == NULL)
+	{
+		log_error("milter_set_reply: vtable_get failed");
+		return -1;
+	}
+
+	log_message(LOG_DEBUG, mailspec, "set_reply: rcode=%s xcode=%s "
+	    "message=%s\n", code, xcode, message);
+
+	if (smfi_setreply(ctx, code, xcode, message) != MI_SUCCESS)
+	{
+		log_error("milter_set_reply: smfi_set_reply failed");
+		return -1;
+	}
+
+	return 0;
+}

@@ -30,6 +30,9 @@ rcpt		rcpt
 body		body
 size		size
 delete		delete
+reply		reply
+xcode		xcode
+message		message
 
 eq		==
 ne		!=
@@ -94,6 +97,9 @@ comment		#.*$
 {body}		return BODY;
 {size}		return SIZE;
 {delete}	return DELETE;
+{reply}		return REPLY;
+{xcode}		return XCODE;
+{message}	return MESSAGE;
 
 {op}		return acl_text[0];
 {multiplier}	return acl_text[0];

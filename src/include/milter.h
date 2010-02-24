@@ -69,4 +69,5 @@ extern int milter_running;
 void milter_init(void);
 void milter_clear(void);
 int8_t milter(void);
+int milter_set_reply(var_t *mailspec, char *code, char *xcode, char *message);
 #endif /* _MILTER_H_ */

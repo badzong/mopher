@@ -38,10 +38,19 @@ struct acl_handler_stage
 typedef struct acl_handler_stage acl_handler_stage_t;
 
 
+struct acl_reply
+{
+	exp_t	*ar_code;
+	exp_t	*ar_xcode;
+	exp_t	*ar_message;
+};
+typedef struct acl_reply acl_reply_t;
+
 struct acl_action
 {
 	acl_action_type_t	 aa_type;
 	void			*aa_data;
+	acl_reply_t		*aa_reply;
 };
 typedef struct acl_action acl_action_t;
 
@@ -127,7 +136,11 @@ typedef struct acl_function acl_function_t;
  * Prototypes
  */
 
+acl_reply_t * acl_reply(exp_t *code);
+acl_reply_t * acl_reply_xcode(acl_reply_t *ar, exp_t *xcode);
+acl_reply_t * acl_reply_message(acl_reply_t *ar, exp_t *message);
 acl_action_t * acl_action(acl_action_type_t type, void *data);
+acl_action_t * acl_action_reply(acl_action_t *aa, acl_reply_t *ar);
 void acl_append(char *table, exp_t *exp, acl_action_t *aa);
 void acl_symbol_register(char *name, milter_stage_t stages,acl_symbol_callback_t callback, acl_symbol_flag_t flags);
 void acl_constant_register(var_type_t type, char *name, void *data, int flags);

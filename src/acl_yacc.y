@@ -12,7 +12,7 @@ int acl_lex(void);
 %token ID INTEGER FLOAT STRING ADDR VARIABLE CONTINUE XREJECT DISCARD ACCEPT
 %token TEMPFAIL GREYLIST VISA DEADLINE DELAY ATTEMPTS TARPIT SET LOG LEVEL 
 %token MULTIPLIER EQ NE LE GE AND OR DEFINE ADD HEADER VALUE INSERT CHANGE
-%token INDEX FROM ESMTP RCPT JUMP BODY SIZE DELETE
+%token INDEX FROM ESMTP RCPT JUMP BODY SIZE DELETE REPLY XCODE MESSAGE
 
 %union {
 	char			 c;
@@ -22,6 +22,7 @@ int acl_lex(void);
 	struct sockaddr_storage *ss;
 	exp_t 			*exp;
 	acl_action_t		*aa;
+	acl_reply_t		*ar;
 	greylist_t		*gl;
 	acl_log_t		*al;
 	msgmod_t		*mm;
@@ -33,7 +34,8 @@ int acl_lex(void);
 %type <d>	FLOAT
 %type <ss>	ADDR
 %type <exp>	exp function symbol constant set tarpit
-%type <aa>	action
+%type <aa>	action terminal
+%type <ar>	reply
 %type <gl>	greylist
 %type <al>	log
 %type <mm>	mod
@@ -57,7 +59,11 @@ statement	: ID exp action		{ acl_append($1, $2, $3); }
 		| DEFINE ID exp		{ exp_define($2, $3); }
 		;
 
-action		: CONTINUE		{ $$ = acl_action(ACL_CONTINUE, NULL); }
+action		: terminal
+		| terminal reply	{ $$ = acl_action_reply($1, $2); }
+		;
+
+terminal	: CONTINUE		{ $$ = acl_action(ACL_CONTINUE, NULL); }
 		| XREJECT		{ $$ = acl_action(ACL_REJECT, NULL); }
 		| DISCARD		{ $$ = acl_action(ACL_DISCARD, NULL); }
 		| ACCEPT		{ $$ = acl_action(ACL_ACCEPT, NULL); }
@@ -69,6 +75,13 @@ action		: CONTINUE		{ $$ = acl_action(ACL_CONTINUE, NULL); }
 		| mod			{ $$ = acl_action(ACL_MOD, $1); }
 		| jump			{ $$ = acl_action(ACL_JUMP, $1); }
 		;
+
+
+reply		: REPLY exp		{ $$ = acl_reply($2); }
+		| reply MESSAGE exp	{ $$ = acl_reply_message($1, $3); }
+		| reply XCODE exp	{ $$ = acl_reply_xcode($1, $3); }
+		;
+
 
 greylist	: greylist VISA exp	{ $$ = greylist_visa($1, $3); }
 		| greylist DEADLINE exp	{ $$ = greylist_deadline($1, $3); }

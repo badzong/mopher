@@ -48,6 +48,66 @@ static acl_log_level_t acl_log_levels[] = {
 
 
 static void
+acl_reply_delete(acl_reply_t *ar)
+{
+	/*
+	 * Expressions in struct acl_reply are freed through exp_garbage!
+	 */
+
+	free(ar);
+
+	return;
+}
+
+
+static acl_reply_t *
+acl_reply_create(void)
+{
+	acl_reply_t *ar;
+
+	ar = (acl_reply_t *) malloc(sizeof (acl_reply_t));
+	if (ar == NULL)
+	{
+		log_die(EX_OSERR, "acl_reply_create: malloc");
+	}
+
+	memset(ar, 0, sizeof (acl_reply_t));
+
+	return ar;
+}
+
+
+acl_reply_t *
+acl_reply(exp_t *code)
+{
+	acl_reply_t *ar;
+
+	ar = acl_reply_create();
+	ar->ar_code = code;
+
+	return ar;
+}
+
+
+acl_reply_t *
+acl_reply_xcode(acl_reply_t *ar, exp_t *xcode)
+{
+	ar->ar_xcode = xcode;
+
+	return ar;
+}
+
+
+acl_reply_t *
+acl_reply_message(acl_reply_t *ar, exp_t *message)
+{
+	ar->ar_message = message;
+
+	return ar;
+}
+
+
+static void
 acl_action_delete(acl_action_t *aa)
 {
 	acl_action_delete_t delete;
@@ -58,10 +118,16 @@ acl_action_delete(acl_action_t *aa)
 		delete(aa->aa_data);
 	}
 
+	if (aa->aa_reply)
+	{
+		acl_reply_delete(aa->aa_reply);
+	}
+
 	free(aa);
 
 	return;
 }
+
 
 static acl_action_t *
 acl_action_create(acl_action_type_t type, void *data)
@@ -91,6 +157,15 @@ acl_action(acl_action_type_t type, void *data)
 	{
 		log_die(EX_SOFTWARE, "acl_action: acl_action_create failed");
 	}
+
+	return aa;
+}
+
+
+acl_action_t *
+acl_action_reply(acl_action_t *aa, acl_reply_t *ar)
+{
+	aa->aa_reply = ar;
 
 	return aa;
 }
@@ -727,6 +802,176 @@ acl_update(milter_stage_t stage, acl_action_type_t action, var_t *mailspec)
 }
 	
 
+static char *
+acl_eval_reply(exp_t *exp, var_t *mailspec)
+{
+	var_t *v = NULL, *tmp = NULL;
+	char *result;
+
+	if (exp == NULL)
+	{
+		log_debug("acl_eval_reply: exp is null");
+		return NULL;
+	}
+
+	v = exp_eval(exp, mailspec);
+	if (v == NULL)
+	{
+		log_error("acl_eval_reply: exp_eval failed");
+		goto error;
+	}
+
+	if (v->v_data == NULL)
+	{
+		log_error("acl_eval_reply: expression returned no data");
+		goto error;
+	}
+
+	if (v->v_type != VT_STRING)
+	{
+		tmp = var_cast_copy(VT_STRING, v);
+		if (tmp == NULL)
+		{
+			log_error("acl_eval_reply: var_cast_copy failed");
+			goto error;
+		}
+
+		exp_free(v);
+
+		v = tmp;
+	}
+
+	result = strdup(v->v_data);
+	if (result == NULL)
+	{
+		log_error("acl_eval_reply: strdup");
+		goto error;
+	}
+
+	if (tmp)
+	{
+		var_delete(tmp);
+	}
+	else
+	{
+		exp_free(v);
+	}
+
+	return result;
+
+
+error:
+
+	if (tmp)
+	{
+		var_delete(tmp);
+	}
+	else if (v)
+	{
+		exp_free(v);
+	}
+
+	return NULL;
+}
+
+
+static int
+acl_set_reply(acl_reply_t *ar, acl_action_type_t type, var_t *mailspec)
+{
+	char *code = NULL;
+	char *xcode = NULL;
+	char *message = NULL;
+	int r = -1;
+
+	code = acl_eval_reply(ar->ar_code, mailspec);
+	if (code == NULL)
+	{
+		log_error("acl_set_reply: acl_eval_reply failed");
+		goto error;
+	}
+
+	switch(type)
+	{
+	case ACL_REJECT:
+		if (code[0] != '5')
+		{
+			log_error("acl_set_reply: bad code %s need 5XX", code);
+			goto error;
+		}
+		break;
+
+	case ACL_TEMPFAIL:
+	case ACL_GREYLIST:
+		if (code[0] != '4')
+		{
+			log_error("acl_set_reply: bad code %s need 4XX", code);
+			goto error;
+		}
+		break;
+
+	default:
+		log_debug("acl_set_reply: bad smtp reply code for action");
+		r = 0;
+
+		goto error;
+
+	}
+	
+	message = acl_eval_reply(ar->ar_message, mailspec);
+	if (message == NULL)
+	{
+		log_error("acl_set_reply: acl_eval_reply failed");
+		goto error;
+	}
+	
+	if (ar->ar_xcode)
+	{
+		xcode = acl_eval_reply(ar->ar_xcode, mailspec);
+		if (xcode == NULL)
+		{
+			log_error("acl_set_reply: acl_eval_reply failed");
+			goto error;
+		}
+	}
+
+	if (milter_set_reply(mailspec, code, xcode, message))
+	{
+		log_error("acl_set_reply: milter_set_reply failed");
+		goto error;
+	}
+
+	free(code);
+	free(message);
+
+	if (xcode)
+	{
+		free(xcode);
+	}
+
+	return 0;
+
+
+error:
+
+	if (code)
+	{
+		free(code);
+	}
+
+	if (message)
+	{
+		free(message);
+	}
+
+	if (xcode)
+	{
+		free(xcode);
+	}
+
+	return r;
+}
+
+
 acl_action_type_t
 acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 {
@@ -805,6 +1050,19 @@ acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 		{
 			log_error("acl: rule number %d in table \"%s\" failed",
 			    i, stagename);
+			return ACL_ERROR;
+		}
+
+		/*
+		 * Evaluate reply if set
+		 */
+		if (aa->aa_reply)
+		{
+			if (acl_set_reply(aa->aa_reply, response, mailspec))
+			{
+				log_error("acl: acl_set_reply failed");
+				return ACL_ERROR;
+			}
 		}
 
 		acl_update(stage, response, mailspec);

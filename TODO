@@ -6,6 +6,4 @@ MOPHER TODO
   * Log policy
   * User manual
   * Connection/Greylist limit
-  * Set return code
   * Regex support (POSIX vs. PCRE?)
-  * Log queue and message ids
