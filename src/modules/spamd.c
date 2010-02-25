@@ -60,6 +60,13 @@ spamd_header(var_t *attrs, char *header, int len)
 		return -1;
 	}
 
+	t = time(NULL);
+	if (t == -1)
+	{
+		log_error("spamd_header: time failed");
+		return -1;
+	}
+
 	if (gmtime_r(&t, &tm) == NULL) {
 		log_error("spamd_header: gmtime failed");
 		return -1;
