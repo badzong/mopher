@@ -1000,7 +1000,7 @@ acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 	pos = LL_START(rules);
 	for (i = 1; (ar = ll_next(rules, &pos)); ++i)
 	{
-		switch (exp_true(ar->ar_expression, mailspec))
+		switch (exp_is_true(ar->ar_expression, mailspec))
 		{
 		/*
 		 * Expression doesn't match

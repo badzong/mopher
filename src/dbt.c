@@ -334,6 +334,17 @@ dbt_db_load_into_table(dbt_t *dbt, var_t *table)
 	 	 */
 		data = record == NULL ? NULL : v->v_data;
 
+		/*
+		 * Do not overwrite existing data
+		 */
+		if (vtable_get(table, v->v_name))
+		{
+			log_error("dbt_db_load_into_table: key \"%s\" exists",
+			    v->v_name);
+
+			continue;
+		}
+
 		if (vtable_set_new(table, v->v_type, v->v_name, data, VF_COPY))
 		{
 			log_error("dbt_db_load_into_table: var_table_set_new "

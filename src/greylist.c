@@ -13,8 +13,9 @@ static dbt_t greylist_dbt;
  * Greylist symbols and db translation
  */
 static char *greylist_tuple_symbols[] = { "greylist_created",
-    "greylist_updated", "greylist_expire", "greylist_deadline",
-    "greylist_delay", "greylist_attempts", "greylist_visa", "greylist_passed",
+    "greylist_updated", "greylist_expire", "greylist_connections",
+    "greylist_deadline", "greylist_delay", "greylist_attempts",
+    "greylist_visa", "greylist_passed",
     NULL };
 
 
@@ -291,7 +292,7 @@ greylist_init(void)
 	for (p = greylist_tuple_symbols; *p; ++p)
 	{
 		acl_symbol_register(*p, MS_OFF_ENVFROM, greylist_tuple_symbol,
-		    AS_NOCACHE);
+		    AS_CACHE);
 	}
 
 	acl_symbol_register("greylist_listed", MS_OFF_ENVFROM, greylist_listed,
@@ -356,8 +357,9 @@ error:
 
 
 static int
-greylist_properties(greylist_t *gl, var_t *mailspec, VAR_INT_T *deadline,
-    VAR_INT_T *delay, VAR_INT_T *attempts, VAR_INT_T *visa)
+greylist_properties(greylist_t *gl, var_t *mailspec, VAR_INT_T *created,
+    VAR_INT_T *expire, VAR_INT_T *deadline, VAR_INT_T *delay,
+    VAR_INT_T *attempts, VAR_INT_T *visa)
 {
 	static const greylist_flag_t flag[] = { GLF_DEADLINE, GLF_DELAY,
 	    GLF_ATTEMPTS, GLF_VISA, GLF_NULL };
@@ -378,6 +380,11 @@ greylist_properties(greylist_t *gl, var_t *mailspec, VAR_INT_T *deadline,
 			log_error("greylist_properties: greylist_eval failed");
 			return -1;
 		}
+	}
+
+	if (gl->gl_flags & GLF_DEADLINE)
+	{
+		*expire = *created + *deadline;
 	}
 
 	return 0;
@@ -431,7 +438,9 @@ greylist_add(greylist_t *gl, var_t *mailspec, char *source, char *envfrom,
     char *envrcpt, VAR_INT_T received)
 {
 	var_t *record;
-	VAR_INT_T expire;
+	VAR_INT_T created = received;
+	VAR_INT_T updated = received;
+	VAR_INT_T expire = 0;
 	VAR_INT_T connections = 1;
 	VAR_INT_T deadline = 0;
 	VAR_INT_T delay = 0;
@@ -439,8 +448,8 @@ greylist_add(greylist_t *gl, var_t *mailspec, char *source, char *envfrom,
 	VAR_INT_T visa = 0;
 	VAR_INT_T passed = 0;
 	
-	if (greylist_properties(gl, mailspec, &deadline, &delay, &attempts,
-	    &visa))
+	if (greylist_properties(gl, mailspec, &created, &expire, &deadline,
+	    &delay, &attempts, &visa))
 	{
 		log_error("greylist_add: greylist_properties failed");
 		return -1;
@@ -464,7 +473,7 @@ greylist_add(greylist_t *gl, var_t *mailspec, char *source, char *envfrom,
 	 * Create and store record
 	 */
 	record = vlist_record(greylist_dbt.dbt_scheme, source, envfrom,
-	    envrcpt, &received, &received, &expire, &connections, &deadline,
+	    envrcpt, &created, &updated, &expire, &connections, &deadline,
 	    &delay, &attempts, &visa, &passed);
 
 	if (record == NULL)
@@ -548,7 +557,7 @@ greylist_recipient(greylist_t * gl, VAR_INT_T *delayed, var_t *mailspec,
 	}
 
 	/*
-	 * Get record properties
+	 * Dereference record
 	 */
 	if (vlist_dereference(record, NULL, NULL, NULL, &created, &updated,
 	    &expire, &connections, &deadline, &delay, &attempts, &visa,
@@ -580,7 +589,8 @@ greylist_recipient(greylist_t * gl, VAR_INT_T *delayed, var_t *mailspec,
 	/*
 	 * Update requested properties
 	 */
-	if (greylist_properties(gl, mailspec, deadline, delay, attempts, visa))
+	if (greylist_properties(gl, mailspec, created, expire, deadline,
+	    delay, attempts, visa))
 	{
 		log_error("greylist_recipient: greylist_properties failed");
 		goto error;

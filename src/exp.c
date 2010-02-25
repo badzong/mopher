@@ -14,7 +14,12 @@
 static sht_t *exp_defs;
 static ll_t *exp_garbage;
 
+static VAR_INT_T exp_true_int  = 1;
+static VAR_INT_T exp_false_int = 0;
+
 var_t exp_empty = { VT_INT, NULL, NULL, VF_KEEP };
+var_t exp_true = { VT_INT, NULL, &exp_true_int, VF_KEEP };
+var_t exp_false = { VT_INT, NULL, &exp_false_int, VF_KEEP };
 
 
 static void
@@ -859,6 +864,26 @@ exp_math_addr(int op, var_t *left, var_t *right)
 
 
 var_t *
+exp_is_null(var_t *v)
+{
+	var_t *result = &exp_false;
+
+	if (v == NULL)
+	{
+		result = &exp_true;
+	}
+	else if (v->v_data == NULL)
+	{
+		result = &exp_true;
+	}
+
+	exp_free(v);
+
+	return result;
+}
+
+
+var_t *
 exp_eval_operation(exp_t *exp, var_t *mailspec)
 {
 	var_t *left = NULL, *right = NULL, *copy;
@@ -876,6 +901,22 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 	}
 
 	left = exp_eval(eo->eo_operand[0], mailspec);
+
+	/*
+	 * Hack: IS_NULL operator
+	 */
+	if (eo->eo_operator == IS_NULL)
+	{
+		result = exp_is_null(left);
+
+		if (left)
+		{
+			exp_free(left);
+		}
+
+		return result;
+	}
+
 	if (left == NULL)
 	{
 		log_error("exp_eval_operation: exp_eval for left-hand value "
@@ -1003,7 +1044,7 @@ exp_eval(exp_t *exp, var_t *mailspec)
 
 
 int
-exp_true(exp_t *exp, var_t *mailspec)
+exp_is_true(exp_t *exp, var_t *mailspec)
 {
 	var_t *v;
 	int r;

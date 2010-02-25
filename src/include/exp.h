@@ -41,6 +41,9 @@ typedef struct exp_function exp_function_t;
 
 
 extern var_t exp_empty;
+extern var_t exp_true;
+extern var_t exp_false;
+
 #define EXP_EMPTY &exp_empty;
 
 /*
@@ -63,9 +66,11 @@ var_t * exp_eval_function(exp_t *exp, var_t *mailspec);
 var_t * exp_math_int(int op, var_t *left, var_t *right);
 var_t * exp_math_float(int op, var_t *left, var_t *right);
 var_t * exp_math_string(int op, var_t *left, var_t *right);
+var_t * exp_math_addr(int op, var_t *left, var_t *right);
+var_t * exp_is_null(var_t *v);
 var_t * exp_eval_operation(exp_t *exp, var_t *mailspec);
 var_t * exp_eval(exp_t *exp, var_t *mailspec);
-int exp_true(exp_t *exp, var_t *mailspec);
+int exp_is_true(exp_t *exp, var_t *mailspec);
 void exp_init(void);
 void exp_clear(void);
 #endif /* _EXP_H_ */
