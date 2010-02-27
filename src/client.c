@@ -499,7 +499,7 @@ client_init()
 	/*
 	 * Start thread
 	 */
-	if (util_thread_create(&client_thread, client_main))
+	if (util_thread_create(&client_thread, client_main, NULL))
 	{
 		log_error("client_init: util_thread_create failed");
 		return -1;

@@ -827,7 +827,7 @@ dbt_open_databases(void)
 	/*
 	 * Start table janitor thread
 	 */
-	if (util_thread_create(&dbt_janitor_thread, dbt_janitor))
+	if (util_thread_create(&dbt_janitor_thread, dbt_janitor, NULL))
 	{
 		log_die(EX_SOFTWARE, "dbt_init: util_thread_create failed");
 	}

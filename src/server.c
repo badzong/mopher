@@ -326,7 +326,7 @@ server_init()
 	/*
 	 * Start server thread
 	 */
-	if (util_thread_create(&server_thread, server_main))
+	if (util_thread_create(&server_thread, server_main, NULL))
 	{
 		log_error("server_init: util_thread_create failed");
 		return -1;

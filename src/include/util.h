@@ -6,6 +6,13 @@
 #define UTIL_MIN(a,b) (a < b ? a : b)
 #define UTIL_MAX(a,b) (a > b ? a : b)
 
+struct util_thread
+{
+	void *(*ut_callback)(void *);
+	void   *ut_arg;
+};
+typedef struct util_thread util_thread_t;
+
 /*
  * Prototypes
  */
@@ -21,7 +28,7 @@ int util_addrcmp(struct sockaddr_storage *ss1, struct sockaddr_storage *ss2);
 int util_block_signals(int sig, ...);
 int util_unblock_signals(int sig, ...);
 int util_signal(int signum, void (*handler)(int));
-int util_thread_create(pthread_t *thread, void *callback);
+int util_thread_create(pthread_t *thread, void *callback, void *arg);
 void util_thread_join(pthread_t thread);
 int util_now(struct timespec *ts);
 int util_concat(char *buffer, int size, ...);

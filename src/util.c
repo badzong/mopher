@@ -409,9 +409,13 @@ util_signal(int signum, void (*handler)(int))
 
 
 static void *
-util_thread_init(void *arg)
+util_thread_init(void *p)
 {
-	void *(*callback)(void *) = arg;
+	util_thread_t *ut = p;
+	void *(*callback)(void *) = ut->ut_callback;
+	void *arg = ut->ut_arg;
+
+	free(ut);
 
 	if (util_block_signals(SIGHUP, SIGTERM, SIGINT, 0))
 	{
@@ -419,14 +423,25 @@ util_thread_init(void *arg)
 		    "util_thread_init: util_block_signal failed");
 	}
 
-	return callback(NULL);
+	return callback(arg);
 }
 
 
 int
-util_thread_create(pthread_t *thread, void *callback)
+util_thread_create(pthread_t *thread, void *callback, void *arg)
 {
 	pthread_attr_t attr;
+	util_thread_t *ut;
+
+	ut = (util_thread_t *) malloc(sizeof (util_thread_t));
+	if (ut == NULL)
+	{
+		log_error("util_thread_create: malloc");
+		return -1;
+	}
+	
+	ut->ut_callback = callback;
+	ut->ut_arg = arg;
 
 	if (pthread_attr_init(&attr))
 	{
@@ -440,7 +455,7 @@ util_thread_create(pthread_t *thread, void *callback)
 		return -1;
 	}
 
-	if (pthread_create(thread, NULL, util_thread_init, callback))
+	if (pthread_create(thread, NULL, util_thread_init, &ut))
 	{
 		log_error("util_thread_create: pthread_create");
 		return -1;
