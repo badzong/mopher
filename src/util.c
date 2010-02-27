@@ -455,7 +455,7 @@ util_thread_create(pthread_t *thread, void *callback, void *arg)
 		return -1;
 	}
 
-	if (pthread_create(thread, NULL, util_thread_init, &ut))
+	if (pthread_create(thread, NULL, util_thread_init, ut))
 	{
 		log_error("util_thread_create: pthread_create");
 		return -1;
