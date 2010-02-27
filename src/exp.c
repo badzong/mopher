@@ -529,8 +529,6 @@ exp_eval_function(exp_t *exp, var_t *mailspec)
 		goto error;
 	}
 
-	v->v_flags |= VF_EXP_FREE;
-
 error:
 	if (single)
 	{
@@ -663,7 +661,6 @@ exp_math_int(int op, var_t *left, var_t *right)
 	case '/':	x = *l / *r;	break;
 	case '<':	x = *l < *r;	break;
 	case '>':	x = *l > *r;	break;
-	case '!':	x = ! *l;	break;
 	case EQ:	x = *l == *r;	break;
 	case NE:	x = *l != *r;	break;
 	case LE:	x = *l <= *r;	break;
@@ -714,7 +711,6 @@ exp_math_float(int op, var_t *left, var_t *right)
 
 	case '<':	i = *l < *r;	break;
 	case '>':	i = *l > *r;	break;
-	case '!':	i = ! *l;	break;
 	case EQ:	i = *l == *r;	break;
 	case NE:	i = *l != *r;	break;
 	case LE:	i = *l <= *r;	break;
@@ -883,6 +879,23 @@ exp_is_null(var_t *v)
 }
 
 
+static var_t *
+exp_not(var_t *v)
+{
+	var_t *r;
+	if (var_true(v))
+	{
+		r = EXP_FALSE;
+	}
+
+	r = EXP_TRUE;
+
+	exp_free(v);
+
+	return r;
+}
+
+
 var_t *
 exp_eval_operation(exp_t *exp, var_t *mailspec)
 {
@@ -901,6 +914,14 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 	}
 
 	left = exp_eval(eo->eo_operand[0], mailspec);
+
+	/*
+	 * ! operator
+	 */
+	if (eo->eo_operator == '!')
+	{
+		return exp_not(left);
+	}
 
 	/*
 	 * Hack: IS_NULL operator

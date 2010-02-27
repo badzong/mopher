@@ -13,7 +13,7 @@ string_strlen(int argc, void **argv)
 
 	len = strlen(argv[0]);
 
-	return var_create(VT_INT, NULL, &len, VF_COPYDATA);
+	return var_create(VT_INT, NULL, &len, VF_COPYDATA | VF_EXP_FREE);
 }
 
 
@@ -24,7 +24,7 @@ string_strcmp(int argc, void **argv)
 
 	cmp = strcmp(argv[0], argv[1]);
 
-	return var_create(VT_INT, NULL, &cmp, VF_COPYDATA);
+	return var_create(VT_INT, NULL, &cmp, VF_COPYDATA | VF_EXP_FREE);
 }
 
 
@@ -39,7 +39,7 @@ string_mailaddr(int argc, void **argv)
 		return NULL;
 	}
 
-	return var_create(VT_STRING, NULL, buffer, VF_COPYDATA);
+	return var_create(VT_STRING, NULL, buffer, VF_COPYDATA | VF_EXP_FREE);
 }
 
 

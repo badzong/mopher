@@ -44,7 +44,9 @@ extern var_t exp_empty;
 extern var_t exp_true;
 extern var_t exp_false;
 
-#define EXP_EMPTY &exp_empty;
+#define EXP_EMPTY &exp_empty
+#define EXP_TRUE &exp_true
+#define EXP_FALSE &exp_false
 
 /*
  * Prototypes

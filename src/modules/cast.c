@@ -9,7 +9,7 @@ static var_type_t cast_values[] = { VT_INT, VT_FLOAT, VT_STRING, VT_NULL };
 static var_t *
 cast(int argc, ll_t *args)
 {
-	var_t *type, *var;
+	var_t *type, *var, *copy;
 	VAR_INT_T *vt;
 	ll_entry_t *pos;
 
@@ -35,7 +35,14 @@ cast(int argc, ll_t *args)
 
 	vt = type->v_data;
 
-	return var_cast_copy(*vt, var);
+	copy = var_cast_copy(*vt, var);
+
+	if (copy)
+	{
+		copy->v_flags |= VF_EXP_FREE;
+	}
+
+	return copy;
 
 
 error:
