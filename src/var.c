@@ -626,7 +626,7 @@ var_true(const var_t * v)
 	ht_t *ht;
 	struct sockaddr_storage ss, *pss;
 
-	if (v->v_data == 0)
+	if (v->v_data == NULL)
 	{
 		return 0;
 	}

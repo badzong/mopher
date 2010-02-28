@@ -887,8 +887,10 @@ exp_not(var_t *v)
 	{
 		r = EXP_FALSE;
 	}
-
-	r = EXP_TRUE;
+	else
+	{
+		r = EXP_TRUE;
+	}
 
 	exp_free(v);
 
