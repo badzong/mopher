@@ -4,7 +4,8 @@
 
 #include <mopher.h>
 
-sht_t *regex_compiled;
+static sht_t		*regex_compiled;
+static pthread_mutex_t	 regex_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 static void
@@ -40,10 +41,21 @@ regex_create(char *pattern, int flags)
 		goto error;
 	}
 
+	if (pthread_mutex_lock(&regex_mutex))
+	{
+		log_error("regex_create: pthread_mutex_lock");
+		goto error;
+	}
+
 	if (sht_insert(regex_compiled, pattern, preg))
 	{
 		log_error("regex_create: sht_insert failed");
 		goto error;
+	}
+
+	if (pthread_mutex_unlock(&regex_mutex))
+	{
+		log_error("regex_create: pthread_mutex_unlock");
 	}
 
 	return preg;
