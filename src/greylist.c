@@ -22,28 +22,14 @@ static char *greylist_tuple_symbols[] = { "greylist_created",
 int
 greylist_source(char *buffer, int size, char *hostname, char *hostaddr)
 {
-	char unknown[42];
 	char *p;
 	int len;
-
-	/*
-	 * If hostaddr has no PTR hostname is set to [hostaddr]
-	 */
-	if (snprintf(unknown, sizeof unknown, "[%s]", hostaddr) >=
-	    sizeof unknown)
-	{
-		/*
-		 * This error is not fatal
-		 */
-		log_error("greylist_source: buffer exhausted");
-		unknown[0] = 0;
-	}
 
 	/*
 	 * Save only the domainname in the greylist tuple. Useful for
 	 * greylisting mail farms.
 	 */
-	if (strcmp(hostname, unknown) == 0)
+	if (strncmp(hostname + 1, hostaddr, strlen(hostaddr)) == 0)
 	{
 		p = hostaddr;
 	}
