@@ -339,7 +339,7 @@ dbt_db_load_into_table(dbt_t *dbt, var_t *table)
 		 */
 		if (vtable_get(table, v->v_name))
 		{
-			log_error("dbt_db_load_into_table: key \"%s\" exists",
+			log_debug("dbt_db_load_into_table: key \"%s\" exists",
 			    v->v_name);
 
 			continue;
