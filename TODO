@@ -2,11 +2,9 @@ MOPHER TODO
 ===========
 
   * cf_yacc.y and acl_yacc.y should both support tables
-  * Log policy
   * User manual
   * Connection/Greylist limit
-  * Regex support (POSIX vs. PCRE?)
   * Stale PID file
   * MX Sync
   * DCC support
-  * Greylist deadline dynamic
+  * seen.c Bug seen_update() bei multi recipient messages
