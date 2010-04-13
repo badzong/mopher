@@ -24,6 +24,7 @@
 #define MSN_EOH		"eoh"
 #define MSN_BODY	"body"
 #define MSN_EOM		"eom"
+#define MSN_ABORT	"abort"
 #define MSN_CLOSE	"close"
 
 #define BUCKETS 127
@@ -300,25 +301,68 @@ milter_acl(milter_stage_t stage, char *stagename, milter_priv_t * mp)
 	return SMFIS_TEMPFAIL;
 }
 
+
+static void
+milter_priv_clear_msg(milter_priv_t *mp)
+{
+	milter_symbol_t *ms;
+	milter_stage_t stages;
+
+	stages = MS_CONNECT | MS_UNKNOWN | MS_HELO;
+
+	for (ms = milter_symbols; ms->ms_name; ++ms)
+	{
+		if (ms->ms_stage | stages)
+		{
+			continue;
+		}
+
+		vtable_remove(mp->mp_table, ms->ms_name);
+	}
+	
+	if (mp->mp_header)
+	{
+		free(mp->mp_header);
+		mp->mp_header = NULL;
+	}
+
+	if (mp->mp_body)
+	{
+		free(mp->mp_body);
+		mp->mp_body = NULL;
+	}
+
+	mp->mp_recipients = 0;
+	mp->mp_headerlen  = 0;
+	mp->mp_bodylen    = 0;
+
+	return;
+}
+
+
 static void
 milter_priv_delete(milter_priv_t * mp)
 {
-	if (mp->mp_table) {
-		var_delete(mp->mp_table);
-	}
-
-	if (mp->mp_header) {
+	if (mp->mp_header)
+	{
 		free(mp->mp_header);
 	}
 
-	if (mp->mp_body) {
+	if (mp->mp_body)
+	{
 		free(mp->mp_body);
+	}
+
+	if (mp->mp_table)
+	{
+		var_delete(mp->mp_table);
 	}
 
 	free(mp);
 
 	return;
 }
+
 
 static milter_priv_t *
 milter_priv_create(void)
@@ -738,6 +782,7 @@ exit:
 	return stat;
 }
 
+
 static sfsistat
 milter_data(SMFICTX * ctx)
 {
@@ -932,7 +977,34 @@ milter_eom(SMFICTX * ctx)
 exit:
 	milter_common_fini(ctx, mp, MS_EOM);
 
+	milter_priv_clear_msg(mp);
+
 	return stat;
+}
+
+
+static sfsistat
+milter_abort(SMFICTX * ctx)
+{
+	milter_priv_t *mp;
+
+	mp = milter_common_init(ctx, MS_ABORT, MSN_ABORT);
+	if (mp == NULL)
+	{
+		log_error("milter_abort: milter_common_init failed");
+		goto exit;
+	}
+
+	log_message(LOG_DEBUG, mp->mp_table, "");
+
+	milter_acl(MS_ABORT, MSN_ABORT, mp);
+
+exit:
+	milter_common_fini(ctx, mp, MS_ABORT);
+
+	milter_priv_clear_msg(mp);
+
+	return SMFIS_CONTINUE;
 }
 
 
@@ -1167,21 +1239,23 @@ milter(void)
 	 */
 	bzero(&smfid, sizeof(struct smfiDesc));
 
-	smfid.xxfi_name = "libmilter";
-	smfid.xxfi_version = SMFI_VERSION;
-	smfid.xxfi_flags = SMFIF_ADDHDRS | SMFIF_CHGHDRS | SMFIF_CHGFROM |
-	    SMFIF_ADDRCPT | SMFIF_ADDRCPT_PAR | SMFIF_DELRCPT | SMFIF_CHGBODY;
-	smfid.xxfi_connect = milter_connect;
-	smfid.xxfi_unknown = milter_unknown;
-	smfid.xxfi_helo = milter_helo;
-	smfid.xxfi_envfrom = milter_envfrom;
-	smfid.xxfi_envrcpt = milter_envrcpt;
-	smfid.xxfi_data = milter_data;
-	smfid.xxfi_header = milter_header;
-	smfid.xxfi_eoh = milter_eoh;
-	smfid.xxfi_body = milter_body;
-	smfid.xxfi_eom = milter_eom;
-	smfid.xxfi_close = milter_close;
+	smfid.xxfi_name		= "libmilter";
+	smfid.xxfi_version	= SMFI_VERSION;
+	smfid.xxfi_flags	= SMFIF_ADDHDRS | SMFIF_CHGHDRS |
+	    SMFIF_CHGFROM | SMFIF_ADDRCPT | SMFIF_ADDRCPT_PAR | SMFIF_DELRCPT |
+	    SMFIF_CHGBODY;
+	smfid.xxfi_connect	= milter_connect;
+	smfid.xxfi_unknown	= milter_unknown;
+	smfid.xxfi_helo		= milter_helo;
+	smfid.xxfi_envfrom	= milter_envfrom;
+	smfid.xxfi_envrcpt	= milter_envrcpt;
+	smfid.xxfi_data		= milter_data;
+	smfid.xxfi_header	= milter_header;
+	smfid.xxfi_eoh		= milter_eoh;
+	smfid.xxfi_body		= milter_body;
+	smfid.xxfi_eom		= milter_eom;
+	smfid.xxfi_abort	= milter_abort;
+	smfid.xxfi_close	= milter_close;
 
 
 	log_debug("milter: using socket: %s", cf_milter_socket);

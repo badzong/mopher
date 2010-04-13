@@ -133,6 +133,42 @@ vtable_set(var_t *table, var_t *v)
 }
 
 
+void
+vtable_remove(var_t *table, char *name)
+{
+	ht_t *ht = table->v_data;
+	var_t *v;
+
+	v = vtable_lookup(table, name);
+	if (v == NULL)
+	{
+		log_debug("vtable_remove: \"%s\" not found", name);
+		return;
+	}
+
+	ht_remove(ht, v);
+
+	return;
+}
+
+
+void
+vtable_remv(var_t *table, ...)
+{
+	va_list ap;
+	char *name;
+
+	va_start(ap, table);
+
+	while ((name = va_arg(ap, char *)))
+	{
+		vtable_remove(table, name);
+	}
+
+	return;
+}
+
+
 int
 vtable_set_new(var_t *table, var_type_t type, char *name, void *data, int flags)
 {
