@@ -1,12 +1,38 @@
-MOPHER README
-
-
 Table of contents
 =================
 
+  * Preamble
   * Installation
   * Bug reports
   * License
+
+
+Preamble
+========
+
+I wrote mopher between 2009 and 2010 as a replacement for milter-greylist. It
+ran quite stable over a year without any code changes. Because I never found
+the time to write usable documentation I didn't release it publicly. Most of
+the documentation is still missing. Feel free to contribute.
+
+
+Design goals:
+
+  * Lightweight and modular design
+  * Firewall like configuration
+  * Fully support libmilter features (early 2010)
+  * Flexible greylisting (time, retry count)
+  * Filter spam efficiently
+
+
+Features:
+
+  * Greylisting
+  * Tarpitting
+  * Spamassassin
+  * RBL
+  * SQLite
+  * MySQL
 
 
 Installation
@@ -15,6 +41,13 @@ Installation
   ./configure
   make
   make install
+
+
+Configuration
+=============
+
+Configuration examples can be found in the config folder.
+For the gory details on access control see src/acl_yacc.y
 
 
 Bug reports
