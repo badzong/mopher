@@ -1,4 +1,7 @@
 config.status
 config.log
+Makefile
+Makefile.common
+config.h
 *.o
 *.so
