@@ -12,4 +12,18 @@ Table of contents
 Installation
 ============
 
+  ./configure
+  make
+  make install
 
+
+Bug reports
+===========
+
+Please send bug reports to: mopher@badzong.com
+
+
+License
+=======
+
+See LICENSE
