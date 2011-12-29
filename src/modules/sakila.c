@@ -4,7 +4,6 @@
 
 #include <string.h>
 #include <malloc.h>
-#include <db.h>
 #include <errno.h>
 #include <mysql/mysql.h>
 

@@ -1,6 +1,5 @@
 #include <string.h>
 #include <malloc.h>
-#include <db.h>
 #include <errno.h>
 
 #include <mopher.h>
