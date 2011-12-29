@@ -31,7 +31,7 @@ Features:
   * Tarpitting
   * Spamassassin
   * RBL
-  * SQLite
+  * BerkelyDB
   * MySQL
 
 
