@@ -7,4 +7,4 @@ MOPHER TODO
   * Stale PID file
   * MX Sync
   * DCC support
-  * seen.c Bug seen_update() bei multi recipient messages
+  * seen.c Bug seen_update() multi recipient messages
