@@ -80,9 +80,11 @@ Why should I join mopher development?
 Installation
 ------------
 
-  ./configure
-  make
-  make install
+```
+# ./configure
+# make
+# make install
+```
 
 
 Configuration
