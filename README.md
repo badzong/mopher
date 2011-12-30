@@ -56,25 +56,25 @@ What does mopher mean?
   milter + gopher = mopher
 ```
 
-  Other cool mail filter names have already been taken. At least it's unique.
+> Other cool mail filter names have already been taken. At least it's unique.
 
 
 Why should I use it?
 
-  To get rid of spam in a very flexible, firewally and lightweight way.
+> To get rid of spam in a very flexible, firewally and lightweight way.
 
 
 I opperate this huge mail infrastucture. Is mopher scalable?
 
-  Highly. It has a built-in memory database similar to milter-greylists and
-  supports BerkeleyDB and MySQL tables (I'll write a PostgreSQL driver soon).
+> Highly. It has a built-in memory database similar to milter-greylists and
+> supports BerkeleyDB and MySQL tables (I'll write a PostgreSQL driver soon).
 
 
 Why should I join mopher development?
 
-  Because it's really easy to create new custom modules for mopher. Don't let
-  the missing documentation scare you! Maybe have a look at
-  src/modules/string.c
+> Because it's really easy to create new custom modules for mopher. Don't let
+> the missing documentation scare you! Maybe have a look at
+> src/modules/string.c
 
 
 Installation
