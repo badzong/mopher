@@ -18,7 +18,7 @@ detailed list of packages you need to install:
   * libmysqlclient-dev (Optional: MySQL support)
 
 ```
-  sh> apt-get install gcc make flex bison libmilter-dev libdb4.8-dev libmysqlclient-dev
+# apt-get install gcc make flex bison libmilter-dev libdb4.8-dev libmysqlclient-dev
 ```
 
 
@@ -72,6 +72,7 @@ Configuration
 Here's a basic configuration file using BerkeleyDB gerylist tables.
 
 > /usr/local/etc/mopher/mopherd.conf
+
 ```
 mopherd_user    = "mopherd"
 mopherd_group   = "postfix"
@@ -94,6 +95,7 @@ table[greylist] = {
 Simple mail.acl using greylisting.
 
 > /usr/local/etc/mopher/mail.acl
+
 ```
 connect log milter_id + ":: new connection: hostname=" + milter_hostname + " (" + milter_hostaddr + ")"
 connect tarpit 10s
