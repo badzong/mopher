@@ -11,22 +11,22 @@
 #define KEYLEN 128
 
 
-typedef int (*seen_add_t)(dbt_t *dbt, var_t *mailspec);
+typedef int (*counter_add_t)(dbt_t *dbt, var_t *mailspec);
 
-static dbt_t seen_relay;
-static dbt_t seen_penpal;
+static dbt_t counter_relay;
+static dbt_t counter_penpal;
 
 
 static int
-seen_lookup(milter_stage_t stage, char *name, var_t *mailspec)
+counter_lookup(milter_stage_t stage, char *name, var_t *mailspec)
 {
 	dbt_t *dbt;
 	VAR_INT_T *recipients;
-	char prefix[] = "seen_penpal";
+	char prefix[] = "counter_penpal";
 
 	if (strncmp(name, prefix, sizeof prefix - 1) == 0)
 	{
-		dbt = &seen_penpal;
+		dbt = &counter_penpal;
 
 		/*
 		 * Penpal symbols are ambiguous for multi recipient messages
@@ -40,7 +40,7 @@ seen_lookup(milter_stage_t stage, char *name, var_t *mailspec)
 		recipients = vtable_get(mailspec, "milter_recipients");
 		if (recipients == NULL)
 		{
-			log_error("seen_lookup: vtable_get failed");
+			log_error("counter_lookup: vtable_get failed");
 			return -1;
 		}
 
@@ -49,18 +49,18 @@ seen_lookup(milter_stage_t stage, char *name, var_t *mailspec)
 			goto load;
 		}
 
-		log_error("seen_lookup: message has %ld recipients: symbol "
+		log_error("counter_lookup: message has %ld recipients: symbol "
 		    "\"%s\" ambiguous", *recipients, name);
 
 		if (vtable_set_new(mailspec, VT_INT, name, NULL, VF_COPYNAME))
 		{
-			log_error("seen_lookup: vtable_set_new failed");
+			log_error("counter_lookup: vtable_set_new failed");
 			return -1;
 		}
 	}
 	else
 	{
-		dbt = &seen_relay;
+		dbt = &counter_relay;
 	}
 
 
@@ -68,7 +68,7 @@ load:
 
 	if (dbt_db_load_into_table(dbt, mailspec))
 	{
-		log_error( "seen_lookup: dbt_db_load_into_table failed");
+		log_error( "counter_lookup: dbt_db_load_into_table failed");
 		return -1;
 	}
 
@@ -77,7 +77,7 @@ load:
 
 
 static int
-seen_add_relay(dbt_t *dbt, var_t *mailspec)
+counter_add_relay(dbt_t *dbt, var_t *mailspec)
 {
 	var_t *record;
 	void *hostaddr;
@@ -87,17 +87,17 @@ seen_add_relay(dbt_t *dbt, var_t *mailspec)
 	if (vtable_dereference(mailspec, "milter_hostaddr", &hostaddr,
 	    "milter_received", &received, NULL) != 2)
 	{
-		log_error("seen_add_penpal: vtable_dereference failed");
+		log_error("counter_add_penpal: vtable_dereference failed");
 		return -1;
 	}
 
 	created = *received;
 	updated = *received;
-	expire   = cf_seen_expire_low;
+	expire   = cf_counter_expire_low;
 
 	/*
 	 * Count gets a head start by 1. Because update is called when the
-	 * connection closes. Next time we use this tuple, we've seen this
+	 * connection closes. Next time we use this tuple, we've counter this
 	 * host for the second time.
 	 */
 	count   = 2;
@@ -106,13 +106,13 @@ seen_add_relay(dbt_t *dbt, var_t *mailspec)
 	    &expire, &count);
 
 	if (record == NULL) {
-		log_warning("seen_add_penpal: vlist_record failed");
+		log_warning("counter_add_penpal: vlist_record failed");
 		return -1;
 	}
 
 	if (dbt_db_set(dbt, record))
 	{
-		log_error("seen_add_penpal: dbt_db_set failed");
+		log_error("counter_add_penpal: dbt_db_set failed");
 		var_delete(record);
 		return -1;
 	}
@@ -124,7 +124,7 @@ seen_add_relay(dbt_t *dbt, var_t *mailspec)
 
 
 static int
-seen_add_penpal(dbt_t *dbt, var_t *mailspec)
+counter_add_penpal(dbt_t *dbt, var_t *mailspec)
 {
 	var_t *record;
 	void *hostaddr;
@@ -137,16 +137,16 @@ seen_add_penpal(dbt_t *dbt, var_t *mailspec)
 	    "milter_envfrom", &envfrom, "milter_envrcpt", &envrcpt,
 	    "milter_received", &received, NULL) != 4)
 	{
-		log_error("seen_add_penpal: vtable_dereference failed");
+		log_error("counter_add_penpal: vtable_dereference failed");
 		return -1;
 	}
 
 	created = *received;
 	updated = *received;
-	expire  = cf_seen_expire_low;
+	expire  = cf_counter_expire_low;
 	/*
 	 * Count gets a head start by 1. Because update is called when the
-	 * connection closes. Next time we use this tuple, we've seen this
+	 * connection closes. Next time we use this tuple, we've counter this
 	 * penpal for the second time.
 	 */
 	count   = 2;
@@ -155,13 +155,13 @@ seen_add_penpal(dbt_t *dbt, var_t *mailspec)
 	    &created, &updated, &expire, &count);
 
 	if (record == NULL) {
-		log_warning("seen_add_penpal: vlist_record failed");
+		log_warning("counter_add_penpal: vlist_record failed");
 		return -1;
 	}
 
 	if (dbt_db_set(dbt, record))
 	{
-		log_error("seen_add_penpal: dbt_db_set failed");
+		log_error("counter_add_penpal: dbt_db_set failed");
 		var_delete(record);
 		return -1;
 	}
@@ -173,7 +173,7 @@ seen_add_penpal(dbt_t *dbt, var_t *mailspec)
 
 
 static int
-seen_update_record(dbt_t *dbt, char *prefix, var_t *mailspec, seen_add_t add)
+counter_update_record(dbt_t *dbt, char *prefix, var_t *mailspec, counter_add_t add)
 {
 	var_t *record = NULL;
 	VAR_INT_T *updated, *expire, *count, *received, r;
@@ -182,7 +182,7 @@ seen_update_record(dbt_t *dbt, char *prefix, var_t *mailspec, seen_add_t add)
 
 	if (vlist_record_keys_missing(dbt->dbt_scheme, mailspec))
 	{
-		log_debug("seen_update_record: required keys for "
+		log_debug("counter_update_record: required keys for "
 		    "dbt_db_get_from_table() missing");
 		return 0;
 	}
@@ -194,19 +194,19 @@ seen_update_record(dbt_t *dbt, char *prefix, var_t *mailspec, seen_add_t add)
 
 	if (r)
 	{
-		log_error("seen_update_record: buffer exhausted");
+		log_error("counter_update_record: buffer exhausted");
 		goto error;
 	}
 
 	if (dbt_db_get_from_table(dbt, mailspec, &record))
 	{
-		log_error( "seen_update_record: dbt_db_get_from_table failed");
+		log_error( "counter_update_record: dbt_db_get_from_table failed");
 		goto error;
 	}
 
 	if (record == NULL)
 	{
-		log_info("seen_update_record: create new record in %s",
+		log_info("counter_update_record: create new record in %s",
 		    prefix);
 		return add(dbt, mailspec);
 	}
@@ -214,7 +214,7 @@ seen_update_record(dbt_t *dbt, char *prefix, var_t *mailspec, seen_add_t add)
 	received = vtable_get(mailspec, "milter_received");
 	if (received == NULL)
 	{
-		log_error("seen_update_record: milter_received not set");
+		log_error("counter_update_record: milter_received not set");
 		goto error;
 	}
 
@@ -222,24 +222,24 @@ seen_update_record(dbt_t *dbt, char *prefix, var_t *mailspec, seen_add_t add)
 	expire	= vlist_record_get(record, expire_key);
 	count	= vlist_record_get(record, prefix);
 
-	log_message(LOG_ERR, mailspec, "seen: %s=%ld", prefix, *count);
+	log_message(LOG_ERR, mailspec, "counter: %s=%ld", prefix, *count);
 
 	if (updated == NULL || expire == NULL || count == NULL)
 	{
-		log_error("seen_update_record: vlist_record_get failed");
+		log_error("counter_update_record: vlist_record_get failed");
 		goto error;
 	}
 
 	*updated = *received;
 	++(*count);
 
-	if (*count > cf_seen_threshold)
+	if (*count > cf_counter_threshold)
 	{
-		*expire = *received + cf_seen_expire_high;
+		*expire = *received + cf_counter_expire_high;
 	}
 	else
 	{
-		*expire = *received + cf_seen_expire_low;
+		*expire = *received + cf_counter_expire_low;
 	}
 
 	/*
@@ -249,7 +249,7 @@ seen_update_record(dbt_t *dbt, char *prefix, var_t *mailspec, seen_add_t add)
 
 	if (dbt_db_set(dbt, record))
 	{
-		log_error("seen_update_record: dbt_db_set failed");
+		log_error("counter_update_record: dbt_db_set failed");
 		goto error;
 	}
 
@@ -269,7 +269,7 @@ error:
 
 
 static int
-seen_update(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
+counter_update(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 {
 	int count;
 	VAR_INT_T *action;
@@ -283,7 +283,7 @@ seen_update(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 	if (vtable_dereference(mailspec, "milter_action", &action,
 	    "milter_laststage", &laststage, NULL) != 2)
 	{
-		log_error("seen_update: vtable_dereference failed");
+		log_error("counter_update: vtable_dereference failed");
 		return -1;
 	}
 
@@ -296,21 +296,21 @@ seen_update(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 		return 0;
 	}
 
-	count = seen_update_record(&seen_relay, "seen_relay", mailspec,
-	    seen_add_relay);
+	count = counter_update_record(&counter_relay, "counter_relay", mailspec,
+	    counter_add_relay);
 
 	if (count == -1)
 	{
-		log_error("seen_update: seen_update_record failed");
+		log_error("counter_update: counter_update_record failed");
 		return -1;
 	}
 
-	count = seen_update_record(&seen_penpal, "seen_penpal", mailspec,
-	    seen_add_penpal);
+	count = counter_update_record(&counter_penpal, "counter_penpal", mailspec,
+	    counter_add_penpal);
 
 	if (count == -1)
 	{
-		log_error("seen_update: seen_update_record failed");
+		log_error("counter_update: counter_update_record failed");
 		return -1;
 	}
 
@@ -319,55 +319,55 @@ seen_update(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 
 
 int
-seen_init(void)
+counter_init(void)
 {
 	var_t *relay_scheme;
 	var_t *penpal_scheme;
 
-	relay_scheme = vlist_scheme("seen_relay",
+	relay_scheme = vlist_scheme("counter_relay",
 		"milter_hostaddr",	VT_ADDR,	VF_KEEPNAME | VF_KEY,
-		"seen_relay_created",	VT_INT,		VF_KEEPNAME,
-		"seen_relay_updated",	VT_INT,		VF_KEEPNAME,
-		"seen_relay_expire",	VT_INT,		VF_KEEPNAME,
-		"seen_relay",		VT_INT,		VF_KEEPNAME,
+		"counter_relay_created",	VT_INT,		VF_KEEPNAME,
+		"counter_relay_updated",	VT_INT,		VF_KEEPNAME,
+		"counter_relay_expire",	VT_INT,		VF_KEEPNAME,
+		"counter_relay",		VT_INT,		VF_KEEPNAME,
 		NULL);
 
-	penpal_scheme = vlist_scheme("seen_penpal",
+	penpal_scheme = vlist_scheme("counter_penpal",
 		"milter_hostaddr",	VT_ADDR,	VF_KEEPNAME | VF_KEY,
 		"milter_envfrom",	VT_STRING,	VF_KEEPNAME | VF_KEY,
 		"milter_envrcpt",	VT_STRING,	VF_KEEPNAME | VF_KEY,
-		"seen_penpal_created",	VT_INT,		VF_KEEPNAME,
-		"seen_penpal_updated",	VT_INT,		VF_KEEPNAME,
-		"seen_penpal_expire",	VT_INT,		VF_KEEPNAME,
-		"seen_penpal",		VT_INT,		VF_KEEPNAME,
+		"counter_penpal_created",	VT_INT,		VF_KEEPNAME,
+		"counter_penpal_updated",	VT_INT,		VF_KEEPNAME,
+		"counter_penpal_expire",	VT_INT,		VF_KEEPNAME,
+		"counter_penpal",		VT_INT,		VF_KEEPNAME,
 		NULL);
 
 	if (relay_scheme == NULL || penpal_scheme == NULL)
 	{
-		log_die(EX_SOFTWARE, "seen_init: vlist_scheme failed");
+		log_die(EX_SOFTWARE, "counter_init: vlist_scheme failed");
 	}
 
-	seen_relay.dbt_scheme			= relay_scheme;
-	seen_relay.dbt_validate			= dbt_common_validate;
-	seen_relay.dbt_sql_invalid_where	= DBT_COMMON_INVALID_SQL;
+	counter_relay.dbt_scheme			= relay_scheme;
+	counter_relay.dbt_validate			= dbt_common_validate;
+	counter_relay.dbt_sql_invalid_where	= DBT_COMMON_INVALID_SQL;
 
-	seen_penpal.dbt_scheme			= penpal_scheme;
-	seen_penpal.dbt_validate		= dbt_common_validate;
-	seen_penpal.dbt_sql_invalid_where	= DBT_COMMON_INVALID_SQL;
+	counter_penpal.dbt_scheme			= penpal_scheme;
+	counter_penpal.dbt_validate		= dbt_common_validate;
+	counter_penpal.dbt_sql_invalid_where	= DBT_COMMON_INVALID_SQL;
 
-	dbt_register("seen_relay", &seen_relay);
-	dbt_register("seen_penpal", &seen_penpal);
+	dbt_register("counter_relay", &counter_relay);
+	dbt_register("counter_penpal", &counter_penpal);
 
-	acl_symbol_register("seen_relay", MS_ANY, seen_lookup, AS_CACHE);
+	acl_symbol_register("counter_relay", MS_ANY, counter_lookup, AS_CACHE);
 
 	/*
-	 * seen penpal is not cached due to abiguity in multi recipient
+	 * counter penpal is not cached due to abiguity in multi recipient
 	 * messages.
 	 */
-	acl_symbol_register("seen_penpal", MS_OFF_ENVRCPT, seen_lookup,
+	acl_symbol_register("counter_penpal", MS_OFF_ENVRCPT, counter_lookup,
 	    AS_NOCACHE);
 
-	acl_update_callback(seen_update);
+	acl_update_callback(counter_update);
 
 	return 0;
 }

@@ -42,9 +42,9 @@ extern char		*cf_spamd_socket;
 extern VAR_INT_T	 cf_client_retry_interval;
 extern char		*cf_server_socket;
 extern VAR_INT_T	 cf_tarpit_progress_interval;
-extern VAR_INT_T	 cf_seen_expire_low;
-extern VAR_INT_T	 cf_seen_expire_high;
-extern VAR_INT_T	 cf_seen_threshold;
+extern VAR_INT_T	 cf_counter_expire_low;
+extern VAR_INT_T	 cf_counter_expire_high;
+extern VAR_INT_T	 cf_counter_threshold;
 
 /*
  * Prototypes

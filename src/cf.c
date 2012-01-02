@@ -67,9 +67,9 @@ char		*cf_spamd_socket;
 VAR_INT_T	 cf_client_retry_interval;
 char		*cf_server_socket;
 VAR_INT_T	 cf_tarpit_progress_interval;
-VAR_INT_T	 cf_seen_expire_low;
-VAR_INT_T	 cf_seen_expire_high;
-VAR_INT_T	 cf_seen_threshold;
+VAR_INT_T	 cf_counter_expire_low;
+VAR_INT_T	 cf_counter_expire_high;
+VAR_INT_T	 cf_counter_threshold;
 
 /*
  * Symbol table
@@ -93,9 +93,9 @@ static cf_symbol_t cf_symbols[] = {
 	{ "client_retry_interval", &cf_client_retry_interval },
 	{ "server_socket", &cf_server_socket },
 	{ "tarpit_progress_interval", &cf_tarpit_progress_interval },
-	{ "seen_expire_low", &cf_seen_expire_low },
-	{ "seen_expire_high", &cf_seen_expire_high },
-	{ "seen_threshold", &cf_seen_threshold },
+	{ "counter_expire_low", &cf_counter_expire_low },
+	{ "counter_expire_high", &cf_counter_expire_high },
+	{ "counter_threshold", &cf_counter_threshold },
 	{ NULL, NULL }
 };
 
