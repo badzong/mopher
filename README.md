@@ -35,6 +35,7 @@ Features:
   * Tarpitting
   * Spamassassin
   * RBL
+  * SPF (libspf2)
   * BerkelyDB
   * MySQL
 
