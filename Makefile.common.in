@@ -37,7 +37,7 @@ CONF_DIR=@sysconfdir@/mopher
 
 # Paths (defs.c)
 
-MOPHERD_DIR=@libdir@/lib/mopher
+MOPHERD_DIR=@libdir@/mopher
 MOPHERD_CONF=@sysconfdir@/mopher/mopherd.conf
 MAIL_ACL=@sysconfdir@/mopher/mail.acl
 
