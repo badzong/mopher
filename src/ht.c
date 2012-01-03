@@ -221,7 +221,10 @@ ht_insert(ht_t *ht, void *data)
 	cf = HT_COLLFACTOR(ht);
 	if (cf > 20)
 	{
-		log_debug("ht_insert: collisions %.1f %%", cf);
+		/*
+		 * FIXME: format is evaluated twice: %%%%
+		 */
+		log_debug("ht_insert: collisions %.1f%%%%", cf);
 	}
 
 	if (HT_LOADFACTOR(ht) > 70)
