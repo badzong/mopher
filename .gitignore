@@ -3,5 +3,6 @@ config.log
 Makefile
 Makefile.common
 config.h
+autom4te.cache
 *.o
 *.so
