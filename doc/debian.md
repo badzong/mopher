@@ -94,7 +94,7 @@ Here's a basic configuration file using BerkeleyDB tables.
 mopherd_user    = "mopherd"
 mopherd_group   = "postfix"
 
-milter_socket   = "/var/spool/postfix/mopherd/mopherd.sock"
+milter_socket   = "unix:/var/spool/postfix/mopherd/mopherd.sock"
 
 table[greylist] = {
     driver      = "bdb",
