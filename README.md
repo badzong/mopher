@@ -48,6 +48,12 @@ Compiles on:
   * Maybe more
 
 
+Questions & Answers
+-------------------
+
+There's a mopher [google group](https://groups.google.com/group/mopher).
+
+
 FAQ
 ---
 
