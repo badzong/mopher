@@ -226,10 +226,18 @@ util_hostaddr(struct sockaddr_storage *ss)
 	struct sockaddr_in *sin, *sin_copy;
 	struct sockaddr_in6 *sin6, *sin6_copy;
 
+	// FIXME: Why does this happen??
+	if (ss == NULL)
+	{
+		log_error("util_hostaddr: supplied sockaddr_storage is NULL");
+		return NULL;
+	}
+
 	cleancopy = (struct sockaddr_storage *)
 		malloc(sizeof(struct sockaddr_storage));
 
-	if (cleancopy == NULL) {
+	if (cleancopy == NULL)
+	{
 		log_warning("util_hostaddr: malloc");
 		return NULL;
 	}
@@ -238,7 +246,8 @@ util_hostaddr(struct sockaddr_storage *ss)
 
 	cleancopy->ss_family = ss->ss_family;
 
-	if (ss->ss_family == AF_INET) {
+	if (ss->ss_family == AF_INET)
+	{
 		sin = (struct sockaddr_in *) ss;
 		sin_copy = (struct sockaddr_in *) cleancopy;
 
