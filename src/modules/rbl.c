@@ -67,7 +67,7 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	if (addr->ss_family != AF_INET)
 	{
 		log_error("rbl_query: address family not supported");
-		goto error;
+		return 0;
 	}
 
 	strncpy(addrbytes, addrstr, sizeof addrbytes);
