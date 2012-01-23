@@ -1,5 +1,5 @@
 AC_PREREQ([2.64])
-AC_INIT([mopher], [0.0], [mopher@badzong.com])
+AC_INIT([mopher], [0.1], [mopher@badzong.com])
 
 AC_SUBST([PACKAGE], [$PACKAGE_NAME])
 AC_SUBST([VERSION], [$PACKAGE_VERSION])
