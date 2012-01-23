@@ -1,0 +1,4 @@
+KNOWN BUGS
+
+  * MySQL connection loss
+    If the MySQL connection is lost, mopher does not automatically reconnect
