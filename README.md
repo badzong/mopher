@@ -14,10 +14,10 @@ Table of contents
 Preamble
 --------
 
-I wrote mopher between 2009 and 2010 as a replacement for milter-greylist. It
-ran quite stable over a year without any code changes. Because I never found
-the time to write usable documentation I didn't release it publicly. Most of
-the documentation is still missing. Feel free to contribute.
+I wrote most of mopher between 2009 and 2010. After that it ran quite stable
+over a year without any code changes. Because I never found the time to write
+usable documentation I didn't release it publicly. Most of the documentation is
+still missing. Feel free to contribute.
 
 
 Design goals:
