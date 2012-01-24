@@ -3,11 +3,11 @@ include @top_srcdir@/Makefile.common
 DIST=@PACKAGE@-@VERSION@
 DISTDIR=@top_srcdir@/$(DIST)
 ARCHIVE=$(DIST).tar
-TARBALL=$(ARCHIVE).bz2
+TARBALL=$(ARCHIVE).gz
 
 SUBDIRS=src man
-
-DISTFILES=configure Makefile.common.in Makefile.in config.h.in config $(SUBDIRS)
+DOC=AUTHORS  BUGS  CODE LICENSE README.md TODO doc
+DISTFILES=configure Makefile.common.in Makefile.in config.h.in config $(SUBDIRS) $(DOC)
 
 
 .PHONY: clean
