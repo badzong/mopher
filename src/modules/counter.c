@@ -146,7 +146,7 @@ counter_add_penpal(dbt_t *dbt, var_t *mailspec)
 	expire  = cf_counter_expire_low;
 	/*
 	 * Count gets a head start by 1. Because update is called when the
-	 * connection closes. Next time we use this tuple, we've counter this
+	 * connection closes. Next time we use this tuple, we encounter this
 	 * penpal for the second time.
 	 */
 	count   = 2;

@@ -29,9 +29,7 @@ log_init(char *name, int level, int syslog, int foreground)
 	}
 
 	option = foreground ? LOG_PID | LOG_PERROR : LOG_PID;
-
 	openlog(name, option, LOG_MAIL);
-
 	return;
 }
 
@@ -51,7 +49,8 @@ log_assemble(char *buffer, int32_t buflen, char *f, va_list ap)
 {
 	vsnprintf(buffer, buflen, f, ap);
 
-	if (errno && errno != EINTR) {
+	if (errno && errno != EINTR)
+	{
 		strncat(buffer + strlen(buffer), ": ", buflen - strlen(buffer));
 		strncat(buffer + strlen(buffer), strerror(errno),
 			buflen - strlen(buffer));
@@ -67,7 +66,8 @@ log_logv(int type, char *f, va_list ap)
 {
 	char buffer[BUFLEN];
 
-	if (type > log_level) {
+	if (type > log_level)
+	{
 		errno = 0;
 		return;
 	}
@@ -136,7 +136,6 @@ log_message(int type, var_t *mailspec, char *f, ...)
 	if (strlen(f) == 0)
 	{
 		log_log(type, "%lu: %s", *id, stage);
-
 		return;
 	}
 
