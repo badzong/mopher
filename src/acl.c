@@ -1148,7 +1148,10 @@ acl_read(void)
 	/*
 	 * run parser
 	 */
-	parser(mail_acl, &acl_in, acl_parse);
+	if(parser(mail_acl, &acl_in, acl_parse))
+	{
+		log_die("acl_read: parser failed");
+	}
 
 	return;
 }
