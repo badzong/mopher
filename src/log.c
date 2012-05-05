@@ -92,7 +92,7 @@ log_log(int type, int syserr, char *f, ...)
 	va_list ap;
 
 	va_start(ap, f);
-	log_logv(type, f, ap);
+	log_logv(type, syserr, f, ap);
 	va_end(ap);
 
 	return;
