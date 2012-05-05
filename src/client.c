@@ -51,7 +51,7 @@ client_create(char *name, char *path, char *myname, char *secret)
 	c = (client_t *) malloc(sizeof (client_t));
 	if (c == NULL)
 	{
-		log_error("client_create: malloc");
+		log_sys_error("client_create: malloc");
 		goto error;
 	}
 
@@ -227,7 +227,7 @@ client_send(client_t *c, var_t *record)
 
 	if (write(c->c_socket, buffer, len) < len)
 	{
-		log_error("client_send: write");
+		log_sys_error("client_send: write");
 
 		close(c->c_socket);
 		c->c_socket = -1;
@@ -317,7 +317,7 @@ client_main(void *arg)
 
 	if (pthread_mutex_lock(&client_mutex))
 	{
-		log_error("client_main: pthread_mutex_lock");
+		log_sys_error("client_main: pthread_mutex_lock");
 		goto error;
 	}
 
@@ -341,7 +341,7 @@ client_main(void *arg)
 		 */
 		else if (r != ETIMEDOUT)
 		{
-			log_error("client_main: pthread_cond_wait");
+			log_sys_error("client_main: pthread_cond_wait");
 			break;
 		}
 
@@ -363,7 +363,7 @@ error:
 
 	if (pthread_mutex_unlock(&client_mutex))
 	{
-		log_error("client_main: pthread_mutex_unlock");
+		log_sys_error("client_main: pthread_mutex_unlock");
 	}
 
 	pthread_exit(NULL);
@@ -399,13 +399,13 @@ client_sync(dbt_t *dbt, var_t *record)
 
 	if (pthread_mutex_lock(&client_mutex))
 	{
-		log_error("client_sync: pthread_mutex_lock");
+		log_sys_error("client_sync: pthread_mutex_lock");
 		return -1;
 	}
 
 	if (pthread_cond_signal(&client_cond))
 	{
-		log_error("client_sync: pthread_cond_signal");
+		log_sys_error("client_sync: pthread_cond_signal");
 		return -1;
 	}
 
@@ -413,7 +413,7 @@ client_sync(dbt_t *dbt, var_t *record)
 
 	if (pthread_mutex_unlock(&client_mutex))
 	{
-		log_error("client_sync: pthread_mutex_unlock");
+		log_sys_error("client_sync: pthread_mutex_unlock");
 	}
 
 	return 0;
@@ -520,24 +520,24 @@ client_clear(void)
 
 	if (pthread_mutex_lock(&client_mutex))
 	{
-		log_error("client_clear: pthread_mutex_lock");
+		log_sys_error("client_clear: pthread_mutex_lock");
 	}
 
 	client_running = 0;
 
 	if (pthread_cond_signal(&client_cond))
 	{
-		log_error("client_clear: pthread_cond_signal");
+		log_sys_error("client_clear: pthread_cond_signal");
 	}
 
 	if (pthread_mutex_unlock(&client_mutex))
 	{
-		log_error("client_clear: pthread_mutex_unlock");
+		log_sys_error("client_clear: pthread_mutex_unlock");
 	}
 
 	if (pthread_join(client_thread, NULL))
 	{
-		log_error("client_clear: pthread_mutex_join");
+		log_sys_error("client_clear: pthread_mutex_join");
 	}
 
 	ll_delete(client_queue, (ll_delete_t) var_delete);

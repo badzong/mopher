@@ -103,7 +103,7 @@ greylist_create(void)
 	gl = (greylist_t *) malloc(sizeof (greylist_t));
 	if (gl == NULL)
 	{
-		log_die(EX_OSERR, "greylist_create: malloc");
+		log_sys_die(EX_OSERR, "greylist_create: malloc");
 	}
 
 	memset(gl, 0, sizeof (greylist_t));

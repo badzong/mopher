@@ -103,7 +103,7 @@ cf_error(const char *s)
 
 {id}		{
 			if((cf_lval.str = strdup(cf_text)) == NULL) {
-				log_die(EX_CONFIG, "cf_lex.l: strdup");
+				log_sys_die(EX_CONFIG, "cf_lex.l: strdup");
 			}
 
 			return ID;

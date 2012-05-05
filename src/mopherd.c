@@ -105,7 +105,7 @@ main(int argc, char **argv)
 	{
 		if (unlink(pidfile))
 		{
-			log_error("mopherd: unlink");
+			log_sys_error("mopherd: unlink");
 		}
 	}
 

@@ -42,7 +42,7 @@ server_update(int socket)
 	len = read(socket, buffer, sizeof buffer);
 	if (len == -1)
 	{
-		log_error("server_update: read");
+		log_sys_error("server_update: read");
 		goto error;
 	}
 
@@ -69,7 +69,7 @@ server_update(int socket)
 	name = strndup(buffer, len);
 	if (name == NULL)
 	{
-		log_error("server_update: strndup");
+		log_sys_error("server_update: strndup");
 		goto error;
 	}
 
@@ -174,7 +174,7 @@ server_main(void *arg)
 				continue;
 			}
 
-			log_error("server: select");
+			log_sys_error("server: select");
 		}
 
 		/*
@@ -206,7 +206,7 @@ server_main(void *arg)
 
 			if(server_clients[i] == -1)
 			{
-				log_error("server: accept");
+				log_sys_error("server: accept");
 			}
 
 			else
@@ -348,7 +348,7 @@ server_clear(void)
 
 	if (pthread_kill(server_thread, SIGUSR2))
 	{
-		log_error("server_clear: pthread_kill");
+		log_sys_error("server_clear: pthread_kill");
 	}
 
 	util_thread_join(server_thread);

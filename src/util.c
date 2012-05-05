@@ -40,7 +40,7 @@ util_strdupenc(const char *src, const char *encaps)
 	}
 
 	if ((dup = strdup(src + 1)) == NULL) {
-		log_warning("util_strdupenc: strdup");
+		log_sys_warning("util_strdupenc: strdup");
 		return NULL;
 	}
 
@@ -156,7 +156,7 @@ util_addrtostr(struct sockaddr_storage *ss)
 
 	paddr = strdup(addr);
 	if (paddr == NULL) {
-		log_error("util_addrtostr: strdup");
+		log_sys_error("util_addrtostr: strdup");
 	}
 
 	return paddr;
@@ -173,7 +173,7 @@ util_file_exists(char *path)
 	}
 
 	if(errno == ENOENT) {
-		log_notice("util_file_exists: stat \"%s\"", path);
+		log_sys_notice("util_file_exists: stat \"%s\"", path);
 		return 0;
 	}
 
@@ -189,7 +189,7 @@ util_file(char *path, char **buffer)
 	int fd, n;
 
 	if (stat(path, &fs) == -1) {
-		log_warning("util_file: stat '%s'", path);
+		log_sys_warning("util_file: stat '%s'", path);
 		return -1;
 	}
 
@@ -199,18 +199,18 @@ util_file(char *path, char **buffer)
 	}
 
 	if((*buffer = (char *) malloc(fs.st_size)) == NULL) {
-		log_warning("util_file: malloc");
+		log_sys_warning("util_file: malloc");
 		return -1;
 
 	}
 
 	if ((fd = open(path, O_RDONLY)) == -1) {
-		log_warning("util_file: open '%s'", path);
+		log_sys_warning("util_file: open '%s'", path);
 		return -1;
 	}
 
 	if ((n = read(fd, *buffer, fs.st_size)) == -1) {
-		log_warning("util_file: read '%s'", path);
+		log_sys_warning("util_file: read '%s'", path);
 		return -1;
 	}
 
@@ -238,7 +238,7 @@ util_hostaddr(struct sockaddr_storage *ss)
 
 	if (cleancopy == NULL)
 	{
-		log_warning("util_hostaddr: malloc");
+		log_sys_warning("util_hostaddr: malloc");
 		return NULL;
 	}
 
@@ -319,7 +319,7 @@ util_block_signals(int sig, ...)
 
 	if (sigemptyset(&sigset))
 	{
-		log_error("util_block_signals: sigemptyset");
+		log_sys_error("util_block_signals: sigemptyset");
 		return -1;
 	}
 
@@ -329,14 +329,14 @@ util_block_signals(int sig, ...)
 	{
 		if (sigaddset(&sigset, signal))
 		{
-			log_error("util_block_signals: sigaddset");
+			log_sys_error("util_block_signals: sigaddset");
 			return -1;
 		}
 	}
 	
 	if (pthread_sigmask(SIG_BLOCK, &sigset, NULL))
 	{
-		log_error("util_block_signals: pthread_sigmask");
+		log_sys_error("util_block_signals: pthread_sigmask");
 		return -1;
 	}
 
@@ -354,7 +354,7 @@ util_unblock_signals(int sig, ...)
 
 	if (sigemptyset(&sigset))
 	{
-		log_error("util_unblock_signals: sigemptyset");
+		log_sys_error("util_unblock_signals: sigemptyset");
 		return -1;
 	}
 
@@ -364,14 +364,14 @@ util_unblock_signals(int sig, ...)
 	{
 		if (sigaddset(&sigset, signal))
 		{
-			log_error("util_unblock_signals: sigaddset");
+			log_sys_error("util_unblock_signals: sigaddset");
 			return -1;
 		}
 	}
 	
 	if (pthread_sigmask(SIG_UNBLOCK, &sigset, NULL))
 	{
-		log_error("util_unblock_signals: pthread_sigmask");
+		log_sys_error("util_unblock_signals: pthread_sigmask");
 		return -1;
 	}
 
@@ -391,7 +391,7 @@ util_signal(int signum, void (*handler)(int))
 
 	if(sigaction(signum, NULL, &old) == -1)
 	{
-		log_error("util_signal: sigaction");
+		log_sys_error("util_signal: sigaction");
 		return -1;
 	}
 
@@ -409,7 +409,7 @@ util_signal(int signum, void (*handler)(int))
 
 	if(sigaction(signum, &new, NULL) == -1)
 	{
-		log_error("util_signal: sigaction");
+		log_sys_error("util_signal: sigaction");
 		return -1;
 	}
 
@@ -445,7 +445,7 @@ util_thread_create(pthread_t *thread, void *callback, void *arg)
 	ut = (util_thread_t *) malloc(sizeof (util_thread_t));
 	if (ut == NULL)
 	{
-		log_error("util_thread_create: malloc");
+		log_sys_error("util_thread_create: malloc");
 		return -1;
 	}
 	
@@ -454,25 +454,25 @@ util_thread_create(pthread_t *thread, void *callback, void *arg)
 
 	if (pthread_attr_init(&attr))
 	{
-		log_error("util_thread_create: pthread_attr_init");
+		log_sys_error("util_thread_create: pthread_attr_init");
 		return -1;
 	}
 
 	if (pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE))
 	{
-		log_error("util_thread_create: pthread_attr_setdetachstate");
+		log_sys_error("util_thread_create: pthread_attr_setdetachstate");
 		return -1;
 	}
 
 	if (pthread_create(thread, NULL, util_thread_init, ut))
 	{
-		log_error("util_thread_create: pthread_create");
+		log_sys_error("util_thread_create: pthread_create");
 		return -1;
 	}
 
 	if (pthread_attr_destroy(&attr))
 	{
-		log_error("util_thread_create: pthread_attr_destroy");
+		log_sys_error("util_thread_create: pthread_attr_destroy");
 		return -1;
 	}
 
@@ -503,7 +503,7 @@ util_thread_join(pthread_t thread)
 
 	if (e)
 	{
-		log_error("dbt_clear: pthread_mutex_join: %s", e);
+		log_sys_error("dbt_clear: pthread_mutex_join: %s", e);
 	}
 
 	return;
@@ -520,7 +520,7 @@ util_now(struct timespec *ts)
 	 */
 	if (gettimeofday(&tv, NULL))
 	{
-		log_error("util_now: gettimeofday");
+		log_sys_error("util_now: gettimeofday");
 		return -1;
 	}
 
@@ -579,12 +579,12 @@ util_setgid(char *name)
 	gr = getgrnam(name);
 	if (gr == NULL)
 	{
-		log_die(EX_SOFTWARE, "util_setgid: getgrnam");
+		log_sys_die(EX_SOFTWARE, "util_setgid: getgrnam");
 	}
 
 	if (setgid(gr->gr_gid))
 	{
-		log_die(EX_OSERR, "util_setgid: setgid");
+		log_sys_die(EX_OSERR, "util_setgid: setgid");
 	}
 
 	return;
@@ -603,12 +603,12 @@ util_setuid(char *name)
 	pw = getpwnam(name);
 	if (pw == NULL)
 	{
-		log_die(EX_SOFTWARE, "util_setuid: getpwnam");
+		log_sys_die(EX_SOFTWARE, "util_setuid: getpwnam");
 	}
 
 	if (setuid(pw->pw_uid))
 	{
-		log_die(EX_OSERR, "util_setuid: setuid");
+		log_sys_die(EX_OSERR, "util_setuid: setuid");
 	}
 
 	return;
@@ -686,13 +686,13 @@ util_pidfile(char *path)
 	    S_IRUSR | S_IRGRP | S_IROTH);
 	if (fd == -1)
 	{
-		log_error("util_dump: open");
+		log_sys_error("util_dump: open");
 		return;
 	}
 
 	if (write(fd, string, len) == -1)
 	{
-		log_error("util_dump: write");
+		log_sys_error("util_dump: write");
 	}
 
 	close(fd);
@@ -728,7 +728,7 @@ util_chmod(char *path, int mode_decimal)
 
 	if (chmod(path, mode))
 	{
-		log_error("util_chmod: chmod: %s", path);
+		log_sys_error("util_chmod: chmod: %s", path);
 		return -1;
 	}
 

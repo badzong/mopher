@@ -124,7 +124,7 @@ module_symbol_load(void *handle, char *path, char *suffix, int die)
 
 	if(die)
 	{
-		log_die(EX_SOFTWARE, "module_symbol_load: dlsym: %s", error);
+		log_sys_die(EX_SOFTWARE, "module_symbol_load: dlsym: %s", error);
 	}
 
 	log_debug("module_symbol_load: dlsym: %s", error);
@@ -170,7 +170,7 @@ module_glob(const char *path)
 	mod = (module_t *) malloc((pglob.gl_pathc + 1) * sizeof (module_t));
 	if (mod == NULL)
 	{
-		log_die(EX_SOFTWARE, "module_glob: malloc");
+		log_sys_die(EX_SOFTWARE, "module_glob: malloc");
 	}
 
 	/*
@@ -196,7 +196,7 @@ module_glob(const char *path)
 		mod[i].mod_handle = dlopen(*file, RTLD_LAZY);
 		if (mod[i].mod_handle == NULL)
 		{
-			log_die(EX_SOFTWARE, "module_glob: dlopen: %s",
+			log_sys_die(EX_SOFTWARE, "module_glob: dlopen: %s",
 			    dlerror());
 		}
 

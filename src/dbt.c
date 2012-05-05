@@ -44,7 +44,7 @@ dbt_close(dbt_t *dbt)
 	{
 		if (pthread_mutex_destroy(&dbt->dbt_driver->dd_mutex))
 		{
-			log_error("dbt_register: ptrhead_mutex_destroy");
+			log_sys_error("dbt_register: ptrhead_mutex_destroy");
 		}
 	}
 
@@ -73,7 +73,7 @@ dbt_db_lock(dbt_t *dbt)
 
 	if (pthread_mutex_lock(&dbt->dbt_driver->dd_mutex))
 	{
-		log_error("dbt_db_lock: pthread_mutex_lock");
+		log_sys_error("dbt_db_lock: pthread_mutex_lock");
 		return -1;
 	}
 
@@ -91,7 +91,7 @@ dbt_db_unlock(dbt_t *dbt)
 
 	if (pthread_mutex_unlock(&dbt->dbt_driver->dd_mutex))
 	{
-		log_error("dbt_db_unlock: pthread_mutex_unlock");
+		log_sys_error("dbt_db_unlock: pthread_mutex_unlock");
 	}
 
 	return;
@@ -380,7 +380,7 @@ dbt_common_sql(char *name)
 	p = strdup(buffer);
 	if (p == NULL)
 	{
-		log_die(EX_OSERR, "dbt_common_sql: strdup");
+		log_sys_die(EX_OSERR, "dbt_common_sql: strdup");
 	}
 
 	return p;
@@ -455,7 +455,7 @@ dbt_register(char *name, dbt_t *dbt)
 	 */
 	if (pthread_mutex_lock(&dbt_janitor_mutex))
 	{
-		log_die(EX_SOFTWARE, "dbt_register: pthread_mutex_lock");
+		log_sys_die(EX_SOFTWARE, "dbt_register: pthread_mutex_lock");
 	}
 
 	/*
@@ -467,7 +467,7 @@ dbt_register(char *name, dbt_t *dbt)
 
 	if (pthread_mutex_unlock(&dbt_janitor_mutex))
 	{
-		log_die(EX_SOFTWARE, "dbt_register: pthread_mutex_unlock");
+		log_sys_die(EX_SOFTWARE, "dbt_register: pthread_mutex_unlock");
 	}
 
 	return;
@@ -662,7 +662,7 @@ dbt_janitor(void *arg)
 
 	if (pthread_mutex_lock(&dbt_janitor_mutex))
 	{
-		log_error("dbt_janitor: pthread_mutex_lock");
+		log_sys_error("dbt_janitor: pthread_mutex_lock");
 		return NULL;
 	}
 
@@ -746,7 +746,7 @@ dbt_janitor(void *arg)
 			continue;
 		}
 
-		log_error("client_main: pthread_cond_wait");
+		log_sys_error("client_main: pthread_cond_timedwait");
 		break;
 	}
 
@@ -757,7 +757,7 @@ dbt_janitor(void *arg)
 	 */
 	if (pthread_mutex_unlock(&dbt_janitor_mutex))
 	{
-		log_error("dbt_janitor: pthread_mutex_unlock");
+		log_sys_error("dbt_janitor: pthread_mutex_unlock");
 	}
 
 	return NULL;
@@ -788,7 +788,7 @@ dbt_open_database(dbt_t *dbt)
 	{
 		if (pthread_mutex_init(&dd->dd_mutex, NULL))
 		{
-			log_die(EX_SOFTWARE,
+			log_sys_die(EX_SOFTWARE,
 			    "dbt_open_database: ptrhead_mutex_init");
 		}
 	}
@@ -877,19 +877,19 @@ dbt_clear()
 {
 	if (pthread_mutex_lock(&dbt_janitor_mutex))
 	{
-		log_error("dbt_janitor_clear: pthread_mutex_lock");
+		log_sys_error("dbt_janitor_clear: pthread_mutex_lock");
 	}
 
 	dbt_janitor_running = 0;
 
 	if (pthread_cond_signal(&dbt_janitor_cond))
 	{
-		log_error("dbt_janitor_clear: pthread_cond_signal");
+		log_sys_error("dbt_janitor_clear: pthread_cond_signal");
 	}
 
 	if (pthread_mutex_unlock(&dbt_janitor_mutex))
 	{
-		log_error("dbt_janitor_clear: pthread_mutex_unlock");
+		log_sys_error("dbt_janitor_clear: pthread_mutex_unlock");
 	}
 
 	util_thread_join(dbt_janitor_thread);

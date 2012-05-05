@@ -68,7 +68,7 @@ acl_reply_create(void)
 	ar = (acl_reply_t *) malloc(sizeof (acl_reply_t));
 	if (ar == NULL)
 	{
-		log_die(EX_OSERR, "acl_reply_create: malloc");
+		log_sys_die(EX_OSERR, "acl_reply_create: malloc");
 	}
 
 	memset(ar, 0, sizeof (acl_reply_t));
@@ -137,7 +137,7 @@ acl_action_create(acl_action_type_t type, void *data)
 	aa = (acl_action_t *) malloc(sizeof (acl_action_t));
 	if (aa == NULL)
 	{
-		log_error("acl_action_create: malloc");
+		log_sys_error("acl_action_create: malloc");
 		return NULL;
 	}
 
@@ -181,7 +181,7 @@ acl_rule_create(exp_t *exp, acl_action_t *aa)
 	ar = (acl_rule_t *) malloc(sizeof (acl_rule_t));
 	if (ar == NULL)
 	{
-		log_error("acl_rule_create: malloc");
+		log_sys_error("acl_rule_create: malloc");
 		return NULL;
 	}
 
@@ -300,7 +300,7 @@ acl_symbol_create(acl_symbol_type_t type, char *name, milter_stage_t stages,
 	as = (acl_symbol_t *) malloc(sizeof (acl_symbol_t));
 	if (as == NULL)
 	{
-		log_die(EX_OSERR, "acl_symbol_create: malloc");
+		log_sys_die(EX_OSERR, "acl_symbol_create: malloc");
 	}
 
 	as->as_type = type;
@@ -384,7 +384,7 @@ acl_function_create(acl_function_type_t type, acl_function_callback_t callback,
 	af = (acl_function_t *) malloc(sizeof (acl_function_t));
 	if (af == NULL)
 	{
-		log_die(EX_OSERR, "acl_function_create: malloc");
+		log_sys_die(EX_OSERR, "acl_function_create: malloc");
 	}
 
 	memset(af, 0, sizeof (acl_function_t));
@@ -421,7 +421,7 @@ acl_function_argv_types(int *argc, va_list ap)
 		types = (var_type_t *) realloc(types, size);
 		if (types == NULL)
 		{
-			log_die(EX_OSERR, "acl_function_argv_types: realloc");
+			log_sys_die(EX_OSERR, "acl_function_argv_types: realloc");
 		}
 
 		types[*argc] = type;
@@ -656,7 +656,7 @@ acl_log_create(exp_t *message)
 	al = (acl_log_t *) malloc(sizeof (acl_log_t));
 	if (al == NULL)
 	{
-		log_die(EX_OSERR, "acl_log: malloc");
+		log_sys_die(EX_OSERR, "acl_log: malloc");
 	}
 
 	memset(al, 0, sizeof (acl_log_t));
@@ -723,11 +723,11 @@ acl_log(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 			goto error;
 		}
 
-		log_log(level, buffer);
+		log_log(level, 0, buffer);
 	}
 	else
 	{
-		log_log(level, v->v_data);
+		log_log(level, 0, v->v_data);
 	}
 
 	exp_free(v);
@@ -846,7 +846,7 @@ acl_eval_reply(exp_t *exp, var_t *mailspec)
 	result = strdup(v->v_data);
 	if (result == NULL)
 	{
-		log_error("acl_eval_reply: strdup");
+		log_sys_error("acl_eval_reply: strdup");
 		goto error;
 	}
 

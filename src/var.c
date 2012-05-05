@@ -228,7 +228,7 @@ var_copy_data(var_type_t type, void *data)
 	}
 
 	if((copy = malloc(size)) == NULL) {
-		log_warning("var_copy_data: malloc");
+		log_sys_warning("var_copy_data: malloc");
 		return NULL;
 	}
 
@@ -299,7 +299,7 @@ var_name_init(char *name, int flags)
 
 	if ((copy = strdup(name)) == NULL)
 	{
-		log_warning("var_name_init: strdup");
+		log_sys_warning("var_name_init: strdup");
 	}
 
 	return copy;
@@ -412,7 +412,7 @@ var_create(var_type_t type, char *name, void *data, int flags)
 	var_t *v;
 
 	if((v = (var_t *) malloc(sizeof(var_t))) == NULL) {
-		log_warning("var_create: malloc");
+		log_sys_warning("var_create: malloc");
 		return NULL;
 	}
 
@@ -507,7 +507,7 @@ var_scan_scheme(var_t *scheme, char *str)
 	name = strndup(str, len);
 	if (name == NULL)
 	{
-		log_warning("var_scan_scheme: strndup");
+		log_sys_warning("var_scan_scheme: strndup");
 		goto error;
 	}
 
@@ -745,8 +745,7 @@ var_dump_list_or_table(var_t * v, char *buffer, int size)
 		}
 
 		if(n == -1) {
-			log_warning
-			    ("var_dump_data: var_dump_data failed");
+			log_warning("var_dump_data: var_dump_data failed");
 			return -1;
 		}
 
@@ -875,7 +874,7 @@ var_compact_create(void)
 
 	vc = (var_compact_t *) malloc(sizeof(var_compact_t));
 	if (vc == NULL) {
-		log_warning("var_compact_create: malloc");
+		log_sys_warning("var_compact_create: malloc");
 		return NULL;
 	}
 
@@ -911,7 +910,7 @@ var_compress_data(char **buffer, int *len, var_t *v)
 
 	p = realloc(*buffer, *len + n);
 	if (p == NULL) {
-		log_warning("var_compress_data: realloc");
+		log_sys_warning("var_compress_data: realloc");
 		return -1;
 	}
 

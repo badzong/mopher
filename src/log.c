@@ -45,24 +45,17 @@ log_close(void)
 }
 
 static void
-log_assemble(char *buffer, int32_t buflen, char *f, va_list ap)
+log_append_syserr(char *buffer, int buflen)
 {
-	vsnprintf(buffer, buflen, f, ap);
-
-	if (errno && errno != EINTR)
-	{
-		strncat(buffer + strlen(buffer), ": ", buflen - strlen(buffer));
-		strncat(buffer + strlen(buffer), strerror(errno),
-			buflen - strlen(buffer));
-	}
-
-	errno = 0;
+	strncat(buffer + strlen(buffer), ": ", buflen - strlen(buffer));
+	strncat(buffer + strlen(buffer), strerror(errno),
+		buflen - strlen(buffer));
 
 	return;
 }
 
-void
-log_logv(int type, char *f, va_list ap)
+static void
+log_logv(int type, int syserr, char *f, va_list ap)
 {
 	char buffer[BUFLEN];
 
@@ -72,7 +65,12 @@ log_logv(int type, char *f, va_list ap)
 		return;
 	}
 
-	log_assemble(buffer, sizeof(buffer), f, ap);
+	vsnprintf(buffer, BUFLEN, f, ap);
+
+	if (syserr)
+	{
+		log_append_syserr(buffer, BUFLEN);
+	}
 
 	if (log_syslog)
 	{
@@ -89,7 +87,7 @@ log_logv(int type, char *f, va_list ap)
 
 
 void
-log_log(int type, char *f, ...)
+log_log(int type, int syserr, char *f, ...)
 {
 	va_list ap;
 
@@ -102,12 +100,12 @@ log_log(int type, char *f, ...)
 
 
 void
-log_die(int r, char *f, ...)
+log_exit(int r, int syserr, char *f, ...)
 {
 	va_list ap;
 
 	va_start(ap, f);
-	log_logv(LOG_ERR, f, ap);
+	log_logv(LOG_ERR, syserr, f, ap);
 	va_end(ap);
 
 	log_close();
@@ -129,13 +127,13 @@ log_message(int type, var_t *mailspec, char *f, ...)
 	if (vtable_dereference(mailspec, "milter_id", &id, "milter_stagename",
 	    &stage, NULL) != 2)
 	{
-		log_log(LOG_ERR, "log_message: vtable_dereference failed");
+		log_log(LOG_ERR, 0, "log_message: vtable_dereference failed");
 		return;
 	}
 
 	if (strlen(f) == 0)
 	{
-		log_log(type, "%lu: %s", *id, stage);
+		log_log(type, 0, "%lu: %s", *id, stage);
 		return;
 	}
 
@@ -143,13 +141,13 @@ log_message(int type, var_t *mailspec, char *f, ...)
 
 	if (vsnprintf(message, sizeof message, f, ap) >= sizeof message)
 	{
-		log_log(LOG_ERR, "log_message: buffer exhausted");
+		log_log(LOG_ERR, 0, "log_message: buffer exhausted");
 		return;
 	}
 
 	va_end(ap);
 
-	log_log(type, "%lu: %s: %s", *id, stage, message);
+	log_log(type, 0, "%lu: %s: %s", *id, stage, message);
 
 	return;
 }

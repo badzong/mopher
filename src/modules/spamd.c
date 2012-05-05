@@ -63,19 +63,19 @@ spamd_header(var_t *attrs, char *header, int len)
 	t = time(NULL);
 	if (t == -1)
 	{
-		log_error("spamd_header: time failed");
+		log_sys_error("spamd_header: time failed");
 		return -1;
 	}
 
 	if (gmtime_r(&t, &tm) == NULL) {
-		log_error("spamd_header: gmtime failed");
+		log_sys_error("spamd_header: gmtime failed");
 		return -1;
 	}
 
 	if (strftime(timestamp, sizeof(timestamp),
 	    "%a, %d %b %Y %H:%M:%S +0000", &tm) == 0)
 	{
-		log_error("spamd_header: strftime failed");
+		log_sys_error("spamd_header: strftime failed");
 		timestamp[0] = '\0';
 	}
 
@@ -133,7 +133,7 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 	message = (char *) malloc(size);
 	if (message == NULL)
 	{
-		log_error("spamd_query: malloc");
+		log_sys_error("spamd_query: malloc");
 		goto error;
 	}
 
@@ -159,7 +159,7 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 	  * Write spamassassin request
 	  */
 	if (write(sock, buffer, strlen(buffer)) == -1) {
-		log_error("spamd_query: write");
+		log_sys_error("spamd_query: write");
 		goto error;
 	}
 
@@ -167,7 +167,7 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 	 * Write message
 	 */
 	if (write(sock, message, size) == -1) {
-		log_error("spamd_query: write");
+		log_sys_error("spamd_query: write");
 		goto error;
 	}
 
@@ -176,7 +176,7 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 	 */
 	n = read(sock, buffer, sizeof buffer - 1);
 	if (n == -1) {
-		log_error("spamd_query: read");
+		log_sys_error("spamd_query: read");
 		goto error;
 	}
 	buffer[n] = 0;
@@ -210,7 +210,7 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 
 		n = read(sock, buffer, sizeof(buffer));
 		if (n == -1) {
-			log_error("spamd_query: read");
+			log_sys_error("spamd_query: read");
 			goto error;
 		}
 

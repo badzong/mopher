@@ -82,7 +82,7 @@ parser_tok_str(int r, char **str, char *token)
 	*str = strdup(token);
 	if (*str == NULL)
 	{
-		log_die(EX_OSERR, "parser_tok_str: strdup");
+		log_sys_die(EX_OSERR, "parser_tok_str: strdup");
 	}
 
 	return r;
@@ -94,7 +94,7 @@ parser(char *path, FILE ** input, int (*parser_callback) (void))
 	struct stat fs;
 
 	if (stat(path, &fs) == -1) {
-		log_error("parser: stat '%s'", path);
+		log_sys_error("parser: stat '%s'", path);
 		return -1;
 	}
 
@@ -104,7 +104,7 @@ parser(char *path, FILE ** input, int (*parser_callback) (void))
 	}
 
 	if ((*input = fopen(path, "r")) == NULL) {
-		log_error("parser: fopen '%s'", path);
+		log_sys_error("parser: fopen '%s'", path);
 		return -1;
 	}
 

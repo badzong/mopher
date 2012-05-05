@@ -14,7 +14,7 @@ ht_init(ht_t *ht, hash_t buckets, ht_hash_t hash, ht_match_t match,
 	ht_delete_t delete)
 {
 	if((ht->ht_table = malloc(buckets * (sizeof(ht_record_t *) + 1))) == NULL) {
-		log_warning("ht_init: malloc");
+		log_sys_warning("ht_init: malloc");
 		return -1;
 	}
 
@@ -38,7 +38,7 @@ ht_create(hash_t buckets, ht_hash_t hash, ht_match_t match, ht_delete_t delete)
 	ht_t *ht;
 
 	if((ht = (ht_t *) malloc(sizeof(ht_t))) == NULL) {
-		log_warning("ht_create: malloc");
+		log_sys_warning("ht_create: malloc");
 		return NULL;
 	}
 
@@ -191,7 +191,7 @@ ht_insert(ht_t *ht, void *data)
 	bucket = ht->ht_hash(data) % ht->ht_buckets;
 
 	if((record = malloc(sizeof (ht_record_t))) == NULL) {
-		log_warning("ht_insert: malloc");
+		log_sys_warning("ht_insert: malloc");
 		return -1;
 	}
 

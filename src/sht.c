@@ -76,7 +76,7 @@ sht_record_create(char *key, void *data)
 	sr = (sht_record_t *) malloc(sizeof (sht_record_t));
 	if (sr == NULL)
 	{
-		log_error("sht_record_create: malloc");
+		log_sys_error("sht_record_create: malloc");
 		goto error;
 	}
 
@@ -85,7 +85,7 @@ sht_record_create(char *key, void *data)
 	sr->sr_key = strdup(key);
 	if (sr->sr_key == NULL)
 	{
-		log_error("sht_record_create: strdup");
+		log_sys_error("sht_record_create: strdup");
 		goto error;
 	}
 
@@ -130,7 +130,7 @@ sht_create(int buckets, sht_delete_t del)
 	sht = (sht_t *) malloc(sizeof (sht_t));
 	if (sht == NULL)
 	{
-		log_error("sht_create: malloc");
+		log_sys_error("sht_create: malloc");
 		goto error;
 	}
 

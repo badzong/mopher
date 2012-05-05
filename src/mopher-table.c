@@ -50,7 +50,7 @@ main(int argc, char **argv)
 	workdir = cf_workdir_path ? cf_workdir_path : defs_mopherd_dir;
 	if (chdir(workdir))
 	{
-		log_die(EX_OSERR, "chdir to \"%s\"", cf_workdir_path);
+		log_sys_die(EX_OSERR, "chdir to \"%s\"", cf_workdir_path);
 	}
 
 	dbt_init();

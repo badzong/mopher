@@ -143,7 +143,7 @@ sakila_buffer_create(char *name, var_type_t type)
 	mb = (sakila_buffer_t *) malloc(sizeof (sakila_buffer_t));
 	if (mb == NULL)
 	{
-		log_error("sakila_buffer_create: malloc");
+		log_sys_error("sakila_buffer_create: malloc");
 		return NULL;
 	}
 
@@ -154,7 +154,7 @@ sakila_buffer_create(char *name, var_type_t type)
 	mb->mb_buffer = malloc(length);
 	if (mb->mb_buffer == NULL)
 	{
-		log_error("sakila_buffer_create: malloc");
+		log_sys_error("sakila_buffer_create: malloc");
 		return NULL;
 	}
 
@@ -223,7 +223,7 @@ sakila_query_create(MYSQL *db, char *query, ht_t *storage, ll_t *params,
 	mq = (sakila_query_t *) malloc(sizeof (sakila_query_t));
 	if (mq == NULL)
 	{
-		log_error("sakila_query_create: malloc");
+		log_sys_error("sakila_query_create: malloc");
 		goto error;
 	}
 
@@ -238,7 +238,7 @@ sakila_query_create(MYSQL *db, char *query, ht_t *storage, ll_t *params,
 
 		mq->sakila_params = (MYSQL_BIND *) malloc(size);
 		if (mq->sakila_params == NULL) {
-			log_error("sakila_query_create: malloc");
+			log_sys_error("sakila_query_create: malloc");
 			goto error;
 		}
 
@@ -253,7 +253,7 @@ sakila_query_create(MYSQL *db, char *query, ht_t *storage, ll_t *params,
 
 		mq->sakila_results = (MYSQL_BIND *) malloc(size);
 		if (mq->sakila_results == NULL) {
-			log_error("sakila_query_create: malloc");
+			log_sys_error("sakila_query_create: malloc");
 			goto error;
 		}
 	
@@ -981,7 +981,7 @@ sakila_create_table(MYSQL *db, char *table, var_t *scheme)
 	var_t *v;
 
 	if (scheme->v_type != VT_LIST) {
-		log_error("sakila_create_table: scheme as bad type");
+		log_error("sakila_create_table: scheme has bad type");
 		return -1;
 	}
 	list = scheme->v_data;
@@ -1048,7 +1048,7 @@ sakila_open(dbt_t *dbt)
 	 */
 	mh = (sakila_handle_t *) malloc(sizeof(sakila_handle_t));
 	if (mh == NULL) {
-		log_error("sakila_open: malloc");
+		log_sys_error("sakila_open: malloc");
 		return -1;
 	}
 

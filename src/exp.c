@@ -78,7 +78,7 @@ exp_create(exp_type_t type, void *data)
 	exp = (exp_t *) malloc(sizeof (exp_t));
 	if (exp == NULL)
 	{
-		log_die(EX_OSERR, "exp_create: malloc");
+		log_sys_die(EX_OSERR, "exp_create: malloc");
 	}
 
 	exp->ex_type = type;
@@ -229,7 +229,7 @@ exp_operation(int operator, exp_t *op1, exp_t *op2)
 	eo = (exp_operation_t *) malloc(sizeof (exp_operation_t));
 	if (eo == NULL)
 	{
-		log_die(EX_OSERR, "exp_operation_create: malloc");
+		log_sys_die(EX_OSERR, "exp_operation_create: malloc");
 	}
 
 	eo->eo_operator = operator;
@@ -258,7 +258,7 @@ exp_function(char *id, exp_t *args)
 	ef = (exp_function_t *) malloc(sizeof (exp_function_t));
 	if (ef == NULL)
 	{
-		log_die(EX_OSERR, "exp_function: malloc");
+		log_sys_die(EX_OSERR, "exp_function: malloc");
 	}
 
 	ef->ef_name = id;
@@ -315,7 +315,7 @@ exp_eval_list(exp_t *exp, var_t *mailspec)
 	var_list = vlist_create(NULL, VF_EXP_FREE);
 	if (var_list == NULL)
 	{
-		log_error("exp_eval_list: malloc");
+		log_sys_error("exp_eval_list: malloc");
 		goto error;
 	}
 
@@ -326,7 +326,7 @@ exp_eval_list(exp_t *exp, var_t *mailspec)
 
 		if (vlist_append(var_list, var_item))
 		{
-			log_error("exp_eval_list: malloc");
+			log_sys_error("exp_eval_list: malloc");
 			goto error;
 		}
 	}
@@ -389,7 +389,7 @@ exp_eval_function_simple(char *name, acl_function_t *af, ll_t *args)
 	argv = (void **) malloc(size);
 	if (argv == NULL)
 	{
-		log_error("exp_eval_function_simple: malloc");
+		log_sys_error("exp_eval_function_simple: malloc");
 		return NULL;
 	}
 

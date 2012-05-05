@@ -28,7 +28,7 @@ regex_create(char *pattern, int flags)
 	preg = malloc(sizeof (regex_t));
 	if (preg == NULL)
 	{
-		log_error("regex_create: malloc");
+		log_sys_error("regex_create: malloc");
 		goto error;
 	}
 
@@ -43,7 +43,7 @@ regex_create(char *pattern, int flags)
 
 	if (pthread_mutex_lock(&regex_mutex))
 	{
-		log_error("regex_create: pthread_mutex_lock");
+		log_sys_error("regex_create: pthread_mutex_lock");
 		goto error;
 	}
 
@@ -55,7 +55,7 @@ regex_create(char *pattern, int flags)
 
 	if (pthread_mutex_unlock(&regex_mutex))
 	{
-		log_error("regex_create: pthread_mutex_unlock");
+		log_sys_error("regex_create: pthread_mutex_unlock");
 	}
 
 	return preg;

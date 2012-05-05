@@ -24,17 +24,17 @@ sock_unix_listen(char *path, int backlog)
 
 	fd = socket(AF_LOCAL, SOCK_STREAM, 0);
 	if(fd == -1) {
-		log_error("sock_unix_listen: socket");
+		log_sys_error("sock_unix_listen: socket");
 		goto error;
 	}
 
 	if(bind(fd, (struct sockaddr*) &sa, sizeof sa) == -1) {
-		log_error("sock_unix_listen: bind: %s", path);
+		log_sys_error("sock_unix_listen: bind: %s", path);
 		goto error;
 	}
 
 	if(listen(fd, backlog) == -1) {
-		log_error("sock_unix_listen: listen: %s", path);
+		log_sys_error("sock_unix_listen: listen: %s", path);
 		goto error;
 	}
 
@@ -61,7 +61,7 @@ sock_unix_unlink(char *uri)
 	}
 
 	if(unlink(uri + 5)) {
-		log_error("sock_unix_unlink: unlink %s", uri + 5);
+		log_sys_error("sock_unix_unlink: unlink %s", uri + 5);
 	}
 
 	log_debug("sock_unix_unlink: %s removed", uri + 5);
@@ -78,7 +78,7 @@ sock_unix_connect(char *path)
 
 	fd = socket(AF_LOCAL, SOCK_STREAM, 0);
 	if (fd == -1) {
-		log_error("sock_unix_connect: socket: \"%s\"", path);
+		log_sys_error("sock_unix_connect: socket: \"%s\"", path);
 		return -1;
 	}
 
@@ -88,7 +88,7 @@ sock_unix_connect(char *path)
 	strcpy(sa.sun_path, path);
 
 	if(connect(fd, (struct sockaddr *) &sa, sizeof sa) == -1) {
-		log_error("sock_connect_unix: connect: \"%s\"", path);
+		log_sys_error("sock_connect_unix: connect: \"%s\"", path);
 		return -1;
 	}
 
@@ -114,7 +114,7 @@ sock_inet_listen(char *bindaddr, char *port, int backlog)
 
 	e = getaddrinfo(bindaddr, port, &hints, &res);
 	if (e) {
-		log_error("sock_inet_listen: getaddrinfo: %s",
+		log_sys_error("sock_inet_listen: getaddrinfo: %s",
 			gai_strerror(e));
 		return -1;
 	}
@@ -129,7 +129,7 @@ sock_inet_listen(char *bindaddr, char *port, int backlog)
 
 		if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof opt))
 		{
-			log_error("sock_inet_listen: setsockopt");
+			log_sys_error("sock_inet_listen: setsockopt");
 		}
 
 		if(bind(fd, next->ai_addr, next->ai_addrlen) == 0) {
@@ -148,7 +148,7 @@ sock_inet_listen(char *bindaddr, char *port, int backlog)
 	}
 
 	if(listen(fd, backlog) == -1) {
-		log_die(EX_OSERR, "sock_inet_listen: listen \"%d\"", port);
+		log_sys_die(EX_OSERR, "sock_inet_listen: listen \"%d\"", port);
 	}
 
 	return fd;
@@ -168,7 +168,7 @@ sock_inet_connect(char *host, char *port)
 	hints.ai_socktype = SOCK_STREAM;
 
 	if((e = getaddrinfo(host, port, &hints, &ai))) {
-		log_error("sock_inet_connect: getaddrinfo %s:%s: %s",
+		log_sys_error("sock_inet_connect: getaddrinfo %s:%s: %s",
 			host, port, gai_strerror(e));
 		return -1;
 	}
@@ -252,7 +252,7 @@ sock_connect(char *uri)
 	 * TCP sockets
 	 */
 	if((host = strdup(uri + 5)) == NULL) {
-		log_error("sock_connect: strdup");
+		log_sys_error("sock_connect: strdup");
 		return -1;
 	}
 	

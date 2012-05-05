@@ -119,13 +119,13 @@ cf_setup_hostname(void **data)
 	char buffer[1024];
 
 	if (gethostname(buffer, sizeof(buffer))) {
-		log_error("cf_setup_hostname: gethostname failed");
+		log_sys_error("cf_setup_hostname: gethostname failed");
 		strcpy(buffer, "unknown");
 	}
 
 	*data = strdup(buffer);
 	if (*data == NULL) {
-		log_die(EX_CONFIG, "cf_setup_hostname: strdup");
+		log_sys_die(EX_CONFIG, "cf_setup_hostname: strdup");
 	}
 
 	return;
@@ -299,7 +299,7 @@ cf_path(char *path)
 	cf_filename = strdup(path);
 	if (cf_filename == NULL)
 	{
-		log_die(EX_OSERR, "cf_file: strdup");
+		log_sys_die(EX_OSERR, "cf_file: strdup");
 	}
 
 	return;

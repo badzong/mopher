@@ -175,7 +175,7 @@ milter_get_id(void)
 
 	if (pthread_mutex_lock(&milter_id_mutex))
 	{
-		log_error("milter_id: pthread_mutex_lock");
+		log_sys_error("milter_id: pthread_mutex_lock");
 		return -1;
 	}
 
@@ -183,7 +183,7 @@ milter_get_id(void)
 
 	if (pthread_mutex_unlock(&milter_id_mutex))
 	{
-		log_error("milter_id: pthread_mutex_unlock");
+		log_sys_error("milter_id: pthread_mutex_unlock");
 	}
 
 	return id;
@@ -372,7 +372,7 @@ milter_priv_create(void)
 	mp = (milter_priv_t *) malloc(sizeof (milter_priv_t));
 	if (mp == NULL)
 	{
-		log_error("milter_priv_create: malloc");
+		log_sys_error("milter_priv_create: malloc");
 		goto error;
 	}
 
@@ -406,7 +406,7 @@ milter_common_init(SMFICTX *ctx, VAR_INT_T stage, char *stagename)
 
 	if (pthread_rwlock_rdlock(&milter_reload_lock))
 	{
-		log_error("milter_common_init: pthread_rwlock_rdlock");
+		log_sys_error("milter_common_init: pthread_rwlock_rdlock");
 		return NULL;
 	}
 
@@ -489,7 +489,7 @@ error:
 	 */
 	if (pthread_rwlock_unlock(&milter_reload_lock))
 	{
-		log_error("milter_common_init: pthread_rwlock_unlock");
+		log_sys_error("milter_common_init: pthread_rwlock_unlock");
 	}
 
 	/*
@@ -529,7 +529,7 @@ milter_common_fini(SMFICTX *ctx, milter_priv_t *mp, milter_stage_t stage)
 
 	if (pthread_rwlock_unlock(&milter_reload_lock))
 	{
-		log_error("milter_common_clear: pthread_rwlock_unlock");
+		log_sys_error("milter_common_clear: pthread_rwlock_unlock");
 	}
 
 	return;
@@ -561,7 +561,7 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 	}
 
 	if ((now = (VAR_INT_T) time(NULL)) == -1) {
-		log_error("milter_connect: time");
+		log_sys_error("milter_connect: time");
 		goto exit;
 	}
 
@@ -836,7 +836,7 @@ milter_header(SMFICTX * ctx, char *headerf, char *headerv)
 	if ((mp->mp_header = (char *) realloc(mp->mp_header,
 	    mp->mp_headerlen + len)) == NULL)
 	{
-		log_error("milter_header: realloc");
+		log_sys_error("milter_header: realloc");
 		goto exit;
 	}
 
@@ -920,7 +920,7 @@ milter_body(SMFICTX * ctx, unsigned char *body, size_t len)
 	if ((mp->mp_body = (char *) realloc(mp->mp_body,
 	    mp->mp_bodylen + len + 1)) == NULL)
 	{
-		log_error("milter_body: realloc");
+		log_sys_error("milter_body: realloc");
 		goto exit;
 	}
 
@@ -1135,7 +1135,7 @@ milter_init(void)
 
 	if (chdir(workdir))
 	{
-		log_die(EX_OSERR, "milter_init: chdir to \"%s\"",
+		log_sys_die(EX_OSERR, "milter_init: chdir to \"%s\"",
 		    cf_workdir_path);
 	}
 		
@@ -1181,7 +1181,7 @@ milter_reload(int signal)
 
 	if (pthread_rwlock_wrlock(&milter_reload_lock))
 	{
-		log_die(EX_SOFTWARE, "milter_reload: pthread_rwlock_wrlock");
+		log_sys_die(EX_SOFTWARE, "milter_reload: pthread_rwlock_wrlock");
 	}
 
 	util_block_signals(SIGUSR1, 0);
@@ -1193,7 +1193,7 @@ milter_reload(int signal)
 
 	if (pthread_rwlock_unlock(&milter_reload_lock))
 	{
-		log_die(EX_SOFTWARE, "milter_reload: pthread_rwlock_unlock");
+		log_sys_die(EX_SOFTWARE, "milter_reload: pthread_rwlock_unlock");
 	}
 
 	return;
@@ -1221,7 +1221,7 @@ milter_unlink_socket(void)
 
 	if (unlink(path))
 	{
-		log_error("milter_unlink_socket: unlink");
+		log_sys_error("milter_unlink_socket: unlink");
 	}
 
 	return;
@@ -1310,7 +1310,7 @@ milter(void)
 
 	if (pthread_rwlock_wrlock(&milter_reload_lock))
 	{
-		log_error("milter_common_init: pthread_rwlock_wrlock");
+		log_sys_error("milter_common_init: pthread_rwlock_wrlock");
 	}
 
 	if (r == MI_SUCCESS)

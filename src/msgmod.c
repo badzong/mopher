@@ -44,7 +44,7 @@ msgmod_create(msgmod_type_t type, ...)
 	mm = (msgmod_t *) malloc(sizeof (msgmod_t));
 	if (mm == NULL)
 	{
-		log_die(EX_OSERR, "msgmod: malloc");
+		log_sys_die(EX_OSERR, "msgmod: malloc");
 	}
 
 	mm->mm_type = type;
@@ -117,7 +117,7 @@ msgmod(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 	args = (var_t **) malloc(size);
 	if (args == NULL)
 	{
-		log_error("msgmod: malloc");
+		log_sys_error("msgmod: malloc");
 		goto error;
 	}
 
