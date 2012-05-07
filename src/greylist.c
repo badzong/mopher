@@ -649,7 +649,7 @@ greylist_recipient(greylist_t * gl, VAR_INT_T *delayed, var_t *mailspec,
 	passed_delay = received - *created;
 
 	log_message(LOG_ERR, mailspec, "greylist: status=defer, delay=%ld/%ld,"
-	    " attempts=%ld/%ld", passed_delay, *delay, *connections + 1,
+	    " attempts=%ld/%ld", passed_delay, *delay, *connections,
 	    *attempts);
 
 
