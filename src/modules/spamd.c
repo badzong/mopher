@@ -182,7 +182,7 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 		goto error;
 	}
 
-	log_debug("spamd_query: received header: %s", recv_header);
+	log_debug("spamd_query: received header:\n%s", recv_header);
 
 	/*
 	 * received header + headers + \r\n\r\n + body 
