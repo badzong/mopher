@@ -23,14 +23,38 @@
 #define SPAMD_FALSELEN 8
 
 
-static const char spamd_single[] = "Received: from %s (%s [%s])\r\n\tby %s "
+static const char spamd_single[] = "Received: from %s (%s)\r\n\tby %s "
     "(envelope-sender <%s>) (%s) with SMTP id %s\r\n\tfor <%s>; %s\r\n";
 
-static const char spamd_multi[] = "Received: from %s (%s [%s])\r\n\tby %s "
+static const char spamd_multi[] = "Received: from %s (%s)\r\n\tby %s "
     "(envelope-sender <%s>) (%s) with SMTP id %s;\r\n\t%s%s\r\n";
 
 static char *spamd_symbols[] = { "spamd_spam", "spamd_score",
 	"spamd_symbols", NULL};
+
+static int
+spamd_rdns_none(char *hostname, char *hostaddr)
+{
+	char *clean_hostname;
+	int r = 0;
+
+	clean_hostname = util_strdupenc(hostname, "[]")
+	if (clean_hostname == NULL)
+	{
+		/*
+                 * If we just ran out of memory. I don't care.
+                 */
+		return 0;
+	}
+
+	if (strcmp(clean_hostname, hostaddr) == 0)
+	{
+		r = 1;
+	}
+
+	free(clean_hostname);
+	return r;
+}
 
 static int
 spamd_header(var_t *attrs, char *header, int len)
@@ -44,6 +68,7 @@ spamd_header(var_t *attrs, char *header, int len)
 	char *queueid;
 	time_t t;
 	char timestamp[BUFLEN];
+	char host[BUFLEN];
 	struct tm tm;
 	int r;
 	const char *fmt;
@@ -88,9 +113,39 @@ spamd_header(var_t *attrs, char *header, int len)
 		fmt = spamd_multi;
 		envrcpt = "";
 	}
+
+	/*
+ 	 * Handle RDNS None
+ 	 */
+	if (spamd_rdns_none(hostname, addrstr))
+	{
+		r = snprintf(host, sizeof(host), "[%s]", addrstr);
+	}
+	else
+	{
+		r = snprintf(host, sizeof(host), "%s [%s]", hostname, addrstr);
+	}
+
+	if (r >= sizeof(host))
+	{
+		log_error("spamd_header: buffer exhausted");
+		return -1;
+	}
+
+	/*
+         * Prevent double qouting e.g. <<me@example.com>>
+         */
+	clean_envfrom = util_strdupenc(envfrom, "<>")
+	if (clean_envfrom == NULL)
+	{
+		log_error("spamd_header: util_strdupenc failed");
+		return -1;
+	}
 		
-	len = snprintf(header, len, fmt, helo, hostname, addrstr, cf_hostname,
-	    envfrom, BINNAME, queueid, envrcpt, timestamp);
+	len = snprintf(header, len, fmt, helo, host, cf_hostname,
+		clean_envfrom, BINNAME, queueid, envrcpt, timestamp);
+
+	free(clean_envfrom);
 
 	return len;
 }
