@@ -38,7 +38,7 @@ spamd_rdns_none(char *hostname, char *hostaddr)
 	char *clean_hostname;
 	int r = 0;
 
-	clean_hostname = util_strdupenc(hostname, "[]")
+	clean_hostname = util_strdupenc(hostname, "[]");
 	if (clean_hostname == NULL)
 	{
 		/*
@@ -135,7 +135,7 @@ spamd_header(var_t *attrs, char *header, int len)
 	/*
          * Prevent double qouting e.g. <<me@example.com>>
          */
-	clean_envfrom = util_strdupenc(envfrom, "<>")
+	clean_envfrom = util_strdupenc(envfrom, "<>");
 	if (clean_envfrom == NULL)
 	{
 		log_error("spamd_header: util_strdupenc failed");
