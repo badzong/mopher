@@ -63,6 +63,7 @@ spamd_header(var_t *attrs, char *header, int len)
 	char *addrstr;
 	char *helo;
 	char *envfrom;
+	char *clean_envfrom;
 	VAR_INT_T recipients;
 	char *envrcpt;
 	char *queueid;
@@ -180,6 +181,8 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 		log_error("spamd_query: spamd_header failed");
 		goto error;
 	}
+
+	log_debug("spamd_query: received header: %s", recv_header);
 
 	/*
 	 * received header + headers + \r\n\r\n + body 
