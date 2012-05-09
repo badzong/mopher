@@ -63,7 +63,6 @@ spamd_header(var_t *attrs, char *header, int len)
 	char *addrstr;
 	char *helo;
 	char *envfrom;
-	char *clean_envfrom;
 	VAR_INT_T recipients;
 	char *envrcpt;
 	char *queueid;
@@ -77,9 +76,9 @@ spamd_header(var_t *attrs, char *header, int len)
 
 	r = acl_symbol_dereference(attrs, "milter_received", &t,
 		"milter_hostname", &hostname, "milter_helo", &helo,
-		"milter_envfrom", &envfrom, "milter_envrcpt", &envrcpt,
-		"milter_recipients", &recipients, "milter_queueid", &queueid,
-		"milter_addrstr", &addrstr, NULL);
+		"milter_envfrom_addr", &envfrom, "milter_envrcpt_addr",
+		&envrcpt, "milter_recipients", &recipients, "milter_queueid",
+		&queueid, "milter_addrstr", &addrstr, NULL);
 	if (r)
 	{
 		log_error("spamd_header: acl_symbol_dereference failed");
@@ -133,20 +132,8 @@ spamd_header(var_t *attrs, char *header, int len)
 		return -1;
 	}
 
-	/*
-         * Prevent double qouting e.g. <<me@example.com>>
-         */
-	clean_envfrom = util_strdupenc(envfrom, "<>");
-	if (clean_envfrom == NULL)
-	{
-		log_error("spamd_header: util_strdupenc failed");
-		return -1;
-	}
-		
 	len = snprintf(header, len, fmt, helo, host, cf_hostname,
-		clean_envfrom, BINNAME, queueid, envrcpt, timestamp);
-
-	free(clean_envfrom);
+		envfrom, BINNAME, queueid, envrcpt, timestamp);
 
 	return len;
 }
