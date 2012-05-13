@@ -611,10 +611,12 @@ greylist_recipient(greylist_t * gl, VAR_INT_T *delayed, var_t *mailspec,
 		++(*connections);
 	}
 
+	passed_delay = received - *created;
+
 	/*
 	 * Greylisting passed (delay and attempts).
 	 */
-	if (received > *created + *delay && *connections > *attempts)
+	if (passed_delay > *delay && *connections > *attempts)
 	{
 		*expire = received + *visa;
 		defer = 0;
@@ -626,15 +628,15 @@ greylist_recipient(greylist_t * gl, VAR_INT_T *delayed, var_t *mailspec,
 		}
 
 		log_message(LOG_ERR, mailspec, "greylist: status=passed, "
-		    "delay=%ld, attempts=%ld, visa=%ld, passed=%ld", *delay,
-		    *attempts, *visa, *passed);
+		    "delay=%ld, attempts=%ld, visa=%ld, passed=%ld",
+		    passed_delay, *connections, *visa, *passed);
 
 		/*
 		 * Set delayed for the first message (set only here!)
 		 */
 		if (*passed == 1)
 		{
-			*delayed = received - *created;
+			*delayed = passed_delay;
 		}
 
 		goto update;
@@ -645,8 +647,6 @@ greylist_recipient(greylist_t * gl, VAR_INT_T *delayed, var_t *mailspec,
 	 */
 	*expire = *created + *deadline;
 	*passed = 0;
-
-	passed_delay = received - *created;
 
 	log_message(LOG_ERR, mailspec, "greylist: status=defer, delay=%ld/%ld,"
 	    " attempts=%ld/%ld", passed_delay, *delay, *connections,
