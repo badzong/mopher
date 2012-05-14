@@ -628,8 +628,9 @@ greylist_recipient(greylist_t * gl, VAR_INT_T *delayed, var_t *mailspec,
 		}
 
 		log_message(LOG_ERR, mailspec, "greylist: status=passed, "
-		    "delay=%ld, attempts=%ld, visa=%ld, passed=%ld",
-		    passed_delay, *connections, *visa, *passed);
+		    "delay=%ld/%ld, attempts=%ld/%ld, visa=%ld, passed=%ld",
+		    passed_delay, *delay, *connections, *attempts, *visa,
+		    *passed);
 
 		/*
 		 * Set delayed for the first message (set only here!)
