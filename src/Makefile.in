@@ -3,14 +3,14 @@ include @top_srcdir@/Makefile.common
 INCLUDE=-I@top_srcdir@ -I@top_srcdir@/src/include
 CFLAGS+=$(INCLUDE)
 
-OBJECTS=defs.o mopherd.o cf_yacc.o cf_lex.o cf.o cf_defaults.o acl_yacc.o acl_lex.o acl.o milter.o module.o ll.o ht.o sht.o var.o vlist.o vtable.o log.o hash.o util.o dbt.o greylist.o sock.o client.o server.o exp.o parser.o tarpit.o msgmod.o
+OBJECTS=defs.o cf_yacc.o cf_lex.o cf.o cf_defaults.o acl_yacc.o acl_lex.o acl.o milter.o module.o ll.o ht.o sht.o var.o vlist.o vtable.o log.o hash.o util.o dbt.o greylist.o sock.o client.o server.o exp.o parser.o tarpit.o msgmod.o
 GENSRC=cf_yacc.c cf_yacc.h cf_lex.c acl_yacc.c acl_yacc.h acl_lex.c
 SUBDIRS=modules
 
 .PHONY: clean
 .PHONY: $(SUBDIRS)
 
-all: $(SUBDIRS) mopherd
+all: $(SUBDIRS) mopherd mopher-greylist
 
 $(SUBDIRS):
 	cd $@ && $(MAKE)
@@ -39,7 +39,10 @@ acl_lex.c: acl_lex.l
 	$(LEX) -t -Pacl_ acl_lex.l > acl_lex.c
 
 mopherd: Makefile $(OBJECTS) $(LIBS)
-	$(CC) $(CFLAGS) -o mopherd $(OBJECTS) $(LDFLAGS)
+	$(CC) $(CFLAGS) -o $@ $(OBJECTS) mopherd.c $(LDFLAGS)
+
+mopher-greylist: Makefile $(OBJECTS) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ $(OBJECTS) mopher-greylist.c  $(LDFLAGS)
 
 clean:
 	-rm mopherd $(OBJECTS) $(GENSRC)

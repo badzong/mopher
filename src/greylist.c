@@ -784,3 +784,144 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 
 	return ACL_NONE;
 }
+
+int
+greylist_pass(char *source, char *envfrom, char *envrcpt)
+{
+	var_t *lookup = NULL, *record = NULL;
+	VAR_INT_T *created;
+	VAR_INT_T *updated;
+	VAR_INT_T *expire;
+	VAR_INT_T *connections;
+	VAR_INT_T *deadline;
+	VAR_INT_T *delay;
+	VAR_INT_T *attempts;
+	VAR_INT_T *visa;
+	VAR_INT_T *passed;
+	int now;
+
+	/*
+	 * Lookup greylist record
+	 */
+	lookup = vlist_record(greylist_dbt.dbt_scheme, source, envfrom,
+	    envrcpt, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+
+	if (lookup == NULL)
+	{
+		log_error("greylist_pass: vlist_record failed");
+		goto error;
+	}
+
+	if (dbt_db_get(&greylist_dbt, lookup, &record))
+	{
+		log_error("greylist_pass: dbt_db_get failed");
+		goto error;
+	}
+
+	var_delete(lookup);
+	lookup = NULL;
+
+	/*
+	 * No record found
+	 */
+	if (record == NULL)
+	{
+		return 0;
+	}
+
+	if (vlist_dereference(record, NULL, NULL, NULL, &created, &updated,
+            &expire, &connections, &deadline, &delay, &attempts, &visa,
+            &passed))
+        {
+                log_error("greylist_pass: vlist_dereference failed");
+		goto error;
+        }
+
+	/*
+	 * Record has already passed
+	 */
+	if (*passed > 0)
+	{
+		return 0;
+	}
+
+	now = time(NULL);
+
+	*delay = now - *created;
+	*connections = *attempts;
+	*expire = now + *visa;
+	*updated = now;
+
+	if (dbt_db_set(&greylist_dbt, record))
+	{
+		log_error("greylist_pass: dbt_db_set failed");
+		goto error;
+	}
+
+	var_delete(record);
+	return 1;
+
+error:
+	if (lookup)
+	{
+		var_delete(lookup);
+	}
+
+	if (record)
+	{
+		var_delete(record);
+	}
+
+	return -1;
+}
+
+void
+greylist_dump_record(dbt_t *dbt, var_t *record)
+{
+	char *source;
+	char *envfrom;
+	char *envrcpt;
+	VAR_INT_T *created;
+	VAR_INT_T *updated;
+	VAR_INT_T *expire;
+	VAR_INT_T *connections;
+	VAR_INT_T *deadline;
+	VAR_INT_T *delay;
+	VAR_INT_T *attempts;
+	VAR_INT_T *visa;
+	VAR_INT_T *passed;
+
+	int n;
+
+	if (vlist_dereference(record, &source, &envfrom, &envrcpt, &created, &updated,
+            &expire, &connections, &deadline, &delay, &attempts, &visa,
+            &passed))
+        {
+                log_sys_die(EX_SOFTWARE, "greylist_dump_record: vlist_dereference failed");
+        }
+
+	if (*passed > 0)
+	{
+		n = *expire - time(NULL);
+
+		printf("%s: %s > %s: status=visa, messages=%ld, expires=%d\n", source, 
+		    envfrom, envrcpt, *passed, n);
+	}
+	else
+	{
+		n = time(NULL) - *created;
+
+		printf("%s: %s > %s: status=defer, delay=%d/%ld, attempts=%ld/%ld\n", source,
+		    envfrom, envrcpt, n, *delay, *connections, *attempts);
+	}
+
+	return;
+}
+
+void
+greylist_dump(void)
+{
+	dbt_db_walk(&greylist_dbt, (dbt_db_callback_t) greylist_dump_record);
+
+	return;
+}

@@ -5,7 +5,11 @@
 
 #include <mopher.h>
 
+#define HOME_LEN 1024
 
+
+static DB_ENV *bdb_env;
+static int bdb_databases;
 static dbt_driver_t dbt_driver;
 
 
@@ -14,8 +18,37 @@ bdb_open(dbt_t *dbt)
 {
 	DB *db = NULL;
 	int r;
+	char home[HOME_LEN];
 
-	if (db_create(&db, NULL, 0)) {
+	/*
+	 * CAVEAT: Not thread safe. Databases are opened at startup by only one single thread.
+	 */
+	if (bdb_env == NULL)
+	{
+		if (util_dirname(home, sizeof home, dbt->dbt_path))
+		{
+			log_error("bdb_open: util_dirname failed");
+			goto error;
+		}
+
+		/*
+		 * Prepare environment for multi process access.
+		 */
+		if (db_env_create(&bdb_env, 0))
+		{
+			log_error("bdb_open: db_env_create failed");
+			goto error;
+		}
+
+		if(bdb_env->open(bdb_env, home, DB_CREATE | DB_INIT_TXN | DB_REGISTER |
+		    DB_RECOVER | DB_INIT_MPOOL | DB_INIT_LOCK | DB_THREAD, 0))
+		{
+			log_error("bdb_open: DB_ENV->open failed");
+			goto error;
+		}
+	}
+
+	if (db_create(&db, bdb_env, 0)) {
 		log_error("bdb_open: db_create failed");
 		goto error;
 	}
@@ -30,6 +63,9 @@ bdb_open(dbt_t *dbt)
 	errno = 0;
 
 	dbt->dbt_handle = db;
+
+	// Database counter. Used to free bdb_env.
+	++bdb_databases;
 
 	return 0;
 
@@ -49,6 +85,11 @@ bdb_close(dbt_t *dbt)
 	DB *db = dbt->dbt_handle;
 	
 	db->close(db, 0);
+
+	if (--bdb_databases == 0)
+	{
+		bdb_env->close(bdb_env, 0);
+	}
 
 	return;
 }

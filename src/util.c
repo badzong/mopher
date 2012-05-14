@@ -734,3 +734,45 @@ util_chmod(char *path, int mode_decimal)
 
 	return 0;
 }
+
+int
+util_dirname(char *buffer, int size, char *path)
+{
+	struct stat s;
+	char *p;
+
+	if (size < strlen(path) + 1)
+	{
+		log_error("util_dirname: buffer exhausted");
+		return -1;
+	}
+
+	strcpy(buffer, path);
+
+	if (stat(path, &s))
+	{
+		log_sys_error("util_dirname: stat");
+		return -1;
+	}
+
+	/*
+	 * Path already is a directory
+	 */
+	if (s.st_mode & S_IFDIR)
+	{
+		return 0;
+	}
+
+	/*
+	 * Missing slash
+	 */
+	p = strrchr(buffer, '/');
+	if (p == NULL)
+	{
+		return -1;
+	}
+
+	*p = 0;
+
+	return 0;
+}

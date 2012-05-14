@@ -37,4 +37,5 @@ void util_setuid(char *name);
 void util_daemonize(void);
 void util_pidfile(char *path);
 int util_chmod(char *path, int mode_decimal);
+int util_dirname(char *buffer, int size, char *path);
 #endif /* _UTIL_H_ */
