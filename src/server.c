@@ -13,11 +13,24 @@
 #define MAX_CLIENTS 10
 #define BACKLOG 16
 #define RECV_BUFFER 4096
+#define MAXARGS 16
+#define FUNC_BUCKETS 64
 
-static int		server_socket;
-static int		server_clients[MAX_CLIENTS + 1];
-static int		server_running;
-static pthread_t	server_thread;
+static server_function_t server_functions[] = {
+	{ "greylist",	"Dump greylist tuples",		server_greylist_dump },
+	{ "pass",	"Let tuple pass greylistung",	server_greylist_pass },
+	{ "help",	"Print this dialog",		server_help },
+#ifdef DEBUG
+	{ "echo",	"Echo input for debugging",	server_echo },
+#endif
+	{ NULL,		NULL,				NULL },
+};
+
+static sht_t *server_function_table;
+static int server_socket;
+static int server_clients[MAX_CLIENTS + 1];
+static int server_running;
+static pthread_t server_thread;
 
 
 static void
@@ -30,7 +43,139 @@ server_usr2(int sig)
 
 
 static int
-server_update(int socket)
+server_reply(int sock, char *message)
+{
+	int len, n;
+	char buffer[RECV_BUFFER];
+
+	len = util_concat(buffer, sizeof buffer, message, "\n", NULL);
+	if (len == -1)
+	{
+		log_error("server_reply: util_concat failed");
+		return -1;
+	}
+
+	n = write(sock, buffer, len);
+	if (n == -1)
+	{
+		log_sys_error("server_reply: write");
+		return -1;
+	}
+
+	return n;
+}
+
+
+int
+server_help(int sock, int argc, char **argv)
+{
+	server_function_t *func;
+	char buffer[RECV_BUFFER];
+
+	for (func = server_functions; func->sf_name; ++func)
+	{
+		util_concat(buffer, sizeof buffer, func->sf_name, "\t", func->sf_help, NULL);
+		server_reply(sock, buffer);
+	}
+	
+	return 0;
+}
+
+
+int
+server_greylist_dump(int sock, int argc, char **argv)
+{
+	return 0;
+}
+
+
+int
+server_greylist_pass(int sock, int argc, char **argv)
+{
+	return 0;
+}
+
+
+int
+server_echo(int sock, int argc, char **argv)
+{
+	return 0;
+}
+
+
+static int
+server_exec_cmd(int sock, char *cmd)
+{
+	int argc = 0;
+	char *argv[MAXARGS];
+	char *save, *p, *nil;
+	server_function_t *sf;
+
+	for (nil = cmd; (p = strtok_r(nil, " ", &save)) && argc < MAXARGS; nil = NULL, ++argc)
+	{
+		argv[argc] = p;
+	}
+
+	if (argc == MAXARGS)
+	{
+		server_reply(sock, "ERROR: Too many arguments");
+		log_error("server_exec_cmd: Too many arguments");
+		return -1;
+	}
+
+	sf = sht_lookup(server_function_table, argv[0]);
+	if (sf == NULL)
+	{
+		sf = sht_lookup(server_function_table, "help");
+		if (sf == NULL)
+		{
+			log_die(EX_SOFTWARE, "server_exec_cmd: help not found. This is impossible hence fatal.");
+		}
+	}
+
+	return sf->sf_callback(sock, argc, argv);
+}
+
+static int
+server_request(int sock)
+{
+	char cmd_buffer[RECV_BUFFER];
+	int len;
+
+	len = read(sock, cmd_buffer, sizeof cmd_buffer);
+	if (len == -1)
+	{
+		log_sys_error("server_request: read");
+		return -1;
+	}
+
+	if (len == sizeof cmd_buffer)
+	{
+		log_sys_error("server_request: buffer exhausted");
+		return -1;
+	}
+
+	cmd_buffer[len] = 0;
+
+	/*
+	 * Connection closed
+	 */
+	if (!len)
+	{
+		return 0;
+	}
+
+	if(server_exec_cmd(sock, cmd_buffer))
+	{
+		log_error("server_request: server_exec_cmd failed");
+		return -1;
+	}
+
+	return len;
+}
+
+static int
+server_update(int sock)
 {
 	dbt_t *dbt;
 	char buffer[RECV_BUFFER];
@@ -39,7 +184,7 @@ server_update(int socket)
 	char *name = NULL;
 	var_t *record = NULL;
 
-	len = read(socket, buffer, sizeof buffer);
+	len = read(sock, buffer, sizeof buffer);
 	if (len == -1)
 	{
 		log_sys_error("server_update: read");
@@ -124,6 +269,7 @@ server_main(void *arg)
 	int ready;
 	fd_set master;
 	fd_set rs;
+	char *client_addr;
 
 	/*
 	 * Server is running
@@ -174,7 +320,7 @@ server_main(void *arg)
 				continue;
 			}
 
-			log_sys_error("server: select");
+			log_sys_error("server_main: select");
 		}
 
 		/*
@@ -189,7 +335,7 @@ server_main(void *arg)
 
 			if(server_clients[i] == 0)
 			{
-				log_error("server: client slots depleted");
+				log_error("server_main: client slots depleted");
 
 				/*
 				 * Disable server_socket in master set and queue new connections
@@ -206,7 +352,7 @@ server_main(void *arg)
 
 			if(server_clients[i] == -1)
 			{
-				log_sys_error("server: accept");
+				log_sys_error("server_main: accept");
 			}
 
 			else
@@ -218,6 +364,17 @@ server_main(void *arg)
 				if(server_clients[i] > maxfd) {
 					maxfd = server_clients[i];
 				}
+			}
+
+			client_addr = util_addrtostr(&caddr);
+			if (client_addr)
+			{
+				log_error("server_main: new client connection from %s", client_addr);
+				free(client_addr);
+			}
+			else
+			{
+				log_error("server_main: util_addrtostr failed");
 			}
 
 server_slots_depleted:
@@ -241,7 +398,7 @@ server_slots_depleted:
 			/*
 			 * Handle request
 			 */
-			len = server_update(server_clients[i]);
+			len = server_request(server_clients[i]);
 			if (len == -1)
 			{
 				log_error("server_main: server_update failed");
@@ -314,6 +471,8 @@ server_slots_depleted:
 int
 server_init()
 {
+	server_function_t *func;
+
 	/*
 	 * Don't start the server if server_socket is empty
 	 */
@@ -323,6 +482,23 @@ server_init()
 		return 0;
 	}
 
+	/*
+	 * Load function table
+	 */
+	server_function_table = sht_create(FUNC_BUCKETS, NULL);
+	if (server_function_table == NULL)
+	{
+		log_die(EX_SOFTWARE, "server_init: sht_create failed");
+	}
+
+	for (func = server_functions; func->sf_name; ++func)
+	{
+		if (sht_insert(server_function_table, func->sf_name, func))
+		{
+			log_die(EX_SOFTWARE, "server_init: sht_insert failed");
+		}
+	}
+	
 	/*
 	 * Start server thread
 	 */
@@ -360,6 +536,8 @@ server_clear(void)
 	{
 		log_error("server_main: util_signal failed");
 	}
+
+	sht_clear(server_function_table);
 
 	return;
 }
