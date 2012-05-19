@@ -15,6 +15,7 @@
 #define RECV_BUFFER 4096
 #define MAXARGS 16
 #define FUNC_BUCKETS 64
+#define MAX_BUFFER 10000000
 
 static server_function_t server_functions[] = {
 	{ "greylist_dump",	"Dump greylist tuples",		server_greylist_dump },
@@ -43,7 +44,7 @@ server_usr2(int sig)
 }
 
 
-static int
+int
 server_reply(int sock, char *message, ...)
 {
 	int len, n;
@@ -92,6 +93,91 @@ server_output(int sock, char *buffer, int size)
 	}
 
 	return n;
+}
+
+
+int
+server_cmd(int sock, char *cmd)
+{
+	char recv[RECV_BUFFER];
+	int n;
+
+	if (server_reply(sock, cmd) == -1)
+	{
+		log_error("server_data_cmd: server_reply failed");
+		return -1;
+	}
+
+	n = read(sock, recv, sizeof recv);
+	if (n == -1)
+	{
+		log_sys_error("server_data_cmd: read");
+		return -1;
+	}
+
+	if (strncmp(recv, "OK", 2))
+	{
+		return -1;
+	}
+
+	return 0;
+}
+
+int
+server_data_cmd(int sock, char *cmd, char **buffer)
+{
+	char recv[RECV_BUFFER];
+	int n;
+
+	if (server_reply(sock, cmd) == -1)
+	{
+		log_error("server_data_cmd: server_reply failed");
+		return -1;
+	}
+
+	n = read(sock, recv, sizeof recv);
+	if (n == -1)
+	{
+		log_sys_error("server_data_cmd: read");
+		return -1;
+	}
+
+	n = atoi(recv);
+	if (n < 0 || n > MAX_BUFFER)
+	{
+		log_error("server_data_cmd: bad buffer size");
+		return -1;
+	}
+
+	*buffer = (char *) malloc(n + 1);
+	if (*buffer == NULL)
+	{
+		log_sys_error("server_data_cmd: malloc");
+		return -1;
+	}
+
+	n = read(sock, *buffer, n);
+	if (n == -1)
+	{
+		log_sys_error("server_data_cmd: read");
+		return -1;
+	}
+
+	(*buffer)[n] = 0;
+
+	n = read(sock, recv, sizeof recv);
+	if (n == -1)
+	{
+		log_sys_error("server_data_cmd: read");
+		return -1;
+	}
+
+	if (strncmp(recv, "OK", 2))
+	{
+		return -1;
+	}
+
+	return 0;
 }
 
 
@@ -524,7 +610,7 @@ server_init()
 	 */
 	if (sht_init(&server_function_table, FUNC_BUCKETS, NULL))
 	{
-		log_die(EX_SOFTWARE, "server_init: sht_create failed");
+		log_die(EX_SOFTWARE, "server_init: sht_init failed");
 	}
 
 	for (func = server_functions; func->sf_name; ++func)

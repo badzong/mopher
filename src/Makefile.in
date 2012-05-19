@@ -10,7 +10,7 @@ SUBDIRS=modules
 .PHONY: clean
 .PHONY: $(SUBDIRS)
 
-all: $(SUBDIRS) mopherd mopher-greylist
+all: $(SUBDIRS) mopherd moco
 
 $(SUBDIRS):
 	cd $@ && $(MAKE)
@@ -41,8 +41,8 @@ acl_lex.c: acl_lex.l
 mopherd: Makefile $(OBJECTS) $(LIBS)
 	$(CC) $(CFLAGS) -o $@ $(OBJECTS) mopherd.c $(LDFLAGS)
 
-mopher-greylist: Makefile $(OBJECTS) $(LIBS)
-	$(CC) $(CFLAGS) -o $@ $(OBJECTS) mopher-greylist.c  $(LDFLAGS)
+moco: Makefile $(OBJECTS) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ $(OBJECTS) moco.c  $(LDFLAGS)
 
 clean:
 	-rm mopherd $(OBJECTS) $(GENSRC)

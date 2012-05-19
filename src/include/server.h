@@ -11,6 +11,9 @@ typedef struct {
  * Prototypes
  */
 
+int server_reply(int sock, char *message, ...);
+int server_cmd(int sock, char *cmd);
+int server_data_cmd(int sock, char *cmd, char **buffer);
 int server_init();
 void server_clear(void);
 int server_dummy(int sock, int argc, char **argv);
