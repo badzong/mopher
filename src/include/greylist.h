@@ -46,7 +46,7 @@ void greylist_delete(greylist_t *gl);
 void greylist_init(void);
 acl_action_type_t greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data);
 int greylist_pass(char *source, char *envfrom, char *envrcpt);
-void greylist_dump_record(dbt_t *dbt, var_t *record);
-void greylist_dump(void);
+int greylist_dump_record(dbt_t *dbt, var_t *record);
+int greylist_dump(char **dump);
 
 #endif /* _GREYLIST_H_ */

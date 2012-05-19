@@ -66,6 +66,9 @@ dbt_close(dbt_t *dbt)
 static int
 dbt_db_lock(dbt_t *dbt)
 {
+	/*
+         * No locking required.
+	 */
 	if ((dbt->dbt_driver->dd_flags & DBT_LOCK) == 0)
 	{
 		return 0;

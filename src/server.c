@@ -17,16 +17,17 @@
 #define FUNC_BUCKETS 64
 
 static server_function_t server_functions[] = {
-	{ "greylist",	"Dump greylist tuples",		server_greylist_dump },
-	{ "pass",	"Let tuple pass greylistung",	server_greylist_pass },
-	{ "help",	"Print this dialog",		server_help },
+	{ "greylist_dump",	"Dump greylist tuples",		server_greylist_dump },
+	{ "greylist_pass",	"Let tuple pass greylistung",	server_greylist_pass },
+	{ "help",		"Print this message",		server_help },
+	{ "quit",		"close connection",		server_quit },
 #ifdef DEBUG
-	{ "echo",	"Echo input for debugging",	server_echo },
+	{ "dummy",		"function dummy",		server_dummy },
 #endif
-	{ NULL,		NULL,				NULL },
+	{ NULL,			NULL,				NULL },
 };
 
-static sht_t *server_function_table;
+static sht_t server_function_table;
 static int server_socket;
 static int server_clients[MAX_CLIENTS + 1];
 static int server_running;
@@ -43,22 +44,50 @@ server_usr2(int sig)
 
 
 static int
-server_reply(int sock, char *message)
+server_reply(int sock, char *message, ...)
 {
 	int len, n;
 	char buffer[RECV_BUFFER];
+        va_list ap;
 
-	len = util_concat(buffer, sizeof buffer, message, "\n", NULL);
-	if (len == -1)
+        va_start(ap, message);
+	len = vsnprintf(buffer, sizeof buffer, message, ap);
+        va_end(ap);
+
+	if (len >= sizeof buffer - 1) // Need to add \n here
 	{
-		log_error("server_reply: util_concat failed");
+		log_error("server_reply: buffer exhausted");
 		return -1;
 	}
 
-	n = write(sock, buffer, len);
+	// No need for \0 here.
+	buffer[len] = '\n';
+
+	n = write(sock, buffer, len + 1);
 	if (n == -1)
 	{
 		log_sys_error("server_reply: write");
+		return -1;
+	}
+
+	return n;
+}
+
+static int
+server_output(int sock, char *buffer, int size)
+{
+	int n;
+
+	if (server_reply(sock, "%d", size) == -1)
+	{
+		log_error("server_output: server_reply failed");
+		return -1;
+	}
+
+	n = write(sock, buffer, size);
+	if (n == -1)
+	{
+		log_sys_error("server_output: write");
 		return -1;
 	}
 
@@ -72,34 +101,99 @@ server_help(int sock, int argc, char **argv)
 	server_function_t *func;
 	char buffer[RECV_BUFFER];
 
+	if (strncmp(argv[0], "help", 4))
+	{
+		server_reply(sock, "Unknown command");
+	}
+	server_reply(sock, "HELP:");
+
 	for (func = server_functions; func->sf_name; ++func)
 	{
 		util_concat(buffer, sizeof buffer, func->sf_name, "\t", func->sf_help, NULL);
 		server_reply(sock, buffer);
 	}
 	
-	return 0;
+	return 1;
 }
 
 
 int
 server_greylist_dump(int sock, int argc, char **argv)
 {
-	return 0;
+	char *dump = NULL;
+	int len;
+	int r = -1;
+
+	len = greylist_dump(&dump);
+
+	log_debug("server_greylist_dump: greylist size: %d bytes", len);
+
+	switch(len)
+	{
+	case 0:
+		server_reply(sock, "greylist empty");
+		return 1;
+	case -1:
+		log_error("server_greylist_dump: greylist_dump failed");
+		goto error;
+	default:
+		break;
+	}
+
+	if(server_output(sock, dump, len) == -1)
+	{
+		log_sys_error("server_greylist_dump: write");
+	}
+	else
+	{
+		r = 1; //OK
+	}
+
+error:
+	if (dump)
+	{
+		free(dump);
+	}
+	
+	return r;
 }
 
 
 int
 server_greylist_pass(int sock, int argc, char **argv)
 {
+	if (argc != 4)
+	{
+		server_reply(sock, "Usage: %s source from rcpt", argv[0]);
+		return -1;
+	}
+
+	switch(greylist_pass(argv[1], argv[2], argv[3]))
+	{
+	case -1:
+		log_error("server_greylist_pass: greylist_pass failed");
+		return -1;
+	case 0:
+		server_reply(sock, "Not found");
+	default:
+		break;
+	}
+
+	return 1;
+}
+
+
+int
+server_quit(int sock, int argc, char **argv)
+{
 	return 0;
 }
 
 
 int
-server_echo(int sock, int argc, char **argv)
+server_dummy(int sock, int argc, char **argv)
 {
-	return 0;
+	return 1;
 }
 
 
@@ -110,6 +204,7 @@ server_exec_cmd(int sock, char *cmd)
 	char *argv[MAXARGS];
 	char *save, *p, *nil;
 	server_function_t *sf;
+	int r;
 
 	for (nil = cmd; (p = strtok_r(nil, " ", &save)) && argc < MAXARGS; nil = NULL, ++argc)
 	{
@@ -118,22 +213,40 @@ server_exec_cmd(int sock, char *cmd)
 
 	if (argc == MAXARGS)
 	{
-		server_reply(sock, "ERROR: Too many arguments");
+		server_reply(sock, "Too many arguments");
 		log_error("server_exec_cmd: Too many arguments");
 		return -1;
 	}
 
-	sf = sht_lookup(server_function_table, argv[0]);
+	sf = sht_lookup(&server_function_table, argv[0]);
 	if (sf == NULL)
 	{
-		sf = sht_lookup(server_function_table, "help");
+		sf = sht_lookup(&server_function_table, "help");
 		if (sf == NULL)
 		{
 			log_die(EX_SOFTWARE, "server_exec_cmd: help not found. This is impossible hence fatal.");
 		}
 	}
 
-	return sf->sf_callback(sock, argc, argv);
+	r = sf->sf_callback(sock, argc, argv);
+	switch (r)
+	{
+	case 0:
+		server_reply(sock, "CLOSE");
+		break;
+	case -1:
+		log_error("server_exec_cmd: %s failed", argv[0]);
+		server_reply(sock, "ERROR");
+		break;
+	case 1:
+		server_reply(sock, "OK", r);
+		break;
+	default:
+		server_reply(sock, "OK: %d", r);
+		break;
+	}
+
+	return r;
 }
 
 static int
@@ -141,6 +254,7 @@ server_request(int sock)
 {
 	char cmd_buffer[RECV_BUFFER];
 	int len;
+	int r;
 
 	len = read(sock, cmd_buffer, sizeof cmd_buffer);
 	if (len == -1)
@@ -158,104 +272,28 @@ server_request(int sock)
 	cmd_buffer[len] = 0;
 
 	/*
-	 * Connection closed
+	 * Strip trailing newlines
+	 */
+	while (cmd_buffer[len - 1] == '\n')
+	{
+		cmd_buffer[--len] = 0;
+	}
+
+	/*
+	 * No command specified
 	 */
 	if (!len)
 	{
 		return 0;
 	}
 
-	if(server_exec_cmd(sock, cmd_buffer))
+	r = server_exec_cmd(sock, cmd_buffer);
+	if (r == -1)
 	{
 		log_error("server_request: server_exec_cmd failed");
-		return -1;
 	}
 
-	return len;
-}
-
-static int
-server_update(int sock)
-{
-	dbt_t *dbt;
-	char buffer[RECV_BUFFER];
-	int len;
-	char *p;
-	char *name = NULL;
-	var_t *record = NULL;
-
-	len = read(sock, buffer, sizeof buffer);
-	if (len == -1)
-	{
-		log_sys_error("server_update: read");
-		goto error;
-	}
-
-	if (len == 0)
-	{
-		log_error("server_update: connection closed");
-		return 0;
-	}
-
-	/*
-	 * Cut trailing newline
-	 */
-	buffer[--len] = 0;
-
-	p = strchr(buffer, '=');
-	if (p == NULL)
-	{
-		log_error("server_update: bad string received");
-		goto error;
-	}
-
-	len = p - buffer;
-	
-	name = strndup(buffer, len);
-	if (name == NULL)
-	{
-		log_sys_error("server_update: strndup");
-		goto error;
-	}
-
-	dbt = dbt_lookup(name);
-	if (dbt == NULL)
-	{
-		log_error("server_update: bad table \"%s\"", name);
-		goto error;
-	}
-
-	record = var_scan_scheme(dbt->dbt_scheme, buffer);
-	if (record == NULL)
-	{
-		log_error("server_update: var_scan_scheme failed");
-		goto error;
-	}
-
-	if (dbt_db_set(dbt, record))
-	{
-		log_error("server_update: dbt_db_set failed");
-		goto error;
-	}
-
-	free(name);
-	var_delete(record);
-
-	return len;
-
-
-error:
-	if (name)
-	{
-		free(name);
-	}
-
-	if (record)
-	{
-		var_delete(record);
-	}
-
-	return -1;
+	return r;
 }
 
 
@@ -398,14 +436,13 @@ server_slots_depleted:
 			/*
 			 * Handle request
 			 */
-			len = server_request(server_clients[i]);
-			if (len == -1)
+			switch(server_request(server_clients[i]))
 			{
-				log_error("server_main: server_update failed");
-			}
-
-			if (len)
-			{
+			case -1:
+				log_error("server_main: server_request failed");
+			case 0:
+				break;
+			default:
 				continue;
 			}
 
@@ -485,15 +522,14 @@ server_init()
 	/*
 	 * Load function table
 	 */
-	server_function_table = sht_create(FUNC_BUCKETS, NULL);
-	if (server_function_table == NULL)
+	if (sht_init(&server_function_table, FUNC_BUCKETS, NULL))
 	{
 		log_die(EX_SOFTWARE, "server_init: sht_create failed");
 	}
 
 	for (func = server_functions; func->sf_name; ++func)
 	{
-		if (sht_insert(server_function_table, func->sf_name, func))
+		if (sht_insert(&server_function_table, func->sf_name, func))
 		{
 			log_die(EX_SOFTWARE, "server_init: sht_insert failed");
 		}
@@ -537,7 +573,7 @@ server_clear(void)
 		log_error("server_main: util_signal failed");
 	}
 
-	sht_clear(server_function_table);
+	sht_clear(&server_function_table);
 
 	return;
 }

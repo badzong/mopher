@@ -7,7 +7,13 @@
 
 #include <mopher.h>
 
+#define DUMP_RECORD_BUFLEN 1024
+
 static dbt_t greylist_dbt;
+
+static char **greylist_dump_buffer;
+static int greylist_dump_buffer_size;
+static pthread_mutex_t greylist_dump_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /*
  * Greylist symbols and db translation
@@ -847,7 +853,7 @@ greylist_pass(char *source, char *envfrom, char *envrcpt)
 
 	now = time(NULL);
 
-	*delay = now - *created;
+	*created = now - *delay;
 	*connections = *attempts;
 	*expire = now + *visa;
 	*updated = now;
@@ -875,7 +881,11 @@ error:
 	return -1;
 }
 
-void
+/*
+ * CAVEAT: greylist_dump_record is not thread safe. Needs to run in locked
+ * context.
+ */
+int
 greylist_dump_record(dbt_t *dbt, var_t *record)
 {
 	char *source;
@@ -891,37 +901,122 @@ greylist_dump_record(dbt_t *dbt, var_t *record)
 	VAR_INT_T *visa;
 	VAR_INT_T *passed;
 
+	char dump[DUMP_RECORD_BUFLEN];
+	char *p;
+	int len;
 	int n;
+
+	/*
+	 * Previous error
+	 */
+	if (greylist_dump_buffer_size == -1)
+	{
+		return -1;
+	}
 
 	if (vlist_dereference(record, &source, &envfrom, &envrcpt, &created, &updated,
             &expire, &connections, &deadline, &delay, &attempts, &visa,
             &passed))
         {
-                log_sys_die(EX_SOFTWARE, "greylist_dump_record: vlist_dereference failed");
+                log_sys_error("greylist_dump_record: vlist_dereference failed");
+		greylist_dump_buffer_size = -1;
+		return -1;
+		
         }
 
 	if (*passed > 0)
 	{
 		n = *expire - time(NULL);
-
-		printf("%s: %s > %s: status=visa, messages=%ld, expires=%d\n", source, 
-		    envfrom, envrcpt, *passed, n);
+		len = snprintf(dump, sizeof dump,
+		    "%s: %s > %s: status=visa, messages=%ld, expires=%d\n",
+		    source, envfrom, envrcpt, *passed, n);
 	}
 	else
 	{
 		n = time(NULL) - *created;
-
-		printf("%s: %s > %s: status=defer, delay=%d/%ld, attempts=%ld/%ld\n", source,
+		len = snprintf(dump, sizeof dump, "%s: %s > %s: "
+		    "status=defer, delay=%d/%ld, attempts=%ld/%ld\n", source,
 		    envfrom, envrcpt, n, *delay, *connections, *attempts);
 	}
 
-	return;
+	if (len >= sizeof dump)
+	{
+		log_error("greylist_dump_record: buffer exhausted");
+		greylist_dump_buffer_size = -1;
+		return -1;
+	}
+
+	greylist_dump_buffer_size += len;
+
+	p = realloc(*greylist_dump_buffer, greylist_dump_buffer_size + 1);
+	if (p == NULL)
+	{
+		greylist_dump_buffer_size = -1;
+		return -1;
+	}
+
+	/*
+         * First record
+         */
+	if (greylist_dump_buffer_size == len)
+	{
+		strcpy(p, dump);
+	}
+	else
+	{
+		strcat(p, dump);
+	}
+
+	*greylist_dump_buffer = p;
+
+	return 0;
 }
 
-void
-greylist_dump(void)
+int
+greylist_dump(char **dump)
 {
+	/*
+	 * arguments to greylist_dump_record are passed through static globals
+	 * hence greylist_dump is mutex.
+	 */
+	if (pthread_mutex_lock(&greylist_dump_mutex))
+	{
+		log_sys_error("greylist_dump: pthread_mutex_lock");
+		return -1;
+	}
+
+	/*
+	 * For safety we require *dump to be NULL.
+	 */
+	if (*dump)
+	{
+		greylist_dump_buffer_size = -1;
+		goto error;
+	}
+
+	greylist_dump_buffer = dump;
+	greylist_dump_buffer_size = 0;
+
 	dbt_db_walk(&greylist_dbt, (dbt_db_callback_t) greylist_dump_record);
 
-	return;
+	if (greylist_dump_buffer_size == -1)
+	{
+		if (*greylist_dump_buffer)
+		{
+			free(*greylist_dump_buffer);
+			*greylist_dump_buffer = NULL;
+		}
+
+		log_error("greylist_dump: greylist_dump_record failed");
+
+		goto error;
+	}
+
+error:
+	if (pthread_mutex_unlock(&greylist_dump_mutex))
+	{
+		log_sys_error("greylist_dump: pthread_mutex_unlock");
+	}
+
+	return greylist_dump_buffer_size;
 }
