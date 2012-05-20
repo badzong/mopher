@@ -609,6 +609,11 @@ server_slots_depleted:
 	 */
 	close(server_socket);
 
+	if (!strncmp(cf_control_socket, "unix", 4))
+	{
+		sock_unix_unlink(cf_control_socket);
+	}
+
 	for(i = 0; server_clients[i] > 0; ++i)
 	{
 		if (server_clients[i] > 0)
