@@ -30,6 +30,7 @@ install: all
 	@echo 
 	@echo installing mopherd in $(sbindir)
 	$(INSTALL) -m 755 -o 0 -g 0 @top_srcdir@/src/mopherd $(sbindir)
+	$(INSTALL) -m 755 -o 0 -g 0 @top_srcdir@/src/moco $(sbindir)
 	@echo 
 	@echo installing modules in $(MOPHERD_DIR)
 	-$(INSTALL) -m 755 -o 0 -g 0 @top_srcdir@/src/modules/*.so $(MOPHERD_DIR)/modules
