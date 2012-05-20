@@ -717,7 +717,7 @@ acl_log(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 
 	if (v->v_type != VT_STRING)
 	{
-		if (var_dump_data(v, buffer, sizeof buffer))
+		if (var_dump_data(v, buffer, sizeof buffer) == -1)
 		{
 			log_error("acl_log: var_dump_data failed");
 			goto error;

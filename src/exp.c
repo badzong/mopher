@@ -827,12 +827,6 @@ exp_math_addr(int op, var_t *left, var_t *right)
 	l = left->v_data;
 	r = right->v_data;
 
-	if (l == NULL || r == NULL)
-	{
-		log_debug("exp_math_addr: empty value");
-		return NULL;
-	}
-
 	switch (op)
 	{
 	case '<':	i = util_addrcmp(l, r) == -1;		break;

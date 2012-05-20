@@ -68,7 +68,7 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	{
 		log_error("rbl_query: address family not supported");
 
-		if (vtable_setv(attrs, VT_ADDR, name, NULL, VF_COPYNAME | VF_KEEPDATA, VT_NULL))
+		if (vtable_set_new(attrs, VT_ADDR, name, NULL, VF_COPYNAME))
 		{
 			log_error("rbl_query: vtable_setv failed");
 			goto error;
@@ -121,7 +121,7 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	{
 		log_debug("rbl_query: RBL record \"%s\" not found", query);
 
-		if (vtable_setv(attrs, VT_ADDR, name, NULL, VF_COPYNAME | VF_KEEPDATA, VT_NULL))
+		if (vtable_set_new(attrs, VT_ADDR, name, NULL, VF_COPYNAME))
 		{
 			log_error("rbl_query: vtable_setv failed");
 			goto error;
@@ -152,7 +152,7 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 
 		free(resultstr);
 
-		if (vtable_setv(attrs, VT_ADDR, name, data, VF_COPYNAME, VT_NULL))
+		if (vtable_set_new(attrs, VT_ADDR, name, data, VF_COPYNAME))
 		{
 			log_error("rbl_query: vtable_setv failed");
 			goto error;

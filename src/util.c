@@ -270,6 +270,16 @@ util_addrcmp(struct sockaddr_storage *ss1, struct sockaddr_storage *ss2)
 {
 	unsigned long inaddr1, inaddr2;
 
+	if (ss1 == NULL && ss2 == NULL)
+	{
+		return 0;
+	}
+
+	if (ss1 == NULL || ss2 == NULL)
+	{
+		return 1;
+	}
+
 	if (ss1->ss_family < ss2->ss_family) {
 		return -1;
 	}
