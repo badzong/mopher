@@ -21,6 +21,7 @@ char * util_strdupenc(const char *src, const char *encaps);
 int util_strmail(char *buffer, int size, const char *src);
 struct sockaddr_storage* util_strtoaddr(const char *str);
 char * util_addrtostr(struct sockaddr_storage *ss);
+int util_addrtoint(struct sockaddr_storage *ss);
 int util_file_exists(char *path);
 int util_file(char *path, char **buffer);
 struct sockaddr_storage * util_hostaddr(struct sockaddr_storage *ss);
