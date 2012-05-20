@@ -40,7 +40,7 @@ extern VAR_INT_T	 cf_dbt_cleanup_interval;
 extern char		*cf_hostname;
 extern char		*cf_spamd_socket;
 extern VAR_INT_T	 cf_client_retry_interval;
-extern char		*cf_server_socket;
+extern char		*cf_control_socket;
 extern VAR_INT_T	 cf_tarpit_progress_interval;
 extern VAR_INT_T	 cf_counter_expire_low;
 extern VAR_INT_T	 cf_counter_expire_high;

@@ -411,7 +411,7 @@ server_main(void *arg)
 	/*
 	 * Create server socket
 	 */
-	server_socket = sock_listen(cf_server_socket, BACKLOG);
+	server_socket = sock_listen(cf_control_socket, BACKLOG);
 	if (server_socket == -1)
 	{
 		log_die(EX_SOFTWARE, "server_init: sock_listen failed");
@@ -599,7 +599,7 @@ server_init()
 	/*
 	 * Don't start the server if server_socket is empty
 	 */
-	if (!cf_server_socket)
+	if (!cf_control_socket)
 	{
 		log_debug("server_init: server_socket is empty: exit");
 		return 0;
@@ -637,7 +637,7 @@ server_init()
 void
 server_clear(void)
 {
-	if (!cf_server_socket)
+	if (!cf_control_socket)
 	{
 		return;
 	}

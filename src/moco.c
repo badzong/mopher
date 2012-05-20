@@ -160,7 +160,7 @@ main(int argc, char **argv)
 			cf_path(config);
 		}
 		cf_init();
-		server = cf_server_socket;
+		server = cf_control_socket;
 	}
 	if (server == NULL)
 	{

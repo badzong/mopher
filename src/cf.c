@@ -65,7 +65,7 @@ VAR_INT_T	 cf_dbt_cleanup_interval;
 char		*cf_hostname;
 char		*cf_spamd_socket;
 VAR_INT_T	 cf_client_retry_interval;
-char		*cf_server_socket;
+char		*cf_control_socket;
 VAR_INT_T	 cf_tarpit_progress_interval;
 VAR_INT_T	 cf_counter_expire_low;
 VAR_INT_T	 cf_counter_expire_high;
@@ -91,7 +91,7 @@ static cf_symbol_t cf_symbols[] = {
 	{ "hostname", &cf_hostname },
 	{ "spamd_socket", &cf_spamd_socket },
 	{ "client_retry_interval", &cf_client_retry_interval },
-	{ "server_socket", &cf_server_socket },
+	{ "control_socket", &cf_control_socket },
 	{ "tarpit_progress_interval", &cf_tarpit_progress_interval },
 	{ "counter_expire_low", &cf_counter_expire_low },
 	{ "counter_expire_high", &cf_counter_expire_high },
