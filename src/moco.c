@@ -52,7 +52,6 @@ static int
 moco_greylist_dump(int sock)
 {
 	char *dump;
-	int n;
 	
 	if(server_data_cmd(sock, "greylist_dump", &dump))
 	{
@@ -102,7 +101,7 @@ main(int argc, char **argv)
 	char *server = NULL;
 	char *action;
 	int sock;
-	int r;
+	int r = 0;
 
 	/*
 	 * Initialize log (foreground, stderr)
