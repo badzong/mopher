@@ -124,8 +124,8 @@ char *
 util_addrtostr(struct sockaddr_storage *ss)
 {
 	char addr[ADDR6_STRLEN], *paddr;
-	struct sockaddr_in *sin = (struct sockaddr_in *) ss;
-	struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *) ss;
+	struct sockaddr_in *sin;
+	struct sockaddr_in6 *sin6;
 	const char *p;
 
 	/*
@@ -160,6 +160,23 @@ util_addrtostr(struct sockaddr_storage *ss)
 	}
 
 	return paddr;
+}
+
+int
+util_addrtoint(struct sockaddr_storage *ss)
+{
+	struct sockaddr_in *sin;
+
+	sin = (struct sockaddr_in *) ss;
+
+	/*
+	 * FIXME: return -1 as address
+	 */
+	if (ss->ss_family != AF_INET) {
+		return -1;
+	}
+
+	return ntohl(sin->sin_addr.s_addr);
 }
 
 

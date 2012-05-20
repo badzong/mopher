@@ -1067,6 +1067,17 @@ var_as_int(var_t *v)
 
 		break;
 
+	case VT_ADDR:
+		i = util_addrtoint(v->v_data);
+
+		/*
+		 * CAVEAT: See util_addrtoint for details
+		 */
+		if (i != -1)
+		{
+			break;
+		}
+
 	default:
 		log_error("var_as_int: bad type");
 		return NULL;
