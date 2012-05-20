@@ -44,6 +44,42 @@ server_usr2(int sig)
 }
 
 
+int server_ok(int sock)
+{
+	int n;
+
+	n = write(sock, "OK", 2);
+	if (n == -1)
+	{
+		log_sys_error("server_ok: write");
+		return -1;
+	}	
+
+	return 0;
+}
+
+
+int server_check(int sock)
+{
+	char ok[2];
+	int n;
+
+	n = read(sock, ok, sizeof ok);
+	if (n == -1)
+	{
+		log_sys_error("server_check: read");
+		return -1;
+	}
+
+	if (memcmp(ok, "OK", 2))
+	{
+		return 1;
+	}
+
+	return 0;
+}
+
+
 int
 server_reply(int sock, char *message, ...)
 {
@@ -85,6 +121,12 @@ server_output(int sock, char *buffer, int size)
 		return -1;
 	}
 
+	if (server_check(sock))
+	{
+		log_error("server_output: server_check failed");
+		return -1;
+	}
+
 	n = write(sock, buffer, size);
 	if (n == -1)
 	{
@@ -99,24 +141,16 @@ server_output(int sock, char *buffer, int size)
 int
 server_cmd(int sock, char *cmd)
 {
-	char recv[RECV_BUFFER];
-	int n;
-
+	log_debug("server_cmd: command '%s'", cmd);
 	if (server_reply(sock, cmd) == -1)
 	{
 		log_error("server_data_cmd: server_reply failed");
 		return -1;
 	}
 
-	n = read(sock, recv, sizeof recv);
-	if (n == -1)
+	if (server_check(sock))
 	{
-		log_sys_error("server_data_cmd: read");
-		return -1;
-	}
-
-	if (strncmp(recv, "OK", 2))
-	{
+		log_sys_error("server_data_cmd: server_check failed");
 		return -1;
 	}
 
@@ -129,6 +163,7 @@ server_data_cmd(int sock, char *cmd, char **buffer)
 	char recv[RECV_BUFFER];
 	int n;
 
+	log_debug("server_data_cmd: command '%s'", cmd);
 	if (server_reply(sock, cmd) == -1)
 	{
 		log_error("server_data_cmd: server_reply failed");
@@ -156,6 +191,12 @@ server_data_cmd(int sock, char *cmd, char **buffer)
 		return -1;
 	}
 
+	if (server_ok(sock))
+	{
+		log_sys_error("server_data_cmd: server_ok failed");
+		return -1;
+	}
+
 	n = read(sock, *buffer, n);
 	if (n == -1)
 	{
@@ -165,15 +206,9 @@ server_data_cmd(int sock, char *cmd, char **buffer)
 
 	(*buffer)[n] = 0;
 
-	n = read(sock, recv, sizeof recv);
-	if (n == -1)
+	if (server_check(sock))
 	{
-		log_sys_error("server_data_cmd: read");
-		return -1;
-	}
-
-	if (strncmp(recv, "OK", 2))
-	{
+		log_sys_error("server_data_cmd: server_check failed");
 		return -1;
 	}
 
@@ -324,11 +359,8 @@ server_exec_cmd(int sock, char *cmd)
 		log_error("server_exec_cmd: %s failed", argv[0]);
 		server_reply(sock, "ERROR");
 		break;
-	case 1:
-		server_reply(sock, "OK", r);
-		break;
 	default:
-		server_reply(sock, "OK: %d", r);
+		server_ok(sock);
 		break;
 	}
 

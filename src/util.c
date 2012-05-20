@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <errno.h>
@@ -123,7 +124,9 @@ util_strtoaddr(const char *str)
 char *
 util_addrtostr(struct sockaddr_storage *ss)
 {
-	char addr[ADDR6_STRLEN], *paddr;
+	char addr[ADDR6_STRLEN];
+	char *paddr;
+	struct sockaddr_un *sun;
 	struct sockaddr_in *sin;
 	struct sockaddr_in6 *sin6;
 	const char *p;
@@ -135,17 +138,27 @@ util_addrtostr(struct sockaddr_storage *ss)
 	}
 	*/
 
+	sun = (struct sockaddr_un *) ss;
 	sin = (struct sockaddr_in *) ss;
 	sin6 = (struct sockaddr_in6 *) ss;
 
-	if (ss->ss_family == AF_INET6) {
+	switch(ss->ss_family)
+	{
+	case AF_INET6:
 		p = inet_ntop(AF_INET6, &sin6->sin6_addr, addr, sizeof(addr));
-	}
-	else if (ss->ss_family == AF_INET) {
+		break;
+
+	case AF_INET:
 		p = inet_ntop(AF_INET, &sin->sin_addr, addr, sizeof(addr));
-	}
-	else {
-		log_error("util_addrtostr: bad address family");
+		break;
+
+	case AF_UNIX:
+		p = "unix domain socket";
+		break;
+
+	default:
+		log_error("util_addrtostr: bad address family: %d",
+			ss->ss_family);
 		return NULL;
 	}
 
@@ -154,7 +167,7 @@ util_addrtostr(struct sockaddr_storage *ss)
 		return NULL;
 	}
 
-	paddr = strdup(addr);
+	paddr = strdup(p);
 	if (paddr == NULL) {
 		log_sys_error("util_addrtostr: strdup");
 	}

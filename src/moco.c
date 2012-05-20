@@ -25,13 +25,14 @@ moco_usage(void)
 	log_error("  greylist   Manipulate Greylist Database");
 	log_error("");
 	log_error("GREYLIST OPTIONS:");
-	log_error("  -d         Dump mopher greylist database");
+	log_error("  -D         Dump mopher greylist database");
 	log_error("  -p         Pass greylisting (requires -s, -f and -r )");
 	log_error("  -m source  MTA source address or domain");
 	log_error("  -f from    Envelope sender address");
 	log_error("  -r rcpt    Envelope recipient address");
 	log_error("");
 	log_error("GENERAL OPTIONS:");
+	log_error("  -d level   Debug level 0-7");
 	log_error("  -c file    Use configuration file");
 	log_error("  -s server  Connect to server");
 	log_error("  -?         Show this message");
@@ -102,14 +103,15 @@ main(int argc, char **argv)
 	char *action;
 	int sock;
 	int r = 0;
+	int debug = LOG_ERR;
+	int show_usage = 0;
 
-	/*
-	 * Initialize log (foreground, stderr)
-	 */
-	log_init(BINNAME, LOG_ERR, 0, 1);
-
-	while ((opt = getopt(argc, argv, "c:s:dpm:f:r:")) != -1) {
+	while ((opt = getopt(argc, argv, "d:c:s:Dpm:f:r:")) != -1) {
 		switch(opt) {
+		case 'd':
+			debug = atoi(optarg);
+			break;
+
 		case 'c':
 			config = optarg;
 			break;
@@ -118,7 +120,7 @@ main(int argc, char **argv)
 			server = optarg;
 			break;
 
-		case 'd':
+		case 'D':
 			dump = 1;
 			break;
 
@@ -139,11 +141,16 @@ main(int argc, char **argv)
 			break;
 
 		default:
-			moco_usage();
+			show_usage = 1;
 		}
 	}
 
-	if (optind >= argc) {
+	/*
+	 * Initialize log (foreground, stderr)
+	 */
+	log_init(BINNAME, debug, 0, 1);
+
+	if (show_usage || optind >= argc) {
 		moco_usage();
 	}
 
@@ -174,6 +181,8 @@ main(int argc, char **argv)
 	{
 		log_die(EX_SOFTWARE, "moco: connection to %s failed", server);
 	}
+
+	log_debug("moco: connected to %s", server);
 
 	if (!strcmp(action, "greylist"))
 	{
