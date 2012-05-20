@@ -39,10 +39,10 @@ moco_usage(void)
 	log_error("");
 	log_error("EXAMPLES:");
 	log_error("");
-	log_error("  Dump greylist");
-	log_error("  %s greylist -d", BINNAME);
+	log_error("  Dump greylist:");
+	log_error("  %s greylist -D", BINNAME);
 	log_error("");
-	log_error("  Pass greylisting");
+	log_error("  Pass greylisting:");
 	log_error("  %s -p -s example.com -f bob@example.com -r me@mydomain.org", BINNAME);
 	log_error("");
 	exit(EX_USAGE);
