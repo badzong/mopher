@@ -1,8 +1,0 @@
-acl_lex.c
-acl_yacc.c
-acl_yacc.h
-cf_lex.c
-cf_yacc.c
-cf_yacc.h
-moco
-mopherd

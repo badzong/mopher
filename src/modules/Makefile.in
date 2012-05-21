@@ -3,25 +3,53 @@ include @top_srcdir@/Makefile.common
 INCLUDE=-I@top_srcdir@ -I@top_srcdir@/src/include
 CFLAGS+=$(INCLUDE)
 
-OBJECTS=cast.o string.o list.o spamd.o rbl.o counter.o regex.o memdb.o @MOD_ACL_SPF@ @MOD_DB_BDB@ @MOD_DB_MYSQL@
-MODULES=cast.so string.so list.so spamd.so rbl.so counter.so regex.so memdb.so @MOD_ACL_SPF@ @MOD_DB_BDB@ @MOD_DB_MYSQL@
+build=@top_srcdir@/build
+modules=@top_srcdir@/build/modules
+
+OBJECTS=\
+	$(modules)/cast.o\
+	$(modules)/string.o\
+	$(modules)/list.o\
+	$(modules)/spamd.o\
+	$(modules)/rbl.o\
+	$(modules)/counter.o\
+	$(modules)/regex.o\
+	$(modules)/memdb.o\
+	$(modules)/@MOD_ACL_SPF@\
+	$(modules)/@MOD_DB_BDB@\
+	$(modules)/@MOD_DB_MYSQL@\
+
+MODULES=\
+	$(modules)/cast.so\
+	$(modules)/string.so\
+	$(modules)/list.so\
+	$(modules)/spamd.so\
+	$(modules)/rbl.so\
+	$(modules)/counter.so\
+	$(modules)/regex.so\
+	$(modules)/memdb.so\
+	$(modules)/@MOD_ACL_SPF@\
+	$(modules)/@MOD_DB_BDB@\
+	$(modules)/@MOD_DB_MYSQL@\
+
 MOD_ALL=@MOD_ALL@
 
-.PHONY: clean
+all: $(modules) $(MOD_ALL)
 
-all: $(MOD_ALL)
+$(modules):
+	mkdir -p $(modules)
 
-bdb.so: bdb.c Makefile
+$(modules)/bdb.so: bdb.c
 	$(CC) $(CFLAGS) $(SOFLAGS) $(LDFLAGS) -ldb -o $@ $<
 
-sakila.so: sakila.c Makefile
+$(modules)/sakila.so: sakila.c
 	$(CC) $(CFLAGS) $(SOFLAGS) $(LDFLAGS) -lmysqlclient -o $@ $<
 
-spf.so: spf.c
+$(modules)/spf.so: spf.c
 	$(CC) $(CFLAGS) $(SOFLAGS) $(LDFLAGS) -lspf2 -o $@ $<
 
-lib.a: $(OBJECTS)
+$(modules)/lib.a: $(OBJECTS)
 	$(AR) $(ARFLAGS) $@ $^
 
-clean:
-	-rm $(MOD_ALL)
+$(modules)/%.so: %.c
+	$(CC) $(CFLAGS) $(SOFLAGS) -o $@ $<

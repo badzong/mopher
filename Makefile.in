@@ -1,13 +1,17 @@
-include @top_srcdir@/Makefile.common
+include Makefile.common
 
 DIST=@PACKAGE@-@VERSION@
 DISTDIR=@top_srcdir@/$(DIST)
 ARCHIVE=$(DIST).tar
 TARBALL=$(ARCHIVE).gz
 
-SUBDIRS=src man
-DOC=AUTHORS  BUGS  CODE LICENSE README.md TODO doc
+build=@top_srcdir@/build
+modules=@top_srcdir@/build/modules
+
+SUBDIRS=src
+DOC=AUTHORS LICENSE README.md TODO doc
 DISTFILES=configure Makefile.common.in Makefile.in config.h.in config $(SUBDIRS) $(DOC)
+PROGRAMS=mopherd moco
 
 
 .PHONY: clean
@@ -21,45 +25,30 @@ DISTFILES=configure Makefile.common.in Makefile.in config.h.in config $(SUBDIRS)
 all: $(SUBDIRS)
 
 install: all
-	@echo 
-	@echo creating directories
-	$(INSTALL) -m 755 -o 0 -g 0 -d $(sysconfdir)/mopher
-	$(INSTALL) -m 755 -o 0 -g 0 -d $(MOPHERD_DIR)
-	$(INSTALL) -m 755 -o 0 -g 0 -d $(MOPHERD_DIR)/db
-	$(INSTALL) -m 755 -o 0 -g 0 -d $(MOPHERD_DIR)/modules
-	@echo 
-	@echo installing mopherd in $(sbindir)
-	$(INSTALL) -m 755 -o 0 -g 0 @top_srcdir@/src/mopherd $(sbindir)
-	$(INSTALL) -m 755 -o 0 -g 0 @top_srcdir@/src/moco $(sbindir)
-	@echo 
-	@echo installing modules in $(MOPHERD_DIR)
-	-$(INSTALL) -m 755 -o 0 -g 0 @top_srcdir@/src/modules/*.so $(MOPHERD_DIR)/modules
-	@echo 
-	@echo installing configuration files in $(sysconfdir)
-	$(INSTALL) -m 640 -o 0 -g 0 @top_srcdir@/config/mopherd.conf $(sysconfdir)/mopher
-	$(INSTALL) -m 640 -o 0 -g 0 @top_srcdir@/config/mail.acl $(sysconfdir)/mopher
-	@echo
-	@echo installing man pages in $(mandir)
-	$(INSTALL) -m 755 -o 0 -g 0 -d $(man1dir)
-	$(INSTALL) -m 755 -o 0 -g 0 -d $(man5dir)
-	$(INSTALL) -m 644 -o 0 -g 0 @top_srcdir@/man/*.1.gz $(man1dir)
-	$(INSTALL) -m 644 -o 0 -g 0 @top_srcdir@/man/*.5.gz $(man5dir)
+	$(INSTALL_DIR) $(DESTDIR)$(sbindir)
+	$(INSTALL_DIR) $(DESTDIR)$(sysconfdir)/mopher
+	$(INSTALL_DIR) $(DESTDIR)$(MOPHERD_DIR)/modules
+	for PROGRAM in $(PROGRAMS); do \
+		$(INSTALL_PROGRAM) $(build)/$$PROGRAM $(DESTDIR)$(sbindir)/$$PROGRAM; \
+	done
+	$(INSTALL_PROGRAM) $(modules)/*.so $(DESTDIR)$(MOPHERD_DIR)/modules
+	$(INSTALL_DATA) @top_srcdir@/config/*.example $(DESTDIR)$(sysconfdir)/mopher
 
 uninstall:
-	@echo removing $(DIST) files
-	@rm -rf $(sysconfdir)/mopher
-	@rm -rf $(MOPHERD_DIR)
-	@rm -f $(sbindir)/mopherd
+	rm -rf $(sysconfdir)/mopher
+	rm -rf $(MOPHERD_DIR)
+	rm -f $(sbindir)/mopherd
+	rm -f $(sbindir)/moco
 
 $(SUBDIRS):
 	@cd $@ && $(MAKE)
 
 clean:
-	@for d in $(SUBDIRS); do (cd $$d && $(MAKE) clean); done
+	rm -rf $(build)
 
 distclean: clean
-	@-rm -f $(ACFILES)
-	@-rm -f $(TARBALL)
+	rm -f $(ACFILES)
+	rm -f $(TARBALL)
 
 dist: clean $(TARBALL)
 
@@ -68,7 +57,7 @@ $(DISTDIR):
 	cp -dpr $(DISTFILES) $(DISTDIR)
 
 $(TARBALL): $(ARCHIVE)
-	-rm -f $@
+	rm -f $@
 	$(GZIP) $<
 
 $(ARCHIVE): $(DISTDIR)

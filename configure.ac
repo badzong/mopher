@@ -1,5 +1,5 @@
 AC_PREREQ([2.64])
-AC_INIT([mopher], [0.1], [mopher@badzong.com])
+AC_INIT([mopher], [0.2], [mopher@mopher.net])
 
 AC_SUBST([PACKAGE], [$PACKAGE_NAME])
 AC_SUBST([VERSION], [$PACKAGE_VERSION])
@@ -86,8 +86,8 @@ then
   MOD_ALL="\$(MODULES)"
   mod_suffix="so"
 else
-  MOD_ALL="lib.a \$(OBJECTS)"
-  MOD_LIBS="modules/lib.a"
+  MOD_ALL="\$(modules)/lib.a \$(OBJECTS)"
+  MOD_LIBS="\$(modules)/lib.a"
   mod_suffix="o"
 fi
 
@@ -165,7 +165,6 @@ AC_CONFIG_FILES([
 	Makefile.common
 	src/Makefile
 	src/modules/Makefile
-	man/Makefile
 ])
 
 AC_OUTPUT

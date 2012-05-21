@@ -1,4 +1,5 @@
 # Install paths
+#
 prefix=@prefix@
 exec_prefix=@exec_prefix@
 sbindir=@sbindir@
@@ -9,7 +10,8 @@ man1dir=$(mandir)/man1
 man5dir=$(mandir)/man5
 
 # Program paths
-
+#
+SHELL=/bin/sh
 CC=@CC@
 LEX=@LEX@
 YACC=@YACC@
@@ -20,47 +22,35 @@ GZIP=@GZIP@
 INSTALL=@INSTALL@
 SED=@SED@
 
+INSTALL_PROGRAM=$(INSTALL)
+INSTALL_DATA=$(INSTALL) -m 644
+INSTALL_DIR=$(INSTALL) -d
 
 # Flags
-
+#
 YFLAGS=-d
-CFLAGS=-Wall -g @CFLAGS@
+CFLAGS=-Wall -DDEBUG @CFLAGS@
 SOFLAGS=-shared -nostartfiles -fPIC
 LDFLAGS=-rdynamic @LDFLAGS@ @LIBS@ @MOD_LIBS@
 ARFLAGS=rcs
 
-
 # CONF_DIR is used in man pages
-
+#
 CONF_DIR=@sysconfdir@/mopher
 
-
 # Paths (defs.c)
-
+#
 MOPHERD_DIR=@libdir@/mopher
 MOPHERD_CONF=@sysconfdir@/mopher/mopherd.conf
 MAIL_ACL=@sysconfdir@/mopher/mail.acl
 
 
 # Files
-
-ACFILES=config.h Makefile Makefile.common src/Makefile src/modules/Makefile man/Makefile
+#
+ACFILES=config.h Makefile Makefile.common src/Makefile src/modules/Makefile
 
 
 # Targets
-
-.SUFFIXES: .c .o .so .man .gz
-
-.c.so:
-	$(CC) $(CFLAGS) $(SOFLAGS) -o $@ $<
-
-.c.o:
-	$(CC) $(CFLAGS) -c $<
-
-.man.gz:
-	@echo prepare man page: $@
-	@$(SED) -e "s|\$$MOPHERD_DIR|$(MOPHERD_DIR)|g" $< \
-	| $(SED) -e "s|\$$MOPHERD_CONF|$(MOPHERD_CONF)|g" \
-	| $(SED) -e "s|\$$MAIL_ACL|$(MAIL_ACL)|g" \
-	| $(SED) -e "s|\$$CONF_DIR|$(CONF_DIR)|g" \
-	| $(GZIP) -c > $@
+#
+.SUFFIXES:
+.SUFFIXES: .c .o .so

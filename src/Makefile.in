@@ -1,49 +1,89 @@
 include @top_srcdir@/Makefile.common
 
-INCLUDE=-I@top_srcdir@ -I@top_srcdir@/src/include
+INCLUDE=-I@top_srcdir@ -I@top_srcdir@/src/include -I$(build)
 CFLAGS+=$(INCLUDE)
 
-OBJECTS=defs.o cf_yacc.o cf_lex.o cf.o cf_defaults.o acl_yacc.o acl_lex.o acl.o milter.o module.o ll.o ht.o sht.o var.o vlist.o vtable.o log.o hash.o util.o dbt.o greylist.o sock.o client.o server.o exp.o parser.o tarpit.o msgmod.o
-GENSRC=cf_yacc.c cf_yacc.h cf_lex.c acl_yacc.c acl_yacc.h acl_lex.c
+build=@top_srcdir@/build
+modules=@top_srcdir@/build/modules
+
+PROGRAMS=\
+	$(build)/mopherd\
+	$(build)/moco
+
+OBJECTS=\
+	$(build)/defs.o\
+	$(build)/cf_yacc.o\
+	$(build)/cf_lex.o\
+	$(build)/cf.o\
+	$(build)/cf_defaults.o\
+	$(build)/acl_yacc.o\
+	$(build)/acl_lex.o\
+	$(build)/acl.o\
+	$(build)/milter.o\
+	$(build)/module.o\
+	$(build)/ll.o\
+	$(build)/ht.o\
+	$(build)/sht.o\
+	$(build)/var.o\
+	$(build)/vlist.o\
+	$(build)/vtable.o\
+	$(build)/log.o\
+	$(build)/hash.o\
+	$(build)/util.o\
+	$(build)/dbt.o\
+	$(build)/greylist.o\
+	$(build)/sock.o\
+	$(build)/client.o\
+	$(build)/server.o\
+	$(build)/exp.o\
+	$(build)/parser.o\
+	$(build)/tarpit.o\
+	$(build)/msgmod.o
+
+GENSRC=\
+	$(build)/cf_yacc.c\
+	$(build)/cf_yacc.h\
+	$(build)/cf_lex.c\
+	$(build)/acl_yacc.c\
+	$(build)/acl_yacc.h\
+	$(build)/acl_lex.c\
+
 SUBDIRS=modules
 
-.PHONY: clean
 .PHONY: $(SUBDIRS)
 
-all: $(SUBDIRS) mopherd moco
+all: $(build) $(SUBDIRS) $(PROGRAMS)
+
+$(build):
+	mkdir -p $(build)
 
 $(SUBDIRS):
 	cd $@ && $(MAKE)
 
-defs.o: defs.c Makefile
-	$(CC) $(CFLAGS) -DMOPHERD_DIR=\"$(MOPHERD_DIR)\" -DMOPHERD_CONF=\"$(MOPHERD_CONF)\" -DMAIL_ACL=\"$(MAIL_ACL)\" -c $<
+$(build)/defs.o: defs.c
+	$(CC) $(CFLAGS) -DMOPHERD_DIR=\"$(MOPHERD_DIR)\" -DMOPHERD_CONF=\"$(MOPHERD_CONF)\" -DMAIL_ACL=\"$(MAIL_ACL)\" -c $< -o $@
 
-cf_defaults.o: cf_defaults.conf
-	ld -r -b binary -o cf_defaults.o cf_defaults.conf
-	$(OBJCOPY) --rename-section .data=.rodata,alloc,load,readonly,data,contents cf_defaults.o cf_defaults.o
+$(build)/cf_defaults.o: cf_defaults.conf
+	ld -r -b binary -o $@ $<
+	$(OBJCOPY) --rename-section .data=.rodata,alloc,load,readonly,data,contents $@ $@
 
-cf_yacc.c: cf_yacc.y
-	$(YACC) $(YFLAGS) -p cf_ cf_yacc.y
-	mv y.tab.c cf_yacc.c
-	mv y.tab.h cf_yacc.h
+$(build)/cf_yacc.c: cf_yacc.y
+	$(YACC) $(YFLAGS) -p cf_ $< -o $@
 
-cf_lex.c: cf_lex.l
-	$(LEX) -t -Pcf_ cf_lex.l > cf_lex.c
+$(build)/cf_lex.c: cf_lex.l
+	$(LEX) -t -Pcf_ $< > $@
 
-acl_yacc.c: acl_yacc.y
-	$(YACC) $(YFLAGS) -p acl_ acl_yacc.y
-	mv y.tab.c acl_yacc.c
-	mv y.tab.h acl_yacc.h
+$(build)/acl_yacc.c: acl_yacc.y
+	$(YACC) $(YFLAGS) -p acl_ $< -o $@
 
-acl_lex.c: acl_lex.l
-	$(LEX) -t -Pacl_ acl_lex.l > acl_lex.c
+$(build)/acl_lex.c: acl_lex.l
+	$(LEX) -t -Pacl_ $< > $@
 
-mopherd: Makefile $(OBJECTS) $(LIBS)
+$(build)/mopherd: Makefile $(OBJECTS) $(LIBS) mopherd.c
 	$(CC) $(CFLAGS) -o $@ $(OBJECTS) mopherd.c $(LDFLAGS)
 
-moco: Makefile $(OBJECTS) $(LIBS)
-	$(CC) $(CFLAGS) -o $@ $(OBJECTS) moco.c  $(LDFLAGS)
+$(build)/moco: Makefile $(OBJECTS) $(LIBS) moco.c
+	$(CC) $(CFLAGS) -o $@ $(OBJECTS) moco.c $(LDFLAGS)
 
-clean:
-	-rm mopherd $(OBJECTS) $(GENSRC)
-	for d in $(SUBDIRS); do (cd $$d && $(MAKE) clean); done
+$(build)/%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@

@@ -1,0 +1,19 @@
+0.2: 2012-05-20
+
+  FEATURES
+
+  * New greylist logging format
+  * Mopher control socket
+  * Mopher control socket client moco (EXPERIMENTAL)
+
+
+  BUGFIXES
+
+  * Garbeled remaining attempts #1
+  * Bad spamd header format #3
+  * ACL evaluation bug #5
+
+
+0.1: 2012-01-23
+
+  * First release

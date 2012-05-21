@@ -1,3 +1,4 @@
+build
 config.status
 config.log
 Makefile
@@ -6,3 +7,4 @@ config.h
 autom4te.cache
 *.o
 *.so
+*.tar.gz
