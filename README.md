@@ -107,6 +107,12 @@ Bug reports
 Please send bug reports to: mopher@badzong.com
 
 
+Contributors
+------------
+
+Petar Bogdanovic
+
+
 License (MIT)
 -------------
 
