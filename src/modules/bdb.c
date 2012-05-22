@@ -16,7 +16,6 @@ bdb_open(dbt_t *dbt)
 {
 	DB *db = NULL;
 	int r;
-	char home[HOME_LEN];
 
 	if (db_create(&db, NULL, 0)) {
 		log_error("bdb_open: db_create failed");
