@@ -3,53 +3,41 @@ include @top_srcdir@/Makefile.common
 INCLUDE=-I@top_srcdir@ -I@top_srcdir@/src/include
 CFLAGS+=$(INCLUDE)
 
-build=@top_srcdir@/build
-modules=@top_srcdir@/build/modules
-
-OBJECTS=\
-	$(modules)/cast.o\
-	$(modules)/string.o\
-	$(modules)/list.o\
-	$(modules)/spamd.o\
-	$(modules)/rbl.o\
-	$(modules)/counter.o\
-	$(modules)/regex.o\
-	$(modules)/memdb.o\
-	$(modules)/@MOD_ACL_SPF@\
-	$(modules)/@MOD_DB_BDB@\
-	$(modules)/@MOD_DB_MYSQL@\
-
 MODULES=\
-	$(modules)/cast.so\
-	$(modules)/string.so\
-	$(modules)/list.so\
-	$(modules)/spamd.so\
-	$(modules)/rbl.so\
-	$(modules)/counter.so\
-	$(modules)/regex.so\
-	$(modules)/memdb.so\
-	$(modules)/@MOD_ACL_SPF@\
-	$(modules)/@MOD_DB_BDB@\
-	$(modules)/@MOD_DB_MYSQL@\
+	cast.so\
+	string.so\
+	list.so\
+	spamd.so\
+	rbl.so\
+	counter.so\
+	regex.so\
+	memdb.so\
+	@MOD_ACL_SPF@\
+	@MOD_DB_BDB@\
+	@MOD_DB_MYSQL@\
 
-MOD_ALL=@MOD_ALL@
+all: $(MODULES)
 
-all: $(modules) $(MOD_ALL)
+install: all
+	$(INSTALL_DIR) $(DESTDIR)$(MODULE_PATH)
+	for MODULE in $(MODULES); do\
+		$(INSTALL_PROGRAM) $$MODULE $(DESTDIR)$(MODULE_PATH);\
+	done
 
-$(modules):
-	mkdir -p $(modules)
+uninstall:
+	for MODULE in $(MODULES); do\
+		rm -i $(DESTDIR)$(MODULE_PATH)/$$MODULE;\
+	done
+	rm -ri $(DESTDIR)$(MODULE_PATH)
 
-$(modules)/bdb.so: bdb.c
+clean:
+	rm $(MODULES)
+
+bdb.so: bdb.c
 	$(CC) $(CFLAGS) $(SOFLAGS) $(LDFLAGS) -ldb -o $@ $<
 
-$(modules)/sakila.so: sakila.c
+sakila.so: sakila.c
 	$(CC) $(CFLAGS) $(SOFLAGS) $(LDFLAGS) -lmysqlclient -o $@ $<
 
-$(modules)/spf.so: spf.c
+spf.so: spf.c
 	$(CC) $(CFLAGS) $(SOFLAGS) $(LDFLAGS) -lspf2 -o $@ $<
-
-$(modules)/lib.a: $(OBJECTS)
-	$(AR) $(ARFLAGS) $@ $^
-
-$(modules)/%.so: %.c
-	$(CC) $(CFLAGS) $(SOFLAGS) -o $@ $<

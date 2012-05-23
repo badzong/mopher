@@ -11,38 +11,8 @@
 #define BUFLEN 1024
 
 static ll_t *module_list;
-
-
-#ifdef DYNAMIC
-
 static ll_t *module_buffers;
 
-#else
-
-module_t module_table[] = {
-/*	{ "test.o",	test_init,	test_fini,	NULL },*/
-	{ "seen-static",	seen_init,	NULL,		NULL },
-	{ "rbl-static",		rbl_init,	rbl_fini,	NULL },
-	{ "spamd-static",	spamd_init,	NULL,		NULL },
-	{ "cast-static",	cast_init,	NULL,		NULL },
-	{ "string-static",	string_init,	NULL,		NULL },
-	{ "memdb-static",	memdb_init,	NULL,		NULL },
-#ifdef WITH_MOD_SPF
-	{ "spf-static",		spf_init,	spf_fini,	NULL },
-#endif
-#ifdef WITH_MOD_BDB
-	{ "bdb-static",	bdb_init,	NULL,		NULL },
-#endif
-#ifdef WITH_MOD_MYSQL
-	{ "sakila-static",	sakila_init,	sakila_fini,	NULL },
-#endif
-	{ NULL,		NULL,		NULL,		NULL }
-};
-
-#endif /* DYNAMIC */
-
-
-#ifdef DYNAMIC
 
 static void
 module_symbol_name(char *path, char *buffer, int size)
@@ -223,7 +193,6 @@ module_glob(const char *path)
 
 	return;
 }
-#endif /* DYNAMIC */
 
 
 void
@@ -265,7 +234,6 @@ module_init(void)
 		log_die(EX_SOFTWARE, "module_load: ll_create failed");
 	}
 
-#ifdef DYNAMIC
 	/*
 	 * Create module buffers
 	 */
@@ -274,13 +242,8 @@ module_init(void)
 	{
 		log_die(EX_SOFTWARE, "module_glob: ll_create failed");
 	}
-#endif /* DYNAMIC */
 
-#ifdef DYNAMIC
 	module_glob(cf_module_path);
-#else /* DYNAMIC */
-	module_load(module_table);
-#endif /* DYNAMIC */
 }
 
 
@@ -293,14 +256,12 @@ module_delete(module_t *mod)
 		mod->mod_fini();
 	}
 
-#ifdef DYNAMIC
 	if (mod->mod_handle)
 	{
 		dlclose(mod->mod_handle);
 	}
 
 	free(mod->mod_name);
-#endif
 
 	return;
 }
@@ -309,11 +270,7 @@ void
 module_clear(void)
 {
 	ll_delete(module_list, (ll_delete_t) module_delete);
-
-#ifdef DYNAMIC
 	ll_delete(module_buffers, (ll_delete_t) free);
-#endif
-	
 
 	return;
 }

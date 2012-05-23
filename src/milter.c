@@ -1097,7 +1097,6 @@ milter_load_symbols(void)
 void
 milter_init(void)
 {
-	char *workdir;
 
 	/*
 	 * Load configuration
@@ -1129,11 +1128,8 @@ milter_init(void)
 	/*
 	 * Change working directory
 	 */
-	workdir = cf_workdir_path ? cf_workdir_path : defs_mopherd_dir;
-
-	log_debug("new working directory: %s", workdir);
-
-	if (chdir(workdir))
+	log_debug("new working directory: %s", cf_workdir_path);
+	if (chdir(cf_workdir_path))
 	{
 		log_sys_die(EX_OSERR, "milter_init: chdir to \"%s\"",
 		    cf_workdir_path);

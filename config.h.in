@@ -1,6 +1,3 @@
-/* Global definitions */
-#undef DYNAMIC
-
 /* Package properties */
 #undef PACKAGE_BUGREPORT
 #undef PACKAGE_NAME

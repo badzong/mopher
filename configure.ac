@@ -53,7 +53,7 @@ then
   AC_MSG_WARN([sed not found.])
 fi
 
-# Checks for libraries.
+# Checks prerequisites
 
 AC_CHECK_LIB([pthread], [pthread_create],
 	[LIBS="$LIBS -lpthread"],
@@ -65,32 +65,13 @@ AC_CHECK_LIB([milter], [smfi_setconn],
 	[AC_MSG_ERROR([libmilter not found. Make sure your system has libmilter])]
 )
 
-# Build with module support (default = yes)
-AC_ARG_ENABLE([dynamic], AS_HELP_STRING([--enable-dynamic], [compile modules as loadable shared objects]))
-if test ! "$enable_dynamic" = "no"
-then
-  # Check if we need to link against libdl
-  AC_CHECK_FUNCS([dlopen dlsym dlerror dlclose], [have_dl="yes"], [have_dl="no"])
-
-  if test "$have_dl" = "no"
-  then
-    AC_CHECK_LIB([dl], [dlopen], [ LIBS="$LIBS -ldl" have_dl="yes"])
-  fi
-
-  if test "$have_dl" = "no"
-  then
+AC_CHECK_FUNCS([dlopen dlsym dlerror dlclose],
+  [],
+  AC_CHECK_LIB([dl], [dlopen],
+    [ LIBS="$LIBS -ldl" ],
     AC_MSG_ERROR([libc has no dlopen and libdl was not found.])
-  fi
-
-  AC_DEFINE([DYNAMIC])
-  MOD_ALL="\$(MODULES)"
-  mod_suffix="so"
-else
-  MOD_ALL="\$(modules)/lib.a \$(OBJECTS)"
-  MOD_LIBS="\$(modules)/lib.a"
-  mod_suffix="o"
-fi
-
+  )
+)
 
 # Check for BerkeleyDB support
 AC_ARG_WITH([bdb], AS_HELP_STRING([--with-bdb], [build with BerkeleyDB support]))
@@ -104,10 +85,10 @@ AS_IF(
 
 if test "$with_bdb" = "yes"
 then
-  MOD_DB_BDB="bdb.$mod_suffix"
+  MOD_DB_BDB="bdb.so"
   AC_SUBST([MOD_DB_BDB])
   AC_DEFINE([WITH_MOD_BDB])
-  AS_IF([test "$enable_dynamic" = "no"], [MOD_LIBS="$MOD_LIBS -ldb"])
+  MOD_LIBS="$MOD_LIBS -ldb"
 fi
 
 
@@ -123,10 +104,10 @@ AS_IF(
 
 if test "$with_mysql" = "yes"
 then
-  MOD_DB_MYSQL="sakila.$mod_suffix"
+  MOD_DB_MYSQL="sakila.so"
   AC_SUBST([MOD_DB_MYSQL])
   AC_DEFINE([WITH_MOD_MYSQL])
-  AS_IF([test "$enable_dynamic" = "no"], [MOD_LIBS="$MOD_LIBS -lmysqlclient"])
+  MOD_LIBS="$MOD_LIBS -lmysqlclient"
 fi
 
 
@@ -142,7 +123,7 @@ AS_IF(
 
 if test "$with_spf2" = "yes"
 then
-  MOD_ACL_SPF="spf.$mod_suffix"
+  MOD_ACL_SPF="spf.so"
   AC_SUBST([MOD_ACL_SPF])
   AC_DEFINE([WITH_MOD_SPF])
   AS_IF([test "$enable_dynamic" = "no"], [MOD_LIBS="$MOD_LIBS -lspf2"])
@@ -150,15 +131,8 @@ fi
 
 
 AC_SUBST([MOD_LIBS])
-AC_SUBST([MOD_ALL])
-
 
 # So far no further checks
-
-
-# Checks for header files.
-# Checks for typedefs, structures, and compiler characteristics.
-# Checks for library functions.
 
 AC_CONFIG_FILES([
 	Makefile

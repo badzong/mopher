@@ -5,46 +5,38 @@ DISTDIR=@top_srcdir@/$(DIST)
 ARCHIVE=$(DIST).tar
 TARBALL=$(ARCHIVE).gz
 
-build=@top_srcdir@/build
-modules=@top_srcdir@/build/modules
-
-SUBDIRS=src
+SUBDIRS=src/modules src
 DOC=AUTHORS LICENSE README.md TODO doc
 DISTFILES=configure Makefile.common.in Makefile.in config.h.in config $(SUBDIRS) $(DOC)
-PROGRAMS=mopherd moco
+CONFIGFILES=mopherd.conf.example mail.acl.example
 
-
-.PHONY: clean
-.PHONY: distclean
-.PHONY: install
-.PHONY: uninstall
 .PHONY: $(SUBDIRS)
-.PHONY: $(ARCHIVE)
-
 
 all: $(SUBDIRS)
 
 install: all
-	$(INSTALL_DIR) $(DESTDIR)$(sbindir)
-	$(INSTALL_DIR) $(DESTDIR)$(sysconfdir)/mopher
-	$(INSTALL_DIR) $(DESTDIR)$(MOPHERD_DIR)/modules
-	for PROGRAM in $(PROGRAMS); do \
-		$(INSTALL_PROGRAM) $(build)/$$PROGRAM $(DESTDIR)$(sbindir)/$$PROGRAM; \
+	for SUBDIR in $(SUBDIRS); do\
+		( cd $$SUBDIR && $(MAKE) install )\
 	done
-	$(INSTALL_PROGRAM) $(modules)/*.so $(DESTDIR)$(MOPHERD_DIR)/modules
-	$(INSTALL_DATA) @top_srcdir@/config/*.example $(DESTDIR)$(sysconfdir)/mopher
+
+	$(INSTALL_DIR) $(DESTDIR)$(CONFIG_PATH)
+	for CF in $(CONFIGFILES); do\
+		$(INSTALL_DATA) @top_srcdir@/config/$$CF $(DESTDIR)$(CONFIG_PATH);\
+	done
 
 uninstall:
-	rm -rf $(sysconfdir)/mopher
-	rm -rf $(MOPHERD_DIR)
-	rm -f $(sbindir)/mopherd
-	rm -f $(sbindir)/moco
+	for SUBDIR in $(SUBDIRS); do\
+		( cd $$SUBDIR && $(MAKE) uninstall )\
+	done
+	rm -ri $(DESTDIR)$(CONFIG_PATH)
 
 $(SUBDIRS):
 	@cd $@ && $(MAKE)
 
 clean:
-	rm -rf $(build)
+	for SUBDIR in $(SUBDIRS); do\
+		( cd $$SUBDIR && $(MAKE) clean )\
+	done
 
 distclean: clean
 	rm -f $(ACFILES)
