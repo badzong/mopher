@@ -63,7 +63,7 @@ clean:
 	rm $(PROGRAMS) $(OBJECTS) $(GENSRC)
 
 defs.o: defs.c
-	$(CC) $(CFLAGS) -DMOPHERD_CONF=\"$(MOPHERD_CONF)\" -DMAIL_ACL=\"$(MAIL_ACL)\" -c $< -o $@
+	$(CC) $(CFLAGS) -DMODULE_PATH=\"$(MODULE_PATH)\" -DMOPHERD_CONF=\"$(MOPHERD_CONF)\" -DMAIL_ACL=\"$(MAIL_ACL)\" -c $< -o $@
 
 cf_defaults.o: cf_defaults.conf
 	ld -r -b binary -o $@ $<

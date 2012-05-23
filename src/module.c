@@ -243,7 +243,7 @@ module_init(void)
 		log_die(EX_SOFTWARE, "module_glob: ll_create failed");
 	}
 
-	module_glob(cf_module_path);
+	module_glob(cf_module_path ? cf_module_path : defs_module_path);
 }
 
 
