@@ -1127,23 +1127,9 @@ acl_init(void)
 void
 acl_read(void)
 {
-	var_t *v;
 	char *mail_acl;
 
-	/*
-	 * Load default ACL path if not configured
-	 */
-	v = cf_get(VT_STRING, "acl_path", NULL);
-	if (v)
-	{
-		mail_acl = v->v_data;
-	}
-	else
-	{
-		mail_acl = defs_mail_acl;
-		log_warning("acl_read: acl_path not set: using \"%s\"",
-		    mail_acl);
-	}
+	mail_acl = cf_acl_path ? cf_acl_path : defs_mail_acl;
 
 	/*
 	 * run parser
