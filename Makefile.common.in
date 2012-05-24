@@ -1,72 +1,47 @@
 # Install paths
 #
-prefix=@prefix@
-exec_prefix=@exec_prefix@
-sbindir=@sbindir@
-libdir=@libdir@
-sysconfdir=@sysconfdir@
-mandir=@datarootdir@/man
-man1dir=$(mandir)/man1
-man5dir=$(mandir)/man5
-
+prefix=			@prefix@
+exec_prefix=		@exec_prefix@
+sbindir=		@sbindir@
+libdir=			@libdir@
+sysconfdir=		@sysconfdir@
+mandir=			@datarootdir@/man
+man1dir=		$(mandir)/man1
+man5dir=		$(mandir)/man5
 
 # Program paths
 #
-SHELL=/bin/sh
-CC=@CC@
-LEX=@LEX@
-YACC=@YACC@
-OBJCOPY=@OBJCOPY@
-AR=@AR@
-TAR=@TAR@
-GZIP=@GZIP@
-INSTALL=@INSTALL@
-SED=@SED@
-
-INSTALL_PROGRAM=$(INSTALL)
-INSTALL_DATA=$(INSTALL) -m 644
-INSTALL_DIR=$(INSTALL) -d
-
+CC=			@CC@
+LEX=			@LEX@
+YACC=			@YACC@
+OBJCOPY=		@OBJCOPY@
+AR=			@AR@
+TAR=			@TAR@
+GZIP=			@GZIP@
+INSTALL=		@INSTALL@
+INSTALL_PROG=		$(INSTALL)
+INSTALL_DATA=		$(INSTALL) -m 644
+INSTALL_DIR=		$(INSTALL) -d
 
 # Flags
 #
-YFLAGS=-d
-CFLAGS=-Wall -DDEBUG @CFLAGS@
-SOFLAGS=-shared -nostartfiles -fPIC
-LDFLAGS=-rdynamic @LDFLAGS@ @LIBS@ @MOD_LIBS@
-ARFLAGS=rcs
-
-
-# CONF_DIR is used in man pages
-#
-PROGRAM_PATH=@sbindir@
-MODULE_PATH=@libdir@/mopher
-CONFIG_PATH=@sysconfdir@/mopher
-
+YFLAGS=			-d
+CFLAGS=			-Wall -DDEBUG @CFLAGS@
+SOFLAGS=		-shared -nostartfiles -fPIC
+LDFLAGS=		-rdynamic @LDFLAGS@ @LIBS@ @MOD_LIBS@
+ARFLAGS=		rcs
 
 # Paths (defs.c)
 #
-MOPHERD_CONF=$(CONFIG_PATH)/mopherd.conf
-MAIL_ACL=$(CONFIG_PATH)/mail.acl
+PROGRAM_PATH=		@sbindir@
+MODULE_PATH=		@libdir@/mopher
+CONFIG_PATH=		@sysconfdir@/mopher
 
+MOPHERD_CONF=		$(CONFIG_PATH)/mopherd.conf
+MAIL_ACL=		$(CONFIG_PATH)/mail.acl
 
 # Files
 #
-ACFILES=config.h Makefile Makefile.common src/Makefile src/modules/Makefile
-
-
-# Targets
-#
-.PHONY: all
-.PHONY: clean
-.PHONY: install
-.PHONY: uninstall
-
-.SUFFIXES:
-.SUFFIXES: .c .o .so
-
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-%.so: %.c
-	$(CC) $(CFLAGS) $(SOFLAGS) -o $@ $<
+PROG=			mopherd moco
+ACFILES=		config.h Makefile Makefile.common src/Makefile \
+			src/modules/Makefile

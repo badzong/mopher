@@ -1,92 +1,44 @@
+# Makefile, src
+
 include @top_srcdir@/Makefile.common
 
-INCLUDE=-I@top_srcdir@ -I@top_srcdir@/src/include
-CFLAGS+=$(INCLUDE)
+GENSRC=			cf_yacc.c acl_yacc.c cf_lex.c acl_lex.c
+SRC=			$(GENSRC) defs.c cf.c acl.c milter.c module.c \
+			ll.c ht.c sht.c var.c vlist.c vtable.c log.c \
+			hash.c util.c dbt.c greylist.c sock.c client.c \
+			server.c exp.c parser.c tarpit.c msgmod.c
+OBJ=			$(SRC:.c=.o) cf_defaults.o
 
-PROGRAMS=\
-	mopherd\
-	moco
+CFLAGS+=		-I@top_srcdir@ -I@top_srcdir@/src/include
+CFLAGS.defs.o=		-DMODULE_PATH=\"$(MODULE_PATH)\" \
+			-DMOPHERD_CONF=\"$(MOPHERD_CONF)\" \
+			-DMAIL_ACL=\"$(MAIL_ACL)\"
 
-OBJECTS=\
-	defs.o\
-	cf_yacc.o\
-	cf_lex.o\
-	cf.o\
-	cf_defaults.o\
-	acl_yacc.o\
-	acl_lex.o\
-	acl.o\
-	milter.o\
-	module.o\
-	ll.o\
-	ht.o\
-	sht.o\
-	var.o\
-	vlist.o\
-	vtable.o\
-	log.o\
-	hash.o\
-	util.o\
-	dbt.o\
-	greylist.o\
-	sock.o\
-	client.o\
-	server.o\
-	exp.o\
-	parser.o\
-	tarpit.o\
-	msgmod.o
+YFLAGS.cf_yacc.c=	-pcf_
+YFLAGS.acl_yacc.c=	-pacl_
+XFLAGS.cf_lex.c=	-Pcf_
+XFLAGS.acl_lex.c=	-Pacl_
 
-GENSRC=\
-	cf_yacc.c\
-	cf_yacc.h\
-	cf_lex.c\
-	acl_yacc.c\
-	acl_yacc.h\
-	acl_lex.c\
+.PHONY: all
 
+all: $(PROG)
 
-all: $(PROGRAMS)
-
-install: all
-	$(INSTALL_DIR) $(DESTDIR)$(PROGRAM_PATH)
-	for PROGRAM in $(PROGRAMS); do\
-		$(INSTALL_PROGRAM) $$PROGRAM $(DESTDIR)$(PROGRAM_PATH);\
-	done
-
-uninstall:
-	for PROGRAM in $(PROGRAMS); do\
-		rm -i $(DESTDIR)$(PROGRAM_PATH)/$$PROGRAM;\
-	done
+$(PROG): $(OBJ)
+	$(CC) $(CFLAGS) -o $@ $@.c $(OBJ) $(LDFLAGS)
 
 clean:
-	rm $(PROGRAMS) $(OBJECTS) $(GENSRC)
+	-rm $(PROG) $(GENSRC:.c=.[ch]) $(OBJ)
 
-defs.o: defs.c
-	$(CC) $(CFLAGS) -DMODULE_PATH=\"$(MODULE_PATH)\" -DMOPHERD_CONF=\"$(MOPHERD_CONF)\" -DMAIL_ACL=\"$(MAIL_ACL)\" -c $< -o $@
-
-cf_defaults.o: cf_defaults.conf
-	ld -r -b binary -o $@ $<
-	$(OBJCOPY) --rename-section .data=.rodata,alloc,load,readonly,data,contents $@ $@
-
-cf_yacc.c: cf_yacc.y
-	$(YACC) $(YFLAGS) -p cf_ $<
-	mv y.tab.c cf_yacc.c
-	mv y.tab.h cf_yacc.h
-
-cf_lex.c: cf_lex.l
-	$(LEX) -t -Pcf_ $< > $@
-
-acl_yacc.c: acl_yacc.y
-	$(YACC) $(YFLAGS) -p acl_ $<
-	mv y.tab.c acl_yacc.c
-	mv y.tab.h acl_yacc.h
-
-acl_lex.c: acl_lex.l
-	$(LEX) -t -Pacl_ $< > $@
-
-mopherd: Makefile $(OBJECTS) $(LIBS) mopherd.c
-	$(CC) $(CFLAGS) -o $@ $(OBJECTS) mopherd.c $(LDFLAGS)
-
-moco: Makefile $(OBJECTS) $(LIBS) moco.c
-	$(CC) $(CFLAGS) -o $@ $(OBJECTS) moco.c $(LDFLAGS)
+.SUFFIXES: .conf .l .y .c .o
+.y.o:	# unset
+.l.o:	# unset
+.y.c:
+	$(YACC) $(YFLAGS) $(YFLAGS.$@) -o $@ $<
+.l.c:
+	$(LEX) -t $(XFLAGS.$@) $< > $@
+.c.o:
+	$(CC) $(CFLAGS) $(CFLAGS.$@) -c $< -o $@
+.conf.o:
+	$(LD) -r -b binary -o $@ $> $^
+	$(OBJCOPY) --rename-section \
+		.data=.rodata,alloc,load,readonly,data,contents $@ $@

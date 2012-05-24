@@ -1,57 +1,70 @@
+# Makefile
+
 include Makefile.common
 
-DIST=@PACKAGE@-@VERSION@
-DISTDIR=@top_srcdir@/$(DIST)
-ARCHIVE=$(DIST).tar
-TARBALL=$(ARCHIVE).gz
+DOC=			AUTHORS LICENSE README.md TODO doc
+CONFIGFILES=		mopherd.conf.example mail.acl.example
 
-SUBDIRS=src/modules src
-DOC=AUTHORS LICENSE README.md TODO doc
-DISTFILES=configure Makefile.common.in Makefile.in config.h.in config $(SUBDIRS) $(DOC)
-CONFIGFILES=mopherd.conf.example mail.acl.example
+DIST=			@PACKAGE@-@VERSION@
+DISTDIR=		$(DIST)
+DISTFILES=		$(DOC) src config configure Makefile.common.in \
+			Makefile.in config.h.in
+ARCHIVE=		$(DIST).tar
+TARBALL=		$(ARCHIVE).gz
 
-.PHONY: $(SUBDIRS)
+SUBDIR=			src/modules src
 
-all: $(SUBDIRS)
+.PHONY: $(SUBDIR)
 
-install: all
-	for SUBDIR in $(SUBDIRS); do\
-		( cd $$SUBDIR && $(MAKE) install )\
+all: $(SUBDIR)
+
+$(SUBDIR):
+	@cd $@ && $(MAKE)
+
+install: install_program install_modules install_config
+
+install_program:
+	$(INSTALL_DIR) $(DESTDIR)$(PROGRAM_PATH)
+	for P in $(PROG); do \
+		$(INSTALL_PROG) src/$$P $(DESTDIR)$(PROGRAM_PATH); \
 	done
 
+install_modules:
+	$(INSTALL_DIR) $(DESTDIR)$(MODULE_PATH)
+	$(INSTALL_PROG) src/modules/*.so $(DESTDIR)$(MODULE_PATH)
+
+install_config:
 	$(INSTALL_DIR) $(DESTDIR)$(CONFIG_PATH)
 	for CF in $(CONFIGFILES); do\
-		$(INSTALL_DATA) @top_srcdir@/config/$$CF $(DESTDIR)$(CONFIG_PATH);\
+		$(INSTALL_DATA) config/$$CF $(DESTDIR)$(CONFIG_PATH);\
 	done
 
 uninstall:
-	for SUBDIR in $(SUBDIRS); do\
-		( cd $$SUBDIR && $(MAKE) uninstall )\
+	-for P in $(PROG); do \
+		rm -i $(DESTDIR)$(PROGRAM_PATH)/$$P; \
 	done
-	rm -ri $(DESTDIR)$(CONFIG_PATH)
-
-$(SUBDIRS):
-	@cd $@ && $(MAKE)
+	-rm -ri $(DESTDIR)$(MODULE_PATH)
+	-rm -ri $(DESTDIR)$(CONFIG_PATH)
 
 clean:
-	for SUBDIR in $(SUBDIRS); do\
-		( cd $$SUBDIR && $(MAKE) clean )\
+	for DIR in $(SUBDIR); do \
+		( cd $$DIR; make $@ );\
 	done
 
 distclean: clean
-	rm -f $(ACFILES)
-	rm -f $(TARBALL)
+	-rm -rf $(ACFILES) $(DISTDIR) $(ARCHIVE) $(TARBALL)
 
-dist: clean $(TARBALL)
+dist: distclean $(TARBALL)
 
-$(DISTDIR):
+configure:
+	$(SHELL) bootstrap.sh
+
+$(DISTDIR): configure
 	mkdir $(DISTDIR)
-	cp -dpr $(DISTFILES) $(DISTDIR)
-
-$(TARBALL): $(ARCHIVE)
-	rm -f $@
-	$(GZIP) $<
+	cp -PRp $(DISTFILES) $(DISTDIR)
 
 $(ARCHIVE): $(DISTDIR)
 	$(TAR) cf $@ $(DISTDIR)
-	rm -rf $(DISTDIR)
+
+$(TARBALL): $(ARCHIVE)
+	$(GZIP) $<

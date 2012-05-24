@@ -1,43 +1,22 @@
+# Makefile, modules
+
 include @top_srcdir@/Makefile.common
 
-INCLUDE=-I@top_srcdir@ -I@top_srcdir@/src/include
-CFLAGS+=$(INCLUDE)
+SRC=			cast.c string.c list.c spamd.c rbl.c counter.c \
+			regex.c memdb.c @MOD_ACL_SPF@ @MOD_DB_BDB@ \
+			@MOD_DB_MYSQL@
+MODULES=		$(SRC:.c=.so)
 
-MODULES=\
-	cast.so\
-	string.so\
-	list.so\
-	spamd.so\
-	rbl.so\
-	counter.so\
-	regex.so\
-	memdb.so\
-	@MOD_ACL_SPF@\
-	@MOD_DB_BDB@\
-	@MOD_DB_MYSQL@\
+CFLAGS+=		-I@top_srcdir@ -I@top_srcdir@/src/include
+LDFLAGS.spf.so?=	-lspf2
+LDFLAGS.bdb.so?=	-ldb
+LDFLAGS.sakila.so?=	-lmysqlclient
 
 all: $(MODULES)
 
-install: all
-	$(INSTALL_DIR) $(DESTDIR)$(MODULE_PATH)
-	for MODULE in $(MODULES); do\
-		$(INSTALL_PROGRAM) $$MODULE $(DESTDIR)$(MODULE_PATH);\
-	done
-
-uninstall:
-	for MODULE in $(MODULES); do\
-		rm -i $(DESTDIR)$(MODULE_PATH)/$$MODULE;\
-	done
-	rm -ri $(DESTDIR)$(MODULE_PATH)
-
 clean:
-	rm $(MODULES)
+	-rm $(MODULES)
 
-bdb.so: bdb.c
-	$(CC) $(CFLAGS) $(SOFLAGS) $(LDFLAGS) -ldb -o $@ $<
-
-sakila.so: sakila.c
-	$(CC) $(CFLAGS) $(SOFLAGS) $(LDFLAGS) -lmysqlclient -o $@ $<
-
-spf.so: spf.c
-	$(CC) $(CFLAGS) $(SOFLAGS) $(LDFLAGS) -lspf2 -o $@ $<
+.SUFFIXES: .c .so
+.c.so:
+	$(CC) $(CFLAGS) $(SOFLAGS) $(LDFLAGS.$@) -o $@ $<
