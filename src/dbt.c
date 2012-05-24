@@ -614,14 +614,16 @@ dbt_janitor_cleanup(time_t now, dbt_t *dbt)
 		{
 			deleted = dbt_janitor_cleanup_walk(dbt);
 		}
+
+		/*
+		 * No validate callback registered. Not cleaning.
+		 */
 		else
 		{
-			/*
-			 * No validate callback registered
-			 */
-			log_debug("dbt_janitor_cleanup: \"%s\" has no validate"
-			    " callback");
-			return -1;
+			log_debug("dbt_janitor_cleanup: database \"%s\" has "
+			    "no validate callback. Not cleaning.",
+			    dbt->dbt_name);
+			deleted = 0;
 		}
 	}
 

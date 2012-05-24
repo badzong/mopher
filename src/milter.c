@@ -160,33 +160,51 @@ static sht_t *milter_sendmail_macro_table;
 static pthread_rwlock_t milter_reload_lock = PTHREAD_RWLOCK_INITIALIZER;
 
 /*
- * Milter id
+ * Milter state database
  */
-static VAR_INT_T milter_id;
+static dbt_t milter_state_dbt;
+static var_t *milter_state_record;
+static var_t *milter_state_scheme;
+static VAR_INT_T milter_state_version = 1; // State database scheme version
+
+/*
+ * Saved milter_id
+ */
+static VAR_INT_T milter_id_int;
+static VAR_INT_T *milter_id;
 static pthread_mutex_t milter_id_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 
 int milter_running = 1;
 
 
-static int
+static VAR_INT_T
 milter_get_id(void)
 {
-	VAR_INT_T id;
+	VAR_INT_T r = -1;
 
 	if (pthread_mutex_lock(&milter_id_mutex))
 	{
-		log_sys_error("milter_id: pthread_mutex_lock");
+		log_sys_error("milter_get_id: pthread_mutex_lock");
 		return -1;
 	}
 
-	id = ++milter_id;
+	r = ++(*milter_id);
+
+	/*
+	 * That's a serious problem. Keep running for stability.
+	 */
+	if (dbt_db_set(&milter_state_dbt, milter_state_record))
+	{
+		log_warning("milter_get_id: dbt_db_set failed");
+	}
 
 	if (pthread_mutex_unlock(&milter_id_mutex))
 	{
-		log_sys_error("milter_id: pthread_mutex_unlock");
+		log_sys_error("milter_get_id: pthread_mutex_unlock");
 	}
 
-	return id;
+	return r;
 }
 
 
@@ -1095,9 +1113,85 @@ milter_load_symbols(void)
 
 
 void
+milter_db_init(void)
+{
+	/*
+	 * milter_id database
+	 */
+	milter_state_scheme = vlist_scheme("state",
+		"version",	VT_INT,		VF_KEEPNAME | VF_KEY,
+		"milter_id",	VT_INT,		VF_KEEPNAME,
+		NULL);
+	if (milter_state_scheme == NULL)
+	{
+		log_die(EX_SOFTWARE, "milter_db_init: vlist_scheme failed");
+	}
+
+	milter_state_dbt.dbt_scheme = milter_state_scheme;
+	dbt_register("state", &milter_state_dbt);
+
+	return;
+}
+
+void
+milter_id_init(void)
+{
+	var_t *lookup;
+
+	/*
+	 * Lookup state record
+	 */
+	lookup = vlist_record(milter_state_scheme, &milter_state_version, NULL);
+	if (lookup == NULL)
+	{
+		log_die(EX_SOFTWARE, "milter_db_init: vlist_record failed");
+	}
+
+	if (dbt_db_get(&milter_state_dbt, lookup, &milter_state_record))
+	{
+		log_die(EX_SOFTWARE, "milter_db_init: dbt_db_get failed");
+	}
+
+	var_delete(lookup);
+
+	/*
+	 * State record exists
+	 */
+	if (milter_state_record)
+	{
+		milter_id = vlist_record_get(milter_state_record, "milter_id");
+		if (milter_id == NULL)
+		{
+			log_die(EX_SOFTWARE, "milter_db_init: "
+			    "vlist_record_get failed");
+		}
+
+		return;
+	}
+
+	/*
+	 * Create new record
+	 */
+	milter_id = &milter_id_int;
+	milter_state_record = vlist_record(milter_state_scheme,
+		&milter_state_version, milter_id);
+	if (milter_state_record == NULL)
+	{
+		log_die(EX_SOFTWARE, "milter_db_init: vlist_record failed");
+	}
+
+	if (dbt_db_set(&milter_state_dbt, milter_state_record))
+	{
+		log_die(EX_SOFTWARE, "milter_db_init: dbt_db_set failed");
+	}
+
+	return;
+}
+
+
+void
 milter_init(void)
 {
-
 	/*
 	 * Load configuration
 	 */
@@ -1135,6 +1229,7 @@ milter_init(void)
 		    cf_workdir_path);
 	}
 		
+
 	/*
 	 * Other initializations
 	 */
@@ -1144,9 +1239,11 @@ milter_init(void)
 	tarpit_init();
 	module_init();
 	milter_load_symbols();
+	milter_db_init();
 
 	dbt_open_databases();
 	acl_read();
+	milter_id_init();
 
 	return;
 }
@@ -1165,6 +1262,11 @@ milter_clear(void)
 	 */
 	sht_delete(milter_postfix_macro_table);
 	sht_delete(milter_sendmail_macro_table);
+
+	/*
+	 * Free milter_state_record
+	 */
+	var_delete(milter_state_record);
 
 	return;
 }
