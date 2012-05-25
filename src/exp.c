@@ -897,7 +897,7 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 {
 	var_t *left = NULL, *right = NULL, *copy;
 	exp_operation_t *eo = exp->ex_data;
-	var_t *result;
+	var_t *result = NULL;
 	var_type_t type;
 
 	/*
@@ -925,20 +925,14 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 	if (eo->eo_operator == IS_NULL)
 	{
 		result = exp_is_null(left);
-
-		if (left)
-		{
-			exp_free(left);
-		}
-
-		return result;
+		goto exit;
 	}
 
 	if (left == NULL)
 	{
 		log_error("exp_eval_operation: exp_eval for left-hand value "
 		    "failed");
-		return NULL;
+		goto exit;
 	}
 
 	if (eo->eo_operand[1])
@@ -948,7 +942,7 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 		{
 			log_error("exp_eval_operation: exp_eval for "
 			    "right-hand value failed");
-			return NULL;
+			goto exit;
 		}
 
 		if (right->v_data == NULL)
@@ -981,7 +975,7 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 			{
 				log_error("exp_eval_operation: var_cast_copy "
 				    "failed");
-				return NULL;
+				goto exit;
 			}
 
 			if (type == left->v_type)
@@ -1019,10 +1013,14 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 
 	default:
 		log_error("exp_eval_operation: bad type");
-		result = NULL;
+		goto exit;
 	}
 
-	exp_free(left);
+exit:
+	if (left)
+	{
+		exp_free(left);
+	}
 
 	if (right)
 	{

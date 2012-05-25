@@ -1068,7 +1068,17 @@ var_as_int(var_t *v)
 		break;
 
 	case VT_ADDR:
-		i = util_addrtoint(v->v_data);
+		/*
+		 * HACK: Cast NULL addresses to 0
+		 */
+		if (v->v_data)
+		{
+			i = util_addrtoint(v->v_data);
+		}
+		else
+		{
+			i = 0;
+		}
 
 		/*
 		 * CAVEAT: See util_addrtoint for details
