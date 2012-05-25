@@ -3,13 +3,12 @@
 include Makefile.common
 
 SUBDIR=			src/modules src
-DO_SUBDIR=		for i in $(SUBDIR); do \
-				$(MAKE) -C $$i $$target; done
+MAKE_SUBDIR=		for i in $(SUBDIR); do $(MAKE) -C $$i $$target; done
 
 all: subdir
 
 subdir:
-	$(DO_SUBDIR)
+	$(MAKE_SUBDIR)
 
 install: install_program install_modules install_config
 
@@ -24,10 +23,10 @@ install_modules:
 	$(INSTALL_PROG) src/modules/*.so $(DESTDIR)$(MODULE_PATH)
 
 install_config:
-	$(INSTALL_DIR) $(DESTDIR)$(CONFIG_INSTPATH)
+	$(INSTALL_DIR) $(DESTDIR)$(CONFIG_INST)
 	for C in $(CONF); do \
 		$(INSTALL_DATA) config/$$C \
-			$(DESTDIR)$(CONFIG_INSTPATH); \
+			$(DESTDIR)$(CONFIG_INST); \
 	done
 
 uninstall:
@@ -35,7 +34,7 @@ uninstall:
 		rm -i $(DESTDIR)$(PROGRAM_PATH)/$$P; \
 	done
 	-rm -ri $(DESTDIR)$(MODULE_PATH)
-	-rm -ri $(DESTDIR)$(CONFIG_INSTPATH)
+	-rm -ri $(DESTDIR)$(CONFIG_INST)
 
 clean:
-	target=$@; $(DO_SUBDIR)
+	target=$@; $(MAKE_SUBDIR)
