@@ -3,23 +3,25 @@
 include Makefile.common
 
 DOC=			AUTHORS LICENSE README.md TODO doc
-CONFIGFILES=		mopherd.conf.example mail.acl.example
+CONF=			mopherd.conf.example mail.acl.example
 
 DIST=			@PACKAGE@-@VERSION@
 DISTDIR=		$(DIST)
 DISTFILES=		$(DOC) src config configure Makefile.common.in \
 			Makefile.in config.h.in
+ACFILES=		config.h Makefile Makefile.common src/Makefile \
+			src/modules/Makefile
 ARCHIVE=		$(DIST).tar
 TARBALL=		$(ARCHIVE).gz
 
 SUBDIR=			src/modules src
+MAKE_SUBDIR=            for i in $(SUBDIR); do $(MAKE) -C $$i $$target; done
 
-.PHONY: $(SUBDIR)
 
-all: $(SUBDIR)
+all: subdir
 
-$(SUBDIR):
-	@cd $@ && $(MAKE)
+subdir:
+	$(MAKE_SUBDIR)
 
 install: install_program install_modules install_config
 
@@ -34,9 +36,9 @@ install_modules:
 	$(INSTALL_PROG) src/modules/*.so $(DESTDIR)$(MODULE_PATH)
 
 install_config:
-	$(INSTALL_DIR) $(DESTDIR)$(CONFIG_PATH)
-	for CF in $(CONFIGFILES); do\
-		$(INSTALL_DATA) config/$$CF $(DESTDIR)$(CONFIG_PATH);\
+	$(INSTALL_DIR) $(DESTDIR)$(CONF_PATH)
+	for C in $(CONF); do\
+		$(INSTALL_DATA) config/$$C $(DESTDIR)$(CONF_PATH);\
 	done
 
 uninstall:
@@ -44,12 +46,10 @@ uninstall:
 		rm -i $(DESTDIR)$(PROGRAM_PATH)/$$P; \
 	done
 	-rm -ri $(DESTDIR)$(MODULE_PATH)
-	-rm -ri $(DESTDIR)$(CONFIG_PATH)
+	-rm -ri $(DESTDIR)$(CONF_PATH)
 
 clean:
-	for DIR in $(SUBDIR); do \
-		( cd $$DIR; make $@ );\
-	done
+	$$target=$@; $(MAKE_SUBDIR)
 
 distclean: clean
 	-rm -rf $(ACFILES) $(DISTDIR) $(ARCHIVE) $(TARBALL)
@@ -57,7 +57,8 @@ distclean: clean
 dist: distclean $(TARBALL)
 
 configure:
-	$(SHELL) bootstrap.sh
+	aclocal
+	autoconf
 
 $(DISTDIR): configure
 	mkdir $(DISTDIR)
