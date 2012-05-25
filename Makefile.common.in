@@ -16,8 +16,6 @@ LEX=			@LEX@
 YACC=			@YACC@
 OBJCOPY=		@OBJCOPY@
 AR=			@AR@
-TAR=			@TAR@
-GZIP=			@GZIP@
 INSTALL=		@INSTALL@
 INSTALL_PROG=		$(INSTALL)
 INSTALL_DATA=		$(INSTALL) -m 644
@@ -36,6 +34,7 @@ ARFLAGS=		rcs
 PROGRAM_PATH=		@sbindir@
 MODULE_PATH=		@libdir@/mopher
 CONFIG_PATH=		@sysconfdir@/mopher
+CONFIG_INSTPATH?=	$(CONFIG_PATH)
 
 MOPHERD_CONF=		$(CONFIG_PATH)/mopherd.conf
 MAIL_ACL=		$(CONFIG_PATH)/mail.acl
@@ -43,5 +42,4 @@ MAIL_ACL=		$(CONFIG_PATH)/mail.acl
 # Files
 #
 PROG=			mopherd moco
-ACFILES=		config.h Makefile Makefile.common src/Makefile \
-			src/modules/Makefile
+CONF=			mopherd.conf.example mail.acl.example
