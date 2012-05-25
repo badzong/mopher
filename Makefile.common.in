@@ -26,8 +26,7 @@ INSTALL_DIR=		$(INSTALL) -d
 # Flags
 #
 YFLAGS=			-d
-#CFLAGS=		-Wall -DDEBUG
-CFLAGS=			-Wall @CFLAGS@
+CFLAGS=			-Wall -DDEBUG @CFLAGS@
 SOFLAGS=		-shared -nostartfiles -fPIC
 LDFLAGS=		-rdynamic @LDFLAGS@ @LIBS@ @MOD_LIBS@
 ARFLAGS=		rcs
@@ -36,11 +35,13 @@ ARFLAGS=		rcs
 #
 PROGRAM_PATH=		@sbindir@
 MODULE_PATH=		@libdir@/mopher
-CONF_PATH=		@sysconfdir@/mopher
+CONFIG_PATH=		@sysconfdir@/mopher
 
-MOPHERD_CONF=		$(CONF_PATH)/mopherd.conf
-MAIL_ACL=		$(CONF_PATH)/mail.acl
+MOPHERD_CONF=		$(CONFIG_PATH)/mopherd.conf
+MAIL_ACL=		$(CONFIG_PATH)/mail.acl
 
 # Files
 #
 PROG=			mopherd moco
+ACFILES=		config.h Makefile Makefile.common src/Makefile \
+			src/modules/Makefile
