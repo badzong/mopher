@@ -11,7 +11,7 @@ DISTDIR=		$(DIST)
 ARCHIVE=		$(DIST).tar
 TARBALL=		$(ARCHIVE).gz
 
-all: bootstrap dist
+all: bootstrap
 
 bootstrap:
 	aclocal
