@@ -904,7 +904,9 @@ greylist_dump_record(dbt_t *dbt, var_t *record)
 	char dump[DUMP_RECORD_BUFLEN];
 	char *p;
 	int len;
-	int n;
+	int expire_time;
+	int delay_time;
+	int now;
 
 	/*
 	 * Previous error
@@ -924,19 +926,22 @@ greylist_dump_record(dbt_t *dbt, var_t *record)
 		
         }
 
+	now = time(NULL);
+	expire_time = *expire - now;
+	
 	if (*passed > 0)
 	{
-		n = *expire - time(NULL);
 		len = snprintf(dump, sizeof dump,
 		    "%s: %s > %s: status=visa, messages=%ld, expires=%d\n",
-		    source, envfrom, envrcpt, *passed, n);
+		    source, envfrom, envrcpt, *passed, expire_time);
 	}
 	else
 	{
-		n = time(NULL) - *created;
+		delay_time = now - *created;
 		len = snprintf(dump, sizeof dump, "%s: %s > %s: "
-		    "status=defer, delay=%d/%ld, attempts=%ld/%ld\n", source,
-		    envfrom, envrcpt, n, *delay, *connections, *attempts);
+		    "status=defer, delay=%d/%ld, attempts=%ld/%ld, "
+		    "expires=%d\n", source, envfrom, envrcpt, delay_time,
+		    *delay, *connections, *attempts, expire_time);
 	}
 
 	if (len >= sizeof dump)
