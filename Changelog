@@ -1,10 +1,11 @@
-0.2: 2012-05-20
+0.2: 2012-06-03
 
   FEATURES
 
   * New greylist logging format
   * Mopher control socket
   * Mopher control socket client moco (EXPERIMENTAL)
+  * Improved Makefiles (Petar Bogdanovic)
 
 
   BUGFIXES
