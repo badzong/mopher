@@ -1,16 +1,32 @@
-#
-# mopherd.conf - example configuration for mopherd
-#
-# See mopherd.conf(5) for configuration file syntax
-#
-
 # mopherd user and group
 #
 #mopherd_user    = "mopherd"
-#mopherd_group   = "postfix"
+#mopherd_group   = "mopherd"
 
 
-# database configuration for MySQL database
+# Berkeley DB example
+#
+#table[state] = {
+#    driver      = "bdb",
+#    path        = "/path/to/state.bdb",
+#}
+#
+#table[greylist] = {
+#    driver      = "bdb",
+#    path        = "/path/to/greylist.bdb",
+#}
+#
+#table[counter_relay] = {
+#    driver      = "bdb",
+#    path        = "/path/to/counter_relay.bdb",
+#}
+#
+#table[counter_penpal] = {
+#    driver      = "bdb",
+#    path        = "/path/to/counter_penpal.bdb",
+#}
+
+# MySQL example
 #
 #table[greylist] = {
 #    driver      = "mysql",
@@ -21,28 +37,23 @@
 #
 #table[delivered_relays] = {
 #    driver      = "mysql",
-#    path        = "/tmp/mysql.sock",
+#    host        = "192.168.1.100",
 #    user        = "mopher",
 #    pass        = "secret"
 #}
 #
 #table[delivered_penpals] = {
 #    driver      = "mysql",
-#    path        = "/tmp/mysql.sock",
+#    host        = "192.168.1.100",
+#    port        = 3306,
+#    database    = "my_mopher_db",
+#    table       = "my_mopher_table",
 #    user        = "mopher",
 #    pass        = "secret"
 #}
 
 
-# load RBL symbols
+# RBL symbols
 #
 #rbl[rbl_example] = "rbl.example.tld"
 #rbl[rbl_blacklist] = "bl.blacklist.tld"
-
-
-# synchronize database records with server mx2
-#
-#server_socket   = "inet::::9025"
-#server[mx2]     = {
-#    socket      = "inet:10.40.41.8:9025"
-#}

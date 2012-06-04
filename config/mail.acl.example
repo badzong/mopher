@@ -1,12 +1,64 @@
-connect log milter_id + ":: new connection: hostname=" + milter_hostname + " (" + milter_hostaddr + ")"
+# This sample mail.acl should get rid of most spam, without greylisting your
+# precious ham emails.
+
+
+# No tarpitting if we've seen this relay more than 5 times.
+#
+connect counter_relay > 5 continue
+
+
+# Tarpit every other relay for 10 seconds
+#
 connect tarpit 10s
 
-envrcpt log milter_id + ":: envelope: from=" + string_mailaddr(milter_envfrom) + " rcpt=" + string_mailaddr(milter_envrcpt)
-envrcpt counter_penpal > 5 continue
-envrcpt greylist delay 5m attempts 3 deadline 2h visa 7d
 
-eom log milter_id + ":: message: queue_id=" + milter_queueid + " message_size=" + (milter_header_size + milter_body_size)
-eom tarpit_delayed add header "X-Tarpit" value "message tarpitted for " + tarpit_delayed + " seconds"
-eom greylist_delayed add header "X-Greylist" value "message greylisted for " + greylist_delayed + " seconds"
+# Tarpit RBL listed relays for 10 more seconds
+# Don't forget to configure rbl_spamhaus in your mopherd.conf
+#
+connect rbl_spamhaus tarpit 10s
 
-close log milter_id + ":: connection: closed"
+
+# Check the greylist table if a record exists and if so, continue greylisting.
+#
+envrcpt greylist
+
+
+# Greylist RBL listed relays for 5 minutes and 3 delivery attempts
+#
+envrcpt rbl_spamhaus greylist delay 5m attempts 3 deadline 2h visa 7d
+
+
+# Greylist messages with spamassassin score higher 3
+# If this message was greylisted by the last rule in envrcpt this rule is
+# passed immediately.
+#
+envrcpt spamd_score > 3 greylist delay 5m attempts 3 deadline 2h visa 7d
+
+
+# More greylisting if spamassassin score is higher 5
+# If this message was greylisted by one of the previous rules. The greylist
+# record gets updated and greylisting continues until the relay matches delay
+# and attempts.
+#
+envrcpt spamd_score > 5 greylist delay 30m attempts 5 deadline 4h visa 7d
+
+
+# I don't want to receive messages with spamassassin score higher 8
+#
+envrcpt spamd_score > 8 reject
+
+
+# More tarpitting for unknown relays
+#
+eom counter_relay > 5 jump stamp
+eom tarpit 20s
+eom jump stamp
+
+# Add some useful headers
+#
+stamp add header "X-Spamassassin-Score" value spamd_score
+stamp add header "X-Spamassassin-Symbols" value spamd_symbols
+stamp tarpit_delayed add header "X-Tarpit" value "message tarpitted for " + tarpit_delayed + " seconds"
+stamp greylist_delayed add header "X-Greylist" value "message greylisted for " + greylist_delayed + " seconds"
+
+
