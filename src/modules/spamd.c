@@ -148,22 +148,17 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 	char recv_header[BUFLEN];
 	char buffer[BUFLEN];
 	char *p, *q;
-	VAR_INT_T *header_size, *body_size;
-	char *header, *body, *message = NULL;
+	char *message = NULL;
 	VAR_INT_T spam;
 	VAR_FLOAT_T score;
-	long len, size;
+	VAR_INT_T *message_size;
+	long header_size, size;
 
-	if (vtable_dereference(attrs, "milter_header", &header,
-	    "milter_header_size", &header_size, "milter_body", &body,
-	    "milter_body_size", &body_size, NULL) != 4)
-	{
-		log_error("spamd_query: vtable_dereference failed");
-		goto error;
-	}
-
-	len = spamd_header(attrs, recv_header, sizeof recv_header);
-	if (len == -1)
+	/*
+         * Build received header
+         */
+	header_size = spamd_header(attrs, recv_header, sizeof recv_header);
+	if (header_size == -1)
 	{
 		log_error("spamd_query: spamd_header failed");
 		goto error;
@@ -172,10 +167,21 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 	log_debug("spamd_query: received header:\n%s", recv_header);
 
 	/*
-	 * received header + headers + \r\n\r\n + body 
+         * Get message size
+         */
+	message_size = vtable_get(attrs, "milter_message_size");
+	if (message_size == NULL)
+	{
+		log_error("spamd_query: vtable_get failed");
+		goto error;
+	}
+
+	size = header_size + *message_size;
+
+	/*
+	 * Allocate message buffer
 	 */
-	size = len + *header_size + 4 + *body_size;
-	message = (char *) malloc(size);
+	message = (char *) malloc(size + 1);
 	if (message == NULL)
 	{
 		log_sys_error("spamd_query: malloc");
@@ -183,12 +189,15 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 	}
 
 	/*
-	 * Build message
+	 * Dump message
 	 */
-	strcpy(message, recv_header);
-	strcat(message, header);
-	strcat(message, "\r\n\r\n");
-	memcpy(message + len + *header_size + 4, body, *body_size);
+	memcpy(message, recv_header, header_size);
+	if (milter_dump_message(message + header_size, size - header_size + 1,
+	    attrs) == -1)
+	{
+		log_error("spamd_query: milter_dump_message failed");
+		goto error;
+	}
 
 	snprintf(buffer, sizeof(buffer), "SYMBOLS SPAMC/1.2\r\n"
 	    "Content-length: %ld\r\n\r\n", size);

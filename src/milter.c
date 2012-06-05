@@ -972,7 +972,10 @@ milter_eom(SMFICTX * ctx)
 		goto exit;
 	}
 
-	message_size = mp->mp_bodylen + mp->mp_headerlen;
+	/*
+	 * header + \r\n\r\n + body
+	 */
+	message_size = mp->mp_bodylen + mp->mp_headerlen + 4;
 
 	if (vtable_setv(mp->mp_table,
 	    VT_INT, "milter_body_size", &mp->mp_bodylen,
@@ -1449,4 +1452,74 @@ milter_set_reply(var_t *mailspec, char *code, char *xcode, char *message)
 	}
 
 	return 0;
+}
+
+
+int
+milter_dump_message(char *buffer, int size, var_t *mailspec)
+{
+	VAR_INT_T *header_size, *body_size;
+	char *header, *body;
+	int total;
+
+	if (acl_symbol_dereference(mailspec, "milter_header", &header,
+	    "milter_header_size", &header_size, "milter_body", &body,
+	    "milter_body_size", &body_size, NULL))
+	{
+		log_error("milter_dump_message: vtable_dereference failed");
+		return -1;
+	}
+
+	/*
+	 * headers + \r\n\r\n + body + \0
+	 */
+	total = *header_size + 4 + *body_size;
+	if (size < total + 1)
+	{
+		log_error("milter_dump_message: buffer exhausted %d < %d",
+		    size, total + 1);
+		return -1;
+	}
+
+	/*
+	 * Build message
+	 */
+	strcpy(buffer, header);
+	strcat(buffer, "\r\n\r\n");
+	memcpy(buffer + *header_size + 4, body, *body_size);
+	buffer[total] = 0;
+
+	return total;
+}
+
+
+int
+milter_message(var_t *mailspec, char **message)
+{
+	VAR_INT_T *message_size;
+	int size;
+
+	message_size = vtable_get(mailspec, "milter_message_size");
+	if (message_size == NULL)
+	{
+		log_error("milter_message: vtable_get failed");
+		return -1;
+	}
+
+	*message = (char *) malloc(*message_size + 1);
+	if (*message == NULL)
+	{
+		log_sys_error("milter_dump_message: malloc");
+		return -1;
+	}
+
+	size = milter_dump_message(*message, *message_size + 1, mailspec);
+	if (size == -1)
+	{
+		log_error("milter_message: milter_dump_message failed");
+		free(*message);
+		*message = NULL;
+	}
+
+	return size;
 }

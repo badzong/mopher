@@ -20,7 +20,8 @@ enum acl_action_type
 	ACL_LOG,
 	ACL_GREYLIST,
 	ACL_TARPIT,
-	ACL_MOD
+	ACL_MOD,
+	ACL_PIPE
 };
 
 typedef enum acl_action_type acl_action_type_t;

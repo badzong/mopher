@@ -28,5 +28,6 @@
 #include <exp.h>
 #include <tarpit.h>
 #include <msgmod.h>
+#include <pipe.h>
 
 #endif /* _MOPHER_H */

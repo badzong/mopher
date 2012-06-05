@@ -6,7 +6,7 @@ GENSRC=			cf_yacc.c acl_yacc.c cf_lex.c acl_lex.c
 SRC=			$(GENSRC) defs.c cf.c acl.c milter.c module.c \
 			ll.c ht.c sht.c var.c vlist.c vtable.c log.c \
 			hash.c util.c dbt.c greylist.c sock.c client.c \
-			server.c exp.c parser.c tarpit.c msgmod.c
+			server.c exp.c parser.c tarpit.c msgmod.c pipe.c
 OBJ=			$(SRC:.c=.o) cf_defaults.o
 
 CFLAGS+=		-I@top_srcdir@ -I@top_srcdir@/src/include

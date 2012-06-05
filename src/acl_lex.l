@@ -33,6 +33,7 @@ delete		delete
 reply		reply
 xcode		xcode
 message		message
+pipe		pipe
 
 eq		==
 ne		!=
@@ -105,6 +106,7 @@ comment		#.*$
 {reply}		return REPLY;
 {xcode}		return XCODE;
 {message}	return MESSAGE;
+{pipe}		return PIPE;
 
 {op}		return acl_text[0];
 {multiplier}	return acl_text[0];

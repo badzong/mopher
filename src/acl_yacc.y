@@ -13,6 +13,7 @@ int acl_lex(void);
 %token TEMPFAIL GREYLIST VISA DEADLINE DELAY ATTEMPTS TARPIT SET LOG LEVEL 
 %token MULTIPLIER EQ NE LE GE AND OR DEFINE ADD HEADER VALUE INSERT CHANGE
 %token INDEX FROM ESMTP RCPT JUMP BODY SIZE DELETE REPLY XCODE MESSAGE IS_NULL
+%token PIPE
 
 %union {
 	char			 c;
@@ -33,7 +34,7 @@ int acl_lex(void);
 %type <i>	INTEGER number
 %type <d>	FLOAT
 %type <ss>	ADDR
-%type <exp>	exp function symbol constant set tarpit
+%type <exp>	exp function symbol constant set tarpit pipe
 %type <aa>	action terminal
 %type <ar>	reply
 %type <gl>	greylist
@@ -74,6 +75,7 @@ terminal	: CONTINUE		{ $$ = acl_action(ACL_CONTINUE, NULL); }
 		| set			{ $$ = acl_action(ACL_SET, $1); }
 		| mod			{ $$ = acl_action(ACL_MOD, $1); }
 		| jump			{ $$ = acl_action(ACL_JUMP, $1); }
+		| pipe			{ $$ = acl_action(ACL_PIPE, $1); }
 		;
 
 
@@ -100,6 +102,9 @@ jump		: JUMP ID		{ $$ = $2; }
 
 log		: log LEVEL exp		{ $$ = acl_log_level($1, $3); }
 		| LOG exp		{ $$ = acl_log_create($2); }
+		;
+
+pipe		: PIPE exp		{ $$ = $2; }
 		;
 
 mod		: ADD HEADER exp VALUE exp
