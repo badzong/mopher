@@ -973,9 +973,9 @@ milter_eom(SMFICTX * ctx)
 	}
 
 	/*
-	 * header + \r\n\r\n + body
+	 * header + \r\n + body
 	 */
-	message_size = mp->mp_bodylen + mp->mp_headerlen + 4;
+	message_size = mp->mp_bodylen + mp->mp_headerlen + 2;
 
 	if (vtable_setv(mp->mp_table,
 	    VT_INT, "milter_body_size", &mp->mp_bodylen,
@@ -1471,9 +1471,9 @@ milter_dump_message(char *buffer, int size, var_t *mailspec)
 	}
 
 	/*
-	 * headers + \r\n\r\n + body + \0
+	 * headers + \r\n + body + \0
 	 */
-	total = *header_size + 4 + *body_size;
+	total = *header_size + 2 + *body_size;
 	if (size < total + 1)
 	{
 		log_error("milter_dump_message: buffer exhausted %d < %d",
@@ -1485,8 +1485,8 @@ milter_dump_message(char *buffer, int size, var_t *mailspec)
 	 * Build message
 	 */
 	strcpy(buffer, header);
-	strcat(buffer, "\r\n\r\n");
-	memcpy(buffer + *header_size + 4, body, *body_size);
+	strcat(buffer, "\r\n");
+	memcpy(buffer + *header_size + 2, body, *body_size);
 	buffer[total] = 0;
 
 	return total;
