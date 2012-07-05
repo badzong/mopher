@@ -68,7 +68,7 @@ the specified action is executed.
 ### Basic examples
 ```
 connect 1 == 1 log "logged for every new connection"
-connect 4 / 4 == 1 "logged"
+connect 4 / 4 == 1 log "logged"
 connect 1 == 2 log "never logged"
 
 eom milter_message_size > 1M log "big message: " + milter_message_size + " bytes"
@@ -217,4 +217,4 @@ close log milter_id + ":: connection: closed"
 ```
 
 ## AUTHORS
-This manuel page was written by Manuel Badzong <mopher@badzong.com>.
+This manual page was written by Manuel Badzong <mopher@badzong.com>.
