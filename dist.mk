@@ -14,7 +14,7 @@ TARBALL=		$(ARCHIVE).gz
 
 all: bootstrap
 
-bootstrap: src/regdom_rules.c
+bootstrap:
 	aclocal
 	autoconf
 

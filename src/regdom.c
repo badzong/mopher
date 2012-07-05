@@ -17,7 +17,7 @@ void
 regdom_init ()
 {
 	int buckets = sizeof regdom_rules / sizeof (regdom_rule_t) * 2;
-	regdom_rule_t *r = regdom_rules;
+	regdom_rule_t *r;
 
 
 	if(sht_init(&regdom_ht, buckets, NULL))
