@@ -29,5 +29,6 @@
 #include <tarpit.h>
 #include <msgmod.h>
 #include <pipe.h>
+#include <regdom.h>
 
 #endif /* _MOPHER_H */

@@ -41,14 +41,9 @@ greylist_source(char *buffer, int size, char *hostname, char *hostaddr)
 	}
 	else
 	{
-		p = strchr(hostname, '.');
-		if (p == NULL)
+		if (!(p = regdom(hostname)))
 		{
 			p = hostaddr;
-		}
-		else
-		{
-			++p;
 		}
 	}
 
