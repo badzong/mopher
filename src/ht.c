@@ -9,6 +9,16 @@
 #include <hash.h>
 #include <log.h>
 
+/*
+ * Debug if collisions reach 20%
+ */
+#define COLLISION_ALERT 20
+
+/*
+ * Double hashtable size if load exceeds 50%
+ */
+#define MAX_LOAD 50
+
 int
 ht_init(ht_t *ht, hash_t buckets, ht_hash_t hash, ht_match_t match,
 	ht_delete_t delete)
@@ -173,6 +183,10 @@ ht_resize(ht_t *ht)
 
 	memcpy(ht, &new, sizeof(ht_t));
 
+	log_info("ht_resize: successful, records=%d (%.1f%%), collisions=%d "
+	    "(%.1f%%)", ht->ht_records, HT_LOADFACTOR(ht), ht->ht_collisions,
+	    HT_COLLFACTOR(ht));
+
 	return 0;
 }
 
@@ -219,7 +233,7 @@ ht_insert(ht_t *ht, void *data)
 	}
 
 	cf = HT_COLLFACTOR(ht);
-	if (cf > 20)
+	if (cf > COLLISION_ALERT)
 	{
 		/*
 		 * FIXME: format is evaluated twice: %%%%
@@ -227,7 +241,7 @@ ht_insert(ht_t *ht, void *data)
 		log_debug("ht_insert: collisions %.1f%%%%", cf);
 	}
 
-	if (HT_LOADFACTOR(ht) > 70)
+	if (HT_LOADFACTOR(ht) > MAX_LOAD)
 	{
 		if (ht_resize(ht))
 		{

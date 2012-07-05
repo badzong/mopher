@@ -1241,6 +1241,7 @@ milter_init(void)
 	greylist_init();
 	tarpit_init();
 	module_init();
+	regdom_init();
 	milter_load_symbols();
 	milter_db_init();
 

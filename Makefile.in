@@ -36,16 +36,5 @@ uninstall:
 	-rm -ri $(DESTDIR)$(MODULE_PATH)
 	-rm -ri $(DESTDIR)$(CONFIG_INST)
 
-regdom_rules.dat:
-	p=http://hg.mozilla.org/mozilla-central/raw-file/tip/netwerk/dns; \
-	wget -O- $$p/effective_tld_names.dat >$@
-regdom_rules.py:
-	p=http://hg.mozilla.org/mozilla-central/raw-file/tip/netwerk/dns; \
-	wget -O- $$p/prepare_tlds.py >$@
-regdom_rules: regdom_rules.py regdom_rules.dat
-	python2 $> $^ >$@
-
-regdom.c: regdom_rules
-
 clean:
 	target=$@; $(MAKE_SUBDIR)

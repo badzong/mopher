@@ -4,59 +4,76 @@
 
 #include <mopher.h>
 
-static sht_t* rules_ht = NULL;
-static rule_t rules[] =
-#	include "regdom_rules"
+#define nsnull NULL
+#define PR_TRUE 1
+#define PR_FALSE 0
+
+static sht_t regdom_ht;
+static regdom_rule_t regdom_rules[] =
+#include "regdom_rules.c"
 ;
 
-static void
+void
 regdom_init ()
 {
-	int i;
-	int n = sizeof rules / sizeof (rule_t);
+	int buckets = sizeof regdom_rules / sizeof (regdom_rule_t) * 2;
+	regdom_rule_t *r = regdom_rules;
 
-	rules_ht = sht_create(2*n, NULL);
-	for (i=0; i<n; i++) {
-		sht_insert(rules_ht, rules[i].name, &rules[i]);
+
+	if(sht_init(&regdom_ht, buckets, NULL))
+	{
+		log_die(EX_SOFTWARE, "regdom_init: sht_init failed");
 	}
+
+	for (r = regdom_rules; r->r_name; r++)
+	{
+		sht_insert(&regdom_ht, r->r_name, r);
+	}
+
+	return;
 }
 
 char*
 regdom (char* name)
 {
-	rule_t* r;
+	regdom_rule_t* r;
 	char* prev = NULL;
 	char* curr = NULL;
 	char* next = name;
 
-	if (!next) {
+	if (!next)
+	{
 		return NULL;
 	}
-	if (!rules_ht) {
-		regdom_init();
-	}
+
 	do {
-		while (*next == '.') {
+		while (*next == '.')
+		{
 			next++;
 		}
-		if (r = sht_lookup(rules_ht, next)) {
-			if (r->exception) {
+		if ((r = sht_lookup(&regdom_ht, next)))
+		{
+			if (r->r_exception)
+			{
 				return next;
 			}
-			if (r->wildcard) {
+			if (r->r_wildcard)
+			{
 				return prev;
 			}
 			break;
 		}
 		prev = curr;
 		curr = next;
-	} while (next = strchr(next, '.'));
+	} while ((next = strchr(next, '.')));
 
-	if (curr && !strchr(curr, '.')) {
+	if (curr && !strchr(curr, '.'))
+	{
 		return prev;
 	}
 	return curr;
 }
+
 
 static void
 regdom_assert (char* in, char* out)
@@ -67,7 +84,7 @@ regdom_assert (char* in, char* out)
 	out = out ?out :"NULL";
 	msg = strcmp(res, out) ?"FAIL" :"OK";
 
-	printf("%4s:	%-40s %-20s %s\n", msg, in, res, out);
+	log_debug("%4s:	%-40s %-20s %s\n", msg, in, res, out);
 }
 
 void

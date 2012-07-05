@@ -1,16 +1,15 @@
 #ifndef _REGDOM_H_
 #define _REGDOM_H_
 
-#define NS_MAXDNAME	1025	/* arpa/nameser.h */
-
-struct rule
+struct regdom_rule
 {
-	char name[NS_MAXDNAME];
-	int exception;
-	int wildcard;
+	char *r_name;
+	char  r_exception;
+	char  r_wildcard;
 };
-typedef struct rule rule_t;
+typedef struct regdom_rule regdom_rule_t;
 
+void regdom_init (void);
 char* regdom (char* name);
 void regdom_test (void);
 
