@@ -1,5 +1,5 @@
 #ifndef _SHT_H_
-#define _SHT_H
+#define _SHT_H_
 
 typedef void (*sht_delete_t)(void *data);
 
