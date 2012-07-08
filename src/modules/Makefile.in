@@ -19,4 +19,4 @@ clean:
 
 .SUFFIXES: .c .so
 .c.so:
-	$(CC) $(CFLAGS) $(SOFLAGS) $(LDFLAGS.$@) -o $@ $<
+	$(CC) $(CFLAGS) $(LDFLAGS.modules) $(LDFLAGS.$@) -o $@ $<
