@@ -35,6 +35,8 @@ static int server_clients[MAX_CLIENTS + 1];
 static int server_running;
 static pthread_t server_thread;
 
+static char server_table_empty[] = "table is empty\n";
+
 
 static void
 server_usr2(int sig)
@@ -74,6 +76,8 @@ int server_check(int sock)
 
 	if (memcmp(ok, "OK", 2))
 	{
+		// Hex debug, could be binary data
+		log_error("server_check: expected 0x%1x%1x ('OK') got %1x%1x", 'O', 'K', ok[0], ok[1]);
 		return 1;
 	}
 
@@ -194,7 +198,7 @@ server_data_cmd(int sock, char *cmd, char **buffer)
 
 	if (server_ok(sock))
 	{
-		log_sys_error("server_data_cmd: server_ok failed");
+		log_error("server_data_cmd: server_ok failed");
 		return -1;
 	}
 
@@ -209,7 +213,7 @@ server_data_cmd(int sock, char *cmd, char **buffer)
 
 	if (server_check(sock))
 	{
-		log_sys_error("server_data_cmd: server_check failed");
+		log_error("server_data_cmd: server_check failed");
 		return -1;
 	}
 
@@ -259,7 +263,7 @@ server_table_dump(int sock, int argc, char **argv)
 	switch(len)
 	{
 	case 0:
-		server_reply(sock, "table empty");
+		server_output(sock, server_table_empty, sizeof server_table_empty);
 		return 1;
 	case -1:
 		log_error("server_table_dump: dbt_dump failed");
@@ -301,7 +305,7 @@ server_greylist_dump(int sock, int argc, char **argv)
 	switch(len)
 	{
 	case 0:
-		server_reply(sock, "greylist empty");
+		server_output(sock, server_table_empty, sizeof server_table_empty);
 		return 1;
 	case -1:
 		log_error("server_greylist_dump: greylist_dump failed");
