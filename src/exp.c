@@ -892,6 +892,23 @@ exp_not(var_t *v)
 }
 
 
+static var_t *
+exp_isset(var_t *mailspec, exp_t *exp)
+{
+	if (exp->ex_type != EX_SYMBOL)
+	{
+		log_error("exp_isset: bad type");
+		return NULL;
+	}
+
+	if (vtable_lookup(mailspec, exp->ex_data))
+	{
+		return EXP_TRUE;
+	}
+
+	return EXP_FALSE;
+}
+
 var_t *
 exp_eval_operation(exp_t *exp, var_t *mailspec)
 {
@@ -907,6 +924,14 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 	{
 		return exp_assign(eo->eo_operand[0], eo->eo_operand[1],
 		    mailspec);
+	}
+
+	/*
+	 * isset operator
+	 */
+	if (eo->eo_operator == IS_SET)
+	{
+		return exp_isset(mailspec, eo->eo_operand[0]);
 	}
 
 	left = exp_eval(eo->eo_operand[0], mailspec);

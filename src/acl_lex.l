@@ -34,6 +34,7 @@ reply		reply
 xcode		xcode
 message		message
 pipe		pipe
+isset		isset
 
 eq		==
 ne		!=
@@ -107,6 +108,7 @@ comment		#.*$
 {xcode}		return XCODE;
 {message}	return MESSAGE;
 {pipe}		return PIPE;
+{isset}		return IS_SET;
 
 {op}		return acl_text[0];
 {multiplier}	return acl_text[0];
