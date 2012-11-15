@@ -77,9 +77,11 @@ int var_compare(const var_t * v1, const var_t * v2);
 int var_true(const var_t * v);
 int var_dump_data(var_t * v, char *buffer, int size);
 int var_dump(var_t * v, char *buffer, int size);
+int var_dump_stdout(var_t * v);
 void var_compact_delete(var_compact_t *vc);
 var_compact_t * var_compress(var_t *v);
 var_t * var_decompress(var_compact_t *vc, var_t *scheme);
 var_t * var_cast_copy(var_type_t type, var_t *v);
 VAR_INT_T var_intval(var_t *v);
+
 #endif /* _VAR_H_ */

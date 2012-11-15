@@ -16,7 +16,7 @@
 
 #define BUCKETS 256
 #define BUFLEN 1024
-
+#define STDOUT_BUFLEN 1024 * 64
 
 static hash_t
 var_hash(var_t * v)
@@ -864,6 +864,21 @@ var_dump(var_t * v, char *buffer, int size)
 	len += var_dump_data(v, buffer + len, size - len);
 
 	return len;
+}
+
+int
+var_dump_stdout(var_t *v)
+{
+	char buffer[STDOUT_BUFLEN];
+	int r;
+
+	r = var_dump(v, buffer, sizeof buffer);
+	printf(buffer);
+
+	// Add newline and flush stdout
+	printf("\n");
+
+	return r;
 }
 
 
