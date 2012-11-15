@@ -81,4 +81,6 @@ void dbt_open_databases(void);
 void dbt_init(void);
 void dbt_clear();
 dbt_t * dbt_lookup(char *name);
+int dbt_dump(char **dump, char *tablename);
+
 #endif /* _DBT_H_ */

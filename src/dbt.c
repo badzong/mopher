@@ -20,6 +20,9 @@ static pthread_t	dbt_janitor_thread;
 static pthread_mutex_t	dbt_janitor_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t	dbt_janitor_cond = PTHREAD_COND_INITIALIZER;
 
+static char           **dbt_dump_buffer;
+static int              dbt_dump_buffer_size;
+static pthread_mutex_t  dbt_dump_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void
 dbt_driver_register(char *name, dbt_driver_t *dd)
@@ -913,4 +916,94 @@ dbt_t *
 dbt_lookup(char *name)
 {
 	return sht_lookup(dbt_tables, name);
+}
+
+
+/*
+ * CAVEAT: dbt_dump_record is not thread safe. Needs to run in locked
+ * context.
+ */
+int
+dbt_dump_record(dbt_t *dbt, var_t *record)
+{
+	char buffer[BUFLEN];
+	int len;
+
+	len = var_dump_data(record, buffer, sizeof buffer);
+	if (len == -1)
+	{
+		return -1;
+	}
+
+	*dbt_dump_buffer = realloc(*dbt_dump_buffer, dbt_dump_buffer_size + len + 2);
+	if (*dbt_dump_buffer == NULL)
+	{
+		log_sys_error("dbt_dump_record: realloc");
+		return -1;
+	}
+
+	snprintf(*dbt_dump_buffer + dbt_dump_buffer_size, len + 2, "%s\n", buffer);
+
+	// Add the record an a trailing newline
+	dbt_dump_buffer_size += len + 1;
+
+	return 0;
+}
+
+int
+dbt_dump(char **dump, char *tablename)
+{
+	dbt_t *table;
+
+	table = dbt_lookup(tablename);
+	if (table == NULL)
+	{
+		log_error("dbt_dump: dbt_lookup failed for table: %s", tablename);
+		return -1;
+	}
+
+	/*
+	 * arguments to dbt_dump_record are passed through static globals
+	 * hence dbt_dump is mutex.
+	 */
+	if (pthread_mutex_lock(&dbt_dump_mutex))
+	{
+		log_sys_error("dbt_dump: pthread_mutex_lock");
+		return -1;
+	}
+
+	/*
+	 * For safety we require *dump to be NULL.
+	 */
+	if (*dump)
+	{
+		dbt_dump_buffer_size = -1;
+		goto error;
+	}
+
+	dbt_dump_buffer = dump;
+	dbt_dump_buffer_size = 0;
+
+	dbt_db_walk(table, (dbt_db_callback_t) dbt_dump_record);
+
+	if (dbt_dump_buffer_size == -1)
+	{
+		if (*dbt_dump_buffer)
+		{
+			free(*dbt_dump_buffer);
+			*dbt_dump_buffer = NULL;
+		}
+
+		log_error("dbt_dump: dbt_dump_record failed");
+
+		goto error;
+	}
+
+error:
+	if (pthread_mutex_unlock(&dbt_dump_mutex))
+	{
+		log_sys_error("dbt_dump: pthread_mutex_unlock");
+	}
+
+	return dbt_dump_buffer_size;
 }

@@ -18,6 +18,7 @@
 #define MAX_BUFFER 10000000
 
 static server_function_t server_functions[] = {
+	{ "table_dump",	        "Dump table",		        server_table_dump },
 	{ "greylist_dump",	"Dump greylist tuples",		server_greylist_dump },
 	{ "greylist_pass",	"Let tuple pass greylistung",	server_greylist_pass },
 	{ "help",		"Print this message",		server_help },
@@ -239,6 +240,54 @@ server_help(int sock, int argc, char **argv)
 
 
 int
+server_table_dump(int sock, int argc, char **argv)
+{
+	char *dump = NULL;
+	int len;
+	int r = -1;
+	
+	if (argc != 2)
+	{
+		log_error("server_table_dump: server_table_dump needs exactly 2 arguments");
+		goto error;
+	}
+		
+	len = dbt_dump(&dump, argv[1]);
+
+	log_debug("server_table_dump: table size: %d bytes", len);
+
+	switch(len)
+	{
+	case 0:
+		server_reply(sock, "table empty");
+		return 1;
+	case -1:
+		log_error("server_table_dump: dbt_dump failed");
+		goto error;
+	default:
+		break;
+	}
+
+	if(server_output(sock, dump, len) == -1)
+	{
+		log_sys_error("server_table_dump: write");
+	}
+	else
+	{
+		r = 1; //OK
+	}
+
+error:
+	if (dump)
+	{
+		free(dump);
+	}
+	
+	return r;
+}
+
+
+int
 server_greylist_dump(int sock, int argc, char **argv)
 {
 	char *dump = NULL;
@@ -326,6 +375,8 @@ server_exec_cmd(int sock, char *cmd)
 	char *save, *p, *nil;
 	server_function_t *sf;
 	int r;
+
+	log_debug("server_exec_cmd: %s", cmd);
 
 	for (nil = cmd; (p = strtok_r(nil, " ", &save)) && argc < MAXARGS; nil = NULL, ++argc)
 	{

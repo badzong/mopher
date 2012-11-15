@@ -21,5 +21,6 @@ int server_help(int sock, int argc, char **argv);
 int server_quit(int sock, int argc, char **argv);
 int server_greylist_dump(int sock, int argc, char **argv);
 int server_greylist_pass(int sock, int argc, char **argv);
+int server_table_dump(int sock, int argc, char **argv);
 
 #endif /* _SERVER_H_ */

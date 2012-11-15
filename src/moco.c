@@ -14,19 +14,28 @@
 #define ACTION_BUCKETS 16
 #define BUFLEN 2048
 
+static int   moco_debug = LOG_ERR;
+static char *moco_config;
+static char *moco_server;
+static char  moco_options[64] = "?hd:c:s:";
+static int   moco_socket;
 
 static void
 moco_usage(void)
 {
-	log_error("Usage: %s ACTION OPTIONS", BINNAME);
+	log_error("Usage: %s <scope> options", BINNAME);
 	log_error("Mopher control client.");
 	log_error("");
-	log_error("ACTIONS:");
-	log_error("  greylist   Manipulate Greylist Database");
+	log_error("SCOPES:");
+	log_error("  table      Dump database tables");
+	log_error("  greylist   Manipulate greylist database");
+	log_error("");
+	log_error("TABLE OPTIONS:");
+	log_error("  -D table   Dump database table");
 	log_error("");
 	log_error("GREYLIST OPTIONS:");
 	log_error("  -D         Dump mopher greylist database");
-	log_error("  -p         Pass greylisting (requires -s, -f and -r )");
+	log_error("  -p         Pass greylisting (requires -m, -f and -r )");
 	log_error("  -m source  MTA source address or domain");
 	log_error("  -f from    Envelope sender address");
 	log_error("  -r rcpt    Envelope recipient address");
@@ -40,6 +49,9 @@ moco_usage(void)
 	log_error("EXAMPLES:");
 	log_error("");
 	log_error("  Dump greylist:");
+	log_error("  %s table -D counter_penpal", BINNAME);
+	log_error("");
+	log_error("  Dump greylist:");
 	log_error("  %s greylist -D", BINNAME);
 	log_error("");
 	log_error("  Pass greylisting:");
@@ -50,14 +62,13 @@ moco_usage(void)
 
 
 static int
-moco_greylist_dump(int sock)
+moco_greylist_dump(void)
 {
 	char *dump;
 	
-	if(server_data_cmd(sock, "greylist_dump", &dump))
+	if (server_data_cmd(moco_socket, "greylist_dump", &dump))
 	{
-		log_die(EX_SOFTWARE, "moco_greylist_dump: server_data_cmd "
-		    "failed");
+		log_die(EX_SOFTWARE, "moco_greylist_dump: server_data_cmd failed");
 	}
 
 	printf(dump);
@@ -68,7 +79,7 @@ moco_greylist_dump(int sock)
 
 
 static int
-moco_greylist_pass(int sock, char *source, char *from, char *rcpt)
+moco_greylist_pass(char *source, char *from, char *rcpt)
 {
 	char cmd[BUFLEN];
 	int n;
@@ -80,7 +91,7 @@ moco_greylist_pass(int sock, char *source, char *from, char *rcpt)
 		log_die(EX_SOFTWARE, "moco_greylist_dump: buffer exhausted");
 	}
 
-	if(server_cmd(sock, cmd))
+	if(server_cmd(moco_socket, cmd))
 	{
 		log_die(EX_SOFTWARE, "moco_greylist_dump: server_cmd failed");
 	}
@@ -88,9 +99,121 @@ moco_greylist_pass(int sock, char *source, char *from, char *rcpt)
 	return 0;
 }
 
+static int
+moco_general(char opt, char *optarg)
+{
+	switch(opt) {
+	case 'd':
+		moco_debug = atoi(optarg);
+		return 0;
 
-int
-main(int argc, char **argv)
+	case 'c':
+		moco_config = optarg;
+		return 0;
+
+	case 's':
+		moco_server = optarg;
+		return 0;
+
+	default:
+		moco_usage();
+	}
+
+	return -1;
+}
+
+
+static void
+moco_init(void)
+{
+	/*
+	 * Initialize log (foreground, stderr)
+	 */
+	log_init(BINNAME, moco_debug, 0, 1);
+
+	/*
+	 * Get server socket string
+	 */
+	if (moco_server == NULL)
+	{
+		if (moco_config)
+		{
+			cf_path(moco_config);
+		}
+		cf_init();
+		moco_server = cf_control_socket;
+	}
+
+	if (moco_server == NULL)
+	{
+		log_die(EX_CONFIG, "moco_init: server_socket not configured");
+	}
+
+	/*
+	 * Connect Server
+	 */
+	moco_socket = sock_connect(moco_server);
+	if (moco_socket == -1)
+	{
+		log_die(EX_SOFTWARE, "moco_init: connection to %s failed", moco_server);
+	}
+
+	log_debug("moco_init: connected to %s", moco_server);
+
+	return;
+}
+
+static int
+moco_table(int argc, char **argv)
+{
+	char *dump;
+	char cmd[BUFLEN];
+	int n;
+	int opt;
+	char *tablename = NULL;
+
+	// Append greylisting specific options
+	strcat(moco_options, "D:");
+	
+	while ((opt = getopt(argc, argv, moco_options)) != -1) {
+		switch(opt) {
+		case 'D':
+			tablename = optarg;
+			break;
+
+		default:
+			moco_general(opt, optarg);
+			break;
+		}
+	}
+
+	if (!tablename)
+	{
+		return -1;
+	}
+
+	moco_init();
+
+	n = snprintf(cmd, sizeof cmd, "table_dump %s", tablename);
+	if (n >= sizeof cmd)
+	{
+		log_die(EX_SOFTWARE, "moco_table_dump: buffer exhausted");
+	}
+	
+	if (server_data_cmd(moco_socket, cmd, &dump))
+	{
+		log_die(EX_SOFTWARE, "moco_table_dump: server_data_cmd failed");
+	}
+
+	printf(dump);
+	free(dump);
+
+	return 0;
+}
+
+
+static int
+moco_greylist(int argc, char **argv)
 {
 	int opt;
 	int pass = 0;
@@ -98,28 +221,12 @@ main(int argc, char **argv)
 	char *source = NULL;
 	char *from = NULL;
 	char *rcpt = NULL;
-	char *config = NULL;
-	char *server = NULL;
-	char *action;
-	int sock;
-	int r = 0;
-	int debug = LOG_ERR;
-	int show_usage = 0;
 
-	while ((opt = getopt(argc, argv, "d:c:s:Dpm:f:r:")) != -1) {
+	// Append greylisting specific options
+	strcat(moco_options, "Dpm:f:r:");
+	
+	while ((opt = getopt(argc, argv, moco_options)) != -1) {
 		switch(opt) {
-		case 'd':
-			debug = atoi(optarg);
-			break;
-
-		case 'c':
-			config = optarg;
-			break;
-
-		case 's':
-			server = optarg;
-			break;
-
 		case 'D':
 			dump = 1;
 			break;
@@ -141,77 +248,78 @@ main(int argc, char **argv)
 			break;
 
 		default:
-			show_usage = 1;
+			moco_general(opt, optarg);
+			break;
 		}
 	}
 
-	/*
-	 * Initialize log (foreground, stderr)
-	 */
-	log_init(BINNAME, debug, 0, 1);
+	moco_init();
 
-	if (show_usage || optind >= argc) {
+	if (dump)
+	{
+		return moco_greylist_dump();
+	}
+
+	if (pass && source && from && rcpt)
+	{
+		return moco_greylist_pass(source, from, rcpt);
+	}
+
+	return -1;
+}
+
+int
+main(int argc, char **argv)
+{
+	char *scope;
+	int (*callback)(int, char **);
+
+	// Open log
+	log_init(BINNAME, moco_debug, 0, 1);
+
+	if (argc < 2)
+	{
 		moco_usage();
+		return EX_USAGE;
 	}
 
-	action = argv[optind];
+	scope = argv[1];
+	argv += 1;
+	argc -= 1; 
 
-	/*
-	 * Get server socket string
-	 */
-	if (server == NULL)
+	// Get scope
+	if (!strcmp(scope, "greylist"))
 	{
-		if (config)
-		{
-			cf_path(config);
-		}
-		cf_init();
-		server = cf_control_socket;
+		callback = moco_greylist;
 	}
-	if (server == NULL)
+	else if (!strcmp(scope, "table"))
 	{
-		log_die(EX_CONFIG, "moco: server_socket not configured");
+		callback = moco_table;
 	}
-
-	/*
-	 * Connect Server
-	 */
-	sock = sock_connect(server);
-	if (sock == -1)
+	else
 	{
-		log_die(EX_SOFTWARE, "moco: connection to %s failed", server);
+		moco_usage();
+		return EX_USAGE;
 	}
 
-	log_debug("moco: connected to %s", server);
-
-	if (!strcmp(action, "greylist"))
+	// Execute scope callback
+	if (callback(argc, argv))
 	{
-		if ((!dump && !pass) || (pass && (!source || !from || !rcpt)))
-		{
-			moco_usage();
-		}
-
-		if (dump)
-		{
-			r = moco_greylist_dump(sock);
-		}
-		else if (pass)
-		{
-			r = moco_greylist_pass(sock, source, from, rcpt);
-		}
-
-		if (r == -1)
-		{
-			log_die(EX_SOFTWARE, "moco: greylist failed");
-		}
+		moco_usage();
+		return EX_USAGE;
 	}
 
-	close(sock);
+	// Cleanup
+	if (moco_socket)
+	{
+		close(moco_socket);
+	}
 
-	if (config)
+	if (moco_config)
 	{
 		cf_clear();
 	}
 
 	return 0;
 }
+
