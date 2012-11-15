@@ -24,6 +24,8 @@ counter_lookup(milter_stage_t stage, char *name, var_t *mailspec)
 	VAR_INT_T *recipients;
 	char prefix[] = "counter_penpal";
 
+	log_message(LOG_DEBUG, mailspec, "counter_lookup: %s", name);
+
 	if (strncmp(name, prefix, sizeof prefix - 1) == 0)
 	{
 		dbt = &counter_penpal;
@@ -93,17 +95,18 @@ counter_add_relay(dbt_t *dbt, var_t *mailspec)
 
 	created = *received;
 	updated = *received;
-	expire   = cf_counter_expire_low;
+	expire  = cf_counter_expire_low;
 
 	/*
 	 * Count gets a head start by 1. Because update is called when the
-	 * connection closes. Next time we use this tuple, we've counter this
+	 * connection closes. Next time we use this tuple, we'll see this
 	 * host for the second time.
 	 */
-	count   = 2;
+	count = 2;
 
 	record = vlist_record(dbt->dbt_scheme, hostaddr, &created, &updated,
 	    &expire, &count);
+
 
 	if (record == NULL) {
 		log_warning("counter_add_penpal: vlist_record failed");
@@ -116,6 +119,8 @@ counter_add_relay(dbt_t *dbt, var_t *mailspec)
 		var_delete(record);
 		return -1;
 	}
+
+	log_debug("counter_add_relay: record saved");
 
 	var_delete(record);
 	
@@ -133,8 +138,8 @@ counter_add_penpal(dbt_t *dbt, var_t *mailspec)
 	VAR_INT_T *received;
 	VAR_INT_T created, updated, expire, count;
 
-	if (vtable_dereference(mailspec, "milter_hostaddr", &hostaddr,
-	    "milter_envfrom", &envfrom, "milter_envrcpt", &envrcpt,
+	if (vtable_dereference(mailspec, "milter_greylist_src", &hostaddr,
+	    "milter_envfrom_addr", &envfrom, "milter_envrcpt_addr", &envrcpt,
 	    "milter_received", &received, NULL) != 4)
 	{
 		log_error("counter_add_penpal: vtable_dereference failed");
@@ -165,6 +170,8 @@ counter_add_penpal(dbt_t *dbt, var_t *mailspec)
 		var_delete(record);
 		return -1;
 	}
+
+	log_debug("counter_add_penpal: record saved");
 
 	var_delete(record);
 	
@@ -325,17 +332,17 @@ counter_init(void)
 	var_t *penpal_scheme;
 
 	relay_scheme = vlist_scheme("counter_relay",
-		"milter_hostaddr",	VT_ADDR,	VF_KEEPNAME | VF_KEY,
+		"milter_hostaddr",		VT_ADDR,	VF_KEEPNAME | VF_KEY,
 		"counter_relay_created",	VT_INT,		VF_KEEPNAME,
 		"counter_relay_updated",	VT_INT,		VF_KEEPNAME,
-		"counter_relay_expire",	VT_INT,		VF_KEEPNAME,
+		"counter_relay_expire",		VT_INT,		VF_KEEPNAME,
 		"counter_relay",		VT_INT,		VF_KEEPNAME,
 		NULL);
 
 	penpal_scheme = vlist_scheme("counter_penpal",
-		"milter_hostaddr",	VT_ADDR,	VF_KEEPNAME | VF_KEY,
-		"milter_envfrom",	VT_STRING,	VF_KEEPNAME | VF_KEY,
-		"milter_envrcpt",	VT_STRING,	VF_KEEPNAME | VF_KEY,
+		"milter_greylist_src",		VT_STRING,	VF_KEEPNAME | VF_KEY,
+		"milter_envfrom_addr",		VT_STRING,	VF_KEEPNAME | VF_KEY,
+		"milter_envrcpt_addr",		VT_STRING,	VF_KEEPNAME | VF_KEY,
 		"counter_penpal_created",	VT_INT,		VF_KEEPNAME,
 		"counter_penpal_updated",	VT_INT,		VF_KEEPNAME,
 		"counter_penpal_expire",	VT_INT,		VF_KEEPNAME,
@@ -349,11 +356,11 @@ counter_init(void)
 
 	counter_relay.dbt_scheme			= relay_scheme;
 	counter_relay.dbt_validate			= dbt_common_validate;
-	counter_relay.dbt_sql_invalid_where	= DBT_COMMON_INVALID_SQL;
+	counter_relay.dbt_sql_invalid_where		= DBT_COMMON_INVALID_SQL;
 
 	counter_penpal.dbt_scheme			= penpal_scheme;
-	counter_penpal.dbt_validate		= dbt_common_validate;
-	counter_penpal.dbt_sql_invalid_where	= DBT_COMMON_INVALID_SQL;
+	counter_penpal.dbt_validate			= dbt_common_validate;
+	counter_penpal.dbt_sql_invalid_where		= DBT_COMMON_INVALID_SQL;
 
 	dbt_register("counter_relay", &counter_relay);
 	dbt_register("counter_penpal", &counter_penpal);
