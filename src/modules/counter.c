@@ -95,7 +95,7 @@ counter_add_relay(dbt_t *dbt, var_t *mailspec)
 
 	created = *received;
 	updated = *received;
-	expire  = cf_counter_expire_low;
+	expire  = *received + cf_counter_expire_low;
 
 	/*
 	 * Count gets a head start by 1. Because update is called when the
@@ -148,7 +148,7 @@ counter_add_penpal(dbt_t *dbt, var_t *mailspec)
 
 	created = *received;
 	updated = *received;
-	expire  = cf_counter_expire_low;
+	expire  = *received + cf_counter_expire_low;
 	/*
 	 * Count gets a head start by 1. Because update is called when the
 	 * connection closes. Next time we use this tuple, we encounter this
