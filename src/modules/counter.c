@@ -96,13 +96,7 @@ counter_add_relay(dbt_t *dbt, var_t *mailspec)
 	created = *received;
 	updated = *received;
 	expire  = *received + cf_counter_expire_low;
-
-	/*
-	 * Count gets a head start by 1. Because update is called when the
-	 * connection closes. Next time we use this tuple, we'll see this
-	 * host for the second time.
-	 */
-	count = 2;
+	count   = 1;
 
 	record = vlist_record(dbt->dbt_scheme, hostaddr, &created, &updated,
 	    &expire, &count);
@@ -149,12 +143,7 @@ counter_add_penpal(dbt_t *dbt, var_t *mailspec)
 	created = *received;
 	updated = *received;
 	expire  = *received + cf_counter_expire_low;
-	/*
-	 * Count gets a head start by 1. Because update is called when the
-	 * connection closes. Next time we use this tuple, we encounter this
-	 * penpal for the second time.
-	 */
-	count   = 2;
+	count   = 1;
 
 	record = vlist_record(dbt->dbt_scheme, hostaddr, envfrom, envrcpt,
 	    &created, &updated, &expire, &count);
