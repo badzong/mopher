@@ -468,7 +468,7 @@ greylist_add(greylist_t *gl, var_t *mailspec, char *source, char *envfrom,
 	 */
 	if (deadline == 0)
 	{
-		expire = cf_greylist_deadline;
+		deadline = cf_greylist_deadline;
 	}
 	if (visa == 0)
 	{
