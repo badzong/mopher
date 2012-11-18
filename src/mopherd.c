@@ -94,7 +94,7 @@ main(int argc, char **argv)
 		util_pidfile(pidfile);
 	}
 
-	log_error("started");
+	log_error("mopherd-%s started", PACKAGE_VERSION);
 
 	r = milter();
 
