@@ -6,6 +6,10 @@ Makefile
 Makefile.common
 config.h
 autom4te.cache
+src/acl_yacc.h
+src/cf_yacc.h
+src/moco
+src/mopherd
 *.o
 *.so
 *.tar.gz
