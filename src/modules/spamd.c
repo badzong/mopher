@@ -32,6 +32,29 @@ static const char spamd_multi[] = "Received: from %s (%s)\r\n\tby %s "
 static char *spamd_symbols[] = { "spamd_spam", "spamd_score",
 	"spamd_symbols", NULL};
 
+static void
+spamd_printable_buffer(char *buffer, int len)
+{
+	int i;
+
+	/*
+	 * we use len as index. So the last char is buffer[len - 1]
+	 */
+	--len;
+
+	for (i = 0; i < len; ++i)
+	{
+		if (buffer[i] < 33 || buffer[i] > 126)
+		{
+			buffer[i] = '.';
+		}
+	}
+
+	buffer[len] = 0;
+
+	return;
+}
+
 static int
 spamd_rdns_none(char *hostname, char *hostaddr)
 {
@@ -240,13 +263,17 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 	 */
 	p = buffer;
 	if (strncmp(p, SPAMD_SPAMD, SPAMD_SPAMDLEN)) {
-		log_error("spamd_query: protocol error");
+		spamd_printable_buffer(p, SPAMD_SPAMDLEN + 1);
+		log_error("spamd_query: protocol error: expected='%s' "
+			"received='%s'", SPAMD_SPAMD, p);
 		goto error;
 	}
 
 	p += SPAMD_SPAMDLEN;
 	if (strncmp(p, SPAMD_VERSION, SPAMD_VERSIONLEN)) {
-		log_notice("spamd_query: protocol version mismtach");
+		spamd_printable_buffer(p, SPAMD_VERSIONLEN + 1);
+		log_notice("spamd_query: protocol version mismtach: "
+			"expected='%s' received='%s'", SPAMD_VERSION, p);
 	}
 
 	p += SPAMD_VERSIONLEN;
@@ -279,7 +306,9 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 	 * Parse results
 	 */
 	if(strncmp(p, SPAMD_SPAM, SPAMD_SPAMLEN)) {
-		log_error("spamd_query: protocol error");
+		spamd_printable_buffer(p, SPAMD_SPAMLEN + 1);
+		log_error("spamd_query: protocol error: expected='%s' "
+			"received='%s'", SPAMD_SPAM, p);
 		goto error;
 	}
 
@@ -294,7 +323,10 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 	}
 	else
 	{
-		log_error("spamd_query: protocol error");
+		spamd_printable_buffer(p, (SPAMD_TRUELEN > SPAMD_FALSELEN ?
+			SPAMD_TRUELEN: SPAMD_FALSELEN) + 1);
+		log_error("spamd_query: protocol error: expected: '%s|%s' "
+			"received='%s'", SPAMD_TRUE, SPAMD_FALSE, p);
 		goto error;
 	}
 
@@ -303,7 +335,8 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 	 */
 	q = strchr(p, ' ');
 	if (q == NULL) {
-		log_error("spamd_query: protocol error");
+		log_error("spamd_query: protocol error: couldn't find the "
+			"next space character");
 		goto error;
 	}
 	*q++ = 0;
@@ -315,14 +348,16 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 	 */
 	p = strchr(q, '\r');
 	if (p == NULL) {
-		log_error("spamd_query: protocol error");
+		log_error("spamd_query: protocol error: couldn't find the "
+			"start of the spamd symbols");
 		goto error;
 	}
 	p += 4; /* \r\n\r\n */
 
 	q = strchr(p, '\r');
 	if (q == NULL) {
-		log_error("spamd_query: protocol error");
+		log_error("spamd_query: protocol error: couldn't find the "
+			"end of the spamd symbols");
 		goto error;
 	}
 	*q = 0;
