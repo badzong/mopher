@@ -838,6 +838,7 @@ milter_header(SMFICTX * ctx, char *headerf, char *headerv)
 	milter_priv_t *mp;
 	int32_t len;
 	sfsistat stat = SMFIS_TEMPFAIL;
+	char *messageid;
 
 	mp = milter_common_init(ctx, MS_HEADER, MSN_HEADER);
 	if (mp == NULL)
@@ -875,6 +876,20 @@ milter_header(SMFICTX * ctx, char *headerf, char *headerv)
 	{
 		log_error("milter_header: vtable_setv failed");
 		goto exit;
+	}
+
+	/*
+         * log message id
+         */
+	if (strcmp(headerf, "Message-ID") == 0)
+	{
+		messageid = util_strdupenc(headerv, "<>");
+		if (messageid)
+		{
+			log_message(LOG_ERR, mp->mp_table, "Message-ID=%s",
+				messageid);
+			free(messageid);
+		}
 	}
 
 	log_message(LOG_DEBUG, mp->mp_table,
