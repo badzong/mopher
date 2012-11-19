@@ -726,7 +726,7 @@ milter_envfrom(SMFICTX * ctx, char **argv)
 		goto exit;
 	}
 
-	log_message(LOG_ERR, mp->mp_table, "envfrom=%s", argv[0]);
+	log_message(LOG_ERR, mp->mp_table, "from=%s", from);
 
 	stat = milter_acl(MS_ENVFROM, MSN_ENVFROM, mp);
 
@@ -769,7 +769,7 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 		goto exit;
 	}
 
-	log_message(LOG_ERR, mp->mp_table, "envrcpt=%s", argv[0]);
+	log_message(LOG_ERR, mp->mp_table, "rcpt=%s", rcpt);
 
 	stat = milter_acl(MS_ENVRCPT, MSN_ENVRCPT, mp);
 

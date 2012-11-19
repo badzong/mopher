@@ -218,7 +218,7 @@ counter_update_record(dbt_t *dbt, char *prefix, var_t *mailspec, counter_add_t a
 	expire	= vlist_record_get(record, expire_key);
 	count	= vlist_record_get(record, prefix);
 
-	log_message(LOG_ERR, mailspec, "counter: %s=%ld", prefix, *count);
+	log_message(LOG_NOTICE, mailspec, "counter: %s=%ld", prefix, *count);
 
 	if (updated == NULL || expire == NULL || count == NULL)
 	{
