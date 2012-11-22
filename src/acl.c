@@ -1088,8 +1088,8 @@ acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 
 		acl_update(stage, response, mailspec);
 
-		log_message(LOG_ERR, mailspec, "match: rule=%d reply=%s",
-			stagename, i, acl_stati[response]);
+		log_message(LOG_ERR, mailspec, "match: stage=%s rule=%d "
+			"reply=%s", stagename, i, acl_stati[response]);
 
 		return response;
 	}

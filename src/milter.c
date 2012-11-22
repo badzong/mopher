@@ -292,19 +292,29 @@ milter_acl(milter_stage_t stage, char *stagename, milter_priv_t * mp)
 	switch (action)
 	{
 	case ACL_CONTINUE:
+		log_debug("milter_acl: stage %s returns SMFIS_CONTINUE",
+			stagename);
 		return SMFIS_CONTINUE;
 
 	case ACL_REJECT:
+		log_debug("milter_acl: stage %s returns SMFIS_REJECT",
+			stagename);
 		return SMFIS_REJECT;
 
 	case ACL_DISCARD:
+		log_debug("milter_acl: stage %s returns SMFIS_DISCARD",
+			stagename);
 		return SMFIS_DISCARD;
 
 	case ACL_ACCEPT:
+		log_debug("milter_acl: stage %s returns SMFIS_ACCEPT",
+			stagename);
 		return SMFIS_ACCEPT;
 
 	case ACL_TEMPFAIL:
 	case ACL_GREYLIST:
+		log_debug("milter_acl: stage %s returns SMFIS_TEMPFAIL",
+			stagename);
 		return SMFIS_TEMPFAIL;
 
 	case ACL_ERROR:
