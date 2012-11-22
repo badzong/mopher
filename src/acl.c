@@ -48,6 +48,24 @@ static acl_log_level_t acl_log_levels[] = {
 };
 
 
+static char *acl_stati[] = {
+	"NULL",
+	"NONE",
+	"CONTINUE",
+	"REJECT",
+	"DISCARD",
+	"ACCEPT",
+	"TEMPFAIL",
+	"JUMP",
+	"SET",
+	"LOG",
+	"GREYLIST",
+	"TARPIT",
+	"MOD",
+	"PIPE"
+};
+
+
 static void
 acl_reply_delete(acl_reply_t *ar)
 {
@@ -1069,6 +1087,9 @@ acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 		}
 
 		acl_update(stage, response, mailspec);
+
+		log_message(LOG_ERR, mailspec, "match: rule=%d reply=%s",
+			stagename, i, acl_stati[response]);
 
 		return response;
 	}
