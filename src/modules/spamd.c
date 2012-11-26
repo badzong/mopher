@@ -362,7 +362,7 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 	}
 	*q = 0;
 
-	log_message(LOG_ERR, attrs, "spamd: spam=%d, score=%.1f, symbols=%s",
+	log_message(LOG_ERR, attrs, "spamd: spam=%d score=%.1f symbols=%s",
 	    spam, score, p);
 
 	symbols = var_create(VT_LIST, "spamd_symbols", NULL,

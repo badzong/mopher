@@ -147,7 +147,7 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 			goto error;
 		}
 
-		log_message(LOG_ERR, attrs, "rbl_query: addr=%s, rbl=%s, "
+		log_message(LOG_ERR, attrs, "rbl_query: addr=%s rbl=%s "
 		    "result=%s", addrstr, domain, resultstr);
 
 		free(resultstr);

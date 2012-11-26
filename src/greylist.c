@@ -499,7 +499,7 @@ greylist_add(greylist_t *gl, var_t *mailspec, char *source, char *envfrom,
 	
 	var_delete(record);
 
-	log_message(LOG_ERR, mailspec, "greylist: status=defer, delay=0/%ld, "
+	log_message(LOG_ERR, mailspec, "greylist: status=defer delay=0/%ld "
 	    "attempts=1/%ld", delay, attempts);
 
 	return 1;
@@ -574,9 +574,9 @@ greylist_recipient(greylist_t * gl, VAR_INT_T *delayed, var_t *mailspec,
 		goto error;
 	}
 
-	log_message(LOG_DEBUG, mailspec, "greylist: status=record, "
-	    "connections=%ld, deadline=%ld, delay=%ld, attempts=%ld, "
-	    "visa=%ld, passed=%ld", *connections, *deadline, *delay,
+	log_message(LOG_DEBUG, mailspec, "greylist: status=record "
+	    "connections=%ld deadline=%ld delay=%ld attempts=%ld "
+	    "visa=%ld passed=%ld", *connections, *deadline, *delay,
 	    *attempts, *visa, *passed);
 
 	/*
@@ -585,7 +585,7 @@ greylist_recipient(greylist_t * gl, VAR_INT_T *delayed, var_t *mailspec,
 	if (*expire < received)
 	{
 		log_message(LOG_DEBUG, mailspec,
-		    "greylist: status=expired, late=%ld",
+		    "greylist: status=expired late=%ld",
 		    received - *expire);
 
 		var_delete(record);
@@ -628,8 +628,8 @@ greylist_recipient(greylist_t * gl, VAR_INT_T *delayed, var_t *mailspec,
 			++(*passed);
 		}
 
-		log_message(LOG_ERR, mailspec, "greylist: status=passed, "
-		    "delay=%ld/%ld, attempts=%ld/%ld, visa=%ld, passed=%ld",
+		log_message(LOG_ERR, mailspec, "greylist: status=passed "
+		    "delay=%ld/%ld attempts=%ld/%ld visa=%ld passed=%ld",
 		    passed_delay, *delay, *connections, *attempts, *visa,
 		    *passed);
 
@@ -650,8 +650,8 @@ greylist_recipient(greylist_t * gl, VAR_INT_T *delayed, var_t *mailspec,
 	*expire = *created + *deadline;
 	*passed = 0;
 
-	log_message(LOG_ERR, mailspec, "greylist: status=defer, delay=%ld/%ld,"
-	    " attempts=%ld/%ld", passed_delay, *delay, *connections,
+	log_message(LOG_ERR, mailspec, "greylist: status=defer delay=%ld/%ld "
+	    "attempts=%ld/%ld", passed_delay, *delay, *connections,
 	    *attempts);
 
 

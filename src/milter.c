@@ -903,7 +903,7 @@ milter_header(SMFICTX * ctx, char *headerf, char *headerv)
 	}
 
 	log_message(LOG_DEBUG, mp->mp_table,
-	    "header=%s, size=%d", headerf, len);
+	    "header=%s size=%d", headerf, len);
 
 	stat = milter_acl(MS_HEADER, MSN_HEADER, mp);
 
@@ -1015,7 +1015,7 @@ milter_eom(SMFICTX * ctx)
 	}
 
 	log_message(LOG_ERR, mp->mp_table,
-	    "message=%d, headers=%d, body=%d",
+	    "message=%d headers=%d body=%d",
 	    message_size, mp->mp_headerlen, mp->mp_bodylen);
 
 	stat = milter_acl(MS_EOM, MSN_EOM, mp);
