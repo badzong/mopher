@@ -1,3 +1,24 @@
+0.3: 2012-11-26
+
+  FEATURES
+
+  * Moco now supports dumping all database tables
+  * Counter_penpal uses greylist_src as MTA address
+  * Log Message-ID in default logging
+  * Consistent logging format
+  * Added pipe action (EXPERIMENTAL)
+  * Identify servers public suffix used for greylisting (Petar Bogdanovic)
+  * Support LDFLAGS #7 (Petar Bogdanovic)
+
+
+  BUGFIXES
+
+  * Update bug in counter.c
+  * Bad message size bug
+  * Ignored cf_default_deadline #10
+  * Typo in sht.c #8 (Petar Bogdanovic)
+
+
 0.2: 2012-06-03
 
   FEATURES
