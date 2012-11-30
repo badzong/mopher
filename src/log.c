@@ -78,7 +78,7 @@ log_logv(int type, int syserr, char *f, va_list ap)
 	}
 	else
 	{
-		fprintf(stderr, buffer);
+		fputs(buffer, stderr);
 		fputc('\n', stderr);
 	}
 
