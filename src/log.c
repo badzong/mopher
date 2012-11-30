@@ -74,7 +74,8 @@ log_logv(int type, int syserr, char *f, va_list ap)
 
 	if (log_syslog)
 	{
-		syslog(type, buffer);
+		//CAVEAT: buffer might contain %
+		syslog(type, "%s", buffer);
 	}
 	else
 	{
