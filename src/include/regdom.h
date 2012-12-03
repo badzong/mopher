@@ -9,6 +9,7 @@ struct regdom_rule
 };
 typedef struct regdom_rule regdom_rule_t;
 
+void regdom_clear (void);
 void regdom_init (void);
 char* regdom (char* name);
 void regdom_test (void);
