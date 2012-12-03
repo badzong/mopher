@@ -62,6 +62,22 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	}
 
 	/*
+         * Address not set. See milter_connect for details.
+	 */
+	if (addr == NULL)
+	{
+		log_debug("rbl_query: address is NULL");
+
+		if (vtable_set_new(attrs, VT_ADDR, name, NULL, VF_COPYNAME))
+		{
+			log_error("rbl_query: vtable_setv failed");
+			goto error;
+		}
+
+		return 0;
+	}
+
+	/*
 	 * No IPv6 support yet.
 	 */
 	if (addr->ss_family != AF_INET)
