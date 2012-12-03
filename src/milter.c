@@ -569,7 +569,7 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 	milter_priv_t *mp = NULL;
 	VAR_INT_T now;
 	char *mta_version;
-	struct sockaddr_storage *ha_clean;
+	struct sockaddr_storage *ha_clean = NULL;
 	char *addrstr;
 	char source[256];
 	VAR_INT_T id;
@@ -600,10 +600,17 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 		goto exit;
 	}
 
-	ha_clean = util_hostaddr((struct sockaddr_storage *) hostaddr);
-	if (ha_clean == NULL) {
-		log_error("milter_connect: util_hostaddr failed");
-		goto exit;
+	// https://www.milter.org/developers/api/xxfi_connect
+	// hostaddr: the host address, as determined by a getpeername(2) call
+	// on the SMTP socket. NULL if the type is not supported in the current
+	// version or if the SMTP connection is made via stdin.
+	if (hostaddr)
+	{
+		ha_clean = util_hostaddr((struct sockaddr_storage *) hostaddr);
+		if (ha_clean == NULL) {
+			log_error("milter_connect: util_hostaddr failed");
+			goto exit;
+		}
 	}
 
 	addrstr = util_addrtostr(ha_clean);

@@ -131,12 +131,11 @@ util_addrtostr(struct sockaddr_storage *ss)
 	struct sockaddr_in6 *sin6;
 	const char *p;
 
-	/*
-	if((ss = (struct sockaddr_storage *)
-		malloc(sizeof(struct sockaddr_storage))) == NULL) {
-		return NULL;
+	if (ss == NULL)
+	{
+		// CAVEAT: Need to strdup here. String is freed later.
+		return strdup("(null)");
 	}
-	*/
 
 	sun = (struct sockaddr_un *) ss;
 	sin = (struct sockaddr_in *) ss;
@@ -256,10 +255,9 @@ util_hostaddr(struct sockaddr_storage *ss)
 	struct sockaddr_in *sin, *sin_copy;
 	struct sockaddr_in6 *sin6, *sin6_copy;
 
-	// FIXME: Why does this happen??
 	if (ss == NULL)
 	{
-		log_error("util_hostaddr: supplied sockaddr_storage is NULL");
+		log_info("util_hostaddr: supplied sockaddr_storage is NULL");
 		return NULL;
 	}
 

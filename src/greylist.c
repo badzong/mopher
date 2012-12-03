@@ -35,7 +35,8 @@ greylist_source(char *buffer, int size, char *hostname, char *hostaddr)
 	 * Save only the domainname in the greylist tuple. Useful for
 	 * greylisting mail farms.
 	 */
-	if (strncmp(hostname + 1, hostaddr, strlen(hostaddr)) == 0)
+	if (strncmp(hostname + 1, hostaddr, strlen(hostaddr)) == 0 ||
+		strcmp(hostaddr, "(null)") == 0)
 	{
 		p = hostaddr;
 	}
