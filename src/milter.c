@@ -1288,6 +1288,7 @@ milter_init(void)
 void
 milter_clear(void)
 {
+	regdom_clear();
 	acl_clear();
 	dbt_clear();
 	module_clear();

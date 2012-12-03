@@ -13,8 +13,17 @@ static regdom_rule_t regdom_rules[] =
 #include "regdom_rules.c"
 ;
 
+
 void
-regdom_init ()
+regdom_clear (void)
+{
+	sht_clear(&regdom_ht);
+
+	return;
+}
+
+void
+regdom_init (void)
 {
 	int buckets = sizeof regdom_rules / sizeof (regdom_rule_t) * 2;
 	regdom_rule_t *r;
