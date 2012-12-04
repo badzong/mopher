@@ -25,4 +25,5 @@ int vtable_list_append(var_t *table, char *listname, var_t *v);
 int vtable_list_append_new(var_t *table, var_type_t type, char *name, void *data,int flags);
 int vtable_dereference(var_t *table, ...);
 int vtable_add_record(var_t *table, var_t *record);
+int vtable_is_null(var_t *table, char *name);
 #endif /* _VTABLE_H_ */

@@ -26,6 +26,15 @@ counter_lookup(milter_stage_t stage, char *name, var_t *mailspec)
 
 	log_message(LOG_DEBUG, mailspec, "counter_lookup: %s", name);
 
+	/*
+	 * mailter_hostaddr is not set. See milter_connect for details.
+	 */
+	if (vtable_is_null(mailspec, "milter_hostaddr"))
+	{
+		log_debug("counter_lookup: milter_hostaddr is NULL");
+		return 0;
+	}
+
 	if (strncmp(name, prefix, sizeof prefix - 1) == 0)
 	{
 		dbt = &counter_penpal;
@@ -273,6 +282,15 @@ counter_update(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 
 	if (stage != MS_CLOSE)
 	{
+		return 0;
+	}
+
+	/*
+	 * mailter_hostaddr is not set. See milter_connect for details.
+	 */
+	if (vtable_is_null(mailspec, "milter_hostaddr"))
+	{
+		log_debug("counter_update: milter_hostaddr is NULL");
 		return 0;
 	}
 

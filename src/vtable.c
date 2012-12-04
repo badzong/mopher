@@ -357,3 +357,17 @@ vtable_add_record(var_t *table, var_t *record)
 
 	return 0;
 }
+
+int
+vtable_is_null(var_t *table, char *name)
+{
+	void *p;
+
+	p = vtable_get(table, name);
+	if (p == NULL)
+	{
+		return 1;
+	}
+
+	return 0;
+}
