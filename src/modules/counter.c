@@ -32,6 +32,14 @@ counter_lookup(milter_stage_t stage, char *name, var_t *mailspec)
 	if (vtable_is_null(mailspec, "milter_hostaddr"))
 	{
 		log_debug("counter_lookup: milter_hostaddr is NULL");
+
+		if (vtable_set_null(mailspec, "counter_relay", VF_KEEPNAME) ||
+		    vtable_set_null(mailspec, "counter_penpal", VF_KEEPNAME))
+		{
+			log_error("counter_lookup: vtable_set_null failed");
+			return -1;
+		}
+
 		return 0;
 	}
 

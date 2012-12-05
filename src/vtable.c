@@ -358,6 +358,21 @@ vtable_add_record(var_t *table, var_t *record)
 	return 0;
 }
 
+
+int
+vtable_set_null(var_t *table, char *name, int flags)
+{
+	flags |= VF_KEEPDATA;
+
+	if (vtable_set_new(table, VT_NULL, name, NULL, flags))
+	{
+		log_warning("vtable_set_null: vtable_set_new failed");
+		return -1;
+	}
+
+	return 0;
+}
+
 int
 vtable_is_null(var_t *table, char *name)
 {
