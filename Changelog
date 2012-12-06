@@ -1,3 +1,11 @@
+0.4: 2012-12-06
+
+  BUGFIXES
+
+  * Fixed possible format string reevaluation in log.c
+  * Fixed handling of NULL host addresses
+
+
 0.3: 2012-11-26
 
   FEATURES
