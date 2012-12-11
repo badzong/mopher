@@ -898,13 +898,13 @@ milter_header(SMFICTX * ctx, char *headerf, char *headerv)
 	/*
          * log message id
          */
-	if (strcmp(headerf, "Message-ID") == 0)
+	if (strcasecmp(headerf, "Message-ID") == 0)
 	{
 		messageid = util_strdupenc(headerv, "<>");
 		if (messageid)
 		{
-			log_message(LOG_ERR, mp->mp_table, "Message-ID=%s",
-				messageid);
+			log_message(LOG_ERR, mp->mp_table, "%s=%s",
+				headerf, messageid);
 			free(messageid);
 		}
 	}
