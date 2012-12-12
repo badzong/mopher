@@ -903,8 +903,8 @@ milter_header(SMFICTX * ctx, char *headerf, char *headerv)
 		messageid = util_strdupenc(headerv, "<>");
 		if (messageid)
 		{
-			log_message(LOG_ERR, mp->mp_table, "%s=%s",
-				headerf, messageid);
+			log_message(LOG_ERR, mp->mp_table, "message-id=%s",
+				messageid);
 			free(messageid);
 		}
 	}
