@@ -3,7 +3,8 @@
 include Makefile.common
 
 SUBDIR=			src/modules src
-MAKE_SUBDIR=		for i in $(SUBDIR); do $(MAKE) -C $$i $$target; done
+MAKE_SUBDIR=		for i in $(SUBDIR); do \
+				(cd $$i && $(MAKE) $$target); done
 
 all: subdir
 
