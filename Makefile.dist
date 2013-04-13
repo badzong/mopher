@@ -1,4 +1,4 @@
-# dist.mk
+# Makefile.dist
 
 DOCSRC=			AUTHORS LICENSE README.md TODO doc
 SRC=			$(DOCSRC) src config configure \
