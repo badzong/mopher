@@ -8,8 +8,8 @@ OUT=			configure Makefile Makefile.common src/Makefile \
 REGDOM=			regdom_rules.dat regdom_rules.py
 
 DIST?=			mopher
-DISTDIR=		$(DIST)
-ARCHIVE=		$(DIST).tar
+DISTDIR=		$(DIST)-$$(cat VERSION)
+ARCHIVE=		$(DISTDIR).tar
 TARBALL=		$(ARCHIVE).gz
 
 all: bootstrap
