@@ -29,7 +29,7 @@ regdom_rules.dat:
 	wget -O- $$p/effective_tld_names.dat >$@
 
 regdom_rules.py:
-	p=http://hg.mozilla.org/mozilla-central/raw-file/tip/netwerk/dns; \
+	p=http://hg.mozilla.org/mozilla-central/raw-file/f4157e8c4107/netwerk/dns; \
 	wget -O- $$p/prepare_tlds.py >$@
 
 src/regdom_rules.c: regdom_rules.py regdom_rules.dat
