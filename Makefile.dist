@@ -1,6 +1,6 @@
 # Makefile.dist
 
-DOCSRC=			AUTHORS LICENSE README.md TODO doc
+DOCSRC=			AUTHORS LICENSE README.md doc
 SRC=			$(DOCSRC) src config configure \
 			Makefile.common.in Makefile.in config.h.in
 OUT=			configure Makefile Makefile.common src/Makefile \
