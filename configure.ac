@@ -1,5 +1,5 @@
 AC_PREREQ([2.64])
-AC_INIT([mopher], [0.4], [mopher@mopher.net])
+AC_INIT([mopher], m4_esyscmd([tr -d \\n <VERSION]), [mopher@mopher.net])
 
 AC_SUBST([PACKAGE], [$PACKAGE_NAME])
 AC_SUBST([VERSION], [$PACKAGE_VERSION])
