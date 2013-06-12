@@ -4,8 +4,9 @@ SRC=			AUTHORS CHANGES LICENSE Makefile.common.in \
 			Makefile.in README.md config config.h.in \
 			configure doc src
 OUT=			Makefile Makefile.common autom4te.cache \
-			config.h config.log configure regdom_rules.dat \
-			regdom_rules.py src/Makefile src/modules/Makefile
+			config.h config.log config.status configure \
+			regdom_rules.dat regdom_rules.py regdom_test.dat \
+			src/Makefile src/modules/Makefile
 
 DIST=			mopher
 VERSION=		0.4.1
@@ -32,8 +33,19 @@ regdom_rules.py:
 	wget -O- $$p/prepare_tlds.py >$@
 
 src/regdom_rules.c: regdom_rules.py regdom_rules.dat
-	echo "/* Generated file. See dist.mk for details */" >$@
+	echo "/* Generated file. See Makefile.dist for details */" >$@
 	python2.7 $> $^ >>$@
+
+regdom_test.dat:
+	p=http://hg.mozilla.org/mozilla-central/raw-file/tip/netwerk/test/unit/data; \
+	wget -O- $$p/test_psl.txt >$@
+
+src/regdom_test.c: regdom_test.dat
+	echo "/* Generated file. See Makefile.dist for details */" >$@
+	echo "void regdom_test (void) {" >>$@
+	sed -n "/^checkPublicSuffix/ { \
+		s//	regdom_assert/; s/null/NULL/g; s/'/\"/g; p; }" $> $^ >>$@
+	echo "}" >>$@
 
 clean:
 	-rm -rf $(OUT) $(DISTDIR) $(DISTDIR).tar $(DISTDIR).tar.gz
