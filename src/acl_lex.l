@@ -12,6 +12,7 @@ tempfail	tempfail
 greylist	greylist
 tarpit		tarpit
 log		log
+level		level
 set		set
 deadline	deadline
 visa		visa
@@ -81,6 +82,7 @@ comment		#.*$
 {tarpit}	return TARPIT;
 {set}		return SET;
 {log}		return LOG;
+{level}		return LEVEL;
 {deadline}	return DEADLINE;
 {visa}		return VISA;
 {delay}		return DELAY;
