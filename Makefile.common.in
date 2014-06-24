@@ -43,5 +43,5 @@ MAIL_ACL=		$(CONFIG_PATH)/mail.acl
 
 # Files
 #
-PROG=			mopherd moco
+PROG=			mopherd mopherctl
 CONF=			mopherd.conf.example mail.acl.example

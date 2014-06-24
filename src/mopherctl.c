@@ -9,19 +9,19 @@
 #include <mopher.h>
 
 #undef BINNAME
-#define BINNAME "moco"
+#define BINNAME "mopherctl"
 
 #define ACTION_BUCKETS 16
 #define BUFLEN 2048
 
-static int   moco_debug = LOG_ERR;
-static char *moco_config;
-static char *moco_server;
-static char  moco_options[64] = "?hd:c:s:";
-static int   moco_socket;
+static int   moctl_debug = LOG_ERR;
+static char *moctl_config;
+static char *moctl_server;
+static char  moctl_options[64] = "?hd:c:s:";
+static int   moctl_socket;
 
 static void
-moco_usage(void)
+moctl_usage(void)
 {
 	log_error("Usage: %s <scope> options", BINNAME);
 	log_error("Mopher control client.");
@@ -62,13 +62,13 @@ moco_usage(void)
 
 
 static int
-moco_greylist_dump(void)
+moctl_greylist_dump(void)
 {
 	char *dump;
 	
-	if (server_data_cmd(moco_socket, "greylist_dump", &dump))
+	if (server_data_cmd(moctl_socket, "greylist_dump", &dump))
 	{
-		log_die(EX_SOFTWARE, "moco_greylist_dump: server_data_cmd failed");
+		log_die(EX_SOFTWARE, "moctl_greylist_dump: server_data_cmd failed");
 	}
 
 	printf(dump);
@@ -79,7 +79,7 @@ moco_greylist_dump(void)
 
 
 static int
-moco_greylist_pass(char *source, char *from, char *rcpt)
+moctl_greylist_pass(char *source, char *from, char *rcpt)
 {
 	char cmd[BUFLEN];
 	int n;
@@ -88,35 +88,35 @@ moco_greylist_pass(char *source, char *from, char *rcpt)
 	    rcpt);
 	if (n >= sizeof cmd)
 	{
-		log_die(EX_SOFTWARE, "moco_greylist_dump: buffer exhausted");
+		log_die(EX_SOFTWARE, "moctl_greylist_dump: buffer exhausted");
 	}
 
-	if(server_cmd(moco_socket, cmd))
+	if(server_cmd(moctl_socket, cmd))
 	{
-		log_die(EX_SOFTWARE, "moco_greylist_dump: server_cmd failed");
+		log_die(EX_SOFTWARE, "moctl_greylist_dump: server_cmd failed");
 	}
 
 	return 0;
 }
 
 static int
-moco_general(char opt, char *optarg)
+moctl_general(char opt, char *optarg)
 {
 	switch(opt) {
 	case 'd':
-		moco_debug = atoi(optarg);
+		moctl_debug = atoi(optarg);
 		return 0;
 
 	case 'c':
-		moco_config = optarg;
+		moctl_config = optarg;
 		return 0;
 
 	case 's':
-		moco_server = optarg;
+		moctl_server = optarg;
 		return 0;
 
 	default:
-		moco_usage();
+		moctl_usage();
 	}
 
 	return -1;
@@ -124,47 +124,47 @@ moco_general(char opt, char *optarg)
 
 
 static void
-moco_init(void)
+moctl_init(void)
 {
 	/*
 	 * Initialize log (foreground, stderr)
 	 */
-	log_init(BINNAME, moco_debug, 0, 1);
+	log_init(BINNAME, moctl_debug, 0, 1);
 
 	/*
 	 * Get server socket string
 	 */
-	if (moco_server == NULL)
+	if (moctl_server == NULL)
 	{
-		if (moco_config)
+		if (moctl_config)
 		{
-			cf_path(moco_config);
+			cf_path(moctl_config);
 		}
 		cf_init();
-		moco_server = cf_control_socket;
+		moctl_server = cf_control_socket;
 	}
 
-	if (moco_server == NULL)
+	if (moctl_server == NULL)
 	{
-		log_die(EX_CONFIG, "moco_init: server_socket not configured");
+		log_die(EX_CONFIG, "moctl_init: server_socket not configured");
 	}
 
 	/*
 	 * Connect Server
 	 */
-	moco_socket = sock_connect(moco_server);
-	if (moco_socket == -1)
+	moctl_socket = sock_connect(moctl_server);
+	if (moctl_socket == -1)
 	{
-		log_die(EX_SOFTWARE, "moco_init: connection to %s failed", moco_server);
+		log_die(EX_SOFTWARE, "moctl_init: connection to %s failed", moctl_server);
 	}
 
-	log_debug("moco_init: connected to %s", moco_server);
+	log_debug("moctl_init: connected to %s", moctl_server);
 
 	return;
 }
 
 static int
-moco_table(int argc, char **argv)
+moctl_table(int argc, char **argv)
 {
 	char *dump;
 	char cmd[BUFLEN];
@@ -173,16 +173,16 @@ moco_table(int argc, char **argv)
 	char *tablename = NULL;
 
 	// Append greylisting specific options
-	strcat(moco_options, "D:");
+	strcat(moctl_options, "D:");
 	
-	while ((opt = getopt(argc, argv, moco_options)) != -1) {
+	while ((opt = getopt(argc, argv, moctl_options)) != -1) {
 		switch(opt) {
 		case 'D':
 			tablename = optarg;
 			break;
 
 		default:
-			moco_general(opt, optarg);
+			moctl_general(opt, optarg);
 			break;
 		}
 	}
@@ -192,17 +192,17 @@ moco_table(int argc, char **argv)
 		return -1;
 	}
 
-	moco_init();
+	moctl_init();
 
 	n = snprintf(cmd, sizeof cmd, "table_dump %s", tablename);
 	if (n >= sizeof cmd)
 	{
-		log_die(EX_SOFTWARE, "moco_table_dump: buffer exhausted");
+		log_die(EX_SOFTWARE, "moctl_table_dump: buffer exhausted");
 	}
 	
-	if (server_data_cmd(moco_socket, cmd, &dump))
+	if (server_data_cmd(moctl_socket, cmd, &dump))
 	{
-		log_die(EX_SOFTWARE, "moco_table_dump: server_data_cmd failed");
+		log_die(EX_SOFTWARE, "moctl_table_dump: server_data_cmd failed");
 	}
 
 	printf(dump);
@@ -213,7 +213,7 @@ moco_table(int argc, char **argv)
 
 
 static int
-moco_greylist(int argc, char **argv)
+moctl_greylist(int argc, char **argv)
 {
 	int opt;
 	int pass = 0;
@@ -223,9 +223,9 @@ moco_greylist(int argc, char **argv)
 	char *rcpt = NULL;
 
 	// Append greylisting specific options
-	strcat(moco_options, "Dpm:f:r:");
+	strcat(moctl_options, "Dpm:f:r:");
 	
-	while ((opt = getopt(argc, argv, moco_options)) != -1) {
+	while ((opt = getopt(argc, argv, moctl_options)) != -1) {
 		switch(opt) {
 		case 'D':
 			dump = 1;
@@ -248,21 +248,21 @@ moco_greylist(int argc, char **argv)
 			break;
 
 		default:
-			moco_general(opt, optarg);
+			moctl_general(opt, optarg);
 			break;
 		}
 	}
 
-	moco_init();
+	moctl_init();
 
 	if (dump)
 	{
-		return moco_greylist_dump();
+		return moctl_greylist_dump();
 	}
 
 	if (pass && source && from && rcpt)
 	{
-		return moco_greylist_pass(source, from, rcpt);
+		return moctl_greylist_pass(source, from, rcpt);
 	}
 
 	return -1;
@@ -275,11 +275,11 @@ main(int argc, char **argv)
 	int (*callback)(int, char **);
 
 	// Open log
-	log_init(BINNAME, moco_debug, 0, 1);
+	log_init(BINNAME, moctl_debug, 0, 1);
 
 	if (argc < 2)
 	{
-		moco_usage();
+		moctl_usage();
 		return EX_USAGE;
 	}
 
@@ -290,32 +290,32 @@ main(int argc, char **argv)
 	// Get scope
 	if (!strcmp(scope, "greylist"))
 	{
-		callback = moco_greylist;
+		callback = moctl_greylist;
 	}
 	else if (!strcmp(scope, "table"))
 	{
-		callback = moco_table;
+		callback = moctl_table;
 	}
 	else
 	{
-		moco_usage();
+		moctl_usage();
 		return EX_USAGE;
 	}
 
 	// Execute scope callback
 	if (callback(argc, argv))
 	{
-		moco_usage();
+		moctl_usage();
 		return EX_USAGE;
 	}
 
 	// Cleanup
-	if (moco_socket)
+	if (moctl_socket)
 	{
-		close(moco_socket);
+		close(moctl_socket);
 	}
 
-	if (moco_config)
+	if (moctl_config)
 	{
 		cf_clear();
 	}
