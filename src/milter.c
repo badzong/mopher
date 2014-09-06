@@ -36,7 +36,6 @@ static milter_symbol_t milter_symbols[] = {
 	{ "milter_ctx", MS_ANY },
 	{ "milter_action", MS_OFF_CONNECT },
 	{ "milter_id", MS_ANY },
-	{ "milter_mta_version", MS_ANY },
 	{ "milter_stage", MS_ANY },
 	{ "milter_stagename", MS_ANY }, 
 	{ "milter_unknown_command", MS_UNKNOWN },
@@ -68,6 +67,7 @@ static milter_symbol_t milter_symbols[] = {
  * http://www.postfix.org/MILTER_README.html (2009-09-26)
  */
 static milter_macro_t milter_macro_symbols[] = {
+	{ "milter_mta_version", "v", MS_ANY },
 	{ "milter_queueid", "i", MS_OFF_EOH },
 	{ "milter_myhostname", "j", MS_ANY },
 	{ "milter_client", "_", MS_ANY },
@@ -157,7 +157,6 @@ milter_get_id(void)
 static int
 milter_macro_lookup(milter_stage_t stage, char *name, var_t *attrs)
 {
-	char *version;
 	milter_macro_t *mm;
 	char *value;
 	SMFICTX *ctx;
@@ -165,8 +164,7 @@ milter_macro_lookup(milter_stage_t stage, char *name, var_t *attrs)
 	int r;
 
 	r = acl_symbol_dereference(attrs, "milter_ctx", &ctx,
-		"milter_mta_version", &version, "milter_stagename", &stagename,
-		NULL);
+		"milter_stagename", &stagename, NULL);
 	if (r)
 	{
 		log_error("milter_macro_lookup: acl_symbol_dereference "
@@ -176,14 +174,13 @@ milter_macro_lookup(milter_stage_t stage, char *name, var_t *attrs)
 
 	mm = sht_lookup(milter_macro_table, name);
 	if (mm == NULL) {
-		log_error("milter_macro_lookup: \"%s\" has no macro for \"%s\"",
-			version, name);
+		log_error("milter_macro_lookup: unkown macro \"%s\"", name);
 		return -1;
 	}
 
 	if ((stage & mm->mm_stage) == 0) {
 		log_error("milter_macro_lookup: \"%s (%s)\" not set at \"%s\""
-			" stage (%s)", mm->mm_macro, name, stagename, version);
+			" stage", mm->mm_macro, name, stagename);
 		return -1;
 	}
 
@@ -501,7 +498,6 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 {
 	milter_priv_t *mp = NULL;
 	VAR_INT_T now;
-	char *mta_version;
 	struct sockaddr_storage *ha_clean = NULL;
 	char *addrstr;
 	char source[256];
@@ -523,13 +519,6 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 
 	if ((now = (VAR_INT_T) time(NULL)) == -1) {
 		log_sys_error("milter_connect: time");
-		goto exit;
-	}
-
-	mta_version = smfi_getsymval(ctx, "v");
-	if (mta_version == NULL)
-	{
-		log_error("milter_connect: smfi_getsymval for \"v\" failed");
 		goto exit;
 	}
 
@@ -563,8 +552,6 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 	if (vtable_setv(mp->mp_table,
 	    VT_INT, "milter_id", &id, VF_KEEPNAME | VF_COPYDATA,
 	    VT_INT, "milter_received", &now, VF_KEEPNAME | VF_COPYDATA,
-	    VT_STRING, "milter_mta_version", mta_version,
-		VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "milter_hostname", hostname, VF_KEEPNAME | VF_COPYDATA,
 	    VT_ADDR, "milter_hostaddr", ha_clean, VF_KEEPNAME,
 	    VT_STRING, "milter_addrstr", addrstr, VF_KEEPNAME,
