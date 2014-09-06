@@ -29,13 +29,6 @@
 
 #define BUCKETS 127
 
-#define POSTFIX "Postfix"
-#define POSTFIX_LEN 7
-
-#define SENDMAIL "Sendmail"
-#define SENDMAIL_LEN 8
-
-
 /*
  * Symbols without callback
  */
@@ -72,25 +65,9 @@ static milter_symbol_t milter_symbols[] = {
 
 
 /*
- * List of all available macros Postfix and Sendmail
- */
-static char *milter_macros[] = {
-	"milter_queueid", "milter_myhostname", "milter_client",
-	"milter_auth_athen", "milter_auth_author", "milter_auth_type",
-	"milter_client_addr", "milter_client_connections",
-	"milter_client_name", "milter_client_port", "milter_client_ptr",
-	"milter_cert_issuer", "milter_cert_subject", "milter_cipher_bits",
-	"milter_cipher", "milter_daemon_name", "milter_mail_addr",
-	"milter_mail_host", "milter_mail_mailer", "milter_rcpt_addr",
-	"milter_rcpt_host", "milter_rcpt_mailer", "milter_tls_version",
-	NULL
-};
-
-
-/*
  * http://www.postfix.org/MILTER_README.html (2009-09-26)
  */
-static milter_macro_t milter_postfix_macros[] = {
+static milter_macro_t milter_macro_symbols[] = {
 	{ "milter_queueid", "i", MS_OFF_EOH },
 	{ "milter_myhostname", "j", MS_ANY },
 	{ "milter_client", "_", MS_ANY },
@@ -119,41 +96,9 @@ static milter_macro_t milter_postfix_macros[] = {
 
 
 /*
- * FIXME: This is a copy of milter_postfix_macros. NEED SENDMAIL!
+ * Macros are loaded into a hash table
  */
-static milter_macro_t milter_sendmail_macros[] = {
-	{ "milter_queueid", "i", MS_OFF_EOH },
-	{ "milter_myhostname", "j", MS_ANY },
-	{ "milter_client", "_", MS_ANY },
-	{ "milter_auth_athen", "{auth_authen}", MS_OFF_ENVFROM },
-	{ "milter_auth_author", "{auth_author}", MS_OFF_ENVFROM },
-	{ "milter_auth_type", "{auth_type}", MS_OFF_ENVFROM },
-	{ "milter_client_addr", "{client_addr}", MS_ANY },
-	{ "milter_client_connections", "{client_connections}", MS_CONNECT },
-	{ "milter_client_name", "{client_name}", MS_ANY },
-	{ "milter_client_port", "{client_port}", MS_ANY },
-	{ "milter_client_ptr", "{client_ptr}", MS_ANY },
-	{ "milter_cert_issuer", "{cert_issuer}", MS_OFF_HELO },
-	{ "milter_cert_subject", "{cert_subject}", MS_OFF_HELO },
-	{ "milter_cipher_bits", "{cipher_bits}", MS_OFF_HELO },
-	{ "milter_cipher", "{cipher}", MS_OFF_HELO },
-	{ "milter_daemon_name", "{daemon_name}", MS_ANY },
-	{ "milter_mail_addr", "{mail_addr}", MS_OFF_DATA },
-	{ "milter_mail_host", "{mail_host}", MS_OFF_DATA },
-	{ "milter_mail_mailer", "{mail_mailer}", MS_OFF_DATA },
-	{ "milter_rcpt_addr", "{rcpt_addr}", MS_ENVRCPT },
-	{ "milter_rcpt_host", "{rcpt_host}", MS_ENVRCPT },
-	{ "milter_rcpt_mailer", "{rcpt_mailer}", MS_ENVRCPT },
-	{ "milter_tls_version", "{tls_version}", MS_OFF_HELO },
-	{ NULL, NULL, 0 }
-};
-
-
-/*
- * Macros are loaded into hash tables
- */
-static sht_t *milter_postfix_macro_table;
-static sht_t *milter_sendmail_macro_table;
+static sht_t *milter_macro_table;
 
 /*
  * Rwlock for reloading
@@ -212,7 +157,6 @@ milter_get_id(void)
 static int
 milter_macro_lookup(milter_stage_t stage, char *name, var_t *attrs)
 {
-	sht_t *macro_table;
 	char *version;
 	milter_macro_t *mm;
 	char *value;
@@ -230,19 +174,7 @@ milter_macro_lookup(milter_stage_t stage, char *name, var_t *attrs)
 		return -1;
 	}
 
-	if (strncmp(version, POSTFIX, POSTFIX_LEN) == 0) {
-		macro_table = milter_postfix_macro_table;
-	}
-	else if (strncmp(version, SENDMAIL, SENDMAIL_LEN) == 0) {
-		macro_table = milter_postfix_macro_table;
-	}
-	else {
-		log_error("milter_macro_lookup: unkown MTA \"%s\"",
-			version);
-		return -1;
-	}
-
-	mm = sht_lookup(macro_table, name);
+	mm = sht_lookup(milter_macro_table, name);
 	if (mm == NULL) {
 		log_error("milter_macro_lookup: \"%s\" has no macro for \"%s\"",
 			version, name);
@@ -1106,7 +1038,6 @@ milter_load_symbols(void)
 {
 	milter_symbol_t *ms;
 	milter_macro_t *mm;
-	char **macro;
 
 	/*
 	 * Symbols without callbacks set by milter.c (the other one)
@@ -1117,43 +1048,22 @@ milter_load_symbols(void)
 	}
 
 	/*
-	 * Initialize Postfix macro table
+	 * Initialize macro table
 	 */
-	milter_postfix_macro_table = sht_create(BUCKETS, NULL);
-	if (milter_postfix_macro_table == NULL)
+	milter_macro_table = sht_create(BUCKETS, NULL);
+	if (milter_macro_table == NULL)
 	{
 		log_die(EX_SOFTWARE, "milter: init: sht_create failed");
 	}
 
-	for (mm = milter_postfix_macros; mm->mm_name; ++mm)
+	for (mm = milter_macro_symbols; mm->mm_name; ++mm)
 	{
-		if (sht_insert(milter_postfix_macro_table, mm->mm_name, mm))
+		if (sht_insert(milter_macro_table, mm->mm_name, mm))
 		{
 			log_die(EX_SOFTWARE, "milter: init: sht_insert failed");
 		}
-	}
 
-	/*
-	 * Initialize Sendmail macro table
-	 */
-	milter_sendmail_macro_table = sht_create(BUCKETS, NULL);
-	if (milter_sendmail_macro_table == NULL)
-	{
-		log_die(EX_SOFTWARE, "milter: init: sht_create failed");
-	}
-
-	for (mm = milter_sendmail_macros; mm->mm_name; ++mm)
-	{
-		if (sht_insert(milter_sendmail_macro_table, mm->mm_name, mm))
-		{
-			log_die(EX_SOFTWARE,
-			    "milter: init: sht_insert failed");
-		}
-	}
-
-	for (macro = milter_macros; *macro; ++macro)
-	{
-		acl_symbol_register(*macro, MS_ANY, milter_macro_lookup,
+		acl_symbol_register(mm->mm_name, mm->mm_stage, milter_macro_lookup,
 		    AS_CACHE);
 	}
 
@@ -1311,8 +1221,7 @@ milter_clear(void)
 	/*
 	 * Free macro tables
 	 */
-	sht_delete(milter_postfix_macro_table);
-	sht_delete(milter_sendmail_macro_table);
+	sht_delete(milter_macro_table);
 
 	/*
 	 * Free milter_state_record
