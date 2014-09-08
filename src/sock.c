@@ -211,9 +211,9 @@ sock_listen(char *uri, int backlog)
 	}
 	
 	if(strncmp(uri, "inet:", 5) == 0) {
-		if((port = strrchr(uri + 5, ':'))) {
-			bindaddr = uri + 5;
-			*port++ = 0;
+		if((bindaddr = strrchr(uri + 5, '@'))) {
+			port = uri + 5;
+			*bindaddr++ = 0;
 		}
 		else {
 			bindaddr = NULL;
@@ -251,20 +251,20 @@ sock_connect(char *uri)
 	/*
 	 * TCP sockets
 	 */
-	if((host = strdup(uri + 5)) == NULL) {
+	if((port = strdup(uri + 5)) == NULL) {
 		log_sys_error("sock_connect: strdup");
 		return -1;
 	}
 	
-	if((port = strrchr(host, ':')) == NULL) {
-		log_error("sock_connect: bad socket string \"%s\"", host);
+	if((host = strrchr(port, '@')) == NULL) {
+		log_error("sock_connect: bad socket string \"%s\"", port);
 		return -1;
 	}
-	*port++ = 0;
+	*host++ = 0;
 
 	r = sock_inet_connect(host, port);
 
-	free(host);
+	free(port);
 
 	return r;
 }
