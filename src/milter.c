@@ -71,7 +71,7 @@ static milter_macro_t milter_macro_symbols[] = {
 	{ "milter_queueid", "i", MS_OFF_EOH },
 	{ "milter_myhostname", "j", MS_ANY },
 	{ "milter_client", "_", MS_ANY },
-	{ "milter_auth_athen", "{auth_authen}", MS_OFF_ENVFROM },
+	{ "milter_auth_authen", "{auth_authen}", MS_OFF_ENVFROM },
 	{ "milter_auth_author", "{auth_author}", MS_OFF_ENVFROM },
 	{ "milter_auth_type", "{auth_type}", MS_OFF_ENVFROM },
 	{ "milter_client_addr", "{client_addr}", MS_ANY },
