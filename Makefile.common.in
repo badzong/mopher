@@ -40,8 +40,9 @@ CONFIG_INST?=		$(CONFIG_PATH)
 
 MOPHERD_CONF=		$(CONFIG_PATH)/mopherd.conf
 MAIL_ACL=		$(CONFIG_PATH)/mail.acl
+REGDOM_RULES=		$(CONFIG_PATH)/effective_tld_names.dat
 
 # Files
 #
 PROG=			mopherd mopherctl
-CONF=			mopherd.conf.example mail.acl.example
+CONF=			mopherd.conf.example mail.acl.example effective_tld_names.dat

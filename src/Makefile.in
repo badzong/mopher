@@ -13,7 +13,8 @@ OBJ=			$(SRC:.c=.o) cf_defaults.o
 CFLAGS+=		-I@top_srcdir@ -I@top_srcdir@/src/include
 CFLAGS.defs.o=		-DMODULE_PATH=\"$(MODULE_PATH)\" \
 			-DMOPHERD_CONF=\"$(MOPHERD_CONF)\" \
-			-DMAIL_ACL=\"$(MAIL_ACL)\"
+			-DMAIL_ACL=\"$(MAIL_ACL)\" \
+			-DREGDOM_RULES=\"$(REGDOM_RULES)\"
 
 YFLAGS.cf_yacc.c=	-pcf_
 YFLAGS.acl_yacc.c=	-pacl_

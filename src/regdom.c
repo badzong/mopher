@@ -1,43 +1,132 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+#include <malloc.h>
 
 #include <mopher.h>
 
-#define nsnull NULL
-#define PR_TRUE 1
-#define PR_FALSE 0
+#define REGDOM_BUCKETS 16384
 
+
+static char *regdom_rules_buffer;
 static sht_t regdom_ht;
-static regdom_rule_t regdom_rules[] =
-#include "regdom_rules.c"
-;
 
 
 void
 regdom_clear (void)
 {
 	sht_clear(&regdom_ht);
+	free(regdom_rules_buffer);
 
 	return;
+}
+
+
+regdom_rule_t *
+regdom_rule_create(char *name, int wildcard, int exception)
+{
+	regdom_rule_t *rule;
+
+	rule = (regdom_rule_t *) malloc(sizeof (regdom_rule_t));
+	if (rule == NULL)
+	{
+		log_die(EX_SOFTWARE, "regdom_rule_create: malloc failed");
+	}
+
+	rule->r_name = name;
+	rule->r_wildcard = wildcard;
+	rule->r_exception = exception;
+
+	return rule;
+}
+
+
+void
+regdom_load_rules (char *path)
+{
+	int n, wildcard, exception;
+	char *p, *name, *saveptr;
+	regdom_rule_t *rule;
+
+	n = util_file(path, &regdom_rules_buffer);
+	if (n <= 0)
+	{
+		log_die(EX_SOFTWARE, "regdom_load_rules: failed to load rules "
+			"from \"%s\"", path);
+	}
+
+	log_debug("regdom: %s: %d bytes\n", path, n);
+
+	name = strtok_r(regdom_rules_buffer, "\n", &saveptr);
+	n = 0;
+	while (name != NULL)
+	{
+		// Strip comments
+		p = strstr(name, "//");
+		if (p != NULL)
+		{
+			*p = 0;
+		}
+
+		// Strip trailing spaces
+		for(p = name + strlen(name); p > name && isspace(*p); --p);
+		if (p < name + strlen(name))
+		{
+			*(p + 1) = 0;
+		}
+
+		// Skip empty lines
+		if (strlen(name) == 0)
+		{
+			name = strtok_r(NULL, "\n", &saveptr);
+			continue;
+		}
+
+		wildcard = 0;
+		exception = 0;
+
+		// Wildcard rule
+		if (*name == '*')
+		{
+			++name;
+			// Make the point optional
+			if (*name == '.')
+			{
+				++name;
+			}
+			wildcard = 1;
+		}
+
+		// Exception rule
+		if (*name == '!')
+		{
+			++name;
+			exception = 1;
+		}
+
+		rule = regdom_rule_create(name, wildcard, exception);
+		if (sht_insert(&regdom_ht, rule->r_name, rule))
+		{
+			log_die(EX_SOFTWARE, "regdom_load_rules: sht_insert "
+				" failed");
+		}
+
+		++n;
+		name = strtok_r(NULL, "\n", &saveptr);
+	}
+
+	log_debug("regdom: loaded %d rules", n);
 }
 
 void
 regdom_init (void)
 {
-	int buckets = sizeof regdom_rules / sizeof (regdom_rule_t) * 2;
-	regdom_rule_t *r;
-
-
-	if(sht_init(&regdom_ht, buckets, NULL))
+	if(sht_init(&regdom_ht, REGDOM_BUCKETS, free))
 	{
 		log_die(EX_SOFTWARE, "regdom_init: sht_init failed");
 	}
 
-	for (r = regdom_rules; r->r_name; r++)
-	{
-		sht_insert(&regdom_ht, r->r_name, r);
-	}
+	regdom_load_rules(defs_regdom_rules);
 
 #ifdef DEBUG
 	regdom_test();
