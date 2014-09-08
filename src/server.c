@@ -166,7 +166,7 @@ int
 server_data_cmd(int sock, char *cmd, char **buffer)
 {
 	char recv[RECV_BUFFER];
-	int n;
+	int n, size, completed;
 
 	log_debug("server_data_cmd: command '%s'", cmd);
 	if (server_reply(sock, cmd) == -1)
@@ -182,14 +182,14 @@ server_data_cmd(int sock, char *cmd, char **buffer)
 		return -1;
 	}
 
-	n = atoi(recv);
-	if (n < 0 || n > MAX_BUFFER)
+	size = atoi(recv);
+	if (size < 0 || size > MAX_BUFFER)
 	{
 		log_error("server_data_cmd: bad buffer size");
 		return -1;
 	}
 
-	*buffer = (char *) malloc(n + 1);
+	*buffer = (char *) malloc(size + 1);
 	if (*buffer == NULL)
 	{
 		log_sys_error("server_data_cmd: malloc");
@@ -202,14 +202,22 @@ server_data_cmd(int sock, char *cmd, char **buffer)
 		return -1;
 	}
 
-	n = read(sock, *buffer, n);
-	if (n == -1)
+	for (completed = 0; size > completed; completed += n)
 	{
-		log_sys_error("server_data_cmd: read");
-		return -1;
+		n = read(sock, *buffer + completed, n);
+		if (n == -1)
+		{
+			log_sys_error("server_data_cmd: read");
+			return -1;
+		}
+
+		if (n == 0)
+		{
+			break;
+		}
 	}
 
-	(*buffer)[n] = 0;
+	(*buffer)[completed] = 0;
 
 	if (server_check(sock))
 	{
