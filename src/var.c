@@ -707,10 +707,10 @@ var_dump_list_or_table(var_t * v, char *buffer, int size)
 {
 	int len, n, is_table;
 	var_t *tmp;
-	ht_t *ht;
 	ht_pos_t ht_pos;
-	ll_t *ll;
 	ll_entry_t *ll_pos;
+	ll_t *ll = NULL;
+	ht_t *ht = NULL;
 
 	is_table = (v->v_type == VT_TABLE);
 

@@ -348,7 +348,7 @@ error:
 static var_t *
 exp_eval_function_complex(char *name, acl_function_t *af, ll_t *args)
 {
-	var_t *v;
+	var_t *v = NULL;
 
 	v = af->af_callback.fc_complex(args->ll_size, args);
 
@@ -362,7 +362,7 @@ exp_eval_function_simple(char *name, acl_function_t *af, ll_t *args)
 	ll_t garbage;
 	ll_entry_t *pos;
 	void **argv = NULL;
-	var_t *v;
+	var_t *v = NULL;
 	int argc;
 	int size;
 	int i;

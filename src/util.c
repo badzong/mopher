@@ -126,7 +126,6 @@ util_addrtostr(struct sockaddr_storage *ss)
 {
 	char addr[ADDR6_STRLEN];
 	char *paddr;
-	struct sockaddr_un *sun;
 	struct sockaddr_in *sin;
 	struct sockaddr_in6 *sin6;
 	const char *p;
@@ -137,7 +136,6 @@ util_addrtostr(struct sockaddr_storage *ss)
 		return strdup("(null)");
 	}
 
-	sun = (struct sockaddr_un *) ss;
 	sin = (struct sockaddr_in *) ss;
 	sin6 = (struct sockaddr_in6 *) ss;
 
