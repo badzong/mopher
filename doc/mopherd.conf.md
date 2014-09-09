@@ -20,10 +20,10 @@ need a little configuration.
     Path where mopherd looks for the mail access control list. The mail.acl
     controls how mopher handles incoming email.
 
-  * client_retry_interval
+  * client_retry_interval (default: 10)
     ( EXPERIMENTAL )
 
-  * control_socket (default: inet:127.0.0.1:44554)
+  * control_socket (default: inet:44554@127.0.0.1)
     The control socket is used by moco to control a running mopherd instance.
     Supported socket types are inet sockets (TCP/SOCK_STREAM) and unix domain
     sockets.
@@ -49,13 +49,14 @@ need a little configuration.
 
   * hostname (default: gethostname(3))
     Hostname used in self references. E.g. for the fake spamd received header.
+    
+  * log_level (default: 4)
+    Log verbosity from 0 lowest to 7 highest. See man syslog(3) for details.
 
   * milter_socket (default: inet:44555@127.0.0.1)
     The milter socket is used by your MTA e.g. Postfix or Sendmail to connect
     to mopherd. Supported socket types are inet sockets (TCP/SOCK_STREAM) and
     unix domain sockets.
-
-    CAVEAT: New inet socket format: inet:port@bindaddr (e.g. inet:1234@0.0.0.0)
 
   * milter_socket_timeout (seconds, default: -1)
     The number of seconds for libmilter to wait before timing out.
@@ -64,7 +65,7 @@ need a little configuration.
     UNIX filesystem permissions for the milter socket. Only applies to unix
     domain sockets.
 
-  * milter_wait FIXME
+  * milter_wait (seconds, default: 1)
     Number of seconds mopherd waits for all milter threads to close upon exit.
 
   * mopherd_group (default: mopherd)
@@ -106,6 +107,10 @@ these four tables:
     The counter module counts every delivered email for every sender and
     recipient address combination.
 
+The compiletime default driver for this tables is memdb. Stored information
+will be lost on proccess termination. To persist the tables filesystem based
+drivers have to be used.
+
 
 ### Supported databases
 
@@ -145,15 +150,15 @@ The counter module counts accepted and delivered mails and keeps track of
 relays and penpals. The module can provide a shortcut through your mail.acl
 for regularly seen mail relays or sender recipient address pairs.
 
-  * counter_expire_low
+  * counter_expire_low (seconds, default: 604800)
     Number of seconds counter records are kept in the database with counter
-    value lower than counter_threshoold.
+    value lower than counter_threshold.
 
-  * counter_expire_high
+  * counter_expire_high (seconds, default: 5184000)
     Number of seconds counter records are kept in the database with counter
-    value higher than counter_threshoold.
+    value higher than counter_threshold.
 
-  * counter_threshold
+  * counter_threshold (default: 3)
     Number of successful delivered emails to switch from low to high.
 
 
@@ -172,3 +177,25 @@ To connect spamassassins spamd you need to set spamd_socket. The default is set
 to localhost port 783.
 
 spamd_socket (default: inet:127.0.0.1:783):
+
+
+### String
+
+  * string_strlen
+
+  * string_strcmp
+
+  * string_mailaddr
+  
+
+### Regex
+
+  * regex_match
+
+  * regex_imatch
+  
+### List
+
+  * list_contains
+
+

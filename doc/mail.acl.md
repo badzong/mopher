@@ -76,14 +76,12 @@ eom milter_message_size > 1M log "big message: " + milter_message_size + " bytes
 
 ### More useful
 ```
-connect rbl_spamhaus = 127.0.0.2 tarpit 60s
+connect rbl_spamhaus == "127.0.0.2" tarpit 60s
 
 # CAVEAT: You need to configure rbl_spamhaus in your *mopherd.conf*
-# rbl = {
-#   "rbl_spamhaus" = "zen.spamhaus.org",
-#   "rbl_sorbs" = "dnsbl.sorbs.net"
-# }
-```
+ rbl[rbl_spamhaus] = "zen.spamhaus.org"
+ rbl[rbl_sorbs]    = "dnsbl.sorbs.net"
+
 
 ## ACTIONS
 
@@ -112,7 +110,7 @@ following rules in the current stage.
 Reject this message with a SMTP 5xx code. Optionally you can specify response
 code and message.
 
-#### Examples
+### Examples
 ```
 envfrom milter_envfrom = "nemesis@rival.xyz" reject
 eom spamd_score > 15 reject xcode 550 message "Not accepting spam"
@@ -165,8 +163,8 @@ connect log "New connection from " + milter_hostname
 Set a variable.
 
 ```
-connect rbl_spamhaus == 127.0.0.2 set $badhost = 1
-connect rbl_sorbs == 127.0.0.3 set $badhost = 1
+connect rbl_spamhaus == "127.0.0.2" set $badhost = 1
+connect rbl_sorbs == "127.0.0.3" set $badhost = 1
 connect $badhost == 1 tarpit 1m
 ```
 
@@ -191,7 +189,7 @@ A definition starts with the keyword *define* followed by an *identifier*
 followed by an *expression*.
 
 ```
-define rbl_match rbl_spamhaus == 127.0.0.2 || rbl_sorbs == 127.0.0.3
+define rbl_match rbl_spamhaus == "127.0.0.2" || rbl_sorbs == "127.0.0.3"
 
 connect rbl_match tarpit 1m
 ```
