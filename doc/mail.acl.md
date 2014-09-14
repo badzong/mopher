@@ -81,6 +81,7 @@ connect rbl_spamhaus == "127.0.0.2" tarpit 60s
 # CAVEAT: You need to configure rbl_spamhaus in your *mopherd.conf*
  rbl[rbl_spamhaus] = "zen.spamhaus.org"
  rbl[rbl_sorbs]    = "dnsbl.sorbs.net"
+```
 
 
 ## ACTIONS
@@ -110,7 +111,7 @@ following rules in the current stage.
 Reject this message with a SMTP 5xx code. Optionally you can specify response
 code and message.
 
-### Examples
+#### Examples
 ```
 envfrom milter_envfrom = "nemesis@rival.xyz" reject
 eom spamd_score > 15 reject xcode 550 message "Not accepting spam"
