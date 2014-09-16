@@ -65,6 +65,11 @@ AC_CHECK_LIB([milter], [smfi_setconn],
 	[AC_MSG_ERROR([libmilter not found. Make sure your system has libmilter])]
 )
 
+AC_CHECK_LIB([idn], [idna_to_ascii_8z],
+	[LIBS="$LIBS -lidn"],
+	[AC_MSG_ERROR([libidn not found. Make sure your system has libidn])]
+)
+
 AC_CHECK_FUNCS([dlopen dlsym dlerror dlclose],
   [],
   AC_CHECK_LIB([dl], [dlopen],

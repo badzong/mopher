@@ -24,38 +24,37 @@ static char *greylist_tuple_symbols[] = { "greylist_created",
     "greylist_visa", "greylist_passed",
     NULL };
 
-
 int
 greylist_source(char *buffer, int size, char *hostname, char *hostaddr)
 {
-	char *p;
-	int len;
-
 	/*
 	 * Save only the domainname in the greylist tuple. Useful for
 	 * greylisting mail farms.
 	 */
-	if (strncmp(hostname + 1, hostaddr, strlen(hostaddr)) == 0 ||
-		strcmp(hostaddr, "(null)") == 0)
+	int len;
+
+	// Hostname is known
+	if (strcmp(hostaddr, "(null)") && strncmp(hostname + 1, hostaddr, strlen(hostaddr)))
 	{
-		p = hostaddr;
-	}
-	else
-	{
-		if (!(p = regdom(hostname)))
+		// Make sure we have punycode
+		len = regdom_punycode(buffer, size, hostname);
+		if (len == -1)
 		{
-			p = hostaddr;
+			log_error("greylist_source: regdom failed");
 		}
+
+		return len;
 	}
 
-	len = strlen(p);
+ 	// Hostname is unset "(null)" or set to hostaddr
+	len = strlen(hostaddr);
 	if (len >= size)
 	{
-		log_error("greylist_hostid: buffer exhausted");
+		log_error("greylist_source: buffer exhausted");
 		return -1;
 	}
 
-	strcpy(buffer, p);
+	strcpy(buffer, hostaddr);
 
 	return len;
 }

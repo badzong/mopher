@@ -18,6 +18,7 @@
 #include <sys/time.h>
 #include <pwd.h>
 #include <grp.h>
+#include <ctype.h>
 
 #include <log.h>
 
@@ -811,4 +812,19 @@ util_dirname(char *buffer, int size, char *path)
 	*p = 0;
 
 	return 0;
+}
+
+void
+util_tolower(char *p)
+{
+	for (; *p; ++p)
+	{
+		// Convert to lowercase
+		if (isupper(*p))
+		{
+			*p = tolower(*p);
+		}
+	}
+
+	return;
 }
