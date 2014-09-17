@@ -226,7 +226,7 @@ util_file(char *path, char **buffer)
 		return 0;
 	}
 
-	if((*buffer = (char *) malloc(fs.st_size)) == NULL) {
+	if((*buffer = (char *) malloc(fs.st_size + 1)) == NULL) {
 		log_sys_warning("util_file: malloc");
 		return -1;
 
@@ -243,6 +243,9 @@ util_file(char *path, char **buffer)
 	}
 
 	close(fd);
+
+	// Terminate file
+	(*buffer)[n] = 0;
 
 	return n;
 }
