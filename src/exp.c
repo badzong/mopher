@@ -639,6 +639,81 @@ exp_assign(exp_t *left, exp_t *right, var_t *mailspec)
 
 
 var_t *
+exp_bool(int op, var_t *left, var_t *right)
+{
+	void *l, *r;
+	int known_value, left_true, right_true, result;
+
+	l = left == NULL? NULL: left->v_data;
+	r = right == NULL? NULL: right->v_data;
+
+	// Both sides are unknown
+	if (l == NULL && r == NULL)
+	{
+		return &exp_empty;
+	}
+
+	// One side is unknown
+	if (l == NULL || r == NULL)
+	{
+		if (l == NULL)
+		{
+			known_value = var_true(right);
+		}
+		else
+		{
+			known_value = var_true(left);
+		}
+
+		// 3-Value-Logic
+		switch (op)
+		{
+		case AND:
+			if (!known_value)
+			{
+				return &exp_false;
+			}
+			break;
+		case OR:
+			if (known_value)
+			{
+				return &exp_true;
+			}
+			break;
+		default:
+			log_error("exp_bool: bad operation");
+			return NULL;
+		}
+
+		return &exp_empty;
+	}
+
+	// Both sides are known
+	left_true = var_true(left);
+	right_true = var_true(right);
+
+	switch (op)
+	{
+	case AND:
+		result = left_true && right_true;
+		break;
+	case OR:
+		result = left_true || right_true;
+		break;
+	default:
+		log_error("exp_bool: bad operation");
+		return NULL;
+	}
+
+	if (result)
+	{
+		return &exp_true;
+	}
+
+	return &exp_false;
+}
+
+var_t *
 exp_math_int(int op, var_t *left, var_t *right)
 {
 	VAR_INT_T *l, *r, x, *p = NULL;
@@ -665,8 +740,6 @@ exp_math_int(int op, var_t *left, var_t *right)
 	case NE:	x = *l != *r;	break;
 	case LE:	x = *l <= *r;	break;
 	case GE:	x = *l >= *r;	break;
-	case AND:	x = *l && *r;	break;
-	case OR:	x = *l || *r;	break;
 
 	default:
 		log_error("exp_math_int: bad operation");
@@ -715,8 +788,6 @@ exp_math_float(int op, var_t *left, var_t *right)
 	case NE:	i = *l != *r;	break;
 	case LE:	i = *l <= *r;	break;
 	case GE:	i = *l >= *r;	break;
-	case AND:	i = *l && *r;	break;
-	case OR:	i = *l || *r;	break;
 
 	default:
 		log_error("exp_math_float: bad operation");
@@ -784,8 +855,6 @@ exp_math_string(int op, var_t *left, var_t *right)
 	case NE:	i = strcmp(l, r) != 0;			break;
 	case LE:	i = strcmp(l, r) <= 0;			break;
 	case GE:	i = strcmp(l, r) >= 0;			break;
-	case AND:	i = var_true(left) && var_true(right);	break;
-	case OR:	i = var_true(left) || var_true(right);	break;
 
 	default:
 		log_error("exp_math_string: bad operation");
@@ -835,8 +904,6 @@ exp_math_addr(int op, var_t *left, var_t *right)
 	case NE:	i = util_addrcmp(l, r) != 0;		break;
 	case LE:	i = util_addrcmp(l, r) <= 0;		break;
 	case GE:	i = util_addrcmp(l, r) >= 0;		break;
-	case AND:	i = var_true(left) && var_true(right);	break;
-	case OR:	i = var_true(left) || var_true(right);	break;
 
 	default:
 		log_error("exp_math_addr: bad operation");
@@ -967,6 +1034,15 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 		{
 			log_error("exp_eval_operation: exp_eval for "
 			    "right-hand value failed");
+			goto exit;
+		}
+
+		/*
+		 * Boolean operator
+		 */
+		if (eo->eo_operator == AND || eo->eo_operator == OR)
+		{
+			result = exp_bool(eo->eo_operator, left, right);
 			goto exit;
 		}
 
