@@ -10,12 +10,15 @@ sht_clear(sht_t *sht)
 	sht_record_t *sr;
 	ht_pos_t pos;
 
-	ht_start(sht->sht_ht, &pos);
-	while ((sr = ht_next(sht->sht_ht, &pos)))
+	if (sht->sht_delete != NULL)
 	{
-		if (sht->sht_delete)
+		ht_start(sht->sht_ht, &pos);
+		while ((sr = ht_next(sht->sht_ht, &pos)) != NULL)
 		{
-			sht->sht_delete(sr->sr_data);
+			if (sr->sr_data != NULL)
+			{
+				sht->sht_delete(sr->sr_data);
+			}
 		}
 	}
 
@@ -256,3 +259,121 @@ sht_next(sht_t *sht, ht_pos_t *pos)
 
 	return sr->sr_data;
 }
+
+#ifdef DEBUG
+int
+sht_test(void)
+{
+	sht_t *ht;
+	struct sht_test {
+		char *st_key;
+		int   st_value;
+	};
+	int i;
+
+	struct sht_test sht_tests[] = {
+		{"0", 0},
+		{"1", 1},
+		{"2", 2},
+		{"3", 3},
+		{"4", 4},
+		{"5", 5},
+		{"6", 6},
+		{"7", 7},
+		{"8", 8},
+		{"9", 9},
+		{"foo", 10},
+		{"bar", 11},
+		{"foobar", 12},
+		{ NULL, 0 }
+	};
+
+	struct sht_test *record;
+	struct sht_test *p;
+
+	ht = sht_create(64, free);
+	
+	// Test inserts
+	for (record = sht_tests; record->st_key != NULL; ++record, ++test_tests)
+	{
+		p = (struct sht_test *) malloc(sizeof (struct sht_test));
+		if (p == NULL)
+		{
+			log_error("sht_test: malloc failed");
+			return -1;
+		}
+
+		p->st_key = record->st_key;
+		p->st_value = record->st_value;
+		
+		if (sht_insert(ht, p->st_key, p) == -1)
+		{
+			log_error("sht_test: sht_insert failed");
+			return -1;
+		}
+	}
+
+	// Test lookups
+	for (record = sht_tests; record->st_key != NULL; ++record, ++test_tests)
+	{
+		p = sht_lookup(ht, record->st_key);
+		if (p == NULL)
+		{
+			log_error("sht_test: sht_get key not found");
+			return -1;
+		}
+
+		if (p->st_value != record->st_value)
+		{
+			log_error("sht_test: value mismatch");
+			return -1;
+		}
+	}
+
+	// Test replace
+	for (i = 0; i < 10; ++i, ++test_tests)
+	{
+		p = (struct sht_test *) malloc(sizeof (struct sht_test));
+		if (p == NULL)
+		{
+			log_error("sht_test: malloc failed");
+			return -1;
+		}
+
+		p->st_key = "foobar";
+		p->st_value = i;
+		if (sht_replace(ht, "foobar", p) == -1)
+		{
+			log_error("sht_test: sht_replace failed");
+			return -1;
+		}
+
+		p = sht_lookup(ht, "foobar");
+		if (p == NULL)
+		{
+			log_error("sht_test: sht_get key not found");
+			return -1;
+		}
+
+		if (p->st_value != i)
+		{
+			log_error("sht_test: value mismatch");
+			return -1;
+		}
+	}
+
+	// Test remove
+	sht_remove(ht, "foobar");
+	p = sht_lookup(ht, "foobar");
+	if (p != NULL)
+	{
+		log_error("sht_test: sht_remove failed");
+		return -1;
+	}
+	++test_tests;
+
+	sht_delete(ht);
+
+	return 0;
+}
+#endif

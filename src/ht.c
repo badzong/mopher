@@ -213,24 +213,17 @@ ht_insert(ht_t *ht, void *data)
 	record->htr_next =
 		ht->ht_table[bucket] != NULL ? ht->ht_table[bucket] : NULL;
 
-	ht->ht_table[bucket] = record;
-
-	if(record->htr_next != NULL) {
+	if(ht->ht_table[bucket] != NULL) {
 		++ht->ht_collisions;
-		
-		/*
-		 * First record in collision chain needs to be counted too.
-		 */
-		if (record->htr_next->htr_next == NULL)
-		{
-			++ht->ht_collisions;
-		}
 	}
-	++ht->ht_records;
 
-	if(bucket < ht->ht_head || ht->ht_head == 0) {
+
+	if(bucket < ht->ht_head || ht->ht_records == 0) {
 		ht->ht_head = bucket;
 	}
+
+	ht->ht_table[bucket] = record;
+	++ht->ht_records;
 
 	cf = HT_COLLFACTOR(ht);
 	if (cf > COLLISION_ALERT)
@@ -391,6 +384,7 @@ ht_next(ht_t *ht, ht_pos_t *pos)
 	 */
 	record = pos->htp_record;
 
+
 	/*
 	 * Next record in current chain
 	 */
@@ -400,7 +394,7 @@ ht_next(ht_t *ht, ht_pos_t *pos)
 
 		return record->htr_data;
 	}
-	
+
 	/*
 	 * Next bucket
 	 */
