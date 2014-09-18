@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <idna.h>
 
 #include <mopher.h>
@@ -12,11 +12,11 @@
 static char *regdom_rules_buffer;
 static sht_t regdom_ht;
 
-
 void
 regdom_clear (void)
 {
 	sht_clear(&regdom_ht);
+	free(regdom_rules_buffer);
 
 	return;
 }
@@ -201,8 +201,6 @@ regdom_load_rules (char *path)
 		name = strtok_r(NULL, "\n", &saveptr);
 	}
 
-	free(regdom_rules_buffer);
-
 	log_debug("regdom: loaded %d rules", n);
 }
 
@@ -335,7 +333,7 @@ regdom_assert (char* test, char* exp)
 		dup = strdup(test);
 		if (dup == NULL)
 		{
-			printf("regdom_assert: strdup failed");
+			log_error("regdom_assert: strdup failed");
 			return -1;
 		}
 		util_tolower(dup);
