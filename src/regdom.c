@@ -17,7 +17,6 @@ void
 regdom_clear (void)
 {
 	sht_clear(&regdom_ht);
-	free(regdom_rules_buffer);
 
 	return;
 }
@@ -217,9 +216,6 @@ regdom_init (void)
 
 	regdom_load_rules(defs_regdom_rules);
 
-#ifdef DEBUG
-	regdom_test();
-#endif
 	return;
 }
 
@@ -324,7 +320,7 @@ error:
 
 
 #ifdef DEBUG
-static void
+static int
 regdom_assert (char* test, char* exp)
 {
 	char *got;
@@ -339,7 +335,8 @@ regdom_assert (char* test, char* exp)
 		dup = strdup(test);
 		if (dup == NULL)
 		{
-			log_die(EX_SOFTWARE, "regdom_assert: strdup failed");
+			printf("regdom_assert: strdup failed");
+			return -1;
 		}
 		util_tolower(dup);
 	}
@@ -351,11 +348,44 @@ regdom_assert (char* test, char* exp)
 
 	if (strcmp(got, exp))
 	{
-		log_debug("regdom_assert: test \"%s\" "
-			"expected \"%s\" got \"%s\"", test, exp, got);
+		log_error("regdom_assert: test \"%s\" expected \"%s\" got "
+			"\"%s\"", test, exp, got);
+		return -1;
 	}
 
 	free(dup);
+
+	return 0;
 }
+
+int
+regdom_test(void)
+{
+	struct regdom_test_case {
+		char *rtc_test;
+		char *rtc_exp;
+		int   rtc_last;
+	};
+
+	struct regdom_test_case *rtc;
+
+	struct regdom_test_case test_domains[] = {
 #include "regdom_test.c"
+		{NULL, NULL, 1}
+	};
+
+	regdom_init();
+
+	for (rtc = test_domains; !rtc->rtc_last; ++rtc, ++test_tests)
+	{
+		if(regdom_assert(rtc->rtc_test, rtc->rtc_exp))
+		{
+			return -1;
+		}
+	}
+
+	regdom_clear();
+
+	return 0;
+}
 #endif

@@ -24,28 +24,15 @@ dist:
 	tar cf $(DISTDIR).tar $(DISTDIR)
 	gzip $(DISTDIR).tar
 
-regdom_rules.dat:
-	p=http://hg.mozilla.org/mozilla-central/raw-file/tip/netwerk/dns; \
-	wget -O- $$p/effective_tld_names.dat >$@
-
-regdom_rules.py:
-	p=http://hg.mozilla.org/mozilla-central/raw-file/f4157e8c4107/netwerk/dns; \
-	wget -O- $$p/prepare_tlds.py >$@
-
-src/regdom_rules.c: regdom_rules.py regdom_rules.dat
-	echo "/* Generated file. See Makefile.dist for details */" >$@
-	python2.7 $> $^ >>$@
-
 regdom_test.dat:
 	p=http://hg.mozilla.org/mozilla-central/raw-file/tip/netwerk/test/unit/data; \
 	wget -O- $$p/test_psl.txt >$@
 
 src/regdom_test.c: regdom_test.dat
 	echo "/* Generated file. See Makefile.dist for details */" >$@
-	echo "void regdom_test (void) {" >>$@
-	sed -n "/^checkPublicSuffix/ { \
-		s//	regdom_assert/; s/null/NULL/g; s/'/\"/g; p; }" $> $^ >>$@
-	echo "}" >>$@
+	echo >>$@
+	sed "s/checkPublicSuffix(/{/; s/null/NULL/g; s/'/\"/g; s/);/, 0},/;" $> \
+		 $^ >>$@
 
 clean:
 	-rm -rf $(OUT) $(DISTDIR) $(DISTDIR).tar $(DISTDIR).tar.gz

@@ -6,10 +6,12 @@ Makefile
 Makefile.common
 config.h
 autom4te.cache
+regdom_test.dat
 src/acl_yacc.h
 src/cf_yacc.h
 src/mopherctl
 src/mopherd
+src/test
 *.o
 *.so
 *.tar.gz

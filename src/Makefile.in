@@ -28,8 +28,11 @@ all: $(PROG)
 $(PROG): $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $@.c $(OBJ) $(LDFLAGS)
 
+test: test.c $(OBJ)
+	$(CC) $(CFLAGS) -o $@ $@.c $(OBJ) $(LDFLAGS)
+
 clean:
-	-rm $(PROG) $(GENSRC:.c=.[ch]) $(OBJ)
+	-rm test $(PROG) $(GENSRC:.c=.[ch]) $(OBJ)
 
 .SUFFIXES: .conf .l .y .c .o
 .y.o:	# unset

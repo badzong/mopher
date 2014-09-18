@@ -30,5 +30,6 @@
 #include <msgmod.h>
 #include <pipe.h>
 #include <regdom.h>
+#include <test.h>
 
 #endif /* _MOPHER_H */

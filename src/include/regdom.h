@@ -16,6 +16,6 @@ void regdom_clear (void);
 void regdom_init (void);
 char * regdom_strdup_idna(char *name);
 int regdom_punycode (char *buffer, int size, char* name);
-void regdom_test (void);
+int regdom_test (void);
 
 #endif /* _REGDOM_H_ */
