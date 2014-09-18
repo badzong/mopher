@@ -33,4 +33,5 @@ void sht_remove(sht_t *sht, char *key);
 int sht_replace(sht_t *sht, char *key, void *data);
 void sht_start(sht_t *sht, ht_pos_t *pos);
 void * sht_next(sht_t *sht, ht_pos_t *pos);
+int sht_test(void);
 #endif /* _SHT_H_ */
