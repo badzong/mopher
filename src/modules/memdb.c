@@ -197,6 +197,7 @@ memdb_walk(dbt_t *dbt, dbt_db_callback_t callback)
 int
 memdb_init(void)
 {
+	dbt_driver.dd_name	= "memdb";
 	dbt_driver.dd_open	= (dbt_db_open_t)	memdb_open;
 	dbt_driver.dd_close	= (dbt_db_close_t)	memdb_close;
 	dbt_driver.dd_get	= (dbt_db_get_t)	memdb_get;
@@ -205,7 +206,7 @@ memdb_init(void)
 	dbt_driver.dd_walk	= (dbt_db_walk_t)	memdb_walk;
 	dbt_driver.dd_flags	= DBT_LOCK;
 
-	dbt_driver_register("memdb", &dbt_driver);
+	dbt_driver_register(&dbt_driver);
 
 	return 0;
 }

@@ -26,16 +26,16 @@ static int              dbt_dump_buffer_size;
 static pthread_mutex_t  dbt_dump_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void
-dbt_driver_register(char *name, dbt_driver_t *dd)
+dbt_driver_register(dbt_driver_t *dd)
 {
-	if((sht_insert(dbt_drivers, name, dd)) == -1)
+	if((sht_insert(dbt_drivers, dd->dd_name, dd)) == -1)
 	{
 		log_die(EX_SOFTWARE, "dbt_driver_register: sht_insert for "
-		    "driver \"%s\" failed", name);
+		    "driver \"%s\" failed", dd->dd_name);
 	}
 
 	log_info("dbt_driver_register: database driver \"%s\" registered",
-	    name);
+	    dd->dd_name);
 
 	return;
 }
@@ -1021,7 +1021,16 @@ error:
 int
 dbt_test(void)
 {
+	dbt_driver_t *dd;
+	ht_pos_t pos;
+
 	dbt_init(0);
+
+	sht_start(dbt_drivers, &pos);
+	while ((dd = sht_next(dbt_drivers, &pos)))
+	{
+		printf("%s\n", dd->dd_name);
+	}
 	dbt_clear();
 
 	return 0;

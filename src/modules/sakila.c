@@ -1440,6 +1440,7 @@ sakila_init(void)
 	snprintf(sakila_addr_type, sizeof sakila_addr_type, "VARBINARY(%lu)",
 	    sizeof (struct sockaddr_storage));
 
+	dbt_driver.dd_name = "mysql";
 	dbt_driver.dd_open = (dbt_db_open_t) sakila_open;
 	dbt_driver.dd_close = (dbt_db_close_t) sakila_close;
 	dbt_driver.dd_get = (dbt_db_get_t) sakila_get;
@@ -1448,7 +1449,7 @@ sakila_init(void)
 	dbt_driver.dd_sql_cleanup = (dbt_db_sql_cleanup_t) sakila_cleanup;
 	dbt_driver.dd_flags = DBT_LOCK;
 
-	dbt_driver_register("mysql", &dbt_driver);
+	dbt_driver_register(&dbt_driver);
 
 	return 0;
 }
