@@ -38,6 +38,11 @@ sock_unix_listen(char *path, int backlog)
 		goto error;
 	}
 
+	if (util_chmod(path, cf_control_socket_permissions))
+	{
+		log_die(EX_SOFTWARE, "sock_unix_listen: util_chmod failed");
+	}
+
 	return fd;
 
 
