@@ -121,8 +121,12 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	switch (e)
 	{
 	case 0:
+#ifdef EAI_NONAME
 	case EAI_NONAME:
+#endif
+#ifdef EAI_NODATA
 	case EAI_NODATA:
+#endif
 		break;
 
 	default:

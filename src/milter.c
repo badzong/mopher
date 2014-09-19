@@ -1179,7 +1179,7 @@ milter_init(void)
 	/*
 	 * Other initializations
 	 */
-	dbt_init();
+	dbt_init(1);
 	acl_init();
 	greylist_init();
 	tarpit_init();

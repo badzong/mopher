@@ -54,7 +54,7 @@ log_append_syserr(char *buffer, int buflen)
 	return;
 }
 
-static void
+void
 log_logv(int type, int syserr, char *f, va_list ap)
 {
 	char buffer[BUFLEN];

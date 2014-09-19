@@ -318,44 +318,6 @@ error:
 
 
 #ifdef DEBUG
-static int
-regdom_assert (char* test, char* exp)
-{
-	char *got;
-	char *dup;
-
-	if (test == NULL)
-	{
-		dup = NULL;
-	}
-	else
-	{
-		dup = strdup(test);
-		if (dup == NULL)
-		{
-			log_error("regdom_assert: strdup failed");
-			return -1;
-		}
-		util_tolower(dup);
-	}
-
-	got = regdom(dup);
-
-	exp = exp ? exp: "NULL";
-	got = got ? got: "NULL";
-
-	if (strcmp(got, exp))
-	{
-		log_error("regdom_assert: test \"%s\" expected \"%s\" got "
-			"\"%s\"", test, exp, got);
-		return -1;
-	}
-
-	free(dup);
-
-	return 0;
-}
-
 int
 regdom_test(void)
 {
@@ -364,21 +326,41 @@ regdom_test(void)
 		char *rtc_exp;
 		int   rtc_last;
 	};
-
 	struct regdom_test_case *rtc;
-
 	struct regdom_test_case test_domains[] = {
 #include "regdom_test.c"
 		{NULL, NULL, 1}
 	};
+	char *test, *exp, *got, *dup;
 
 	regdom_init();
 
-	for (rtc = test_domains; !rtc->rtc_last; ++rtc, ++test_tests)
+	for (rtc = test_domains; !rtc->rtc_last; ++rtc)
 	{
-		if(regdom_assert(rtc->rtc_test, rtc->rtc_exp))
+		test = rtc->rtc_test;
+		exp = rtc->rtc_exp;
+
+		if (test == NULL)
 		{
-			return -1;
+			dup = NULL;
+		}
+		else
+		{
+			dup = strdup(test);
+			util_tolower(dup);
+		}
+
+		got = regdom(dup);
+
+		exp = exp ? exp: "NULL";
+		got = got ? got: "NULL";
+
+		TEST_ASSERT(strcmp(got, exp) == 0, "\"%s\" expected \"%s\" "
+			"got \"%s\"", test, exp, got);
+
+		if (dup != NULL)
+		{
+			free(dup);
 		}
 	}
 

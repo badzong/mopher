@@ -14,6 +14,7 @@
 
 static sht_t *dbt_drivers;
 static sht_t *dbt_tables;
+static int dbt_threads_running;
 
 static int		dbt_janitor_running;
 static pthread_t	dbt_janitor_thread;
@@ -845,7 +846,7 @@ dbt_open_databases(void)
 
 
 void
-dbt_init(void)
+dbt_init(int start_threads)
 {
 	/*
 	 * Initialize driver table
@@ -866,14 +867,19 @@ dbt_init(void)
 	/*
 	 * Start sync threads
 	 */
-	if (server_init())
+	if (start_threads)
 	{
-		log_die(EX_SOFTWARE, "dbt_init: server_init failed");
-	}
+		if (server_init())
+		{
+			log_die(EX_SOFTWARE, "dbt_init: server_init failed");
+		}
 
-	if (client_init())
-	{
-		log_die(EX_SOFTWARE, "dbt_init: client_init failed");
+		if (client_init())
+		{
+			log_die(EX_SOFTWARE, "dbt_init: client_init failed");
+		}
+
+		dbt_threads_running = 1;
 	}
 
 	return;
@@ -883,27 +889,30 @@ dbt_init(void)
 void
 dbt_clear()
 {
-	if (pthread_mutex_lock(&dbt_janitor_mutex))
+	if (dbt_threads_running)
 	{
-		log_sys_error("dbt_janitor_clear: pthread_mutex_lock");
+		if (pthread_mutex_lock(&dbt_janitor_mutex))
+		{
+			log_sys_error("dbt_janitor_clear: pthread_mutex_lock");
+		}
+
+		dbt_janitor_running = 0;
+
+		if (pthread_cond_signal(&dbt_janitor_cond))
+		{
+			log_sys_error("dbt_janitor_clear: pthread_cond_signal");
+		}
+
+		if (pthread_mutex_unlock(&dbt_janitor_mutex))
+		{
+			log_sys_error("dbt_janitor_clear: pthread_mutex_unlock");
+		}
+
+		util_thread_join(dbt_janitor_thread);
+
+		client_clear();
+		server_clear();
 	}
-
-	dbt_janitor_running = 0;
-
-	if (pthread_cond_signal(&dbt_janitor_cond))
-	{
-		log_sys_error("dbt_janitor_clear: pthread_cond_signal");
-	}
-
-	if (pthread_mutex_unlock(&dbt_janitor_mutex))
-	{
-		log_sys_error("dbt_janitor_clear: pthread_mutex_unlock");
-	}
-
-	util_thread_join(dbt_janitor_thread);
-
-	client_clear();
-	server_clear();
 
 	sht_delete(dbt_drivers);
 	sht_delete(dbt_tables);
@@ -1007,3 +1016,15 @@ error:
 
 	return dbt_dump_buffer_size;
 }
+
+#ifdef DEBUG
+int
+dbt_test(void)
+{
+	dbt_init(0);
+	dbt_clear();
+
+	return 0;
+}
+
+#endif

@@ -12,6 +12,7 @@
 
 void log_init(char *name, int level, int syslog, int foreground);
 void log_close(void);
+void log_logv(int type, int syserr, char *f, va_list ap);
 void log_log(int type, int syserr, char *f, ...);
 void log_exit(int r, int syserr, char *f, ...);
 void log_message(int type, var_t *mailspec, char *f, ...);

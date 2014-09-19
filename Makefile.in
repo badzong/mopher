@@ -11,6 +11,9 @@ all: subdir
 subdir:
 	$(MAKE_SUBDIR)
 
+test: all
+	cd src && make test
+
 install: install_program install_modules install_config
 
 install_program:

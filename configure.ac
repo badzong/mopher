@@ -80,7 +80,20 @@ AC_CHECK_FUNCS([dlopen dlsym dlerror dlclose],
 
 # Check for BerkeleyDB support
 AC_ARG_WITH([bdb], AS_HELP_STRING([--with-bdb], [build with BerkeleyDB support]))
-AC_CHECK_LIB([db], [db_create], [have_bdb="yes"], [have_bdb="no"])
+
+have_bdb=no
+BDB_DB185_H=
+BDB_LIBS=
+
+# db 1.85, included in libc
+AC_CHECK_FUNCS(dbopen, [AC_CHECK_HEADERS([db.h], [have_bdb=yes])])
+
+# db 1.85 compatibility mode
+if test "$have_bdb" = "no"
+then
+  AC_CHECK_LIB(db, __db185_open, [AC_CHECK_HEADERS(db_185.h,
+    [have_bdb=yes; BDB_LIBS='-ldb'; BDB_DB185_H='-DBDB_DB185_H'])])
+fi
 
 AS_IF(
   [test -z "$with_bdb"], [with_bdb="$have_bdb"],
@@ -92,10 +105,10 @@ if test "$with_bdb" = "yes"
 then
   MOD_DB_BDB="bdb.so"
   AC_SUBST([MOD_DB_BDB])
+  AC_SUBST([BDB_LIBS])
+  AC_SUBST([BDB_DB185_H])
   AC_DEFINE([WITH_MOD_BDB])
-  MOD_LIBS="$MOD_LIBS -ldb"
 fi
-
 
 # Check for MySQL support
 AC_ARG_WITH([mysql], AS_HELP_STRING([--with-mysql], [build with MySQL support]))

@@ -31,6 +31,11 @@ LDFLAGS.modules=	-shared -nostartfiles -fPIC @LDFLAGS@
 LDFLAGS=		-rdynamic @LDFLAGS@ @LIBS@ @MOD_LIBS@
 ARFLAGS=		rcs
 
+# BerkeleyDB Module (bdb.so)
+#
+BDB_LIBS=		@BDB_LIBS@
+BDB_DB185_H=		@BDB_DB185_H@
+
 # Paths (defs.c)
 #
 PROGRAM_PATH=		@sbindir@

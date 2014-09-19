@@ -7,10 +7,10 @@ SRC=			cast.c string.c list.c spamd.c rbl.c counter.c \
 			@MOD_DB_MYSQL@
 MODULES=		$(SRC:.c=.so)
 
-CFLAGS+=		-I@top_srcdir@ -I@top_srcdir@/src/include
+CFLAGS+=		-I@top_srcdir@ -I@top_srcdir@/src/include $(BDB_DB185_H)
 LDFLAGS.spf.so?=	-lspf2
-LDFLAGS.bdb.so?=	-ldb
 LDFLAGS.sakila.so?=	-lmysqlclient
+LDFLAGS.bdb.so?=	$(BDB_LIBS)
 
 all: $(MODULES)
 

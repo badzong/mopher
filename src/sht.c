@@ -294,83 +294,51 @@ sht_test(void)
 	ht = sht_create(64, free);
 	
 	// Test inserts
-	for (record = sht_tests; record->st_key != NULL; ++record, ++test_tests)
+	for (record = sht_tests; record->st_key != NULL; ++record)
 	{
 		p = (struct sht_test *) malloc(sizeof (struct sht_test));
 		if (p == NULL)
 		{
-			log_error("sht_test: malloc failed");
-			return -1;
+			log_die(EX_SOFTWARE, "sht_test: malloc failed");
 		}
 
 		p->st_key = record->st_key;
 		p->st_value = record->st_value;
 		
-		if (sht_insert(ht, p->st_key, p) == -1)
-		{
-			log_error("sht_test: sht_insert failed");
-			return -1;
-		}
+		TEST_ASSERT(sht_insert(ht, p->st_key, p) == 0, "sht_insert failed");
 	}
 
 	// Test lookups
-	for (record = sht_tests; record->st_key != NULL; ++record, ++test_tests)
+	for (record = sht_tests; record->st_key != NULL; ++record)
 	{
 		p = sht_lookup(ht, record->st_key);
-		if (p == NULL)
-		{
-			log_error("sht_test: sht_get key not found");
-			return -1;
-		}
-
-		if (p->st_value != record->st_value)
-		{
-			log_error("sht_test: value mismatch");
-			return -1;
-		}
+		TEST_ASSERT(p != NULL, "sht_lookup failed");
+		TEST_ASSERT(p->st_value == record->st_value,
+			"sht_lookup didn't return the right data");
 	}
 
 	// Test replace
-	for (i = 0; i < 10; ++i, ++test_tests)
+	for (i = 0; i < 10; ++i)
 	{
 		p = (struct sht_test *) malloc(sizeof (struct sht_test));
 		if (p == NULL)
 		{
-			log_error("sht_test: malloc failed");
-			return -1;
+			log_die(EX_SOFTWARE, "sht_test: malloc failed");
 		}
 
 		p->st_key = "foobar";
 		p->st_value = i;
-		if (sht_replace(ht, "foobar", p) == -1)
-		{
-			log_error("sht_test: sht_replace failed");
-			return -1;
-		}
+		TEST_ASSERT(sht_replace(ht, "foobar", p) == 0, "sht_replace failed");
 
 		p = sht_lookup(ht, "foobar");
-		if (p == NULL)
-		{
-			log_error("sht_test: sht_get key not found");
-			return -1;
-		}
-
-		if (p->st_value != i)
-		{
-			log_error("sht_test: value mismatch");
-			return -1;
-		}
+		TEST_ASSERT(p != NULL, "sht_get key not found");
+		TEST_ASSERT(p->st_value == i, "sht_get value mismatch");
 	}
 
 	// Test remove
 	sht_remove(ht, "foobar");
 	p = sht_lookup(ht, "foobar");
-	if (p != NULL)
-	{
-		log_error("sht_test: sht_remove failed");
-		return -1;
-	}
-	++test_tests;
+	TEST_ASSERT(p == NULL, "sht_remove not successful");
 
 	sht_delete(ht);
 

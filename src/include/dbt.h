@@ -78,9 +78,10 @@ int dbt_db_load_into_table(dbt_t *dbt, var_t *table);
 void dbt_register(char *name, dbt_t *dbt);
 int dbt_common_validate(dbt_t *dbt, var_t *record);
 void dbt_open_databases(void);
-void dbt_init(void);
+void dbt_init(int start_threads);
 void dbt_clear();
 dbt_t * dbt_lookup(char *name);
 int dbt_dump(char **dump, char *tablename);
+int dbt_test(void);
 
 #endif /* _DBT_H_ */

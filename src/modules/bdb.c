@@ -1,7 +1,16 @@
 #include <string.h>
-#include <malloc.h>
-#include <db.h>
+#include <stdlib.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+
+#ifdef BDB_DB185_H
+# include <db_185.h>
+# define OPEN185 __db185_open
+#else
+# include <db.h>
+# define OPEN185 dbopen
+#endif
 
 #include <mopher.h>
 
@@ -15,33 +24,19 @@ static int
 bdb_open(dbt_t *dbt)
 {
 	DB *db = NULL;
-	int r;
 
-	if (db_create(&db, NULL, 0)) {
-		log_error("bdb_open: db_create failed");
-		goto error;
-	}
 
-	r = db->open(db, NULL, dbt->dbt_path, dbt->dbt_table,
-		DB_BTREE, DB_CREATE | DB_THREAD, 0);
-	if (r) {
-		log_error("bdb_open: DB->open for \"%s\" failed",
-			dbt->dbt_path);
-		goto error;
+	db = OPEN185(dbt->dbt_path, O_RDWR|O_CREAT,
+		S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP, DB_BTREE, NULL);
+	if (db == NULL)
+	{
+		log_error("bdb_open: db_open failed");
+		return -1;
 	}
-	errno = 0;
 
 	dbt->dbt_handle = db;
 
 	return 0;
-
-error:
-
-	if (db) {
-		db->close(db, 0);
-	}
-
-	return -1;
 }
 
 
@@ -50,7 +45,7 @@ bdb_close(dbt_t *dbt)
 {
 	DB *db = dbt->dbt_handle;
 	
-	db->close(db, 0);
+	db->close(db);
 
 	return;
 }
@@ -76,13 +71,12 @@ bdb_get(dbt_t *dbt, var_t *record, var_t **result)
 
 	k.data = vc->vc_key;
 	k.size = vc->vc_klen;
-	d.flags = DB_DBT_MALLOC;
 
-	r = db->get(db, NULL, &k, &d, 0);
+	r = db->get(db, &k, &d, 0);
 	switch (r) {
 	case 0:
 		break;
-	case DB_NOTFOUND:
+	case 1:
 		log_info("bdb_get: no record found");
 		goto exit;
 	default:
@@ -136,7 +130,7 @@ bdb_set(dbt_t *dbt, var_t *v)
 	d.data = vc->vc_data;
 	d.size = vc->vc_dlen;
 
-	r = db->put(db, NULL, &k, &d, 0);
+	r = db->put(db, &k, &d, 0);
 	if (r) {
 		log_warning("bdb_set: DB->put failed");
 		goto error;
@@ -177,7 +171,7 @@ bdb_del(dbt_t *dbt, var_t *v)
 	d.data = vc->vc_data;
 	d.size = vc->vc_dlen;
 
-	r = db->del(db, NULL, &k, 0);
+	r = db->del(db, &k, 0);
 	if (r) {
 		log_warning("bdb_del: DB->del failed");
 		goto error;
@@ -201,21 +195,17 @@ int
 bdb_walk(dbt_t *dbt, dbt_db_callback_t callback)
 {
 	DB *db = dbt->dbt_handle;
-	DBC *cursor = NULL;
 	DBT k, d;
 	int r;
 	var_compact_t vc;
 	var_t *record;
-
-	if (db->cursor(db, NULL, &cursor, 0)) {
-		log_warning("bdb_walk: DB->cursor failed");
-		goto error;
-	}
+	int flags;
 
 	memset(&k, 0, sizeof(k));
 	memset(&d, 0, sizeof(d));
 
-	while((r = cursor->get(cursor, &k, &d, DB_NEXT)) == 0) {
+	for(flags = R_FIRST; (r = db->seq(db, &k, &d, flags)) == 0; flags = R_NEXT)
+	{
 		vc.vc_key = k.data;
 		vc.vc_klen = k.size;
 		vc.vc_data = d.data;
@@ -224,7 +214,7 @@ bdb_walk(dbt_t *dbt, dbt_db_callback_t callback)
 		record = var_decompress(&vc, dbt->dbt_scheme);
 		if (record == NULL) {
 			log_warning("bdb_walk: var_decompress failed");
-			goto error;
+			return -1;
 		}
 
 		if(callback(dbt, record)) {
@@ -233,23 +223,12 @@ bdb_walk(dbt_t *dbt, dbt_db_callback_t callback)
 
 		var_delete(record);
 	}
-	if(r != DB_NOTFOUND) {
+	if(r != 1) {
 		log_warning("bdb_walk: DBC->get failed");
-		goto error;
+		return -1;
 	}
-
-	cursor->close(cursor);
 
 	return 0;
-
-
-error:
-
-	if (cursor) {
-		cursor->close(cursor);
-	}
-
-	return -1;
 }
 
 
@@ -277,6 +256,7 @@ bdb_init(void)
 	dbt_driver.dd_del = (dbt_db_del_t) bdb_del;
 	dbt_driver.dd_walk = (dbt_db_walk_t) bdb_walk;
 	dbt_driver.dd_sync = (dbt_db_sync_t) bdb_sync;
+	dbt_driver.dd_flags = DBT_LOCK;
 
 	dbt_driver_register("bdb", &dbt_driver);
 
