@@ -1036,7 +1036,6 @@ error:
 
 #ifdef DEBUG
 static dbt_t dbt_test_table;
-static dbt_driver_t *dbt_test_dd;
 static var_t *dbt_test_scheme;
 
 // Set number of threads to test with
