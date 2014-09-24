@@ -412,11 +412,14 @@ void
 dbt_register(char *name, dbt_t *dbt)
 {
 	var_t *config;
+	char *config_key;
+
+	config_key = dbt->dbt_config_key == NULL? name: dbt->dbt_config_key;
 
 	/*
 	 * Load config table
 	 */
-	config = cf_get(VT_TABLE, "table", name, NULL);
+	config = cf_get(VT_TABLE, "table", config_key, NULL);
 	if (config == NULL) {
 		log_die(EX_CONFIG, "dbt_register: missing database "
 			"configuration for \"%s\"", name);
@@ -1047,28 +1050,34 @@ void
 dbt_test_get_scheme(void)
 {
 	dbt_test_scheme = vlist_scheme("test",
-		"test_int_key",		VT_INT,		VF_COPY | VF_KEY,
-		"test_float_key",	VT_FLOAT,	VF_COPY | VF_KEY,
-		"test_string_key",	VT_STRING,	VF_COPY | VF_KEY,
-		"test_addr_key",	VT_ADDR,	VF_COPY | VF_KEY,
-		"test_int",		VT_INT,		VF_COPY,
-		"test_float",		VT_FLOAT,	VF_COPY,
-		"test_string",		VT_STRING,	VF_COPY,
-		"test_addr",		VT_ADDR,	VF_COPY,
+		"test_int_key",		VT_INT,		VF_KEEPNAME | VF_KEY,
+		"test_float_key",	VT_FLOAT,	VF_KEEPNAME | VF_KEY,
+		"test_string_key",	VT_STRING,	VF_KEEPNAME | VF_KEY,
+		"test_addr_key",	VT_ADDR,	VF_KEEPNAME | VF_KEY,
+		"test_int",		VT_INT,		VF_KEEPNAME,
+		"test_float",		VT_FLOAT,	VF_KEEPNAME,
+		"test_string",		VT_STRING,	VF_KEEPNAME,
+		"test_addr",		VT_ADDR,	VF_KEEPNAME,
+		"test_created",		VT_INT,		VF_KEEPNAME,
+		"test_updated",		VT_INT,		VF_KEEPNAME,
+		"test_expire",		VT_INT,		VF_KEEPNAME,
 		NULL);
 
 	return;
 }
 
 typedef struct dbt_test_record {
-	VAR_INT_T           tr_int_key;
-	VAR_FLOAT_T         tr_float_key;
-	char                tr_string_key[20];
-	var_sockaddr_t	    tr_sockaddr_key;
-	VAR_INT_T           tr_int_value;
-	VAR_FLOAT_T         tr_float_value;
-	char                tr_string_value[20];
-	var_sockaddr_t	    tr_sockaddr_value;
+	VAR_INT_T       tr_int_key;
+	VAR_FLOAT_T     tr_float_key;
+	char            tr_string_key[20];
+	var_sockaddr_t  tr_sockaddr_key;
+	VAR_INT_T       tr_int_value;
+	VAR_FLOAT_T     tr_float_value;
+	char            tr_string_value[20];
+	var_sockaddr_t  tr_sockaddr_value;
+	VAR_INT_T       tr_test_created;
+	VAR_INT_T       tr_test_updated;
+	VAR_INT_T       tr_test_expire;
 } dbt_test_record_t;
 
 void
@@ -1092,6 +1101,12 @@ dbt_test_record(dbt_test_record_t *tr, int n)
 	sin = (struct sockaddr_in *) &tr->tr_sockaddr_value;
 	sin->sin_family = AF_INET;
 	sin->sin_addr.s_addr = (n * 0x10101010);
+
+	tr->tr_test_created = time(NULL);
+	tr->tr_test_updated = tr->tr_test_created;
+
+	// Record expired 1 second ago
+	tr->tr_test_expire = tr->tr_test_created - 1;
 }
 
 void
@@ -1116,14 +1131,16 @@ dbt_test_set(pthread_t *thread)
 	record1 = vlist_record(dbt_test_scheme, &tr1.tr_int_key, &tr1.tr_float_key,
 		tr1.tr_string_key, &tr1.tr_sockaddr_key, &tr1.tr_int_value,
 		&tr1.tr_float_value, tr1.tr_string_value,
-		&tr1.tr_sockaddr_value);
+		&tr1.tr_sockaddr_value, &tr1.tr_test_created,
+		&tr1.tr_test_updated, &tr1.tr_test_expire);
 	lookup = vlist_record(dbt_test_scheme, &tr1.tr_int_key, &tr1.tr_float_key,
 		tr1.tr_string_key, &tr1.tr_sockaddr_key, NULL, NULL, NULL,
-		NULL);
+		NULL, NULL, NULL, NULL);
 	record2 = vlist_record(dbt_test_scheme, &tr2.tr_int_key, &tr2.tr_float_key,
 		tr2.tr_string_key, &tr2.tr_sockaddr_key, &tr2.tr_int_value,
 		&tr2.tr_float_value, tr2.tr_string_value,
-		&tr2.tr_sockaddr_value);
+		&tr2.tr_sockaddr_value, &tr2.tr_test_created,
+		&tr2.tr_test_updated, &tr2.tr_test_expire);
 
 	TEST_ASSERT(record1 != NULL && record2 != NULL, "vlist_record failed");
 	TEST_ASSERT(dbt_db_set(&dbt_test_table, record1) == 0, "dbt_db_set failed");
@@ -1134,6 +1151,8 @@ dbt_test_set(pthread_t *thread)
 	TEST_ASSERT(dbt_db_del(&dbt_test_table, lookup) == 0, "dbt_db_del failed");
 	TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
 	TEST_ASSERT(result == NULL, "dbt_db_del returned deleted record: %s", tr1.tr_string_key);
+
+	// Add records for dbt_test_get()
 	TEST_ASSERT(dbt_db_set(&dbt_test_table, record1) == 0, "dbt_db_set failed");
 	TEST_ASSERT(dbt_db_set(&dbt_test_table, record2) == 0, "dbt_db_set failed");
 	TEST_ASSERT(dbt_db_sync(&dbt_test_table) == 0, "dbt_db_sync failed");
@@ -1166,7 +1185,7 @@ dbt_test_get(pthread_t *thread)
 	// Lookup record 1
 	lookup = vlist_record(dbt_test_scheme, &tr1.tr_int_key, &tr1.tr_float_key,
 		tr1.tr_string_key, &tr1.tr_sockaddr_key, NULL, NULL, NULL,
-		NULL);
+		NULL, NULL, NULL, NULL);
 	TEST_ASSERT(lookup != NULL, "vlist_record failed");
 	TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
 	TEST_ASSERT(result != NULL, "returned result is NULL");
@@ -1176,7 +1195,7 @@ dbt_test_get(pthread_t *thread)
 	// Lookup record 2
 	lookup = vlist_record(dbt_test_scheme, &tr2.tr_int_key, &tr2.tr_float_key,
 		tr2.tr_string_key, &tr2.tr_sockaddr_key, NULL, NULL, NULL,
-		NULL);
+		NULL, NULL, NULL, NULL);
 	TEST_ASSERT(lookup != NULL, "vlist_record failed");
 	TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
 	TEST_ASSERT(result != NULL, "returned result is NULL");
@@ -1187,7 +1206,7 @@ dbt_test_get(pthread_t *thread)
 }
 
 void
-dbt_test_prepare(char *name, char *driver)
+dbt_test_prepare(char *config_key, char *driver)
 {
 	// Create test scheme
 	dbt_test_get_scheme();
@@ -1196,6 +1215,7 @@ dbt_test_prepare(char *name, char *driver)
 	dbt_test_table.dbt_scheme = dbt_test_scheme;
 	dbt_test_table.dbt_validate = dbt_common_validate;
 	dbt_test_table.dbt_sql_invalid_where = DBT_COMMON_INVALID_SQL;
+	dbt_test_table.dbt_config_key = config_key;
 
 	// Init prerequisites
 	cf_init();
@@ -1206,9 +1226,6 @@ dbt_test_prepare(char *name, char *driver)
 
 	// Register test table
 	dbt_register("test", &dbt_test_table);
-
-	// Override database driver
-	dbt_test_table.dbt_drivername = name;
 
 	// Set dbt_sync to 0 to avoid calling client_sync
 	dbt_sync = 0;
@@ -1230,14 +1247,14 @@ dbt_test_finalize(void)
 }
 
 void
-dbt_test_driver(char *name, char *driver)
+dbt_test_driver(char *config, char *driver)
 {
 	int i;
 
 	/*
 	 * Multi-threaded write test
 	 */
-	dbt_test_prepare(name, driver);
+	dbt_test_prepare(config, driver);
 
 	// Start threads
 	bzero(dbt_test_thread, sizeof dbt_test_thread);
@@ -1266,7 +1283,7 @@ dbt_test_driver(char *name, char *driver)
 	/*
 	 * Multi-threaded read test
 	 */
-	dbt_test_prepare(name, driver);
+	dbt_test_prepare(config, driver);
 
 	// Start threads
 	bzero(dbt_test_thread, sizeof dbt_test_thread);
@@ -1292,8 +1309,9 @@ dbt_test_driver(char *name, char *driver)
 void
 dbt_test(void)
 {
-	dbt_test_driver("memdb", "memdb.so");
-	dbt_test_driver("bdb", "bdb.so");
+	dbt_test_driver("test_memdb", "memdb.so");
+	dbt_test_driver("test_bdb", "bdb.so");
+	dbt_test_driver("test_mysql", "sakila.so");
 }
 
 #endif

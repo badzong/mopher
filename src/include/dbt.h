@@ -35,6 +35,7 @@ typedef struct dbt_driver {
 
 typedef struct dbt {
 	char			 *dbt_name;
+	char			 *dbt_config_key;
 	char			 *dbt_path;
 	char			 *dbt_host;
 	VAR_INT_T		  dbt_port;
