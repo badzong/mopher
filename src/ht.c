@@ -23,12 +23,12 @@ int
 ht_init(ht_t *ht, hash_t buckets, ht_hash_t hash, ht_match_t match,
 	ht_delete_t delete)
 {
-	if((ht->ht_table = malloc(buckets * (sizeof(ht_record_t *) + 1))) == NULL) {
+	if((ht->ht_table = malloc(buckets * sizeof(ht_record_t *))) == NULL) {
 		log_sys_warning("ht_init: malloc");
 		return -1;
 	}
 
-	bzero(ht->ht_table, buckets * (sizeof(ht_record_t *) + 1));
+	bzero(ht->ht_table, buckets * sizeof(ht_record_t *));
 
 	ht->ht_buckets = buckets;
 	ht->ht_hash = hash;
@@ -402,19 +402,19 @@ ht_next(ht_t *ht, ht_pos_t *pos)
 	    i < ht->ht_buckets && ht->ht_table[i] == NULL;
 	    ++i);
 
-	if(ht->ht_table[i])
+	/*
+	 * Last record
+	 */
+	if(i == ht->ht_buckets)
 	{
-		pos->htp_bucket = i;
-		pos->htp_record = ht->ht_table[i];
+		pos->htp_bucket = 0;
+		pos->htp_record = NULL;
 
 		return record->htr_data;
 	}
 
-	/*
-	 * Last record
-	 */
-	pos->htp_bucket = 0;
-	pos->htp_record = NULL;
+	pos->htp_bucket = i;
+	pos->htp_record = ht->ht_table[i];
 
 	return record->htr_data;
 }

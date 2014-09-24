@@ -1,11 +1,28 @@
-#include <config.h>
-#include <test.h>
-#include <mopher.h>
 #include <string.h>
+#include <pthread.h>
+#include <config.h>
+#include <mopher.h>
 
 #define BUFLEN 1024
 
+static pthread_mutex_t test_mutex = PTHREAD_MUTEX_INITIALIZER;
 int test_tests;
+
+static void
+test_count(void)
+{
+	if (pthread_mutex_lock(&test_mutex))
+	{
+		log_die(EX_SOFTWARE, "test_count: pthread_mutex_lock");
+	}
+
+	++test_tests;
+
+	if (pthread_mutex_unlock(&test_mutex))
+	{
+		log_die(EX_SOFTWARE, "test_count: pthread_mutex_unlock");
+	}
+}
 
 void
 test_assert(char *file, int line, int cond, char *m, ...)
@@ -13,7 +30,8 @@ test_assert(char *file, int line, int cond, char *m, ...)
 	va_list ap;
 	char f[BUFLEN];
 
-	++test_tests;
+	test_count();
+
 	if (cond)
 	{
 		return;

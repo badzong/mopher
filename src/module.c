@@ -11,7 +11,6 @@
 #define BUFLEN 1024
 
 static ll_t *module_list;
-static ll_t *module_buffers;
 
 
 static void
@@ -104,13 +103,60 @@ module_symbol_load(void *handle, char *path, char *suffix, int die)
 
 
 void
+module_load(char *file)
+{
+	module_t *mod;
+
+	log_debug("module_glob: load \"%s\"", file);
+
+	mod = (module_t *) malloc(sizeof (module_t));
+	if (mod == NULL)
+	{
+		log_sys_die(EX_SOFTWARE, "module_load: malloc");
+	}
+	mod->mod_path = strdup(file);
+	mod->mod_name = strrchr(mod->mod_path, '/') + 1;
+
+	/*
+	 * Open module
+	 */
+	mod->mod_handle = dlopen(file, RTLD_LAZY);
+	if (mod->mod_handle == NULL)
+	{
+		log_sys_die(EX_SOFTWARE, "module_load: dlopen: %s", dlerror());
+	}
+
+	/*
+	 * Load Symbols
+	 */
+	mod->mod_init = module_symbol_load(mod->mod_handle, file, "init", 1);
+	mod->mod_fini = module_symbol_load(mod->mod_handle, file, "fini", 0);
+
+	/*
+	 * Initialize module
+	 */
+	if (mod->mod_init())
+	{
+		log_die(EX_SOFTWARE, "module_load: %s: init failed",
+		    mod->mod_name);
+	}
+
+	if (LL_INSERT(module_list, mod) == -1)
+	{
+		log_die(EX_SOFTWARE, "module_load: LL_INSERT failed");
+	}
+
+	return;
+}
+
+
+void
 module_glob(const char *path)
 {
 	glob_t pglob;
 	char pattern[BUFLEN];
 	char **file;
 	module_t *mod;
-	int i;
 
 	memset(&pglob, 0, sizeof(pglob));
 	snprintf(pattern, sizeof(pattern), "%s/*.so", path);
@@ -144,50 +190,12 @@ module_glob(const char *path)
 	}
 
 	/*
-	 * Append buffer to module_buffers
-	 */
-	if (LL_INSERT(module_buffers, mod) == -1)
-	{
-		log_die(EX_SOFTWARE, "module_glob: LL_INSERT failed");
-	}
-
-	/*
 	 * Prepare modules
 	 */
-	for (i = 0, file = pglob.gl_pathv; *file; ++file, ++i)
+	for (file = pglob.gl_pathv; *file; ++file)
 	{
-		log_debug("module_glob: load \"%s\"", *file);
-
-		mod[i].mod_name = strdup(*file);
-
-		/*
-		 * Open module
-		 */
-		mod[i].mod_handle = dlopen(*file, RTLD_LAZY);
-		if (mod[i].mod_handle == NULL)
-		{
-			log_sys_die(EX_SOFTWARE, "module_glob: dlopen: %s",
-			    dlerror());
-		}
-
-		/*
-		 * Load Symbols
-		 */
-		mod[i].mod_init = module_symbol_load(mod[i].mod_handle, *file,
-		    "init", 1);
-		mod[i].mod_fini = module_symbol_load(mod[i].mod_handle, *file,
-		    "fini", 0);
+		module_load(*file);
 	}
-
-	/*
-	 * Close array
-	 */
-	memset(&mod[i], 0, sizeof (module_t));
-
-	/*
-	 * Load modules
-	 */
-	module_load(mod);
 
 	globfree(&pglob);
 
@@ -196,54 +204,51 @@ module_glob(const char *path)
 
 
 void
-module_load(module_t *mod)
+module_init(int glob, ...)
 {
-	int i;
+	va_list ap;
+	char *module_name;
+	char *module_path;
+	char buffer[BUFLEN];
 
-	/*
-	 * Append modules
-	 */
-	for(i = 0; mod[i].mod_name; ++i)
-	{
-		if (mod[i].mod_init())
-		{
-			log_die(EX_SOFTWARE, "module_load: %s: init failed",
-			    mod[i].mod_name);
-		}
-
-		if (LL_INSERT(module_list, &mod[i]) == -1)
-		{
-			log_die(EX_SOFTWARE, "module_create: LL_INSERT "
-			    "failed");
-		}
-	}
-
-	return;
-}
-
-
-void
-module_init(void)
-{
-	/*
-	 * Create module list
-	 */
 	module_list = ll_create();
 	if (module_list == NULL)
 	{
-		log_die(EX_SOFTWARE, "module_load: ll_create failed");
+		log_die(EX_SOFTWARE, "module_init: ll_create failed");
 	}
 
-	/*
-	 * Create module buffers
-	 */
-	module_buffers = ll_create();
-	if (module_buffers == NULL)
+	module_path = cf_module_path? cf_module_path: defs_module_path;
+
+	// Search modules in the filesystem
+	if (glob)
 	{
-		log_die(EX_SOFTWARE, "module_glob: ll_create failed");
+		module_glob(module_path);
+		return;
 	}
 
-	module_glob(cf_module_path ? cf_module_path : defs_module_path);
+	// Load modules supplied in va_list
+	va_start(ap, glob);
+	for (;;)
+	{
+		module_name = va_arg(ap, char *);
+		if (module_name == NULL)
+		{
+			break;
+		}
+
+		if (strlen(module_path) + strlen(module_name) + 2 > sizeof buffer)
+		{
+			log_die(EX_SOFTWARE, "module_init: buffer exhausted");
+		}
+
+		strcpy(buffer, module_path);
+		strcat(buffer, "/");
+		strcat(buffer, module_name);
+
+		module_load(buffer);
+	}
+	va_end(ap);
+
 }
 
 
@@ -261,7 +266,8 @@ module_delete(module_t *mod)
 		dlclose(mod->mod_handle);
 	}
 
-	free(mod->mod_name);
+	free(mod->mod_path);
+	free(mod);
 
 	return;
 }
@@ -270,7 +276,6 @@ void
 module_clear(void)
 {
 	ll_delete(module_list, (ll_delete_t) module_delete);
-	ll_delete(module_buffers, (ll_delete_t) free);
 
 	return;
 }

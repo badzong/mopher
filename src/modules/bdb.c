@@ -94,6 +94,9 @@ bdb_get(dbt_t *dbt, var_t *record, var_t **result)
 	}
 
 exit:
+	// CAVEAT: free'd by libdb
+	vc->vc_data = NULL;
+	vc->vc_dlen = 0;
 	var_compact_delete(vc);
 
 	return 0;
@@ -101,6 +104,9 @@ exit:
 error:
 
 	if (vc) {
+		// CAVEAT: free'd by libdb
+		vc->vc_data = NULL;
+		vc->vc_dlen = 0;
 		var_compact_delete(vc);
 	}
 
@@ -163,8 +169,8 @@ bdb_del(dbt_t *dbt, var_t *v)
 		goto error;
 	}
 
-	memset(&k, 0, sizeof(k));
-	memset(&d, 0, sizeof(d));
+	memset(&k, 0, sizeof k);
+	memset(&d, 0, sizeof d);
 
 	k.data = vc->vc_key;
 	k.size = vc->vc_klen;

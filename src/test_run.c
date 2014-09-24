@@ -17,7 +17,6 @@ main (int argc, char **argv)
 {
 	int seconds, stat;
 	test_handler_t *handler;
-	int r = 0;
 	int i;
 
 	log_init("mopher test", LOG_ERR, 0, 1);
@@ -46,10 +45,11 @@ main (int argc, char **argv)
 		}
 
 		handler->th_callback(); // Dies on error
-		log_error("%-12s: %2d OK", handler->th_name, test_tests-stat);
+		log_error("%-12s: %4d OK", handler->th_name, test_tests-stat);
 	}
 
 	seconds = time(NULL) - test_start;
 	log_error("\n%d tests in %d seconds.", test_tests, seconds);
+
 	return 0;
 }

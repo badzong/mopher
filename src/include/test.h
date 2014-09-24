@@ -6,7 +6,7 @@ extern int test_tests;
 struct test_handler
 {
 	char *th_name;
-	int (*th_callback)(void);
+	void (*th_callback)(void);
 };
 typedef struct test_handler test_handler_t;
 

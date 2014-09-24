@@ -261,7 +261,7 @@ sht_next(sht_t *sht, ht_pos_t *pos)
 }
 
 #ifdef DEBUG
-int
+void
 sht_test(void)
 {
 	sht_t *ht;
@@ -342,6 +342,6 @@ sht_test(void)
 
 	sht_delete(ht);
 
-	return 0;
+	return;
 }
 #endif

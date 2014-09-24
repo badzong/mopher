@@ -52,6 +52,7 @@ typedef struct dbt {
 	char			 *dbt_drivername;
 	dbt_driver_t		 *dbt_driver;
 	void			 *dbt_handle;
+	int			  dbt_open;
 } dbt_t;
 
 typedef int (*dbt_validate_t)(dbt_t *dbt, var_t *record);
@@ -83,6 +84,6 @@ void dbt_init(int start_threads);
 void dbt_clear();
 dbt_t * dbt_lookup(char *name);
 int dbt_dump(char **dump, char *tablename);
-int dbt_test(void);
+void dbt_test(void);
 
 #endif /* _DBT_H_ */

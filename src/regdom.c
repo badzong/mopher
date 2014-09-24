@@ -318,7 +318,7 @@ error:
 
 
 #ifdef DEBUG
-int
+void
 regdom_test(void)
 {
 	struct regdom_test_case {
@@ -366,6 +366,6 @@ regdom_test(void)
 
 	regdom_clear();
 
-	return 0;
+	return;
 }
 #endif

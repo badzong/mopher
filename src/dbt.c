@@ -6,6 +6,9 @@
 #include <errno.h>
 #include <signal.h>
 
+// Required for testing
+#include <netinet/in.h>
+
 #include <mopher.h>
 
 #define DBT_BUCKETS 32
@@ -24,6 +27,8 @@ static pthread_cond_t	dbt_janitor_cond = PTHREAD_COND_INITIALIZER;
 static char           **dbt_dump_buffer;
 static int              dbt_dump_buffer_size;
 static pthread_mutex_t  dbt_dump_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static int dbt_sync = 1;
 
 void
 dbt_driver_register(dbt_driver_t *dd)
@@ -44,6 +49,11 @@ dbt_driver_register(dbt_driver_t *dd)
 static void
 dbt_close(dbt_t *dbt)
 {
+	if (!dbt->dbt_open)
+	{
+		return;
+	}
+
 	if ((dbt->dbt_driver->dd_flags & DBT_LOCK))
 	{
 		if (pthread_mutex_destroy(&dbt->dbt_driver->dd_mutex))
@@ -63,6 +73,8 @@ dbt_close(dbt_t *dbt)
 	{
 		free(dbt->dbt_sql_invalid_where);
 	}
+
+	dbt->dbt_open = 0;
 
 	return;
 }
@@ -134,7 +146,10 @@ dbt_db_set(dbt_t *dbt, var_t *record)
 		return -1;
 	}
 
-	client_sync(dbt, record);
+	if (dbt_sync)
+	{
+		client_sync(dbt, record);
+	}
 
 	r = dbt->dbt_driver->dd_set(dbt, record);
 
@@ -808,11 +823,13 @@ dbt_open_database(dbt_t *dbt)
 	log_debug("dbt_open_database: open \"%s\" using \"%s\"", dbt->dbt_name,
 	    dbt->dbt_drivername);
 
-	if (DBT_DB_OPEN(dbt))
+	if (dbt->dbt_driver->dd_open(dbt))
 	{
 		log_die(EX_CONFIG, "dbt_open_database: can't open \"%s\"",
 		    dbt->dbt_name);
 	}
+
+	dbt->dbt_open = 1;
 
 	return;
 }
@@ -1018,22 +1035,266 @@ error:
 }
 
 #ifdef DEBUG
-int
-dbt_test(void)
-{
-	dbt_driver_t *dd;
-	ht_pos_t pos;
+static dbt_t dbt_test_table;
+static dbt_driver_t *dbt_test_dd;
+static var_t *dbt_test_scheme;
 
+// Set number of threads to test with
+#define TEST_THREADS 50
+static int dbt_test_threads = TEST_THREADS;
+static pthread_t dbt_test_thread[TEST_THREADS];
+
+void
+dbt_test_get_scheme(void)
+{
+	dbt_test_scheme = vlist_scheme("test",
+		"test_int_key",		VT_INT,		VF_COPY | VF_KEY,
+		"test_float_key",	VT_FLOAT,	VF_COPY | VF_KEY,
+		"test_string_key",	VT_STRING,	VF_COPY | VF_KEY,
+		"test_addr_key",	VT_ADDR,	VF_COPY | VF_KEY,
+		"test_int",		VT_INT,		VF_COPY,
+		"test_float",		VT_FLOAT,	VF_COPY,
+		"test_string",		VT_STRING,	VF_COPY,
+		"test_addr",		VT_ADDR,	VF_COPY,
+		NULL);
+
+	return;
+}
+
+typedef struct dbt_test_record {
+	VAR_INT_T           tr_int_key;
+	VAR_FLOAT_T         tr_float_key;
+	char                tr_string_key[20];
+	var_sockaddr_t	    tr_sockaddr_key;
+	VAR_INT_T           tr_int_value;
+	VAR_FLOAT_T         tr_float_value;
+	char                tr_string_value[20];
+	var_sockaddr_t	    tr_sockaddr_value;
+} dbt_test_record_t;
+
+void
+dbt_test_record(dbt_test_record_t *tr, int n)
+{
+	struct sockaddr_in *sin;
+
+	bzero(tr, sizeof (dbt_test_record_t));
+
+	// Every thread creates a different record
+	tr->tr_int_key = n;
+	tr->tr_float_key = n * 0.5;
+	snprintf(tr->tr_string_key, 19, "KEY: %d", n);
+	sin = (struct sockaddr_in *) &tr->tr_sockaddr_key;
+	sin->sin_family = AF_INET;
+	sin->sin_addr.s_addr = (n * 0x10101010);
+
+	tr->tr_int_value = n;
+	tr->tr_float_value = n * 0.5;
+	snprintf(tr->tr_string_value, 19, "VALUE: %d", n);
+	sin = (struct sockaddr_in *) &tr->tr_sockaddr_value;
+	sin->sin_family = AF_INET;
+	sin->sin_addr.s_addr = (n * 0x10101010);
+}
+
+void
+dbt_test_set(pthread_t *thread)
+{
+	dbt_test_record_t tr1;
+	dbt_test_record_t tr2;
+	int n;
+	var_t *record1= NULL;
+	var_t *record2 = NULL;
+	var_t *lookup= NULL;
+	var_t *result = NULL;
+
+	// Calculate thread number
+	n = thread - dbt_test_thread;
+
+	// Create test record data	
+	dbt_test_record(&tr1, n);
+	dbt_test_record(&tr2, n + dbt_test_threads);
+
+	// Create records
+	record1 = vlist_record(dbt_test_scheme, &tr1.tr_int_key, &tr1.tr_float_key,
+		tr1.tr_string_key, &tr1.tr_sockaddr_key, &tr1.tr_int_value,
+		&tr1.tr_float_value, tr1.tr_string_value,
+		&tr1.tr_sockaddr_value);
+	lookup = vlist_record(dbt_test_scheme, &tr1.tr_int_key, &tr1.tr_float_key,
+		tr1.tr_string_key, &tr1.tr_sockaddr_key, NULL, NULL, NULL,
+		NULL);
+	record2 = vlist_record(dbt_test_scheme, &tr2.tr_int_key, &tr2.tr_float_key,
+		tr2.tr_string_key, &tr2.tr_sockaddr_key, &tr2.tr_int_value,
+		&tr2.tr_float_value, tr2.tr_string_value,
+		&tr2.tr_sockaddr_value);
+
+	TEST_ASSERT(record1 != NULL && record2 != NULL, "vlist_record failed");
+	TEST_ASSERT(dbt_db_set(&dbt_test_table, record1) == 0, "dbt_db_set failed");
+	TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
+	TEST_ASSERT(result != NULL, "dbt_db_get returned NULL");
+	var_delete(result);
+	result = NULL;
+	TEST_ASSERT(dbt_db_del(&dbt_test_table, lookup) == 0, "dbt_db_del failed");
+	TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
+	TEST_ASSERT(result == NULL, "dbt_db_del returned deleted record: %s", tr1.tr_string_key);
+	TEST_ASSERT(dbt_db_set(&dbt_test_table, record1) == 0, "dbt_db_set failed");
+	TEST_ASSERT(dbt_db_set(&dbt_test_table, record2) == 0, "dbt_db_set failed");
+	TEST_ASSERT(dbt_db_sync(&dbt_test_table) == 0, "dbt_db_sync failed");
+
+	var_delete(record1);
+	var_delete(record2);
+	var_delete(lookup);
+
+	return;
+}
+
+void
+dbt_test_get(pthread_t *thread)
+{
+	dbt_test_record_t tr1;
+	dbt_test_record_t tr2;
+	int n;
+	var_t *lookup= NULL;
+	var_t *result = NULL;
+
+	return;
+
+	// Calculate thread number
+	n = thread - dbt_test_thread;
+
+	// Create record data	
+	dbt_test_record(&tr1, n);
+	dbt_test_record(&tr2, n + dbt_test_threads);
+
+	// Lookup record 1
+	lookup = vlist_record(dbt_test_scheme, &tr1.tr_int_key, &tr1.tr_float_key,
+		tr1.tr_string_key, &tr1.tr_sockaddr_key, NULL, NULL, NULL,
+		NULL);
+	TEST_ASSERT(lookup != NULL, "vlist_record failed");
+	TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
+	TEST_ASSERT(result != NULL, "returned result is NULL");
+	var_delete(lookup);
+	var_delete(result);
+
+	// Lookup record 2
+	lookup = vlist_record(dbt_test_scheme, &tr2.tr_int_key, &tr2.tr_float_key,
+		tr2.tr_string_key, &tr2.tr_sockaddr_key, NULL, NULL, NULL,
+		NULL);
+	TEST_ASSERT(lookup != NULL, "vlist_record failed");
+	TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
+	TEST_ASSERT(result != NULL, "returned result is NULL");
+	var_delete(lookup);
+	var_delete(result);
+
+	return;
+}
+
+void
+dbt_test_prepare(char *name, char *driver)
+{
+	// Create test scheme
+	dbt_test_get_scheme();
+	
+	// Init dbt_test_table
+	dbt_test_table.dbt_scheme = dbt_test_scheme;
+	dbt_test_table.dbt_validate = dbt_common_validate;
+	dbt_test_table.dbt_sql_invalid_where = DBT_COMMON_INVALID_SQL;
+
+	// Init prerequisites
+	cf_init();
 	dbt_init(0);
 
-	sht_start(dbt_drivers, &pos);
-	while ((dd = sht_next(dbt_drivers, &pos)))
-	{
-		printf("%s\n", dd->dd_name);
-	}
-	dbt_clear();
+	// Load database drivers
+	module_init(0, driver, NULL);
 
-	return 0;
+	// Register test table
+	dbt_register("test", &dbt_test_table);
+
+	// Override database driver
+	dbt_test_table.dbt_drivername = name;
+
+	// Set dbt_sync to 0 to avoid calling client_sync
+	dbt_sync = 0;
+
+	// Open database
+	dbt_open_database(&dbt_test_table);
+
+	return;
+}
+
+void
+dbt_test_finalize(void)
+{
+	dbt_clear();
+	module_clear();
+	cf_clear();
+
+	return;
+}
+
+void
+dbt_test_driver(char *name, char *driver)
+{
+	int i;
+
+	/*
+	 * Multi-threaded write test
+	 */
+	dbt_test_prepare(name, driver);
+
+	// Start threads
+	bzero(dbt_test_thread, sizeof dbt_test_thread);
+	for (i = 0; i < dbt_test_threads; ++i)
+	{
+		util_thread_create(dbt_test_thread + i, dbt_test_set,
+			// HACK: Pass the thread pointer to thread
+			//       Used to calculate thread number
+			dbt_test_thread + i);
+	}
+
+	// Join threads
+	for (i = 0; i < dbt_test_threads; ++i)
+	{
+		util_thread_join(dbt_test_thread[i]);
+	}
+
+	dbt_test_finalize();
+
+	// MemDB is not persistent
+	if (strcmp(driver, "memdb.so") == 0)
+	{
+		return;
+	}
+
+	/*
+	 * Multi-threaded read test
+	 */
+	dbt_test_prepare(name, driver);
+
+	// Start threads
+	bzero(dbt_test_thread, sizeof dbt_test_thread);
+	for (i = 0; i < dbt_test_threads; ++i)
+	{
+		util_thread_create(dbt_test_thread + i, dbt_test_get,
+			// HACK: Pass the thread pointer to thread
+			//       Used to calculate thread number
+			dbt_test_thread + i);
+	}
+
+	// Join threads
+	for (i = 0; i < dbt_test_threads; ++i)
+	{
+		util_thread_join(dbt_test_thread[i]);
+	}
+
+	dbt_test_finalize();
+
+	return;
+}
+
+void
+dbt_test(void)
+{
+	dbt_test_driver("memdb", "memdb.so");
+	dbt_test_driver("bdb", "bdb.so");
 }
 
 #endif
