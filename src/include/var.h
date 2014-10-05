@@ -72,6 +72,7 @@ void var_rename(var_t *v, char *name, int flags);
 int var_init(var_t *v, var_type_t type, char *name, void *data, int flags);
 var_t * var_create(var_type_t type, char *name, void *data, int flags);
 void * var_scan_data(var_type_t type, char *str);
+var_t * var_scan(var_type_t type, char *name, char *str);
 var_t * var_scan_scheme(var_t *scheme, char *str);
 int var_compare(const var_t * v1, const var_t * v2);
 int var_true(const var_t * v);

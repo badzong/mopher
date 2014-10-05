@@ -7,6 +7,7 @@ static int test_start;
 
 test_handler_t test_handlers[] = {
 	{"sht.c", sht_test},
+	{"exp.c", exp_test},
 	{"dbt.c", dbt_test},
 	{"regdom.c", regdom_test},
 	{ NULL, NULL }

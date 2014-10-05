@@ -477,6 +477,30 @@ var_scan_data(var_type_t type, char *str)
 }
 
 var_t *
+var_scan(var_type_t type, char *name, char *str)
+{
+	var_t *v = NULL;
+	void *data;
+
+	data = var_scan_data(type, str);
+	if (data == NULL)
+	{
+		log_warning("var_scan: var_scan_data failed");
+		return NULL;
+	}
+
+	v = var_create(type, name, data, VF_COPY);
+	if (v == NULL)
+	{
+		log_warning("var_scan: var_create failed");
+	}
+
+	free(data);
+
+	return v;
+}
+
+var_t *
 var_scan_scheme(var_t *scheme, char *str)
 {
 	char *name;

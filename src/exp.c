@@ -196,22 +196,7 @@ exp_constant(var_type_t type, void *data)
 {
 	var_t *v = NULL;
 
-	switch (type)
-	{
-	case VT_STRING:
-	case VT_ADDR:
-		v = var_create(type, NULL, data, VF_REF);
-		break;
-
-	case VT_INT:
-	case VT_FLOAT:
-		v = var_create(type, NULL, data, VF_COPYDATA);
-		break;
-
-	default:
-		log_die(EX_SOFTWARE, "exp_constant: bad type");
-	}
-
+	v = var_create(type, NULL, data, VF_COPYDATA);
 	if (v == NULL)
 	{
 		log_die(EX_SOFTWARE, "exp_constant: var_create failed");
@@ -716,7 +701,8 @@ exp_bool(int op, var_t *left, var_t *right)
 var_t *
 exp_math_int(int op, var_t *left, var_t *right)
 {
-	VAR_INT_T *l, *r, x, *p = NULL;
+	VAR_INT_T *l, *r, x;
+	int cmp = 0;
 	var_t *v;
 
 	l = left->v_data;
@@ -734,22 +720,38 @@ exp_math_int(int op, var_t *left, var_t *right)
 	case '-':	x = *l - *r;	break;
 	case '*':	x = *l * *r;	break;
 	case '/':	x = *l / *r;	break;
-	case '<':	x = *l < *r;	break;
-	case '>':	x = *l > *r;	break;
-	case EQ:	x = *l == *r;	break;
-	case NE:	x = *l != *r;	break;
-	case LE:	x = *l <= *r;	break;
-	case GE:	x = *l >= *r;	break;
+
+	case '<':	cmp = *l < *r;	break;
+	case '>':	cmp = *l > *r;	break;
+	case EQ:	cmp = *l == *r;	break;
+	case NE:	cmp = *l != *r;	break;
+	case LE:	cmp = *l <= *r;	break;
+	case GE:	cmp = *l >= *r;	break;
 
 	default:
 		log_error("exp_math_int: bad operation");
 		return NULL;
 	}
 
-	p = &x;
+	switch (op)
+	{
+	case '+':
+	case '-':
+	case '*':
+	case '/':
+		break;
+
+	// Handle comparison
+	default:
+		if (cmp)
+		{
+			return EXP_TRUE;
+		}
+		return EXP_FALSE;
+	}
 
 exit:
-	v = var_create(VT_INT, NULL, p, VF_COPYDATA | VF_EXP_FREE);
+	v = var_create(VT_INT, NULL, &x, VF_COPYDATA | VF_EXP_FREE);
 	if (v == NULL)
 	{
 		log_error("exp_math_int: var_create failed");
@@ -763,7 +765,7 @@ var_t *
 exp_math_float(int op, var_t *left, var_t *right)
 {
 	VAR_FLOAT_T *l, *r, x;
-	VAR_INT_T i;
+	int cmp = 0;
 	var_t *v;
 
 	l = left->v_data;
@@ -782,12 +784,12 @@ exp_math_float(int op, var_t *left, var_t *right)
 	case '*':	x = *l * *r;	break;
 	case '/':	x = *l / *r;	break;
 
-	case '<':	i = *l < *r;	break;
-	case '>':	i = *l > *r;	break;
-	case EQ:	i = *l == *r;	break;
-	case NE:	i = *l != *r;	break;
-	case LE:	i = *l <= *r;	break;
-	case GE:	i = *l >= *r;	break;
+	case '<':	cmp = *l < *r;	break;
+	case '>':	cmp = *l > *r;	break;
+	case EQ:	cmp = *l == *r;	break;
+	case NE:	cmp = *l != *r;	break;
+	case LE:	cmp = *l <= *r;	break;
+	case GE:	cmp = *l >= *r;	break;
 
 	default:
 		log_error("exp_math_float: bad operation");
@@ -800,13 +802,18 @@ exp_math_float(int op, var_t *left, var_t *right)
 	case '-':
 	case '*':
 	case '/':
-		v = var_create(VT_FLOAT, NULL, &x, VF_COPYDATA | VF_EXP_FREE);
 		break;
 
+	// Handle comparison
 	default:
-		v = var_create(VT_INT, NULL, &i, VF_COPYDATA | VF_EXP_FREE);
+		if (cmp)
+		{
+			return EXP_TRUE;
+		}
+		return EXP_FALSE;
 	}
 
+	v = var_create(VT_FLOAT, NULL, &x, VF_COPYDATA | VF_EXP_FREE);
 	if (v == NULL)
 	{
 		log_error("exp_math_float: var_create failed");
@@ -831,7 +838,7 @@ var_t *
 exp_math_string(int op, var_t *left, var_t *right)
 {
 	char *l, *r, x[EXP_STRLEN];
-	VAR_INT_T i;
+	int cmp = 0;
 	var_t *v;
 
 	l = left->v_data;
@@ -848,35 +855,40 @@ exp_math_string(int op, var_t *left, var_t *right)
 
 	switch (op)
 	{
-	case '+':						break;
-	case '<':	i = strcmp(l, r) == -1;			break;
-	case '>':	i = strcmp(l, r) == 1;			break;
-	case EQ:	i = strcmp(l, r) == 0;			break;
-	case NE:	i = strcmp(l, r) != 0;			break;
-	case LE:	i = strcmp(l, r) <= 0;			break;
-	case GE:	i = strcmp(l, r) >= 0;			break;
+	case '+':					break;
+	case '<':	cmp = strcmp(l, r) == -1;	break;
+	case '>':	cmp = strcmp(l, r) == 1;	break;
+	case EQ:	cmp = strcmp(l, r) == 0;	break;
+	case NE:	cmp = strcmp(l, r) != 0;	break;
+	case LE:	cmp = strcmp(l, r) <= 0;	break;
+	case GE:	cmp = strcmp(l, r) >= 0;	break;
 
 	default:
 		log_error("exp_math_string: bad operation");
 		return NULL;
 	}
 
-	if (op == '+')
+	switch (op)
 	{
-		if (util_concat(x, sizeof x, l, r, NULL) == -1)
-		{
-			log_error("exp_math_string: util_concat: buffer "
-			    "exhausted");
-			return NULL;
-		}
+	case '+':
+		break;
 
-		v = var_create(VT_STRING, NULL, x, VF_COPYDATA | VF_EXP_FREE);
+	// Handle comparison
+	default:
+		if (cmp)
+		{
+			return EXP_TRUE;
+		}
+		return EXP_FALSE;
 	}
-	else
+
+	if (util_concat(x, sizeof x, l, r, NULL) == -1)
 	{
-		v = var_create(VT_INT , NULL, &i, VF_COPYDATA | VF_EXP_FREE);
+		log_error("exp_math_string: util_concat: buffer exhausted");
+		return NULL;
 	}
-		
+
+	v = var_create(VT_STRING, NULL, x, VF_COPYDATA | VF_EXP_FREE);
 	if (v == NULL)
 	{
 		log_error("exp_math_string: var_create failed");
@@ -890,7 +902,7 @@ var_t *
 exp_math_addr(int op, var_t *left, var_t *right)
 {
 	struct sockaddr_storage *l, *r;
-	VAR_INT_T i;
+	int cmp;
 	var_t *v;
 
 	l = left->v_data;
@@ -898,25 +910,24 @@ exp_math_addr(int op, var_t *left, var_t *right)
 
 	switch (op)
 	{
-	case '<':	i = util_addrcmp(l, r) == -1;		break;
-	case '>':	i = util_addrcmp(l, r) == 1;		break;
-	case EQ:	i = util_addrcmp(l, r) == 0;		break;
-	case NE:	i = util_addrcmp(l, r) != 0;		break;
-	case LE:	i = util_addrcmp(l, r) <= 0;		break;
-	case GE:	i = util_addrcmp(l, r) >= 0;		break;
+	case '<':	cmp = util_addrcmp(l, r) == -1;		break;
+	case '>':	cmp = util_addrcmp(l, r) == 1;		break;
+	case EQ:	cmp = util_addrcmp(l, r) == 0;		break;
+	case NE:	cmp = util_addrcmp(l, r) != 0;		break;
+	case LE:	cmp = util_addrcmp(l, r) <= 0;		break;
+	case GE:	cmp = util_addrcmp(l, r) >= 0;		break;
 
 	default:
 		log_error("exp_math_addr: bad operation");
 		return NULL;
 	}
 
-	v = var_create(VT_INT , NULL, &i, VF_COPYDATA | VF_EXP_FREE);
-	if (v == NULL)
+	if (cmp)
 	{
-		log_error("exp_math_addr: var_create failed");
+		return EXP_TRUE;
 	}
 
-	return v;
+	return EXP_FALSE;
 }
 
 
@@ -944,6 +955,17 @@ static var_t *
 exp_not(var_t *v)
 {
 	var_t *r;
+	
+	// NULL returns NULL
+	if (v == NULL)
+	{
+		return EXP_EMPTY;
+	}
+	if (v->v_data == NULL)
+	{
+		return EXP_EMPTY;
+	}
+
 	if (var_true(v))
 	{
 		r = EXP_FALSE;
@@ -1220,3 +1242,365 @@ exp_clear(void)
 
 	return;
 }
+
+#ifdef DEBUG
+
+static VAR_INT_T exp_test_const_int_0 = 0;
+static VAR_INT_T exp_test_const_int_1 = 1;
+static VAR_INT_T exp_test_const_int_2 = 2;
+static VAR_INT_T exp_test_const_int_3 = 3;
+static exp_t *exp_test_int_0;
+static exp_t *exp_test_int_1;
+static exp_t *exp_test_int_2;
+static exp_t *exp_test_int_3;
+
+static VAR_FLOAT_T exp_test_const_float_0 = 0.0;
+static VAR_FLOAT_T exp_test_const_float_1 = 0.5;
+static VAR_FLOAT_T exp_test_const_float_2 = 1.0;
+static VAR_FLOAT_T exp_test_const_float_3 = 1.5;
+static exp_t *exp_test_float_0;
+static exp_t *exp_test_float_1;
+static exp_t *exp_test_float_2;
+static exp_t *exp_test_float_3;
+
+static char *exp_test_const_str_0 = "";
+static char *exp_test_const_str_1 = "1";
+static char *exp_test_const_str_2 = "1.50";
+static char *exp_test_const_str_3 = "11.50";
+static exp_t *exp_test_str_0;
+static exp_t *exp_test_str_1;
+static exp_t *exp_test_str_2;
+static exp_t *exp_test_str_3;
+
+static exp_t *exp_test_null;
+
+static void
+exp_test_const_init(void)
+{
+	exp_test_int_0 = exp_constant(VT_INT, &exp_test_const_int_0);
+	exp_test_int_1 = exp_constant(VT_INT, &exp_test_const_int_1);
+	exp_test_int_2 = exp_constant(VT_INT, &exp_test_const_int_2);
+	exp_test_int_3 = exp_constant(VT_INT, &exp_test_const_int_3);
+
+	exp_test_float_0 = exp_constant(VT_FLOAT, &exp_test_const_float_0);
+	exp_test_float_1 = exp_constant(VT_FLOAT, &exp_test_const_float_1);
+	exp_test_float_2 = exp_constant(VT_FLOAT, &exp_test_const_float_2);
+	exp_test_float_3 = exp_constant(VT_FLOAT, &exp_test_const_float_3);
+
+	exp_test_str_0 = exp_constant(VT_STRING, exp_test_const_str_0);
+	exp_test_str_1 = exp_constant(VT_STRING, exp_test_const_str_1);
+	exp_test_str_2 = exp_constant(VT_STRING, exp_test_const_str_2);
+	exp_test_str_3 = exp_constant(VT_STRING, exp_test_const_str_3);
+
+	exp_test_null = exp_constant(VT_INT, NULL);
+
+	return;
+}
+
+void
+exp_test(void)
+{
+	exp_t *e;
+	var_t *v;
+
+	exp_init();
+	exp_test_const_init();
+
+	// exp_is_true
+	TEST_ASSERT(!exp_is_true(exp_test_int_0, NULL), "exp_is_true failed");
+	TEST_ASSERT(exp_is_true(exp_test_int_1, NULL), "exp_is_true failed");
+	TEST_ASSERT(exp_is_true(exp_test_int_2, NULL), "exp_is_true failed");
+	TEST_ASSERT(exp_is_true(exp_test_int_3, NULL), "exp_is_true failed");
+	TEST_ASSERT(!exp_is_true(exp_test_float_0, NULL), "exp_is_true failed");
+	TEST_ASSERT(exp_is_true(exp_test_float_1, NULL), "exp_is_true failed");
+	TEST_ASSERT(exp_is_true(exp_test_float_2, NULL), "exp_is_true failed");
+	TEST_ASSERT(exp_is_true(exp_test_float_3, NULL), "exp_is_true failed");
+	TEST_ASSERT(!exp_is_true(exp_test_str_0, NULL), "exp_is_true failed");
+	TEST_ASSERT(exp_is_true(exp_test_str_1, NULL), "exp_is_true failed");
+	TEST_ASSERT(exp_is_true(exp_test_str_2, NULL), "exp_is_true failed");
+	TEST_ASSERT(exp_is_true(exp_test_str_3, NULL), "exp_is_true failed");
+	TEST_ASSERT(!exp_is_true(exp_test_null, NULL), "exp_is_true failed");
+
+	// Not
+	v = exp_eval(exp_operation('!', exp_test_int_0, NULL), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation('!', exp_test_int_1, NULL), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation('!', exp_test_float_0, NULL), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation('!', exp_test_float_1, NULL), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation('!', exp_test_str_0, NULL), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation('!', exp_test_str_1, NULL), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation('!', exp_test_null, NULL), NULL);
+	TEST_ASSERT(v == EXP_EMPTY, "exp_eval failed");
+
+	// AND
+	v = exp_eval(exp_operation(AND, exp_test_int_0, exp_test_float_0), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(AND, exp_test_str_1, exp_test_float_0), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(AND, exp_test_str_0, exp_test_int_1), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(AND, exp_test_int_1, exp_test_float_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(AND, exp_test_null, exp_test_str_0), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(AND, exp_test_int_1, exp_test_null), NULL);
+	TEST_ASSERT(v == EXP_EMPTY, "exp_eval failed");
+	v = exp_eval(exp_operation(AND, exp_test_null, exp_test_null), NULL);
+	TEST_ASSERT(v == EXP_EMPTY, "exp_eval failed");
+
+	// OR
+	v = exp_eval(exp_operation(OR, exp_test_int_0, exp_test_float_0), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(OR, exp_test_str_1, exp_test_float_0), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(OR, exp_test_str_0, exp_test_int_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(OR, exp_test_int_1, exp_test_float_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(OR, exp_test_null, exp_test_str_0), NULL);
+	TEST_ASSERT(v == EXP_EMPTY, "exp_eval failed");
+	v = exp_eval(exp_operation(OR, exp_test_int_1, exp_test_null), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(OR, exp_test_null, exp_test_null), NULL);
+	TEST_ASSERT(v == EXP_EMPTY, "exp_eval failed");
+
+	// < 
+	v = exp_eval(exp_operation('<', exp_test_int_0, exp_test_int_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation('<', exp_test_int_1, exp_test_int_2), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation('<', exp_test_float_0, exp_test_float_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation('<', exp_test_float_1, exp_test_float_2), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation('<', exp_test_int_1, exp_test_float_3), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+
+	v = exp_eval(exp_operation('<', exp_test_int_1, exp_test_int_1), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation('<', exp_test_int_2, exp_test_int_1), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation('<', exp_test_float_1, exp_test_float_1), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation('<', exp_test_float_2, exp_test_float_1), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation('<', exp_test_float_3, exp_test_int_1), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation('<', exp_test_int_1, exp_test_float_2), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+
+	// > 
+	v = exp_eval(exp_operation('>', exp_test_int_1, exp_test_int_0), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation('>', exp_test_int_2, exp_test_int_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation('>', exp_test_float_1, exp_test_float_0), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation('>', exp_test_float_2, exp_test_float_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation('>', exp_test_float_3, exp_test_int_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+
+	v = exp_eval(exp_operation('>', exp_test_int_1, exp_test_int_1), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation('>', exp_test_int_1, exp_test_int_2), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation('>', exp_test_float_1, exp_test_float_1), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation('>', exp_test_float_1, exp_test_float_2), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation('>', exp_test_int_1, exp_test_float_3), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation('>', exp_test_int_1, exp_test_float_2), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+
+	// LE
+	v = exp_eval(exp_operation(LE, exp_test_int_0, exp_test_int_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(LE, exp_test_int_1, exp_test_int_2), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(LE, exp_test_float_0, exp_test_float_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(LE, exp_test_float_1, exp_test_float_2), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(LE, exp_test_int_1, exp_test_float_3), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(LE, exp_test_int_1, exp_test_int_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(LE, exp_test_float_1, exp_test_float_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(LE, exp_test_int_1, exp_test_float_2), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+
+	v = exp_eval(exp_operation(LE, exp_test_int_2, exp_test_int_1), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(LE, exp_test_float_2, exp_test_float_1), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(LE, exp_test_float_3, exp_test_int_1), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+
+	// GE
+	v = exp_eval(exp_operation(GE, exp_test_int_1, exp_test_int_0), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(GE, exp_test_int_2, exp_test_int_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(GE, exp_test_float_1, exp_test_float_0), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(GE, exp_test_float_2, exp_test_float_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(GE, exp_test_float_3, exp_test_int_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(GE, exp_test_int_1, exp_test_int_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(GE, exp_test_float_1, exp_test_float_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(GE, exp_test_float_2, exp_test_int_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+
+	v = exp_eval(exp_operation(GE, exp_test_int_1, exp_test_int_2), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(GE, exp_test_float_1, exp_test_float_2), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(GE, exp_test_int_1, exp_test_float_3), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+
+	// EQ
+	v = exp_eval(exp_operation(EQ, exp_test_int_0, exp_test_int_0), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_test_int_1, exp_test_int_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_test_float_0, exp_test_float_0), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_test_float_1, exp_test_float_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_test_str_0, exp_test_str_0), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_test_str_3, exp_test_str_3), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	
+	v = exp_eval(exp_operation(EQ, exp_test_int_1, exp_test_str_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_test_float_3, exp_test_str_2), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+
+	v = exp_eval(exp_operation(EQ, exp_test_int_1, exp_test_int_2), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_test_float_1, exp_test_float_2), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_test_str_1, exp_test_str_2), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_test_int_1, exp_test_float_3), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_test_float_1, exp_test_str_3), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_test_int_3, exp_test_str_0), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+
+	// NE
+	v = exp_eval(exp_operation(NE, exp_test_int_0, exp_test_int_0), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(NE, exp_test_int_1, exp_test_int_1), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(NE, exp_test_float_0, exp_test_float_0), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(NE, exp_test_float_1, exp_test_float_1), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(NE, exp_test_str_0, exp_test_str_0), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(NE, exp_test_str_3, exp_test_str_3), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	
+	v = exp_eval(exp_operation(NE, exp_test_int_1, exp_test_str_1), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(NE, exp_test_float_3, exp_test_str_2), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+
+	v = exp_eval(exp_operation(NE, exp_test_int_1, exp_test_int_2), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(NE, exp_test_float_1, exp_test_float_2), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(NE, exp_test_str_1, exp_test_str_2), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(NE, exp_test_int_1, exp_test_float_3), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(NE, exp_test_float_1, exp_test_str_3), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(NE, exp_test_int_3, exp_test_str_0), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+
+	// +
+	v = exp_eval(exp_operation(EQ, exp_operation('+', exp_test_int_0, exp_test_int_1), exp_test_int_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_operation('+', exp_test_int_1, exp_test_int_2), exp_test_int_3), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_operation('+', exp_test_float_0, exp_test_float_1), exp_test_float_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_operation('+', exp_test_float_1, exp_test_float_2), exp_test_float_3), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_operation('+', exp_test_str_0, exp_test_str_1), exp_test_str_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_operation('+', exp_test_str_1, exp_test_str_2), exp_test_str_3), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_operation('+', exp_test_int_1, exp_test_float_1), exp_test_float_3), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_operation('+', exp_test_int_1, exp_test_str_2), exp_test_str_3), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_operation('+', exp_test_int_1, exp_test_str_0), exp_test_str_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_operation('+', exp_test_float_3, exp_test_str_0), exp_test_str_2), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+
+	// -
+	v = exp_eval(exp_operation(EQ, exp_operation('-', exp_test_int_1, exp_test_int_0), exp_test_int_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_operation('-', exp_test_int_3, exp_test_int_1), exp_test_int_2), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_operation('-', exp_test_float_1, exp_test_float_0), exp_test_float_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_operation('-', exp_test_float_3, exp_test_float_1), exp_test_float_2), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_operation('-', exp_test_float_3, exp_test_int_1), exp_test_float_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_operation('-', exp_test_int_1, exp_test_float_1), exp_test_float_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+
+	// *
+	v = exp_eval(exp_operation(EQ, exp_operation('*', exp_test_int_1, exp_test_int_0), exp_test_int_0), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_operation('*', exp_test_int_2, exp_test_int_1), exp_test_int_2), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_operation('*', exp_test_float_1, exp_test_float_0), exp_test_float_0), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_operation('*', exp_test_float_2, exp_test_float_3), exp_test_float_3), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_operation('*', exp_test_float_1, exp_test_int_2), exp_test_float_2), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_operation('*', exp_test_int_1, exp_test_float_3), exp_test_float_3), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+
+	// /
+	v = exp_eval(exp_operation(EQ, exp_operation('/', exp_test_int_2, exp_test_int_1), exp_test_int_2), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_operation('/', exp_test_int_3, exp_test_int_2), exp_test_int_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_operation('/', exp_test_float_3, exp_test_float_2), exp_test_float_3), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_operation('/', exp_test_float_2, exp_test_int_2), exp_test_float_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_operation('/', exp_test_float_3, exp_test_int_3), exp_test_float_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_operation('/', exp_test_int_3, exp_test_float_3), exp_test_int_2), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+
+	// Cleanup
+	exp_clear();
+
+	return;
+}
+
+#endif
