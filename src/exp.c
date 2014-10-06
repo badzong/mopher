@@ -1232,6 +1232,17 @@ static exp_t *exp_test_str_1;
 static exp_t *exp_test_str_2;
 static exp_t *exp_test_str_3;
 
+static char *exp_test_const_addr_0 = "0.0.0.0";
+static char *exp_test_const_addr_1 = "::";
+static char *exp_test_const_addr_2 = "127.0.0.1";
+static char *exp_test_const_addr_3 = "127.0.0.2";
+static char *exp_test_const_addr_4 = "::1";
+static exp_t *exp_test_addr_0;
+static exp_t *exp_test_addr_1;
+static exp_t *exp_test_addr_2;
+static exp_t *exp_test_addr_3;
+static exp_t *exp_test_addr_4;
+
 static exp_t *exp_test_null;
 
 static void
@@ -1251,6 +1262,12 @@ exp_test_const_init(void)
 	exp_test_str_1 = exp_constant(VT_STRING, exp_test_const_str_1);
 	exp_test_str_2 = exp_constant(VT_STRING, exp_test_const_str_2);
 	exp_test_str_3 = exp_constant(VT_STRING, exp_test_const_str_3);
+
+	exp_test_addr_0 = exp_constant(VT_ADDR, util_strtoaddr(exp_test_const_addr_0));
+	exp_test_addr_1 = exp_constant(VT_ADDR, util_strtoaddr(exp_test_const_addr_1));
+	exp_test_addr_2 = exp_constant(VT_ADDR, util_strtoaddr(exp_test_const_addr_2));
+	exp_test_addr_3 = exp_constant(VT_ADDR, util_strtoaddr(exp_test_const_addr_3));
+	exp_test_addr_4 = exp_constant(VT_ADDR, util_strtoaddr(exp_test_const_addr_4));
 
 	exp_test_null = exp_constant(VT_INT, NULL);
 
@@ -1280,6 +1297,12 @@ exp_test(void)
 	TEST_ASSERT(exp_is_true(exp_test_str_3, NULL), "exp_is_true failed");
 	TEST_ASSERT(!exp_is_true(exp_test_null, NULL), "exp_is_true failed");
 
+	TEST_ASSERT(!exp_is_true(exp_test_addr_0, NULL), "exp_is_true failed");
+	TEST_ASSERT(!exp_is_true(exp_test_addr_1, NULL), "exp_is_true failed");
+	TEST_ASSERT(exp_is_true(exp_test_addr_2, NULL), "exp_is_true failed");
+	TEST_ASSERT(exp_is_true(exp_test_addr_3, NULL), "exp_is_true failed");
+	TEST_ASSERT(exp_is_true(exp_test_addr_4, NULL), "exp_is_true failed");
+
 	// Not
 	v = exp_eval(exp_operation('!', exp_test_int_0, NULL), NULL);
 	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
@@ -1293,6 +1316,14 @@ exp_test(void)
 	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
 	v = exp_eval(exp_operation('!', exp_test_str_1, NULL), NULL);
 	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation('!', exp_test_addr_2, NULL), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation('!', exp_test_addr_3, NULL), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation('!', exp_test_addr_0, NULL), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation('!', exp_test_addr_1, NULL), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
 	v = exp_eval(exp_operation('!', exp_test_null, NULL), NULL);
 	TEST_ASSERT(v == EXP_EMPTY, "exp_eval failed");
 
@@ -1309,6 +1340,14 @@ exp_test(void)
 	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
 	v = exp_eval(exp_operation(AND, exp_test_int_1, exp_test_null), NULL);
 	TEST_ASSERT(v == EXP_EMPTY, "exp_eval failed");
+	v = exp_eval(exp_operation(AND, exp_test_int_1, exp_test_addr_0), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(AND, exp_test_addr_0, exp_test_addr_1), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(AND, exp_test_addr_2, exp_test_addr_3), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(AND, exp_test_addr_3, exp_test_addr_4), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
 	v = exp_eval(exp_operation(AND, exp_test_null, exp_test_null), NULL);
 	TEST_ASSERT(v == EXP_EMPTY, "exp_eval failed");
 
@@ -1324,6 +1363,12 @@ exp_test(void)
 	v = exp_eval(exp_operation(OR, exp_test_null, exp_test_str_0), NULL);
 	TEST_ASSERT(v == EXP_EMPTY, "exp_eval failed");
 	v = exp_eval(exp_operation(OR, exp_test_int_1, exp_test_null), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(OR, exp_test_addr_0, exp_test_addr_1), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(OR, exp_test_addr_1, exp_test_str_0), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(OR, exp_test_addr_0, exp_test_addr_4), NULL);
 	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
 	v = exp_eval(exp_operation(OR, exp_test_null, exp_test_null), NULL);
 	TEST_ASSERT(v == EXP_EMPTY, "exp_eval failed");
@@ -1353,6 +1398,17 @@ exp_test(void)
 	v = exp_eval(exp_operation('<', exp_test_int_1, exp_test_float_2), NULL);
 	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
 
+	v = exp_eval(exp_operation('<', exp_test_addr_0, exp_test_addr_2), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation('<', exp_test_addr_1, exp_test_addr_4), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation('<', exp_test_addr_2, exp_test_addr_3), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation('<', exp_test_addr_0, exp_test_addr_0), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation('<', exp_test_addr_1, exp_test_addr_1), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+
 	// > 
 	v = exp_eval(exp_operation('>', exp_test_int_1, exp_test_int_0), NULL);
 	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
@@ -1376,6 +1432,17 @@ exp_test(void)
 	v = exp_eval(exp_operation('>', exp_test_int_1, exp_test_float_3), NULL);
 	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
 	v = exp_eval(exp_operation('>', exp_test_int_1, exp_test_float_2), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+
+	v = exp_eval(exp_operation('>', exp_test_addr_2, exp_test_addr_0), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation('>', exp_test_addr_4, exp_test_addr_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation('>', exp_test_addr_3, exp_test_addr_2), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation('>', exp_test_addr_0, exp_test_addr_0), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation('>', exp_test_addr_1, exp_test_addr_1), NULL);
 	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
 
 	// LE
@@ -1403,6 +1470,17 @@ exp_test(void)
 	v = exp_eval(exp_operation(LE, exp_test_float_3, exp_test_int_1), NULL);
 	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
 
+	v = exp_eval(exp_operation(LE, exp_test_addr_0, exp_test_addr_2), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(LE, exp_test_addr_1, exp_test_addr_4), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(LE, exp_test_addr_2, exp_test_addr_3), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(LE, exp_test_addr_0, exp_test_addr_0), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(LE, exp_test_addr_1, exp_test_addr_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+
 	// GE
 	v = exp_eval(exp_operation(GE, exp_test_int_1, exp_test_int_0), NULL);
 	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
@@ -1427,6 +1505,17 @@ exp_test(void)
 	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
 	v = exp_eval(exp_operation(GE, exp_test_int_1, exp_test_float_3), NULL);
 	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+
+	v = exp_eval(exp_operation(GE, exp_test_addr_2, exp_test_addr_0), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(GE, exp_test_addr_4, exp_test_addr_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(GE, exp_test_addr_3, exp_test_addr_2), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(GE, exp_test_addr_0, exp_test_addr_0), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(GE, exp_test_addr_1, exp_test_addr_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
 
 	// EQ
 	v = exp_eval(exp_operation(EQ, exp_test_int_0, exp_test_int_0), NULL);
@@ -1460,6 +1549,17 @@ exp_test(void)
 	v = exp_eval(exp_operation(EQ, exp_test_int_3, exp_test_str_0), NULL);
 	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
 
+	v = exp_eval(exp_operation(EQ, exp_test_addr_2, exp_test_addr_0), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_test_addr_4, exp_test_addr_1), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_test_addr_3, exp_test_addr_2), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_test_addr_0, exp_test_addr_0), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(EQ, exp_test_addr_1, exp_test_addr_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+
 	// NE
 	v = exp_eval(exp_operation(NE, exp_test_int_0, exp_test_int_0), NULL);
 	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
@@ -1491,6 +1591,17 @@ exp_test(void)
 	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
 	v = exp_eval(exp_operation(NE, exp_test_int_3, exp_test_str_0), NULL);
 	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+
+	v = exp_eval(exp_operation(NE, exp_test_addr_2, exp_test_addr_0), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(NE, exp_test_addr_4, exp_test_addr_1), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(NE, exp_test_addr_3, exp_test_addr_2), NULL);
+	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
+	v = exp_eval(exp_operation(NE, exp_test_addr_0, exp_test_addr_0), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
+	v = exp_eval(exp_operation(NE, exp_test_addr_1, exp_test_addr_1), NULL);
+	TEST_ASSERT(v == EXP_FALSE, "exp_eval failed");
 
 	// +
 	v = exp_eval(exp_operation(EQ, exp_operation('+', exp_test_int_0, exp_test_int_1), exp_test_int_1), NULL);

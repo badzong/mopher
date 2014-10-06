@@ -299,6 +299,7 @@ int
 util_addrcmp(struct sockaddr_storage *ss1, struct sockaddr_storage *ss2)
 {
 	unsigned long inaddr1, inaddr2;
+	int cmp;
 
 	if (ss1 == NULL && ss2 == NULL)
 	{
@@ -338,9 +339,19 @@ util_addrcmp(struct sockaddr_storage *ss1, struct sockaddr_storage *ss2)
 		/*
 		 * XXX: Simple implementation.
 		 */
-		return memcmp(&((struct sockaddr_in6 *) ss1)->sin6_addr.s6_addr,
+		cmp = memcmp(&((struct sockaddr_in6 *) ss1)->sin6_addr.s6_addr,
 			      &((struct sockaddr_in6 *) ss2)->sin6_addr.s6_addr,
 			      ADDR6_LEN);
+
+		if (cmp < 0)
+		{
+			return -1;
+		}
+		if (cmp > 0)
+		{
+			return 1;
+		}
+		return 0;
 
 	default:
 		log_warning("util_addrcmp: bad address family");
