@@ -7,6 +7,7 @@ list_contains(int argc, ll_t *args)
 	var_t *haystack, *needle, *v;
 	ll_t *list;
 	ll_entry_t *pos;
+	int cmp;
 
 	pos = LL_START(args);
 	haystack = ll_next(args, &pos);
@@ -32,7 +33,12 @@ list_contains(int argc, ll_t *args)
 	pos = LL_START(list);
 	while ((v = ll_next(list, &pos)))
 	{
-		if (var_compare(needle, v) == 0)
+		if (var_compare(&cmp, needle, v))
+		{
+			log_error("list_contains: var_compare failed");
+		}
+
+		if (cmp == 0)
 		{
 			return EXP_TRUE;
 		}
