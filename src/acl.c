@@ -1149,14 +1149,14 @@ acl_init(void)
 void
 acl_read(void)
 {
-	char *mail_acl;
+	char *mopherd_acl;
 
-	mail_acl = cf_acl_path ? cf_acl_path : defs_mail_acl;
+	mopherd_acl = cf_acl_path ? cf_acl_path : defs_mopherd_acl;
 
 	/*
 	 * run parser
 	 */
-	if(parser(mail_acl, &acl_in, acl_parse))
+	if(parser(mopherd_acl, &acl_in, acl_parse))
 	{
 		log_die(EX_SOFTWARE, "acl_read: parser failed");
 	}

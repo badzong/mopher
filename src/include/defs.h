@@ -2,7 +2,7 @@
 #define _DEFS_H_
 
 char *defs_mopherd_conf;
-char *defs_mail_acl;
+char *defs_mopherd_acl;
 char *defs_regdom_rules;
 char *defs_module_path;
 
