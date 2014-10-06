@@ -17,111 +17,40 @@
 static int   moctl_debug = LOG_ERR;
 static char *moctl_config;
 static char *moctl_server;
-static char  moctl_options[64] = "?hd:c:s:";
 static int   moctl_socket;
 
 static void
 moctl_usage(void)
 {
-	log_error("Usage: %s <scope> options", BINNAME);
-	log_error("Mopher control client.");
+	log_error("Usage: %s [-hG] [-d level] [-c file] [-s host] [-D table] [-P <origin> <from> <rcpt>]", BINNAME);
 	log_error("");
-	log_error("SCOPES:");
-	log_error("  table      Dump database tables");
-	log_error("  greylist   Manipulate greylist database");
+	log_error("mopherctl controls the mopher daemon.");
 	log_error("");
-	log_error("TABLE OPTIONS:");
-	log_error("  -D table   Dump database table");
+	log_error("Available options are:");
 	log_error("");
-	log_error("GREYLIST OPTIONS:");
-	log_error("  -D         Dump mopher greylist database");
-	log_error("  -p         Pass greylisting (requires -m, -f and -r )");
-	log_error("  -m source  MTA source address or domain");
-	log_error("  -f from    Envelope sender address");
-	log_error("  -r rcpt    Envelope recipient address");
+	log_error("  -h      Show usage message.");
 	log_error("");
-	log_error("GENERAL OPTIONS:");
-	log_error("  -d level   Debug level 0-7");
-	log_error("  -c file    Use configuration file");
-	log_error("  -s server  Connect to server");
-	log_error("  -?         Show this message");
+	log_error("  -d level");
+	log_error("    Set logging severity level to level");
 	log_error("");
-	log_error("EXAMPLES:");
+	log_error("  -c file");
+	log_error("    Read configuration from file.");
 	log_error("");
-	log_error("  Dump greylist:");
-	log_error("  %s table -D counter_penpal", BINNAME);
+	log_error("  -s host");
+	log_error("    Connect to host.");
 	log_error("");
-	log_error("  Dump greylist:");
-	log_error("  %s greylist -D", BINNAME);
+	log_error("  -D <table>");
+	log_error("    Print raw content of table.");
 	log_error("");
-	log_error("  Pass greylisting:");
-	log_error("  %s greylist -p -m example.com -f bob@example.com -r me@mydomain.org", BINNAME);
+	log_error("  -G");
+	log_error("    Print formatted content of the greylist-table.");
 	log_error("");
+	log_error("  -P <origin> <from> <rcpt>");
+	log_error("    Temporarily whitelist triplet.");
+	log_error("");
+
 	exit(EX_USAGE);
 }
-
-
-static int
-moctl_greylist_dump(void)
-{
-	char *dump;
-	
-	if (server_data_cmd(moctl_socket, "greylist_dump", &dump))
-	{
-		log_die(EX_SOFTWARE, "moctl_greylist_dump: server_data_cmd failed");
-	}
-
-	printf(dump);
-	free(dump);
-
-	return 0;
-}
-
-
-static int
-moctl_greylist_pass(char *source, char *from, char *rcpt)
-{
-	char cmd[BUFLEN];
-	int n;
-	
-	n = snprintf(cmd, sizeof cmd, "greylist_pass %s %s %s", source, from,
-	    rcpt);
-	if (n >= sizeof cmd)
-	{
-		log_die(EX_SOFTWARE, "moctl_greylist_dump: buffer exhausted");
-	}
-
-	if(server_cmd(moctl_socket, cmd))
-	{
-		log_die(EX_SOFTWARE, "moctl_greylist_dump: server_cmd failed");
-	}
-
-	return 0;
-}
-
-static int
-moctl_general(char opt, char *optarg)
-{
-	switch(opt) {
-	case 'd':
-		moctl_debug = atoi(optarg);
-		return 0;
-
-	case 'c':
-		moctl_config = optarg;
-		return 0;
-
-	case 's':
-		moctl_server = optarg;
-		return 0;
-
-	default:
-		moctl_usage();
-	}
-
-	return -1;
-}
-
 
 static void
 moctl_init(void)
@@ -164,35 +93,48 @@ moctl_init(void)
 }
 
 static int
-moctl_table(int argc, char **argv)
+moctl_greylist(void)
+{
+	char *dump;
+	
+	if (server_data_cmd(moctl_socket, "greylist_dump", &dump))
+	{
+		log_die(EX_SOFTWARE, "moctl_greylist_dump: server_data_cmd failed");
+	}
+
+	printf(dump);
+	free(dump);
+
+	return 0;
+}
+
+static int
+moctl_pass(char *source, char *from, char *rcpt)
+{
+	char cmd[BUFLEN];
+	int n;
+	
+	n = snprintf(cmd, sizeof cmd, "greylist_pass %s %s %s", source, from,
+	    rcpt);
+	if (n >= sizeof cmd)
+	{
+		log_die(EX_SOFTWARE, "moctl_greylist_dump: buffer exhausted");
+	}
+
+	if(server_cmd(moctl_socket, cmd))
+	{
+		log_die(EX_SOFTWARE, "moctl_greylist_dump: server_cmd failed");
+	}
+
+	return 0;
+}
+
+static int
+moctl_dump(char *tablename)
 {
 	char *dump;
 	char cmd[BUFLEN];
 	int n;
-	int opt;
-	char *tablename = NULL;
-
-	// Append greylisting specific options
-	strcat(moctl_options, "D:");
-	
-	while ((opt = getopt(argc, argv, moctl_options)) != -1) {
-		switch(opt) {
-		case 'D':
-			tablename = optarg;
-			break;
-
-		default:
-			moctl_general(opt, optarg);
-			break;
-		}
-	}
-
-	if (!tablename)
-	{
-		return -1;
-	}
-
-	moctl_init();
 
 	n = snprintf(cmd, sizeof cmd, "table_dump %s", tablename);
 	if (n >= sizeof cmd)
@@ -211,103 +153,99 @@ moctl_table(int argc, char **argv)
 	return 0;
 }
 
-
-static int
-moctl_greylist(int argc, char **argv)
+int
+main(int argc, char **argv)
 {
 	int opt;
-	int pass = 0;
 	int dump = 0;
-	char *source = NULL;
-	char *from = NULL;
-	char *rcpt = NULL;
+	int greylist = 0;
+	int pass = 0;
+	char *table;
+	char *source;
+	char *from;
+	char *rcpt;
 
-	// Append greylisting specific options
-	strcat(moctl_options, "Dpm:f:r:");
-	
-	while ((opt = getopt(argc, argv, moctl_options)) != -1) {
+	// Open log
+	log_init(BINNAME, moctl_debug, 0, 1);
+
+	// No command supplied
+	if (argc < 2)
+	{
+		moctl_usage();
+	}
+
+	while ((opt = getopt(argc, argv, "?hGPd:c:s:D:")) != -1) {
 		switch(opt) {
-		case 'D':
-			dump = 1;
+		case '?':
+		case 'h':
+			moctl_usage();
 			break;
 
-		case 'p':
+		case 'G':
+			greylist = 1;
+			break;
+
+		case 'P':
 			pass = 1;
 			break;
 
-		case 'm':
-			source = optarg;
+		case 'd':
+			moctl_debug = atoi(optarg);
 			break;
 
-		case 'f':
-			from = optarg;
+		case 'c':
+			moctl_config = optarg;
 			break;
 
-		case 'r':
-			rcpt = optarg;
+		case 's':
+			moctl_server = optarg;
+			break;
+
+		case 'D':
+			dump = 1;
+			table = optarg;
 			break;
 
 		default:
-			moctl_general(opt, optarg);
+			moctl_usage();
 			break;
 		}
+	}
+
+	// No command specified
+	if (!(dump | greylist | pass))
+	{
+		moctl_usage();
 	}
 
 	moctl_init();
 
 	if (dump)
 	{
-		return moctl_greylist_dump();
+		return moctl_dump(table);
 	}
-
-	if (pass && source && from && rcpt)
+	else if (greylist)
 	{
-		return moctl_greylist_pass(source, from, rcpt);
+		return moctl_greylist();
 	}
-
-	return -1;
-}
-
-int
-main(int argc, char **argv)
-{
-	char *scope;
-	int (*callback)(int, char **);
-
-	// Open log
-	log_init(BINNAME, moctl_debug, 0, 1);
-
-	if (argc < 2)
+	else if (pass)
 	{
-		moctl_usage();
-		return EX_USAGE;
+		if (argc - optind != 3)
+		{
+			moctl_usage();
+			return EX_USAGE;
+		}
+
+		source = argv[optind];
+		from = argv[optind + 1];
+		rcpt = argv[optind + 2];
+
+		return moctl_pass(source, from, rcpt);
 	}
 
-	scope = argv[1];
-	argv += 1;
-	argc -= 1; 
-
-	// Get scope
-	if (!strcmp(scope, "greylist"))
-	{
-		callback = moctl_greylist;
-	}
-	else if (!strcmp(scope, "table"))
-	{
-		callback = moctl_table;
-	}
-	else
-	{
-		moctl_usage();
-		return EX_USAGE;
-	}
-
-	// Execute scope callback
-	if (callback(argc, argv))
-	{
-		moctl_usage();
-		return EX_USAGE;
-	}
+	// Impossible
+	moctl_usage();
+	return EX_USAGE;
 
 	// Cleanup
 	if (moctl_socket)
@@ -322,4 +260,3 @@ main(int argc, char **argv)
 
 	return 0;
 }
-
