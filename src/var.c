@@ -595,51 +595,119 @@ error:
 }
 
 int
-var_compare(const var_t * v1, const var_t * v2)
+var_compare_int(void *left, void *right)
 {
+	VAR_INT_T *l = (VAR_INT_T*) left;
+	VAR_INT_T *r = (VAR_INT_T*) right;
 
-	if (v1->v_type != v2->v_type) {
-		log_warning("var_compare: comparing differnt types");
+	if (*l < *r)
+	{
+		return -1;
+	}
 
-		if (v1->v_type < v2->v_type) {
-			return -1;
-		}
-
+	if (*l > *r)
+	{
 		return 1;
 	}
 
-	switch (v1->v_type) {
+	return 0;
+}
 
-	case VT_INT:
-		if (*(VAR_INT_T *) v1->v_data < *(VAR_INT_T *) v2->v_data) {
-			return -1;
-		}
-		if (*(VAR_INT_T *) v1->v_data > *(VAR_INT_T *) v2->v_data) {
-			return 1;
-		}
-		return 0;
+int
+var_compare_float(void *left, void *right)
+{
+	VAR_FLOAT_T *l = (VAR_FLOAT_T*) left;
+	VAR_FLOAT_T *r = (VAR_FLOAT_T*) right;
 
-	case VT_FLOAT:
-		if (*(VAR_FLOAT_T *) v1->v_data < *(VAR_FLOAT_T *) v2->v_data) {
-			return -1;
-		}
-		if (*(VAR_FLOAT_T *) v1->v_data > *(VAR_FLOAT_T *) v2->v_data) {
-			return 1;
-		}
-		return 0;
+	if (*l < *r)
+	{
+		return -1;
+	}
 
-	case VT_STRING:
-		return strcmp(v1->v_data, v2->v_data);
-
-	case VT_ADDR:
-		return util_addrcmp(v1->v_data, v2->v_data);
-
-	default:
-		log_warning("var_compare: bad type");
-		break;
+	if (*l > *r)
+	{
+		return 1;
 	}
 
 	return 0;
+}
+
+int
+var_compare(int *cmp, var_t * v1, var_t * v2)
+{
+	var_t *copy = NULL;
+	var_t *left = v1;
+	var_t *right = v2;
+	var_type_t type;
+
+	type = VAR_MAX_TYPE(left, right);
+	if (left->v_type != right->v_type)
+	{
+		if (left->v_type != type)
+		{
+			copy = var_cast_copy(type, left);
+			left = copy;
+		}
+		else
+		{
+			copy = var_cast_copy(type, right);
+			right = copy;
+		}
+
+		if (copy == NULL)
+		{
+			log_warning("var_compare: var_cast_copy failed");
+			goto error;
+		}
+	}
+
+	switch (type)
+	{
+	case VT_INT:
+		*cmp = var_compare_int(left->v_data, right->v_data);
+		break;
+
+	case VT_FLOAT:
+		*cmp = var_compare_float(left->v_data, right->v_data);
+		break;
+
+	case VT_STRING:
+		*cmp = strcmp(left->v_data, right->v_data);
+
+		// Strcmp may return any integer.
+		if (*cmp < 0)
+		{
+			*cmp = -1;
+		}
+		if (*cmp > 0)
+		{
+			*cmp = 1;
+		}
+		break;
+
+	case VT_ADDR:
+		*cmp = util_addrcmp(left->v_data, right->v_data);
+		break;
+
+	default:
+		log_warning("var_compare: bad type");
+		goto error;
+	}
+
+	if (copy)
+	{
+		var_delete(copy);
+	}
+
+	return 0;
+
+error:
+	if (copy)
+	{
+		var_delete(copy);
+	}
+
+	return -1;
 }
 
 

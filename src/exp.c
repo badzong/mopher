@@ -622,6 +622,73 @@ exp_assign(exp_t *left, exp_t *right, var_t *mailspec)
 	return value;
 }
 
+var_t *
+exp_compare(int op, var_t *left, var_t *right)
+{
+	void *l, *r;
+	int cmp;
+
+	l = left == NULL? NULL: left->v_data;
+	r = right == NULL? NULL: right->v_data;
+
+	// One side is unknown
+	if (l == NULL || r == NULL)
+	{
+		return EXP_EMPTY;
+	}
+
+	if (var_compare(&cmp, left, right))
+	{
+		log_error("exp_compare: var_compare failed");
+		return NULL;
+	}
+
+	switch(cmp)
+	{
+	case -1:
+		switch(op)
+		{
+		case '<':
+		case LE:
+		case NE:
+			return EXP_TRUE;
+
+		case '>':
+		case GE:
+		case EQ:
+			return EXP_FALSE;
+		}
+	case 0:
+		switch(op)
+		{
+		case LE:
+		case GE:
+		case EQ:
+			return EXP_TRUE;
+
+		case '<':
+		case '>':
+		case NE:
+			return EXP_FALSE;
+		}
+	case 1:
+		switch(op)
+		{
+		case '>':
+		case GE:
+		case NE:
+			return EXP_TRUE;
+
+		case '<':
+		case LE:
+		case EQ:
+			return EXP_FALSE;
+		}
+	}
+
+	log_warning("exp_compare: var_compare returned unexpected value");
+	return NULL;
+}
 
 var_t *
 exp_bool(int op, var_t *left, var_t *right)
@@ -702,7 +769,6 @@ var_t *
 exp_math_int(int op, var_t *left, var_t *right)
 {
 	VAR_INT_T *l, *r, x;
-	int cmp = 0;
 	var_t *v;
 
 	l = left->v_data;
@@ -711,7 +777,7 @@ exp_math_int(int op, var_t *left, var_t *right)
 	if (l == NULL || r == NULL)
 	{
 		log_debug("exp_math_int: empty value");
-		goto exit;
+		return EXP_EMPTY;
 	}
 
 	switch (op)
@@ -721,36 +787,11 @@ exp_math_int(int op, var_t *left, var_t *right)
 	case '*':	x = *l * *r;	break;
 	case '/':	x = *l / *r;	break;
 
-	case '<':	cmp = *l < *r;	break;
-	case '>':	cmp = *l > *r;	break;
-	case EQ:	cmp = *l == *r;	break;
-	case NE:	cmp = *l != *r;	break;
-	case LE:	cmp = *l <= *r;	break;
-	case GE:	cmp = *l >= *r;	break;
-
 	default:
 		log_error("exp_math_int: bad operation");
 		return NULL;
 	}
 
-	switch (op)
-	{
-	case '+':
-	case '-':
-	case '*':
-	case '/':
-		break;
-
-	// Handle comparison
-	default:
-		if (cmp)
-		{
-			return EXP_TRUE;
-		}
-		return EXP_FALSE;
-	}
-
-exit:
 	v = var_create(VT_INT, NULL, &x, VF_COPYDATA | VF_EXP_FREE);
 	if (v == NULL)
 	{
@@ -765,7 +806,6 @@ var_t *
 exp_math_float(int op, var_t *left, var_t *right)
 {
 	VAR_FLOAT_T *l, *r, x;
-	int cmp = 0;
 	var_t *v;
 
 	l = left->v_data;
@@ -774,7 +814,7 @@ exp_math_float(int op, var_t *left, var_t *right)
 	if (l == NULL || r == NULL)
 	{
 		log_debug("exp_math_float: empty value");
-		goto error;
+		return EXP_EMPTY;
 	}
 
 	switch (op)
@@ -784,47 +824,12 @@ exp_math_float(int op, var_t *left, var_t *right)
 	case '*':	x = *l * *r;	break;
 	case '/':	x = *l / *r;	break;
 
-	case '<':	cmp = *l < *r;	break;
-	case '>':	cmp = *l > *r;	break;
-	case EQ:	cmp = *l == *r;	break;
-	case NE:	cmp = *l != *r;	break;
-	case LE:	cmp = *l <= *r;	break;
-	case GE:	cmp = *l >= *r;	break;
-
 	default:
 		log_error("exp_math_float: bad operation");
 		return NULL;
 	}
 
-	switch (op)
-	{
-	case '+':
-	case '-':
-	case '*':
-	case '/':
-		break;
-
-	// Handle comparison
-	default:
-		if (cmp)
-		{
-			return EXP_TRUE;
-		}
-		return EXP_FALSE;
-	}
-
 	v = var_create(VT_FLOAT, NULL, &x, VF_COPYDATA | VF_EXP_FREE);
-	if (v == NULL)
-	{
-		log_error("exp_math_float: var_create failed");
-	}
-
-	return v;
-
-
-error:
-
-	v = var_create(VT_INT, NULL, NULL, VF_KEEP | VF_EXP_FREE);
 	if (v == NULL)
 	{
 		log_error("exp_math_float: var_create failed");
@@ -838,7 +843,6 @@ var_t *
 exp_math_string(int op, var_t *left, var_t *right)
 {
 	char *l, *r, x[EXP_STRLEN];
-	int cmp = 0;
 	var_t *v;
 
 	l = left->v_data;
@@ -856,30 +860,10 @@ exp_math_string(int op, var_t *left, var_t *right)
 	switch (op)
 	{
 	case '+':					break;
-	case '<':	cmp = strcmp(l, r) == -1;	break;
-	case '>':	cmp = strcmp(l, r) == 1;	break;
-	case EQ:	cmp = strcmp(l, r) == 0;	break;
-	case NE:	cmp = strcmp(l, r) != 0;	break;
-	case LE:	cmp = strcmp(l, r) <= 0;	break;
-	case GE:	cmp = strcmp(l, r) >= 0;	break;
 
 	default:
 		log_error("exp_math_string: bad operation");
 		return NULL;
-	}
-
-	switch (op)
-	{
-	case '+':
-		break;
-
-	// Handle comparison
-	default:
-		if (cmp)
-		{
-			return EXP_TRUE;
-		}
-		return EXP_FALSE;
 	}
 
 	if (util_concat(x, sizeof x, l, r, NULL) == -1)
@@ -895,39 +879,6 @@ exp_math_string(int op, var_t *left, var_t *right)
 	}
 
 	return v;
-}
-
-
-var_t *
-exp_math_addr(int op, var_t *left, var_t *right)
-{
-	struct sockaddr_storage *l, *r;
-	int cmp;
-	var_t *v;
-
-	l = left->v_data;
-	r = right->v_data;
-
-	switch (op)
-	{
-	case '<':	cmp = util_addrcmp(l, r) == -1;		break;
-	case '>':	cmp = util_addrcmp(l, r) == 1;		break;
-	case EQ:	cmp = util_addrcmp(l, r) == 0;		break;
-	case NE:	cmp = util_addrcmp(l, r) != 0;		break;
-	case LE:	cmp = util_addrcmp(l, r) <= 0;		break;
-	case GE:	cmp = util_addrcmp(l, r) >= 0;		break;
-
-	default:
-		log_error("exp_math_addr: bad operation");
-		return NULL;
-	}
-
-	if (cmp)
-	{
-		return EXP_TRUE;
-	}
-
-	return EXP_FALSE;
 }
 
 
@@ -1059,13 +1010,26 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 			goto exit;
 		}
 
-		/*
-		 * Boolean operator
-		 */
-		if (eo->eo_operator == AND || eo->eo_operator == OR)
+		switch(eo->eo_operator)
 		{
+		// Boolean operator
+		case AND:
+		case OR:
 			result = exp_bool(eo->eo_operator, left, right);
 			goto exit;
+
+		// Comparator
+		case '<':
+		case '>':
+		case LE:
+		case GE:
+		case EQ:
+		case NE:
+			result = exp_compare(eo->eo_operator, left, right);
+			goto exit;
+
+		default:
+			break;
 		}
 
 		if (right->v_data == NULL)
@@ -1128,10 +1092,6 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 
 	case VT_STRING:
 		result = exp_math_string(eo->eo_operator, left, right);
-		break;
-
-	case VT_ADDR:
-		result = exp_math_addr(eo->eo_operator, left, right);
 		break;
 
 	default:
@@ -1300,7 +1260,6 @@ exp_test_const_init(void)
 void
 exp_test(void)
 {
-	exp_t *e;
 	var_t *v;
 
 	exp_init();
