@@ -737,13 +737,13 @@ util_pidfile(char *path)
 	    S_IRUSR | S_IRGRP | S_IROTH);
 	if (fd == -1)
 	{
-		log_sys_error("util_dump: open");
+		log_sys_die(EX_SOFTWARE, "util_pidfile: open");
 		return;
 	}
 
 	if (write(fd, string, len) == -1)
 	{
-		log_sys_error("util_dump: write");
+		log_sys_die(EX_SOFTWARE, "util_pidfile: write");
 	}
 
 	close(fd);

@@ -7,6 +7,27 @@
 
 #include <mopher.h>
 
+void
+mopherd_unlink_pidfile(char *pidfile)
+{
+	if (pidfile == NULL)
+	{
+		return;
+	}
+
+	if (!util_file_exists(pidfile))
+	{
+		return;
+	}
+
+	if (unlink(pidfile))
+	{
+			log_sys_error("mopherd_unlink_pidfile: unlink");
+	}
+
+	return;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -101,13 +122,7 @@ main(int argc, char **argv)
 	/*
 	 * Remove PID file
 	 */
-	if (pidfile)
-	{
-		if (unlink(pidfile))
-		{
-			log_sys_error("mopherd: unlink");
-		}
-	}
+	mopherd_unlink_pidfile(pidfile);
 
 	/*
 	 * Cleanup
