@@ -22,6 +22,7 @@ void log_message(int type, var_t *mailspec, char *f, ...);
 #define log_notice(...) log_log(LOG_NOTICE, 0, __VA_ARGS__)
 #define log_error(...) log_log(LOG_ERR, 0, __VA_ARGS__)
 #define log_warning(...) log_log(LOG_WARNING, 0, __VA_ARGS__)
+#define log_crit(...) log_log(LOG_CRIT, 0, __VA_ARGS__)
 #define log_die(RETURN, ...) log_exit(RETURN, 0, __VA_ARGS__)
 
 #define log_sys_debug(...) log_log(LOG_DEBUG, 1, __VA_ARGS__)

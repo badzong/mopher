@@ -1251,6 +1251,12 @@ dbt_test_driver(char *config, char *driver)
 {
 	int i;
 
+	if (!module_exists(driver))
+	{
+		log_crit("dbt_test_driver: %s not installed", driver);
+		return;
+	}
+
 	/*
 	 * Multi-threaded write test
 	 */

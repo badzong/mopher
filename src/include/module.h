@@ -20,6 +20,7 @@ typedef struct module
 void module_glob(const char *path);
 void module_load(char *file);
 void module_init(int glob, ...);
+int module_exists(char *mod);
 void module_clear(void);
 
 #endif /* _MODULES_H_ */

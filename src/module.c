@@ -203,6 +203,25 @@ module_glob(const char *path)
 }
 
 
+int
+module_exists(char *mod)
+{
+	char buffer[BUFLEN];
+	char *module_path;
+	int n;
+
+	module_path = cf_module_path? cf_module_path: defs_module_path;
+
+	n = snprintf(buffer, sizeof buffer, "%s/%s", module_path, mod);
+	if (n >= sizeof buffer)
+	{
+		log_error("module_exists: buffer exhausted");
+		return -1;
+	}
+
+	return util_file_exists(buffer);
+}
+
 void
 module_init(int glob, ...)
 {
