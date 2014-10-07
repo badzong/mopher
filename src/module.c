@@ -156,7 +156,6 @@ module_glob(const char *path)
 	glob_t pglob;
 	char pattern[BUFLEN];
 	char **file;
-	module_t *mod;
 
 	memset(&pglob, 0, sizeof(pglob));
 	snprintf(pattern, sizeof(pattern), "%s/*.so", path);
@@ -179,15 +178,6 @@ module_glob(const char *path)
 
 	log_debug("module_glob: found %d modules in \"%s\"", pglob.gl_pathc,
 	    path);
-
-	/*
-	 * Create module_t array
-	 */
-	mod = (module_t *) malloc((pglob.gl_pathc + 1) * sizeof (module_t));
-	if (mod == NULL)
-	{
-		log_sys_die(EX_SOFTWARE, "module_glob: malloc");
-	}
 
 	/*
 	 * Prepare modules

@@ -160,10 +160,10 @@ function	: ID '(' exp ')'	{ $$ = exp_function($1, $3); }
 symbol		: ID 			{ $$ = exp_symbol($1); }
 		;
 
-constant	: STRING		{ $$ = exp_constant(VT_STRING, $1); }
-		| number		{ $$ = exp_constant(VT_INT, &$1); }
-		| FLOAT			{ $$ = exp_constant(VT_FLOAT, &$1); }
-		| ADDR			{ $$ = exp_constant(VT_ADDR, $1); }
+constant	: STRING		{ $$ = exp_constant(VT_STRING, $1, VF_REF); }
+		| number		{ $$ = exp_constant(VT_INT, &$1, VF_COPY); }
+		| FLOAT			{ $$ = exp_constant(VT_FLOAT, &$1, VF_COPY); }
+		| ADDR			{ $$ = exp_constant(VT_ADDR, $1, VF_REF); }
 		;
 
 number		: INTEGER 's'		{ $$ = $1; }

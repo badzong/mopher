@@ -192,11 +192,11 @@ exp_list(exp_t *list, exp_t *exp)
 
 
 exp_t *
-exp_constant(var_type_t type, void *data)
+exp_constant(var_type_t type, void *data, int flags)
 {
 	var_t *v = NULL;
 
-	v = var_create(type, NULL, data, VF_COPYDATA);
+	v = var_create(type, NULL, data, flags);
 	if (v == NULL)
 	{
 		log_die(EX_SOFTWARE, "exp_constant: var_create failed");
@@ -1248,28 +1248,28 @@ static exp_t *exp_test_null;
 static void
 exp_test_const_init(void)
 {
-	exp_test_int_0 = exp_constant(VT_INT, &exp_test_const_int_0);
-	exp_test_int_1 = exp_constant(VT_INT, &exp_test_const_int_1);
-	exp_test_int_2 = exp_constant(VT_INT, &exp_test_const_int_2);
-	exp_test_int_3 = exp_constant(VT_INT, &exp_test_const_int_3);
+	exp_test_int_0 = exp_constant(VT_INT, &exp_test_const_int_0, VF_KEEP);
+	exp_test_int_1 = exp_constant(VT_INT, &exp_test_const_int_1, VF_KEEP);
+	exp_test_int_2 = exp_constant(VT_INT, &exp_test_const_int_2, VF_KEEP);
+	exp_test_int_3 = exp_constant(VT_INT, &exp_test_const_int_3, VF_KEEP);
 
-	exp_test_float_0 = exp_constant(VT_FLOAT, &exp_test_const_float_0);
-	exp_test_float_1 = exp_constant(VT_FLOAT, &exp_test_const_float_1);
-	exp_test_float_2 = exp_constant(VT_FLOAT, &exp_test_const_float_2);
-	exp_test_float_3 = exp_constant(VT_FLOAT, &exp_test_const_float_3);
+	exp_test_float_0 = exp_constant(VT_FLOAT, &exp_test_const_float_0, VF_KEEP);
+	exp_test_float_1 = exp_constant(VT_FLOAT, &exp_test_const_float_1, VF_KEEP);
+	exp_test_float_2 = exp_constant(VT_FLOAT, &exp_test_const_float_2, VF_KEEP);
+	exp_test_float_3 = exp_constant(VT_FLOAT, &exp_test_const_float_3, VF_KEEP);
 
-	exp_test_str_0 = exp_constant(VT_STRING, exp_test_const_str_0);
-	exp_test_str_1 = exp_constant(VT_STRING, exp_test_const_str_1);
-	exp_test_str_2 = exp_constant(VT_STRING, exp_test_const_str_2);
-	exp_test_str_3 = exp_constant(VT_STRING, exp_test_const_str_3);
+	exp_test_str_0 = exp_constant(VT_STRING, exp_test_const_str_0, VF_KEEP);
+	exp_test_str_1 = exp_constant(VT_STRING, exp_test_const_str_1, VF_KEEP);
+	exp_test_str_2 = exp_constant(VT_STRING, exp_test_const_str_2, VF_KEEP);
+	exp_test_str_3 = exp_constant(VT_STRING, exp_test_const_str_3, VF_KEEP);
 
-	exp_test_addr_0 = exp_constant(VT_ADDR, util_strtoaddr(exp_test_const_addr_0));
-	exp_test_addr_1 = exp_constant(VT_ADDR, util_strtoaddr(exp_test_const_addr_1));
-	exp_test_addr_2 = exp_constant(VT_ADDR, util_strtoaddr(exp_test_const_addr_2));
-	exp_test_addr_3 = exp_constant(VT_ADDR, util_strtoaddr(exp_test_const_addr_3));
-	exp_test_addr_4 = exp_constant(VT_ADDR, util_strtoaddr(exp_test_const_addr_4));
+	exp_test_addr_0 = exp_constant(VT_ADDR, util_strtoaddr(exp_test_const_addr_0), VF_REF);
+	exp_test_addr_1 = exp_constant(VT_ADDR, util_strtoaddr(exp_test_const_addr_1), VF_REF);
+	exp_test_addr_2 = exp_constant(VT_ADDR, util_strtoaddr(exp_test_const_addr_2), VF_REF);
+	exp_test_addr_3 = exp_constant(VT_ADDR, util_strtoaddr(exp_test_const_addr_3), VF_REF);
+	exp_test_addr_4 = exp_constant(VT_ADDR, util_strtoaddr(exp_test_const_addr_4), VF_REF);
 
-	exp_test_null = exp_constant(VT_INT, NULL);
+	exp_test_null = exp_constant(VT_INT, NULL, VF_REF);
 
 	return;
 }
