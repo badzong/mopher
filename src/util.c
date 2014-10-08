@@ -306,7 +306,12 @@ util_addrcmp(struct sockaddr_storage *ss1, struct sockaddr_storage *ss2)
 		return 0;
 	}
 
-	if (ss1 == NULL || ss2 == NULL)
+	if (ss1 == NULL)
+	{
+		return -1;
+	}
+
+	if (ss2 == NULL)
 	{
 		return 1;
 	}
