@@ -26,7 +26,7 @@ INSTALL_DIR=		$(INSTALL) -d
 # Flags
 #
 YFLAGS=			-d
-CFLAGS=			-Wall -DDEBUG @CFLAGS@
+CFLAGS=			-Wall @CFLAGS@
 LDFLAGS.modules=	-shared -nostartfiles -fPIC @LDFLAGS@
 LDFLAGS=		-rdynamic @LDFLAGS@ @LIBS@ @MOD_LIBS@
 ARFLAGS=		rcs
