@@ -683,8 +683,15 @@ dbt_janitor_cleanup(time_t now, dbt_t *dbt)
 		return -1;
 	}
 
-	log_debug("dbt_janitor: deleted %d stale records from \"%s\"", deleted,
-	    dbt->dbt_name);
+	if (deleted)
+	{
+		log_error("Database cleanup: deleted %d stale records from "
+			"\"%s\"", deleted, dbt->dbt_name);
+	}
+	else
+	{
+		log_error("Database cleanup: \"%s\" is clean", dbt->dbt_name);
+	}
 
 	return deleted;
 }
