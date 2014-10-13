@@ -30,7 +30,8 @@ typedef struct dbt_driver {
 	dbt_db_sync_t	 	 dd_sync;
 	dbt_db_sql_cleanup_t	 dd_sql_cleanup;
 	int			 dd_flags;
-	pthread_mutex_t		 dd_mutex;
+	pthread_mutex_t		 dd_lock;
+	pthread_mutex_t		 dd_walk_lock;
 } dbt_driver_t;
 
 typedef struct dbt {

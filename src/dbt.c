@@ -49,6 +49,8 @@ dbt_driver_register(dbt_driver_t *dd)
 static void
 dbt_close(dbt_t *dbt)
 {
+	int r = 0;
+
 	if (!dbt->dbt_open)
 	{
 		return;
@@ -56,7 +58,10 @@ dbt_close(dbt_t *dbt)
 
 	if ((dbt->dbt_driver->dd_flags & DBT_LOCK))
 	{
-		if (pthread_mutex_destroy(&dbt->dbt_driver->dd_mutex))
+		r |= pthread_mutex_destroy(&dbt->dbt_driver->dd_lock);
+		r |= pthread_mutex_destroy(&dbt->dbt_driver->dd_walk_lock);
+
+		if (r)
 		{
 			log_sys_error("dbt_register: ptrhead_mutex_destroy");
 		}
@@ -80,7 +85,7 @@ dbt_close(dbt_t *dbt)
 }
 
 static int
-dbt_db_lock(dbt_t *dbt)
+dbt_lock(dbt_t *dbt, pthread_mutex_t *mutex)
 {
 	/*
          * No locking required.
@@ -90,30 +95,42 @@ dbt_db_lock(dbt_t *dbt)
 		return 0;
 	}
 
-	if (pthread_mutex_lock(&dbt->dbt_driver->dd_mutex))
+	if (pthread_mutex_lock(mutex))
 	{
-		log_sys_error("dbt_db_lock: pthread_mutex_lock");
+		log_sys_error("dbt_lock: pthread_mutex_lock");
 		return -1;
 	}
 
 	return 0;
 }
 
-
 static void
-dbt_db_unlock(dbt_t *dbt)
+dbt_unlock(dbt_t *dbt, pthread_mutex_t *mutex)
 {
 	if ((dbt->dbt_driver->dd_flags & DBT_LOCK) == 0)
 	{
 		return;
 	}
 
-	if (pthread_mutex_unlock(&dbt->dbt_driver->dd_mutex))
+	if (pthread_mutex_unlock(mutex))
 	{
 		log_sys_error("dbt_db_unlock: pthread_mutex_unlock");
 	}
 
 	return;
+}
+
+static int
+dbt_db_lock(dbt_t *dbt)
+{
+	return dbt_lock(dbt, &dbt->dbt_driver->dd_lock);
+}
+
+
+static void
+dbt_db_unlock(dbt_t *dbt)
+{
+	return dbt_unlock(dbt, &dbt->dbt_driver->dd_lock);
 }
 
 int
@@ -182,14 +199,15 @@ dbt_db_walk(dbt_t *dbt, dbt_db_callback_t callback)
 {
 	int r;
 
-	if (dbt_db_lock(dbt))
+	if(dbt_lock(dbt, &dbt->dbt_driver->dd_walk_lock) == -1)
 	{
+		log_error("dbt_db_walk: dbt_lock failed");
 		return -1;
 	}
-
+	
 	r = dbt->dbt_driver->dd_walk(dbt, callback);
 
-	dbt_db_unlock(dbt);
+	dbt_unlock(dbt, &dbt->dbt_driver->dd_walk_lock);
 
 	return r;
 }
@@ -795,6 +813,7 @@ static void
 dbt_open_database(dbt_t *dbt)
 {
 	dbt_driver_t *dd;
+	int r = 0;
 
 	/*
 	 * Lookup database driver
@@ -813,7 +832,10 @@ dbt_open_database(dbt_t *dbt)
 	 */
 	if ((dd->dd_flags & DBT_LOCK))
 	{
-		if (pthread_mutex_init(&dd->dd_mutex, NULL))
+		r |= pthread_mutex_init(&dd->dd_lock, NULL);
+		r |= pthread_mutex_init(&dd->dd_walk_lock, NULL);
+
+		if (r)
 		{
 			log_sys_die(EX_SOFTWARE,
 			    "dbt_open_database: ptrhead_mutex_init");
@@ -1105,8 +1127,8 @@ dbt_test_record(dbt_test_record_t *tr, int n)
 	tr->tr_test_created = time(NULL);
 	tr->tr_test_updated = tr->tr_test_created;
 
-	// Record expired 1 second ago
-	tr->tr_test_expire = tr->tr_test_created - 1;
+	// Record expired yesterday
+	tr->tr_test_expire = tr->tr_test_created - 86400;
 }
 
 void
@@ -1144,16 +1166,20 @@ dbt_test_set(pthread_t *thread)
 
 	TEST_ASSERT(record1 != NULL && record2 != NULL, "vlist_record failed");
 	TEST_ASSERT(dbt_db_set(&dbt_test_table, record1) == 0, "dbt_db_set failed");
+	TEST_ASSERT(dbt_db_sync(&dbt_test_table) == 0, "dbt_db_sync failed");
 	TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
 	TEST_ASSERT(result != NULL, "dbt_db_get returned NULL");
 	var_delete(result);
 	result = NULL;
+
 	TEST_ASSERT(dbt_db_del(&dbt_test_table, lookup) == 0, "dbt_db_del failed");
+	TEST_ASSERT(dbt_db_sync(&dbt_test_table) == 0, "dbt_db_sync failed");
 	TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
 	TEST_ASSERT(result == NULL, "dbt_db_del returned deleted record: %s", tr1.tr_string_key);
 
 	// Add records for dbt_test_get()
 	TEST_ASSERT(dbt_db_set(&dbt_test_table, record1) == 0, "dbt_db_set failed");
+	TEST_ASSERT(dbt_db_sync(&dbt_test_table) == 0, "dbt_db_sync failed");
 	TEST_ASSERT(dbt_db_set(&dbt_test_table, record2) == 0, "dbt_db_set failed");
 	TEST_ASSERT(dbt_db_sync(&dbt_test_table) == 0, "dbt_db_sync failed");
 
@@ -1216,6 +1242,7 @@ dbt_test_prepare(char *config_key, char *driver)
 	dbt_test_table.dbt_validate = dbt_common_validate;
 	dbt_test_table.dbt_sql_invalid_where = DBT_COMMON_INVALID_SQL;
 	dbt_test_table.dbt_config_key = config_key;
+	dbt_test_table.dbt_cleanup_schedule = time(NULL);
 
 	// Init prerequisites
 	cf_init();
@@ -1262,6 +1289,8 @@ dbt_test_driver(char *config, char *driver)
 	 */
 	dbt_test_prepare(config, driver);
 
+	i = dbt_janitor_cleanup(time(NULL), &dbt_test_table);
+
 	// Start threads
 	bzero(dbt_test_thread, sizeof dbt_test_thread);
 	for (i = 0; i < dbt_test_threads; ++i)
@@ -1278,7 +1307,11 @@ dbt_test_driver(char *config, char *driver)
 		util_thread_join(dbt_test_thread[i]);
 	}
 
+	// Check cleanup
+	TEST_ASSERT(dbt_janitor_cleanup(time(NULL), &dbt_test_table), "dbt_db_cleanup failed");
+
 	dbt_test_finalize();
+
 
 	// MemDB is not persistent
 	if (strcmp(driver, "memdb.so") == 0)
