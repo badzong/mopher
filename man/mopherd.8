@@ -1,0 +1,46 @@
+.Dd July 12, 2014
+.Dt MOPHERD 8
+.Os
+.Sh NAME
+.Nm mopherd
+.Nd the mopher daemon
+.Sh SYNOPSIS
+.Nm
+.Op Fl hfC
+.Op Fl d Ar level
+.Op Fl c Ar file
+.Op Fl p Ar pidfile
+.Sh DESCRIPTION
+.Nm
+reads a list of rules and acts on each incoming mail delivery attempt
+based on various criteria and existing states.
+.Pp
+Available options are:
+.Bl -tag -width Ds
+.It Fl h
+Show usage message.
+.It Fl f
+Run in foreground, don't detach from the controlling terminal.
+.It Fl C
+Check configuration file syntax and exit.
+.It Fl d Ar level
+Set logging severity level to
+.Ar level .
+.It Fl c Ar file
+Read configuration from
+.Ar file .
+.It Fl p Ar pidfile
+Create a PID file in
+.Ar pidfile .
+.El
+.Sh FILES
+.Bl -tag -width Ds
+.It Pa @sysconfdir@/mopher/mopherd.conf
+Configuration file for the mopher daemon.
+.It Pa @sysconfdir@/mopher/mopherd.acl
+List of rules enforced by the mopher daemon.
+.El
+.Sh SEE ALSO
+.Xr mopher 7 ,
+.Xr mopherd.conf 5 ,
+.Xr mopherd.acl 5

@@ -1,0 +1,319 @@
+.Dd July 13, 2014
+.Dt MOPHERD.CONF 5
+.Os
+.Sh NAME
+.Nm mopherd.conf
+.Nd the mopher daemon configuration file
+.Sh DESCRIPTION
+The
+.Nm
+file contains the default configuration used by
+.Xr mopherd 8
+and
+.Xr mopherctl 8
+to set various parameters for mopher's core functionality and its
+modules.
+The list of all rules enforced by mopher can be found in
+.Xr mopherd.acl 5 .
+.Pp
+Comment lines in
+.Nm
+start with the
+.Ql #
+character, empty lines are treated as comments.
+Configuration directives are key-value pairs and can span multiple
+lines.
+Both key and value allow for some structure in that a key may contain
+indices and a value can be a table containing other (comma-separated)
+key-value pairs:
+.Bd -literal -offset indent
+key_a		 = "string"
+key_b		 = -1.0
+
+key_c[id_x]	 = 1000
+key_c[id_y]	 = 127.0.0.1
+
+key_d = {
+	key_e	 = "/path/to/file",
+	key_f	 = 200K,
+	key_g	 = 12h,
+	key_h	 = ::1
+}
+.Ed
+.Pp
+Each integer may have one of the following optional suffixes:
+.Bl -tag -width 8n -offset indent -compact
+.It s[econd]
+multiply by 1
+.It m[inute]
+multiply by 60
+.It h[our]
+multiply by 3600
+.It d[ay]
+multiply by 86400
+.It K[ibi]
+multiply by 1024
+.It M[ebi]
+multiply by 1048576
+.It G[ibi]
+multiply by 1073741824
+.El
+.Sh GENERAL CONFIGURATION
+The following directives control the general behaviour of mopher
+(default values are enclosed in parentheses):
+.Bl -tag -width 4n
+.It Sy acl_log_level Pq 3
+Syslog severity level (0-7) for messages logged by the
+.Em log
+keyword in
+.Xr mopherd.acl 5 .
+.It Sy acl_path Pq Qq @sysconfdir@/mopher/mopherd.acl
+Path to
+.Xr mopherd.acl 5 .
+.\" .It Sy cleanup_interval Pq 10m
+.\" FIXME: rephrase
+.\" Most mopher tables need regular clean up. Depending on the used
+.\" database backend this may require a full table lock and block all
+.\" email delivery until the table is clean. Do not bother to change
+.\" this setting unless your server handels hundreds of connections
+.\" per second.
+.\" .It Sy client_retry_interval Pq 10s
+.\" FIXME: experimental
+.It Sy control_socket Pq Qq inet:44554@127.0.0.1
+Socket used by
+.Xr mopherctl 8
+to control a running
+.Xr mopherd 8
+instance.
+Supported socket types are tcp (inet:port@address) and unix domain
+sockets (unix:/path/to/socket).
+.It Sy control_socket_permissions Pq 0660
+File system permissions of
+.Em control_socket .
+Only applies to unix domain sockets.
+.It Sy foreground Pq 0
+Run in foreground, don't detach from the controlling terminal.
+.It Sy greylist_deadline Pq 1d
+Default maximal lifetime of a greylist item.
+Older items will be removed from the greylist.
+All
+.Em greylist
+rules in
+.Xr mopherd.acl 5
+without a
+.Em deadline
+parameter will use this value.
+.It Sy greylist_visa Pq 30d
+Default maximal lifetime of a greylist visa item.
+Older visa items will be removed from the greylist.
+Greylist items are upgraded to visa items when
+.Em delay
+expires or the number of
+.Em attempts
+is met.
+Subsequent successful mail deliveries will renew any existing visa item
+(i.e. reset its remaining lifetime).
+.It Sy hostname Pq Xr gethostname 3
+Default hostname used in self-references.
+.It Sy log_level Pq 4
+Syslog severity level (0-7) for messages logged by
+.Xr mopherd 8 .
+.It Sy milter_socket Pq inet:44555@127.0.0.1
+Socket used by MTAs to communicate with a running
+.Xr mopherd 8
+instance.
+Supported socket types are tcp (inet:port@address) and unix domain
+sockets (unix:/path/to/socket).
+.It Sy milter_socket_permissions Pq 0660
+File system permissions of
+.Em milter_socket .
+Only applies to unix domain sockets.
+.It Sy milter_socket_timeout Pq 7210s
+Default timeout for any communication between mopher and MTAs.
+.\" .It Sy milter_wait Pq 1s
+.\" FIXME: rephrase
+.\" Number of seconds mopherd waits for all milter threads to close upon exit.
+.It Sy module_path Pq Qq @libdir@/mopher
+Path to loadable mopher modules.
+.Xr mopherd 8
+will load all available modules in
+.Em module_path
+during startup.
+.It Sy mopherd_user Pq Qq mopher
+User ID of
+.Xr mopherd 8
+set during startup.
+All files and sockets will be created as
+.Em mopher_user .
+.It Sy mopherd_group Pq Qq mopher
+Group ID of
+.Xr mopherd 8
+set during startup.
+All files and sockets will be created as
+.Em mopher_group .
+.It Sy tarpit_progress_interval Pq 10s
+Interval between two progress notifications issued during tarpitting.
+When
+.Xr mopherd 8
+is tarpitting a host, it needs to issue periodic notifications to the
+MTA in order to reset its timeouts.
+.It Sy workdir_path Pq Qq /
+Working directory of
+.Xr mopherd 8
+set during startup.
+.El
+.Sh TABLE CONFIGURATION
+Mopher keeps its lists and state in generic tables.
+The following two tables are part of mopher's core functionality:
+.Bl -tag -width 4n
+.It Sy state
+Contains some
+.Xr mopherd 8
+state data.
+Currently, it consists of a strictly increasing integer, incremented by
+.Xr mopherd 8
+on each new connection and used as a distinct connection identifier in
+logs.
+.It Sy greylist
+Contains greylist and visa triplets (origin, sender and recipient
+combinations) and various metadata about them.
+.El
+.Pp
+Defining a generic table also requires specifying its backend driver.
+Backend drivers will translate all requests to generic tables into
+requests as they are understood by that particular backend or library.
+.Pp
+The two most common types of backend drivers require one of the
+following two configuration directives when configuring the
+.Em greylist
+table:
+.Bd -literal -offset indent
+# illustrative example raw_db,
+# implementing a whole RDBMS
+table[greylist] = {
+	driver		= "raw_db",
+	path		= "/path/to/greylist.db"
+}
+
+# illustrative example net_db,
+# implementing socket access methods to a RDBMS
+table[greylist] = {
+	driver		= "net_db",
+	host		= 127.0.0.1,
+	database	= "mopher",
+	table		= "greylist",
+	user		= "mopher",
+	pass		= "secret"
+}
+.Ed
+.Pp
+Currently available backend drivers are:
+.Bl -tag -width 4n
+.It Sy memdb Pq Memory DB
+A simple hash table stored in main memory.
+Not persistent.
+If no backend driver was configured for a table, that table will use the
+.Em memdb
+driver and therefore lose all its content as soon as
+.Xr mopherd 8
+shuts down.
+.It Sy bdb Pq Berkeley DB
+Embedded database for key/value data.
+Uses the legacy format/API (1.85) that is in most distributions either
+part of the standard C library or offered separately by one of the more
+recent db software-packages.
+.It Sy sakila Pq MySQL
+SQL database management system.
+.El
+.Pp
+.Em Note :
+All backend drivers available in the mopher source distribution are
+usually compiled as loadable mopher modules.
+.Sh MODULE CONFIGURATION
+Loadable mopher modules may extend mopher in mainly two ways:
+A Module may provide additional backend drivers for tables or additional
+symbols and functions that are made available to
+.Xr mopherd 8
+during its evaluation of
+.Xr mopherd.acl 5 .
+.Pp
+The following list only describes configuration directives for modules
+that require some configuration.
+See
+.Xr mopherd.acl 5
+for additional information on usage and behaviour.
+.Ss Relay and Penpal Counter
+.Em counter
+counts the amount of successfully delivered messages by a relay (address
+or domain) or penpal (origin, sender and recipient combination).  Both
+counters are stored in tables and therefore require the selection of a
+backend driver:
+.Bd -literal -offset indent
+table[counter_relay] = {
+	driver		= "bdb",
+	path		= "/path/to/relay.db"
+}
+
+table[counter_penpal] = {
+	driver		= "bdb",
+	path		= "/path/to/penpal.db"
+}
+.Ed
+.Pp
+The following directives control the general behaviour of
+.Em counter
+(default values are enclosed in parentheses):
+.Bl -tag -width 4n
+.It Sy counter_expire_low Pq 7d
+Default maximal lifetime of a counter item with a value less than
+.Em counter_threshold .
+.It Sy counter_expire_high Pq 60d
+Default maximal lifetime of a counter item with a value greater than
+.Em counter_threshold .
+.It Sy counter_threshold Pq 3
+See
+.Em counter_expire_low
+and
+.Em counter_expire_high .
+.El
+.Ss DNSBL Resolver
+.Em rbl
+maps DNSBL query results to
+.Xr mopherd.acl 5
+symbols.
+Each black- or whitelist needs to be defined through the indexed keyword
+.Em rbl
+before it can be used in
+.Xr mopherd.acl 5 :
+.Bd -literal -offset indent
+rbl[list_foo] = blacklist.foo.org
+rbl[list_bar] = whitelist.bar.net
+.Ed
+.Pp
+where the name of the index is the name of the symbol exported to
+.Xr mopherd.acl 5 .
+.Ss SpamAssassin Resolver
+.Em spamd
+submits messages to SpamAssassin and maps the evaluation results to
+.Xr mopherd.acl 5
+symbols.
+.Pp
+The following directives control the general behaviour of
+.Em spamd
+(default values are enclosed in parentheses):
+.Bl -tag -width 4n
+.It Sy spamd_socket Pq Qq inet:783@127.0.0.1
+Socket used by
+.Xr mopherd 8
+to check incoming messages for their score and matching tests.
+.El
+.Sh IMPLEMENTATION NOTES
+Third party distributors of binary packages may split a full mopher
+build into several complementary packages in order to make some
+dependencies optional.
+In such cases, it is possible that some modules are not available on
+your system even though they are documented here.
+.Sh SEE ALSO
+.Xr mopher 7 ,
+.Xr mopherd 8 ,
+.Xr mopherctl 8

@@ -1,0 +1,492 @@
+MOPHERD.ACL(5)              BSD File Formats Manual             MOPHERD.ACL(5)
+
+NNAAMMEE
+     mmoopphheerrdd..aaccll -- the mopher daemon access control list
+
+DDEESSCCRRIIPPTTIIOONN
+     The mmoopphheerrdd..aaccll file contains a list of rules enforced by mopherd(8) at
+     one or more milter stages.
+
+     Comment lines in mmoopphheerrdd..aaccll start with the `#' character, empty lines
+     are treated as comments.  Statements are either definitions or rules and
+     can span multiple lines.
+
+RRUULLEESS
+     A statement is a rule if it has the following structure:
+
+           ssttaaggee ccoonnddiittiioonn aaccttiioonn
+
+     A _s_t_a_g_e is generally named after a milter stage and it is therefore nec-
+     essary to know how the available milter stages correspond to the various
+     stages of a SMTP transaction:
+
+           mmiilltteerr ssttaaggee    SSMMTTPP ssttaaggee
+           connect         (connection established)
+           helo            HELO (hostname)
+           envfrom         MAIL FROM: (sender)
+           envrcpt         RCPT TO: (one recipient)
+           data            DATA
+           header          (one header)
+           eoh             (empty line)
+           body            (one line of body)
+           eom             .
+           close           QUIT
+
+     The milter stages _e_n_v_r_c_p_t, _h_e_a_d_e_r and _b_o_d_y can be entered one or more
+     times during a SMTP transaction.  If the remote host or the MTA closes
+     the connection prematurely while being in any stage between _e_n_v_f_r_o_m and
+     _e_o_m, the additional stage _a_b_o_r_t will be entered before entering _c_l_o_s_e.
+     If the remote host issues unknown commands during a SMTP transaction, the
+     additional stage _u_n_k_n_o_w_n will be entered.
+
+     After entering a milter stage, _c_o_n_d_i_t_i_o_n is evaluated.  If the evaluation
+     returns true, _a_c_t_i_o_n is taken.  A condition is an _e_x_p_r_e_s_s_i_o_n.
+
+EEXXPPRREESSSSIIOONNSS
+     An expression is recursively defined as one or more expressions, associ-
+     ated by _a_r_i_t_h_m_e_t_i_c, _r_e_l_a_t_i_o_n_a_l and _b_o_o_l_e_a_n _o_p_e_r_a_t_o_r_s.  Basic expressions
+     are _c_o_n_s_t_a_n_t_s, _v_a_r_i_a_b_l_e_s, _s_y_m_b_o_l_s and _f_u_n_c_t_i_o_n_s.
+
+     A _c_o_n_s_t_a_n_t is either a string, integer, float or address:
+
+           "foo"           # string
+           "1"             # string
+           ""              # string
+           100             # integer
+           1.1             # float
+           ::1             # address
+           127.0.0.1       # address
+
+     Each integer may have one of the following optional suffixes:
+           s[econd]  multiply by 1
+           m[inute]  multiply by 60
+           h[our]    multiply by 3600
+           d[ay]     multiply by 86400
+           K[ibi]    multiply by 1024
+           M[ebi]    multiply by 1048576
+           G[ibi]    multiply by 1073741824
+
+     A _v_a_r_i_a_b_l_e begins with a `$' and is a resolvable entity that may be set
+     at any milter stage.
+
+     A _s_y_m_b_o_l is a resolvable entity that may or may not be available at a
+     particular milter stage.
+
+     A _f_u_n_c_t_i_o_n is a resolvable entity that is always available and has zero
+     or more parameters.
+
+     Variables, symbols and functions will only be resolved if they appear in
+     an expression that is being evaluated.  Resolving variables, symbols and
+     functions may yield unknown values alias _n_u_l_l values.  Unknown values
+     have a certain effect on the way boolean operators work.  If one or more
+     operands in an arithmetic or relational operation is null, the result
+     will be unknown and therefore null.
+
+     _A_r_i_t_h_m_e_t_i_c _o_p_e_r_a_t_i_o_n_s (`+', `-', `*', `/') on integers and floats work as
+     one might expect.  Implicit type conversion will take place if necessary
+     and possible.  Division (`/') of integers may yield truncated results
+     while addition (`+') of strings will concatenate them:
+
+           "foo" + "bar"   # "foobar"
+           3 / 2           # 1
+           3 / 2.0         # 1.5
+
+     _R_e_l_a_t_i_o_n_a_l _o_p_e_r_a_t_i_o_n_s (`<', `<=', `>', `>=', `==', `!=') on integers,
+     floats and strings work as one might expect.  Implicit type conversion
+     will take place if necessary and possible.
+
+     _B_o_o_l_e_a_n _o_p_e_r_a_t_o_r_s (`!', `&&', `||') mimic their counterparts within the
+     Kleene logic which is a three-valued logic.  Truth values of a 3VL con-
+     sist of _t_r_u_e, _f_a_l_s_e and a third, indeterminate value _u_n_k_n_o_w_n or _n_u_l_l.
+
+     The truth table for `!' (NOT) and any expression _A:
+
+           AA        !!AA
+           false    true
+           null     null
+           true     false
+
+     The truth table for `&&' (AND), `||' (OR) and any expression _A and _B:
+
+           AA        BB        AA &&&& BB   AA |||| BB
+           false    false    false    false
+           false    null     false    null
+           false    true     false    true
+           null     false    false    null
+           null     null     null     null
+           null     true     null     true
+           true     false    false    true
+           true     null     null     true
+           true     true     true     true
+
+     Evaluating an integer or a float will yield false if the particular value
+     is 0, true otherwise.  Evaluating a string will yield false if its value
+     is "" (empty) or "0", true otherwise.  Evaluating an address will yield
+     false if the address is invalid, true otherwise.
+
+     _N_o_t_e: During the evaluation of any rule, action will only be taken if
+     condition is true.  false and null are equivalent in that case.
+
+AACCTTIIOONNSS
+     An action describes how mopherd(8) and therefore the MTA, should handle
+     the current SMTP transaction.  Actions may have parameters that may or
+     may not be omitted.
+
+     If the examples in the following list do not explicitly mention the stage
+     and condition part of a rule, they are implied but omitted for reasons of
+     brevity.
+
+     ccoonnttiinnuuee
+           The continue action will stop the evaluation of any remaining rules
+           tied to the current milter stage.  Evaluation will continue at the
+           next milter stage.
+
+     rreejjeecctt
+           The reject action will reject the current SMTP transaction with a
+           permanent error code and stop any further processing.
+
+     ddiissccaarrdd
+           The discard action will accept the current SMTP transaction, dis-
+           card the message silently and stop any further processing.
+
+     aacccceepptt
+           The accept action will accept the current SMTP transaction and stop
+           any further processing.
+
+     tteemmppffaaiill
+           The tempfail action will reject the current SMTP transaction with a
+           temporary error code and stop any further processing.
+
+     ggrreeyylliisstt [ddeellaayy _e_x_p] [aatttteemmppttss _e_x_p] [ddeeaaddlliinnee _e_x_p] [vviissaa _e_x_p]
+           Until one of two possible thresholds are met, the greylist action
+           will reject the current SMTP transaction with a temporary error
+           code and stop any further processing.
+
+           Greylisting an origin (address or domain) means keeping track of
+           the effort made by that origin to deliver a message by a specific
+           sender to a specific recipient.  Effort is defined as either the
+           number of _a_t_t_e_m_p_t_s made by the origin or the _d_e_l_a_y he was willing
+           to accept in order to carry out a particular SMTP transaction:
+
+                 # reject until 12 hours have passed
+                 #
+                 greylist delay 12h
+
+                 # reject until 2 attempts are recorded
+                 #
+                 greylist attempts 2
+
+                 # reject until 2 attempts are recorded within 4 hours
+                 #
+                 greylist attempts 2 deadline 4h
+
+                 # reject until 12 hours have passed
+                 #   or 5 attempts are recorded within 4 hours
+                 #
+                 greylist delay 12h attempts 5 deadline 4h
+
+           After the required effort has been made, mopherd(8) will upgrade
+           the greylist triplet (origin, sender and recipient combination) to
+           a _v_i_s_a triplet.  A visa triplet will allow for undelayed SMTP
+           transactions until it expires:
+
+                 # reject until 12 hours have passed
+                 #   or 5 attempts are recorded within 4 hours
+                 #   and issue a visa for 7 days on success
+                 #
+                 greylist delay 12h attempts 5 deadline 4h visa 7d
+
+           Successful SMTP transactions that resemble a valid visa triplet
+           will automatically trigger the renewal of the corresponding visa.
+
+           _N_o_t_e: Right before any greylist rules, your mmoopphheerrdd..aaccll should con-
+           tain one empty greylist rule:
+
+                 # empty greylist rule
+                 #
+                 <stage> greylist
+
+           An empty greylist rule will compare all existing greylist triplets
+           with the current SMTP transaction and, in case a triplet matches,
+           avoid the evaluation of subsequent greylist rules that are tied to
+           potentially costly conditions.
+
+     ttaarrppiitt _e_x_p
+           The tarpit action will delay the current SMTP transaction (without
+           rejecting it):
+
+                 # delay for 60 seconds
+                 #
+                 tarpit 60s
+
+     lloogg _e_x_p
+           The log action will log any custom message:
+
+                 # log "New connection from some.host.name!"
+                 #
+                 log "New connection from " + milter_hostname + "!"
+
+     sseett _e_x_p
+           The set action will set a variable:
+
+                 # set $flag to 1
+                 #
+                 set $flag = 1
+
+     jjuummpp _e_x_p
+           The jump action will stop the evaluation of any remaining rules
+           tied to the current stage and jump to a different stage:
+
+                 # jump to first rule of stage2 if <condition> is true
+                 #
+                 stage1 <condition> jump stage2
+                 stage1 ...      # not evaluated if <condition> is true
+                 stage1 ...      # not evaluated if <condition> is true
+
+                 stage2 ...
+                 stage2 ...
+                 stage2 ...
+
+           From the perspective of mopherd(8), there are no special stages.
+           Every stage is just a named list of rules, while only an equally
+           named stage will be processed during a specific milter stage.
+           Within that process, jumps may happen and extend the original list.
+
+           _W_a_r_n_i_n_g: Beware of circular jumps.
+
+     aadddd hheeaaddeerr _e_x_p vvaalluuee _e_x_p
+           The add header action will add _h_e_a_d_e_r if it doesn't exist and
+           replace its _v_a_l_u_e otherwise.
+
+     iinnsseerrtt hheeaaddeerr _e_x_p vvaalluuee _e_x_p [iinnddeexx _e_x_p]
+           The insert header action will always add _h_e_a_d_e_r.  If _i_n_d_e_x is
+           greater than the number of existing headers, _h_e_a_d_e_r will be added
+           at the end of the list.  If _i_n_d_e_x is 0 (default), _h_e_a_d_e_r will be
+           added at the beginning of the list.
+
+     cchhaannggee hheeaaddeerr _e_x_p vvaalluuee _e_x_p [iinnddeexx _e_x_p]
+           The change header action will replace the _v_a_l_u_e of an existing
+           _h_e_a_d_e_r.  If multiple _h_e_a_d_e_rs exist, _i_n_d_e_x may be used to replace
+           only a particular occurence of _h_e_a_d_e_r.
+
+     ddeelleettee hheeaaddeerr _e_x_p [iinnddeexx _e_x_p]
+           The delete header action will delete _h_e_a_d_e_r.  If multiple _h_e_a_d_e_rs
+           exist, _i_n_d_e_x may be used to delete only a particular occurence of
+           _h_e_a_d_e_r.
+
+     cchhaannggee ffrroomm _e_x_p [eessmmttpp _e_x_p]
+           The change from action will replace the envelope sender address.
+           If _e_s_m_t_p is not null, it will be interpreted as a string containing
+           additional ESMTP arguments.
+
+     aadddd rrccpptt _e_x_p [eessmmttpp _e_x_p]
+           The add rcpt action will add an envelope recipient.  If _e_s_m_t_p is
+           not null, it will be interpreted as a string containing additional
+           ESMTP arguments.
+
+     ddeelleettee rrccpptt _e_x_p
+           The delete rcpt action will remove an envelope recipient.  The
+           recipient address must be surrounded by angle brackets.
+
+     The actions _g_r_e_y_l_i_s_t, _t_e_m_p_f_a_i_l and _r_e_j_e_c_t may be complemented by a custom
+     SMTP reply:
+
+     <action> rreeppllyy _e_x_p [xxccooddee _e_x_p] mmeessssaaggee _e_x_p
+           The MTA will use _r_e_p_l_y as the SMTP reply code, _x_c_o_d_e as the
+           extended SMTP reply code and _m_e_s_s_a_g_e as the SMTP reply message:
+
+                 # reject known spammer
+                 #
+                 reject reply 550 xcode "5.7.1" message "No thanks, bye!"
+
+     The effect of _a_c_c_e_p_t, _g_r_e_y_l_i_s_t, _t_e_m_p_f_a_i_l, _r_e_j_e_c_t and _d_i_s_c_a_r_d, the timing
+     of a reply and the visibility of its message depend all on the way a par-
+     ticular MTA implementation handles SMTP transactions.  In other words,
+     mopherd(8) just passes its verdict (and a reply) but has no influence on
+     whatever the MTA will do next.
+
+DDEEFFIINNIITTIIOONNSS
+     A definition is a placeholder for any _e_x_p_r_e_s_s_i_o_n:
+
+           # simplify your mmoopphheerrdd..aaccll with definitions
+           #
+           define foo _s_o_m_e _c_o_m_p_l_i_c_a_t_e_d _a_r_i_t_h_m_e_t_i_c _e_x_p_r_e_s_s_i_o_n
+           define bar _a_n_o_t_h_e_r _c_o_m_p_l_i_c_a_t_e_d _a_r_i_t_h_m_e_t_i_c _e_x_p_r_e_s_s_i_o_n
+
+           connect log "foo = " + foo
+           envrcpt log "bar = " + bar
+           data    log "foo + bar = " + (foo + bar)
+
+     The evaluation of definitions is not limited in any way.  Definitions may
+     contain symbols, functions, operators or anything else that also makes up
+     expressions as defined in the beginning of this document.
+
+SSYYMMBBOOLLSS
+     The following list describes all symbols known to mopherd(8).  Type and
+     stage availability are enclosed in parentheses.  A symbol is either
+     always available (_a_n_y), exclusively bound to a milter stage (_n_a_m_e) or
+     bound to a milter stage and all stages following that stage (_n_a_m_e_*).
+
+     ccoouunntteerr__ppeennppaall (number, any)
+
+     ccoouunntteerr__rreellaayy (number, envrcpt)
+
+     ggrreeyylliisstt__aatttteemmppttss (FIXME, envfrom*)
+
+     ggrreeyylliisstt__ccoonnnneeccttiioonnss (FIXME, envfrom*)
+
+     ggrreeyylliisstt__ccrreeaatteedd (FIXME, envfrom*)
+
+     ggrreeyylliisstt__ddeeaaddlliinnee (FIXME, envfrom*)
+
+     ggrreeyylliisstt__ddeellaayy (FIXME, envfrom*)
+
+     ggrreeyylliisstt__ddeellaayyeedd (FIXME, envfrom*)
+
+     ggrreeyylliisstt__eexxppiirree (FIXME, envfrom*)
+
+     ggrreeyylliisstt__lliisstteedd (FIXME, envfrom*)
+
+     ggrreeyylliisstt__ppaasssseedd (FIXME, envfrom*)
+
+     ggrreeyylliisstt__uuppddaatteedd (FIXME, envfrom*)
+
+     ggrreeyylliisstt__vviissaa (FIXME, envfrom*)
+
+     mmiilltteerr__aaccttiioonn (FIXME, connect*)
+
+     mmiilltteerr__aaddddrrssttrr (FIXME, any)
+
+     mmiilltteerr__aauutthh__aauutthheenn (FIXME, envfrom*)
+
+     mmiilltteerr__aauutthh__aauutthhoorr (FIXME, envfrom*)
+
+     mmiilltteerr__aauutthh__ttyyppee (FIXME, envfrom*)
+
+     mmiilltteerr__bbooddyy (FIXME, eom)
+
+     mmiilltteerr__bbooddyy__ssiizzee (FIXME, eom)
+
+     mmiilltteerr__cceerrtt__iissssuueerr (FIXME, helo*)
+
+     mmiilltteerr__cceerrtt__ssuubbjjeecctt (FIXME, helo*)
+
+     mmiilltteerr__cciipphheerr (FIXME, helo*)
+
+     mmiilltteerr__cciipphheerr__bbiittss (FIXME, helo*)
+
+     mmiilltteerr__cclliieenntt (FIXME, any)
+
+     mmiilltteerr__cclliieenntt__aaddddrr (FIXME, any)
+
+     mmiilltteerr__cclliieenntt__ccoonnnneeccttiioonnss (FIXME, connect)
+
+     mmiilltteerr__cclliieenntt__nnaammee (FIXME, any)
+
+     mmiilltteerr__cclliieenntt__ppoorrtt (FIXME, any)
+
+     mmiilltteerr__cclliieenntt__ppttrr (FIXME, any)
+
+     mmiilltteerr__ccttxx (FIXME, any)
+
+     mmiilltteerr__ddaaeemmoonn__nnaammee (FIXME, any)
+
+     mmiilltteerr__eennvvffrroomm (FIXME, envfrom*)
+
+     mmiilltteerr__eennvvffrroomm__aaddddrr (FIXME, envfrom*)
+
+     mmiilltteerr__eennvvrrccpptt (FIXME, envrcpt*)
+
+     mmiilltteerr__eennvvrrccpptt__aaddddrr (FIXME, envrcpt*)
+
+     mmiilltteerr__ggrreeyylliisstt__ssrrcc (FIXME, any)
+
+     mmiilltteerr__hheeaaddeerr (FIXME, eoh*)
+
+     mmiilltteerr__hheeaaddeerr__nnaammee (FIXME, header)
+
+     mmiilltteerr__hheeaaddeerr__ssiizzee (FIXME, eoh*)
+
+     mmiilltteerr__hheeaaddeerr__vvaalluuee (FIXME, header)
+
+     mmiilltteerr__hheelloo (FIXME, helo*)
+
+     mmiilltteerr__hhoossttaaddddrr (FIXME, any)
+
+     mmiilltteerr__hhoossttnnaammee (FIXME, any)
+
+     mmiilltteerr__iidd (FIXME, any)
+
+     mmiilltteerr__mmaaiill__aaddddrr (FIXME, data*)
+
+     mmiilltteerr__mmaaiill__hhoosstt (FIXME, data*)
+
+     mmiilltteerr__mmaaiill__mmaaiilleerr (FIXME, data*)
+
+     mmiilltteerr__mmeessssaaggee__ssiizzee (FIXME, eom)
+
+     mmiilltteerr__mmttaa__vveerrssiioonn (FIXME, any)
+
+     mmiilltteerr__mmyyhhoossttnnaammee (FIXME, any)
+
+     mmiilltteerr__qquueeuueeiidd (FIXME, eoh*)
+
+     mmiilltteerr__rrccpptt__aaddddrr (FIXME, envrcpt)
+
+     mmiilltteerr__rrccpptt__hhoosstt (FIXME, envrcpt)
+
+     mmiilltteerr__rrccpptt__mmaaiilleerr (FIXME, envrcpt)
+
+     mmiilltteerr__rreecceeiivveedd (FIXME, any)
+
+     mmiilltteerr__rreecciippiieenntt__lliisstt (FIXME, data*)
+
+     mmiilltteerr__rreecciippiieennttss (FIXME, envrcpt*)
+
+     mmiilltteerr__ssttaaggee (FIXME, any)
+
+     mmiilltteerr__ssttaaggeennaammee (FIXME, any)
+
+     mmiilltteerr__ssuubbjjeecctt (FIXME, eoh*)
+
+     mmiilltteerr__ttllss__vveerrssiioonn (FIXME, helo*)
+
+     mmiilltteerr__uunnkknnoowwnn__ccoommmmaanndd (FIXME, unknown)
+
+     ssppaammdd__ssccoorree
+
+     ssppaammdd__ssppaamm
+
+     ssppaammdd__ssyymmbboollss
+
+     ssppff
+
+     ssppff__rreeaassoonn
+
+     ttaarrppiitt__ddeellaayyeedd
+
+FFUUNNCCTTIIOONNSS
+     ccaasstt
+
+     lliisstt__ccoonnttaaiinnss
+
+     rreeggeexx__iimmaattcchh
+
+     rreeggeexx__mmaattcchh
+
+     ssttrriinngg__mmaaiillaaddddrr
+
+     ssttrriinngg__ssttrrccmmpp
+
+     ssttrriinngg__ssttrrlleenn
+
+IIMMPPLLEEMMEENNTTAATTIIOONN NNOOTTEESS
+     Third party distributors of binary packages may split a full mopher build
+     into several complementary packages in order to make some dependencies
+     optional.  In such cases, it is possible that some modules are not avail-
+     able on your system even though they are documented here.
+
+SSEEEE AALLSSOO
+     mopher(7), mopherd(8), mopherctl(8)
+
+BSD                           September 30, 2014                           BSD

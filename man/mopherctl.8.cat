@@ -1,0 +1,46 @@
+MOPHERCTL(8)              BSD System Manager's Manual             MOPHERCTL(8)
+
+NNAAMMEE
+     mmoopphheerrccttll -- the mopher daemon control utility
+
+SSYYNNOOPPSSIISS
+     mmoopphheerrccttll [--hh] [--dd _l_e_v_e_l] [--cc _f_i_l_e] [--ss _h_o_s_t] _c_o_m_m_a_n_d
+
+DDEESSCCRRIIPPTTIIOONN
+     mmoopphheerrccttll controls the mopher daemon.
+
+     Available options are:
+
+     --hh      Show usage message.
+
+     --dd _l_e_v_e_l
+             Set logging severity level to _l_e_v_e_l
+
+     --cc _f_i_l_e
+             Read configuration from _f_i_l_e.
+
+     --ss _h_o_s_t
+             Connect to _h_o_s_t.
+
+     _c_o_m_m_a_n_d is one of the following:
+
+     dump _t_a_b_l_e
+             Print raw content of _t_a_b_l_e.
+
+     greylist dump
+             Print formatted content of the greylist-table.
+
+     greylist pass _o_r_i_g_i_n _f_r_o_m _r_c_p_t
+             Temporarily whitelist triplet.
+
+FFIILLEESS
+     @sysconfdir@/mopher/mopherd.conf
+             Configuration file for the mopher daemon.
+
+     @sysconfdir@/mopher/mopherd.acl
+             List of rules enforced by the mopher daemon.
+
+SSEEEE AALLSSOO
+     mopher(7), mopherd.conf(5), mopherd.acl(5)
+
+BSD                              July 13, 2014                             BSD

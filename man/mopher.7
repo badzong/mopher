@@ -1,0 +1,93 @@
+.Dd July 11, 2014
+.Dt MOPHER 7
+.Os
+.Sh NAME
+.Nm mopher
+.Nd versatile mail filter
+.Sh DESCRIPTION
+The mail gopher (mopher) is an extension to all mail transfer agents
+(MTAs) that implement the Sendmail Milter API.
+It reads a list of rules and acts on each incoming mail delivery attempt
+based on various criteria and existing states.
+Since the general idea behind mopher is to replace the chain of milters
+that is often consulted by the MTA, mopher's design is modular and its
+language can be extended through a variety of loadable mopher
+modules.
+.Pp
+The following list only describes mopher's core features, while mopher's
+remaining functionality is part of its available modules:
+.Bl -tag -width Ds
+.It Sy Greylisting
+Mopher supports indiscriminate and selective greylisting.
+It lists either individual addresses or whole domains (based on reverse
+lookups and rules provided by Mozilla's Public Suffix List) and keeps
+track of all retries by that particular origin.
+Listing domains avoids cases, where several load balancing MTAs are
+trying to deliver the same message, while counting retries and acting
+upon the result can speed up the inevitable.
+.It Sy Whitelisting
+Mopher supports whitelisting origins (address or domain) based on their
+amount of successfully delivered messages.
+It also tracks penpals, which are triplets containing the origin, the
+sender- and the recipient-address.
+Whitelisting based on penpals is the prefered strategy when dealing with
+Email providers that host large numbers of legitimate users but also
+significant amounts of spammers.
+.It Sy Tarpitting
+Mopher supports delaying incoming mail delivery attempts.
+Tarpitting, like any other action, can be applied selectively.
+.It Sy Generic Storage
+All tables kept by mopher are accessed through a generic interface.
+The selection of back-ends is therefore only limited by the amount of
+available database modules.
+Currently, several back-end modules are provided.
+.It Sy Custom Logging
+Mopher uses a well structured default log format and allows for
+additional custom logging at any stage, which also includes the access
+to all symbols available at that particular stage.
+.It Sy Custom Headers
+The injection of custom headers is possible.
+Like with custom logging, all symbols available at a particular stage
+are also available when defining a custom header and its content.
+.It Sy Control Socket
+Communication with a running mopher daemon is possible through its
+control socket.
+Available actions are currently limited to the printing of tables and
+modifying of greylist items.
+.El
+.Pp
+Successfully configuring and running mopher requires a basic
+understanding of SMTP and its various stages.
+Users are also encouraged to consult
+.Xr mopherd.acl 5 ,
+in order to get an overview of the basic language and its expressions.
+.Sh FILES
+.Bl -tag -width Ds
+.It Pa @sbindir@/mopherd
+The mopher daemon.
+.It Pa @sbindir@/mopherctl
+The mopher daemon control utility.
+.It Pa @sysconfdir@/mopher/mopherd.conf
+Configuration file for the mopher daemon.
+.It Pa @sysconfdir@/mopher/mopherd.acl
+List of rules enforced by the mopher daemon.
+.It Pa @libdir@/mopher
+Directory containing loadable mopher modules.
+.El
+.Sh SEE ALSO
+.Xr mopherd 8 ,
+.Xr mopherctl 8 ,
+.Xr mopherd.conf 5 ,
+.Xr mopherd.acl 5
+.Sh AUTHORS
+.An Manuel Badzong ,
+.Mt manuel@badzong.com
+.An Petar Bogdanovic ,
+.Mt petar@smokva.net
+.Sh BUGS
+Any issues related to building, running or configuring mopher can be
+reported at the following location:
+.Lk https://github.com/badzong/mopher/issues
+.Pp
+There is also a general discussion mailing-list:
+.Lk https://groups.google.com/d/forum/mopher

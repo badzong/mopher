@@ -1,0 +1,1293 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN"
+ "http://www.w3.org/TR/MathML2/dtd/xhtml-math11-f.dtd"
+ [<!ENTITY mathml "http://www.w3.org/1998/Math/MathML">]>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta name="generator" content="groff -Txhtml, see www.gnu.org"/>
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII"/>
+<meta name="Content-Style" content="text/css"/>
+<style type="text/css">
+       .center { text-align: center }
+       .right  { text-align: right }
+       p       { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       pre     { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       table   { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       h1      { text-align: center }
+</style>
+<!-- Creator     : groff version 1.21 -->
+<!-- CreationDate: Tue Oct 14 21:26:34 2014 -->
+<title></title>
+</head>
+<body>
+
+<hr/>
+
+
+<p>MOPHERD.ACL(5) BSD File Formats Manual
+MOPHERD.ACL(5)</p>
+
+<p style="margin-top: 1em"><b>NAME</b></p>
+
+<p style="margin-left:6%;"><b>mopherd.acl</b> &mdash; the
+mopher daemon access control list</p>
+
+<p style="margin-top: 1em"><b>DESCRIPTION</b></p>
+
+<p style="margin-left:6%;">The <b>mopherd.acl</b> file
+contains a list of rules enforced by mopherd(8) at one or
+more milter stages.</p>
+
+<p style="margin-left:6%; margin-top: 1em">Comment lines in
+<b>mopherd.acl</b> start with the &lsquo;#&rsquo; character,
+empty lines are treated as comments. Statements are either
+definitions or rules and can span multiple lines.</p>
+
+<p style="margin-top: 1em"><b>RULES</b></p>
+
+<p style="margin-left:6%;">A statement is a rule if it has
+the following structure:</p>
+
+<p style="margin-left:14%; margin-top: 1em"><b>stage
+condition action</b></p>
+
+<p style="margin-left:6%; margin-top: 1em">A <i>stage</i>
+is generally named after a milter stage and it is therefore
+necessary to know how the available milter stages correspond
+to the various stages of a SMTP transaction:</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<colgroup><col width="14%"></col>
+<col width="59%"></col>
+<col width="18%"></col>
+<col width="9%"></col>
+</colgroup>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p><b>milter stage</b></p></td>
+<td>
+
+
+<p><b>SMTP stage</b></p></td>
+<td>
+</td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>connect</p></td>
+<td>
+
+
+<p>(connection established)</p></td>
+<td>
+</td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>helo</p></td>
+<td>
+
+
+<p>HELO (hostname)</p></td>
+<td>
+</td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>envfrom</p></td>
+<td>
+
+
+<p>MAIL FROM: (sender)</p></td>
+<td>
+</td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>envrcpt</p></td>
+<td>
+
+
+<p>RCPT TO: (one recipient)</p></td>
+<td>
+</td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>data</p></td>
+<td>
+
+
+<p>DATA</p></td>
+<td>
+</td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>header</p></td>
+<td>
+
+
+<p>(one header)</p></td>
+<td>
+</td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>eoh</p></td>
+<td>
+
+
+<p>(empty line)</p></td>
+<td>
+</td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>body</p></td>
+<td>
+
+
+<p>(one line of body)</p></td>
+<td>
+</td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>eom</p></td>
+<td>
+
+
+<p>.</p></td>
+<td>
+</td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>close</p></td>
+<td>
+
+
+<p>QUIT</p></td>
+<td>
+</td></tr>
+</table>
+
+<p style="margin-left:6%; margin-top: 1em">The milter
+stages <i>envrcpt</i>, <i>header</i> and <i>body</i> can be
+entered one or more times during a SMTP transaction. If the
+remote host or the MTA closes the connection prematurely
+while being in any stage between <i>envfrom</i> and
+<i>eom</i>, the additional stage <i>abort</i> will be
+entered before entering <i>close</i>. If the remote host
+issues unknown commands during a SMTP transaction, the
+additional stage <i>unknown</i> will be entered.</p>
+
+<p style="margin-left:6%; margin-top: 1em">After entering a
+milter stage, <i>condition</i> is evaluated. If the
+evaluation returns true, <i>action</i> is taken. A condition
+is an <i>expression</i>.</p>
+
+<p style="margin-top: 1em"><b>EXPRESSIONS</b></p>
+
+<p style="margin-left:6%;">An expression is recursively
+defined as one or more expressions, associated by
+<i>arithmetic</i>, <i>relational</i> and <i>boolean
+operators</i>. Basic expressions are <i>constants</i>,
+<i>variables</i>, <i>symbols</i> and <i>functions</i>.</p>
+
+<p style="margin-left:6%; margin-top: 1em">A
+<i>constant</i> is either a string, integer, float or
+address:</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<colgroup><col width="14%"></col>
+<col width="10%"></col>
+<col width="11%"></col>
+<col width="10%"></col>
+<col width="55%"></col>
+</colgroup>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>&quot;foo&quot;</p></td>
+<td>
+</td>
+<td>
+
+
+<p># string</p></td>
+<td>
+</td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>&quot;1&quot;</p></td>
+<td>
+</td>
+<td>
+
+
+<p># string</p></td>
+<td>
+</td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>&quot;&quot;</p></td>
+<td>
+</td>
+<td>
+
+
+<p># string</p></td>
+<td>
+</td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>100</p></td>
+<td>
+</td>
+<td>
+
+
+<p># integer</p></td>
+<td>
+</td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>1.1</p></td>
+<td>
+</td>
+<td>
+
+
+<p># float</p></td>
+<td>
+</td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>::1</p></td>
+<td>
+</td>
+<td>
+
+
+<p># address</p></td>
+<td>
+</td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>127.0.0.1</p></td>
+<td></td>
+<td>
+
+
+<p># address</p></td>
+<td>
+</td></tr>
+</table>
+
+<p style="margin-left:6%; margin-top: 1em">Each integer may
+have one of the following optional suffixes:</p>
+
+<p>s[econd]</p>
+
+<p style="margin-left:27%; margin-top: 1em">multiply by
+1</p>
+
+<p>m[inute]</p>
+
+<p style="margin-left:27%; margin-top: 1em">multiply by
+60</p>
+
+<p>h[our]</p>
+
+<p style="margin-left:27%; margin-top: 1em">multiply by
+3600</p>
+
+<p>d[ay]</p>
+
+<p style="margin-left:27%; margin-top: 1em">multiply by
+86400</p>
+
+<p>K[ibi]</p>
+
+<p style="margin-left:27%; margin-top: 1em">multiply by
+1024</p>
+
+<p>M[ebi]</p>
+
+<p style="margin-left:27%; margin-top: 1em">multiply by
+1048576</p>
+
+<p>G[ibi]</p>
+
+<p style="margin-left:27%; margin-top: 1em">multiply by
+1073741824</p>
+
+<p style="margin-left:6%; margin-top: 1em">A
+<i>variable</i> begins with a &lsquo;$&rsquo; and is a
+resolvable entity that may be set at any milter stage.</p>
+
+<p style="margin-left:6%; margin-top: 1em">A <i>symbol</i>
+is a resolvable entity that may or may not be available at a
+particular milter stage.</p>
+
+<p style="margin-left:6%; margin-top: 1em">A
+<i>function</i> is a resolvable entity that is always
+available and has zero or more parameters.</p>
+
+<p style="margin-left:6%; margin-top: 1em">Variables,
+symbols and functions will only be resolved if they appear
+in an expression that is being evaluated. Resolving
+variables, symbols and functions may yield unknown values
+alias <i>null</i> values. Unknown values have a certain
+effect on the way boolean operators work. If one or more
+operands in an arithmetic or relational operation is null,
+the result will be unknown and therefore null.</p>
+
+<p style="margin-left:6%; margin-top: 1em"><i>Arithmetic
+operations</i> (</p>
+
+<p>&lsquo;+&rsquo;, &lsquo;-&rsquo;, &lsquo;*&rsquo;,
+&lsquo;/&rsquo; ) on integers and floats work as one might
+expect. Implicit type conversion will take place if
+necessary and possible. Division (&lsquo;/&rsquo;) of
+integers may yield truncated results while addition
+(&lsquo;+&rsquo;) of strings will concatenate them:</p>
+
+
+<p style="margin-left:14%; margin-top: 1em">&quot;foo&quot;
++ &quot;bar&quot; # &quot;foobar&quot;</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<colgroup><col width="14%"></col>
+<col width="10%"></col>
+<col width="11%"></col>
+<col width="10%"></col>
+<col width="55%"></col>
+</colgroup>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>3 / 2</p></td>
+<td>
+</td>
+<td>
+
+
+<p># 1</p></td>
+<td>
+</td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>3 / 2.0</p></td>
+<td>
+</td>
+<td>
+
+
+<p># 1.5</p></td>
+<td>
+</td></tr>
+</table>
+
+<p style="margin-left:6%; margin-top: 1em"><i>Relational
+operations</i> (</p>
+
+<p>&lsquo;&lt;&rsquo;, &lsquo;&lt;=&rsquo;,
+&lsquo;&gt;&rsquo;, &lsquo;&gt;=&rsquo;, &lsquo;==&rsquo;,
+&lsquo;!=&rsquo; ) on integers, floats and strings work as
+one might expect. Implicit type conversion will take place
+if necessary and possible.</p>
+
+<p style="margin-left:6%; margin-top: 1em"><i>Boolean
+operators</i> (</p>
+
+<p>&lsquo;!&rsquo;, &lsquo;&amp;&amp;&rsquo;,
+&lsquo;||&rsquo; ) mimic their counterparts within the
+Kleene logic which is a three-valued logic. Truth values of
+a 3VL consist of <i>true</i>, <i>false</i> and a third,
+indeterminate value <i>unknown</i> or <i>null</i>.</p>
+
+<p style="margin-left:6%; margin-top: 1em">The truth table
+for &lsquo;!&rsquo; (NOT) and any expression <i>A</i>:</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<colgroup><col width="14%"></col>
+<col width="35%"></col>
+<col width="11%"></col>
+<col width="40%"></col>
+</colgroup>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p><b>A</b></p></td>
+<td>
+
+
+<p><b>!A</b></p></td>
+<td>
+</td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>false</p></td>
+<td>
+
+
+<p>true</p></td>
+<td>
+</td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>null</p></td>
+<td>
+
+
+<p>null</p></td>
+<td>
+</td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>true</p></td>
+<td>
+
+
+<p>false</p></td>
+<td>
+</td></tr>
+</table>
+
+<p style="margin-left:6%; margin-top: 1em">The truth table
+for &lsquo;&amp;&amp;&rsquo; (AND), &lsquo;||&rsquo; (OR)
+and any expression <i>A</i> and <i>B</i>:</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<colgroup><col width="14%"></col>
+<col width="58%"></col>
+<col width="11%"></col>
+<col width="12%"></col>
+<col width="5%"></col>
+</colgroup>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p><b>A</b></p></td>
+<td>
+
+
+<p><b>B</b></p></td>
+<td>
+
+
+<p><b>A &amp;&amp; B</b></p></td>
+<td>
+
+
+<p><b>A || B</b></p></td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>false</p></td>
+<td>
+
+
+<p>false</p></td>
+<td>
+
+
+<p>false</p></td>
+<td>
+
+
+<p>false</p></td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>false</p></td>
+<td>
+
+
+<p>null</p></td>
+<td>
+
+
+<p>false</p></td>
+<td>
+
+
+<p>null</p></td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>false</p></td>
+<td>
+
+
+<p>true</p></td>
+<td>
+
+
+<p>false</p></td>
+<td>
+
+
+<p>true</p></td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>null</p></td>
+<td>
+
+
+<p>false</p></td>
+<td>
+
+
+<p>false</p></td>
+<td>
+
+
+<p>null</p></td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>null</p></td>
+<td>
+
+
+<p>null</p></td>
+<td>
+
+
+<p>null</p></td>
+<td>
+
+
+<p>null</p></td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>null</p></td>
+<td>
+
+
+<p>true</p></td>
+<td>
+
+
+<p>null</p></td>
+<td>
+
+
+<p>true</p></td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>true</p></td>
+<td>
+
+
+<p>false</p></td>
+<td>
+
+
+<p>false</p></td>
+<td>
+
+
+<p>true</p></td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>true</p></td>
+<td>
+
+
+<p>null</p></td>
+<td>
+
+
+<p>null</p></td>
+<td>
+
+
+<p>true</p></td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>true</p></td>
+<td>
+
+
+<p>true</p></td>
+<td>
+
+
+<p>true</p></td>
+<td>
+
+
+<p>true</p></td></tr>
+</table>
+
+<p style="margin-left:6%; margin-top: 1em">Evaluating an
+integer or a float will yield false if the particular value
+is 0, true otherwise. Evaluating a string will yield false
+if its value is &quot;&quot; (empty) or &quot;0&quot;, true
+otherwise. Evaluating an address will yield false if the
+address is invalid, true otherwise.</p>
+
+<p style="margin-left:6%; margin-top: 1em"><i>Note</i>:
+During the evaluation of any rule, action will only be taken
+if condition is true. false and null are equivalent in that
+case.</p>
+
+<p style="margin-top: 1em"><b>ACTIONS</b></p>
+
+<p style="margin-left:6%;">An action describes how
+mopherd(8) and therefore the MTA, should handle the current
+SMTP transaction. Actions may have parameters that may or
+may not be omitted.</p>
+
+<p style="margin-left:6%; margin-top: 1em">If the examples
+in the following list do not explicitly mention the stage
+and condition part of a rule, they are implied but omitted
+for reasons of brevity.</p>
+
+<p style="margin-top: 1em"><b>continue</b></p>
+
+<p style="margin-left:14%;">The continue action will stop
+the evaluation of any remaining rules tied to the current
+milter stage. Evaluation will continue at the next milter
+stage.</p>
+
+<p style="margin-top: 1em"><b>reject</b></p>
+
+<p style="margin-left:14%;">The reject action will reject
+the current SMTP transaction with a permanent error code and
+stop any further processing.</p>
+
+<p style="margin-top: 1em"><b>discard</b></p>
+
+<p style="margin-left:14%;">The discard action will accept
+the current SMTP transaction, discard the message silently
+and stop any further processing.</p>
+
+<p style="margin-top: 1em"><b>accept</b></p>
+
+<p style="margin-left:14%;">The accept action will accept
+the current SMTP transaction and stop any further
+processing.</p>
+
+<p style="margin-top: 1em"><b>tempfail</b></p>
+
+<p style="margin-left:14%;">The tempfail action will reject
+the current SMTP transaction with a temporary error code and
+stop any further processing.</p>
+
+<p style="margin-top: 1em"><b>greylist</b> [ <b><br/>
+delay</b> <i>exp</i>] [ <b><br/>
+attempts</b> <i>exp</i>] [ <b><br/>
+deadline</b> <i>exp</i>] [ <b><br/>
+visa</b> <i>exp</i>]</p>
+
+<p style="margin-left:14%;">Until one of two possible
+thresholds are met, the greylist action will reject the
+current SMTP transaction with a temporary error code and
+stop any further processing.</p>
+
+<p style="margin-left:14%; margin-top: 1em">Greylisting an
+origin (address or domain) means keeping track of the effort
+made by that origin to deliver a message by a specific
+sender to a specific recipient. Effort is defined as either
+the number of <i>attempts</i> made by the origin or the
+<i>delay</i> he was willing to accept in order to carry out
+a particular SMTP transaction:</p>
+
+<p style="margin-left:22%; margin-top: 1em"># reject until
+12 hours have passed <br/>
+# <br/>
+greylist delay 12h</p>
+
+<p style="margin-left:22%; margin-top: 1em"># reject until
+2 attempts are recorded <br/>
+# <br/>
+greylist attempts 2</p>
+
+<p style="margin-left:22%; margin-top: 1em"># reject until
+2 attempts are recorded within 4 hours <br/>
+# <br/>
+greylist attempts 2 deadline 4h</p>
+
+<p style="margin-left:22%; margin-top: 1em"># reject until
+12 hours have passed <br/>
+# or 5 attempts are recorded within 4 hours <br/>
+# <br/>
+greylist delay 12h attempts 5 deadline 4h</p>
+
+<p style="margin-left:14%; margin-top: 1em">After the
+required effort has been made, mopherd(8) will upgrade the
+greylist triplet (origin, sender and recipient combination)
+to a <i>visa</i> triplet. A visa triplet will allow for
+undelayed SMTP transactions until it expires:</p>
+
+<p style="margin-left:22%; margin-top: 1em"># reject until
+12 hours have passed <br/>
+# or 5 attempts are recorded within 4 hours <br/>
+# and issue a visa for 7 days on success <br/>
+# <br/>
+greylist delay 12h attempts 5 deadline 4h visa 7d</p>
+
+<p style="margin-left:14%; margin-top: 1em">Successful SMTP
+transactions that resemble a valid visa triplet will
+automatically trigger the renewal of the corresponding
+visa.</p>
+
+<p style="margin-left:14%; margin-top: 1em"><i>Note</i>:
+Right before any greylist rules, your <b>mopherd.acl</b>
+should contain one empty greylist rule:</p>
+
+<p style="margin-left:22%; margin-top: 1em"># empty
+greylist rule <br/>
+# <br/>
+&lt;stage&gt; greylist</p>
+
+<p style="margin-left:14%; margin-top: 1em">An empty
+greylist rule will compare all existing greylist triplets
+with the current SMTP transaction and, in case a triplet
+matches, avoid the evaluation of subsequent greylist rules
+that are tied to potentially costly conditions.</p>
+
+<p style="margin-top: 1em"><b>tarpit</b> <i>exp</i></p>
+
+<p style="margin-left:14%;">The tarpit action will delay
+the current SMTP transaction (without rejecting it):</p>
+
+<p style="margin-left:22%; margin-top: 1em"># delay for 60
+seconds <br/>
+# <br/>
+tarpit 60s</p>
+
+<p style="margin-top: 1em"><b>log</b> <i>exp</i></p>
+
+<p style="margin-left:14%;">The log action will log any
+custom message:</p>
+
+<p style="margin-left:22%; margin-top: 1em"># log &quot;New
+connection from some.host.name!&quot; <br/>
+# <br/>
+log &quot;New connection from &quot; + milter_hostname +
+&quot;!&quot;</p>
+
+<p style="margin-top: 1em"><b>set</b> <i>exp</i></p>
+
+<p style="margin-left:14%;">The set action will set a
+variable:</p>
+
+<p style="margin-left:22%; margin-top: 1em"># set $flag to
+1 <br/>
+# <br/>
+set $flag = 1</p>
+
+<p style="margin-top: 1em"><b>jump</b> <i>exp</i></p>
+
+<p style="margin-left:14%;">The jump action will stop the
+evaluation of any remaining rules tied to the current stage
+and jump to a different stage:</p>
+
+<p style="margin-left:22%; margin-top: 1em"># jump to first
+rule of stage2 if &lt;condition&gt; is true <br/>
+# <br/>
+stage1 &lt;condition&gt; jump stage2</p>
+
+<table width="100%" border="0" rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<colgroup><col width="22%"></col>
+<col width="10%"></col>
+<col width="10%" class="center"></col>
+<col width="11%"></col>
+<col width="47%"></col>
+</colgroup>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>stage1 ...</p></td>
+<td></td>
+<td>
+
+
+<p># not evaluated if &lt;condition&gt; is true</p></td>
+<td>
+</td></tr>
+<tr valign="top" align="left">
+<td></td>
+<td>
+
+
+<p>stage1 ...</p></td>
+<td></td>
+<td>
+
+
+<p># not evaluated if &lt;condition&gt; is true</p></td>
+<td>
+</td></tr>
+</table>
+
+<p style="margin-left:22%; margin-top: 1em">stage2 ...
+<br/>
+stage2 ... <br/>
+stage2 ...</p>
+
+<p style="margin-left:14%; margin-top: 1em">From the
+perspective of mopherd(8), there are no special stages.
+Every stage is just a named list of rules, while only an
+equally named stage will be processed during a specific
+milter stage. Within that process, jumps may happen and
+extend the original list.</p>
+
+
+<p style="margin-left:14%; margin-top: 1em"><i>Warning</i>:
+Beware of circular jumps.</p>
+
+<p style="margin-top: 1em"><b>add header</b> <i>exp</i>
+<b>value</b> <i>exp</i></p>
+
+<p style="margin-left:14%;">The add header action will add
+<i>header</i> if it doesn&rsquo;t exist and replace its
+<i>value</i> otherwise.</p>
+
+<p style="margin-top: 1em"><b>insert header</b> <i>exp</i>
+<b>value</b> <i>exp</i> [ <b><br/>
+index</b> <i>exp</i>]</p>
+
+<p style="margin-left:14%;">The insert header action will
+always add <i>header</i>. If <i>index</i> is greater than
+the number of existing headers, <i>header</i> will be added
+at the end of the list. If <i>index</i> is 0 (default),
+<i>header</i> will be added at the beginning of the
+list.</p>
+
+<p style="margin-top: 1em"><b>change header</b> <i>exp</i>
+<b>value</b> <i>exp</i> [ <b><br/>
+index</b> <i>exp</i>]</p>
+
+<p style="margin-left:14%;">The change header action will
+replace the <i>value</i> of an existing <i>header</i>. If
+multiple <i>header</i>s exist, <i>index</i> may be used to
+replace only a particular occurence of <i>header</i>.</p>
+
+<p style="margin-top: 1em"><b>delete header</b> <i>exp</i>
+[ <b><br/>
+index</b> <i>exp</i>]</p>
+
+<p style="margin-left:14%;">The delete header action will
+delete <i>header</i>. If multiple <i>header</i>s exist,
+<i>index</i> may be used to delete only a particular
+occurence of <i>header</i>.</p>
+
+<p style="margin-top: 1em"><b>change from</b> <i>exp</i> [
+<b><br/>
+esmtp</b> <i>exp</i>]</p>
+
+<p style="margin-left:14%;">The change from action will
+replace the envelope sender address. If <i>esmtp</i> is not
+null, it will be interpreted as a string containing
+additional ESMTP arguments.</p>
+
+<p style="margin-top: 1em"><b>add rcpt</b> <i>exp</i> [
+<b><br/>
+esmtp</b> <i>exp</i>]</p>
+
+<p style="margin-left:14%;">The add rcpt action will add an
+envelope recipient. If <i>esmtp</i> is not null, it will be
+interpreted as a string containing additional ESMTP
+arguments.</p>
+
+<p style="margin-top: 1em"><b>delete rcpt</b>
+<i>exp</i></p>
+
+<p style="margin-left:14%;">The delete rcpt action will
+remove an envelope recipient. The recipient address must be
+surrounded by angle brackets.</p>
+
+<p style="margin-left:6%; margin-top: 1em">The actions
+<i>greylist</i>, <i>tempfail</i> and <i>reject</i> may be
+complemented by a custom SMTP reply:</p>
+
+<p style="margin-top: 1em">&lang; <br/>
+action&rang; <b>reply</b> <i>exp</i> [ <b><br/>
+xcode</b> <i>exp</i>] <b>message</b> <i>exp</i></p>
+
+<p style="margin-left:14%;">The MTA will use <i>reply</i>
+as the SMTP reply code, <i>xcode</i> as the extended SMTP
+reply code and <i>message</i> as the SMTP reply message:</p>
+
+<p style="margin-left:22%; margin-top: 1em"># reject known
+spammer <br/>
+# <br/>
+reject reply 550 xcode &quot;5.7.1&quot; message &quot;No
+thanks, bye!&quot;</p>
+
+<p style="margin-left:6%; margin-top: 1em">The effect of
+<i>accept</i>, <i>greylist</i>, <i>tempfail</i>,
+<i>reject</i> and <i>discard</i>, the timing of a reply and
+the visibility of its message depend all on the way a
+particular MTA implementation handles SMTP transactions. In
+other words, mopherd(8) just passes its verdict (and a
+reply) but has no influence on whatever the MTA will do
+next.</p>
+
+<p style="margin-top: 1em"><b>DEFINITIONS</b></p>
+
+<p style="margin-left:6%;">A definition is a placeholder
+for any <i>expression</i>:</p>
+
+<p style="margin-left:14%; margin-top: 1em"># simplify your
+<b>mopherd.acl</b> with definitions <br/>
+# <br/>
+define foo <i>some complicated arithmetic expression</i>
+<br/>
+define bar <i>another complicated arithmetic
+expression</i></p>
+
+<p style="margin-left:14%; margin-top: 1em">connect log
+&quot;foo = &quot; + foo <br/>
+envrcpt log &quot;bar = &quot; + bar <br/>
+data log &quot;foo + bar = &quot; + (foo + bar)</p>
+
+<p style="margin-left:6%; margin-top: 1em">The evaluation
+of definitions is not limited in any way. Definitions may
+contain symbols, functions, operators or anything else that
+also makes up expressions as defined in the beginning of
+this document.</p>
+
+<p style="margin-top: 1em"><b>SYMBOLS</b></p>
+
+<p style="margin-left:6%;">The following list describes all
+symbols known to mopherd(8). Type and stage availability are
+enclosed in parentheses. A symbol is either always available
+(<i>any</i>), exclusively bound to a milter stage
+(<i>name</i>) or bound to a milter stage and all stages
+following that stage (<i>name*</i>).</p>
+
+<p style="margin-top: 1em"><b>counter_penpal</b> (number,
+any)</p>
+
+<p style="margin-top: 1em"><b>counter_relay</b> (number,
+envrcpt)</p>
+
+<p style="margin-top: 1em"><b>greylist_attempts</b> (FIXME,
+envfrom*)</p>
+
+<p style="margin-top: 1em"><b>greylist_connections</b>
+(FIXME, envfrom*)</p>
+
+<p style="margin-top: 1em"><b>greylist_created</b> (FIXME,
+envfrom*)</p>
+
+<p style="margin-top: 1em"><b>greylist_deadline</b> (FIXME,
+envfrom*)</p>
+
+<p style="margin-top: 1em"><b>greylist_delay</b> (FIXME,
+envfrom*)</p>
+
+<p style="margin-top: 1em"><b>greylist_delayed</b> (FIXME,
+envfrom*)</p>
+
+<p style="margin-top: 1em"><b>greylist_expire</b> (FIXME,
+envfrom*)</p>
+
+<p style="margin-top: 1em"><b>greylist_listed</b> (FIXME,
+envfrom*)</p>
+
+<p style="margin-top: 1em"><b>greylist_passed</b> (FIXME,
+envfrom*)</p>
+
+<p style="margin-top: 1em"><b>greylist_updated</b> (FIXME,
+envfrom*)</p>
+
+<p style="margin-top: 1em"><b>greylist_visa</b> (FIXME,
+envfrom*)</p>
+
+<p style="margin-top: 1em"><b>milter_action</b> (FIXME,
+connect*)</p>
+
+<p style="margin-top: 1em"><b>milter_addrstr</b> (FIXME,
+any)</p>
+
+<p style="margin-top: 1em"><b>milter_auth_authen</b>
+(FIXME, envfrom*)</p>
+
+<p style="margin-top: 1em"><b>milter_auth_author</b>
+(FIXME, envfrom*)</p>
+
+<p style="margin-top: 1em"><b>milter_auth_type</b> (FIXME,
+envfrom*)</p>
+
+<p style="margin-top: 1em"><b>milter_body</b> (FIXME,
+eom)</p>
+
+<p style="margin-top: 1em"><b>milter_body_size</b> (FIXME,
+eom)</p>
+
+<p style="margin-top: 1em"><b>milter_cert_issuer</b>
+(FIXME, helo*)</p>
+
+<p style="margin-top: 1em"><b>milter_cert_subject</b>
+(FIXME, helo*)</p>
+
+<p style="margin-top: 1em"><b>milter_cipher</b> (FIXME,
+helo*)</p>
+
+<p style="margin-top: 1em"><b>milter_cipher_bits</b>
+(FIXME, helo*)</p>
+
+<p style="margin-top: 1em"><b>milter_client</b> (FIXME,
+any)</p>
+
+<p style="margin-top: 1em"><b>milter_client_addr</b>
+(FIXME, any)</p>
+
+
+<p style="margin-top: 1em"><b>milter_client_connections</b>
+(FIXME, connect)</p>
+
+<p style="margin-top: 1em"><b>milter_client_name</b>
+(FIXME, any)</p>
+
+<p style="margin-top: 1em"><b>milter_client_port</b>
+(FIXME, any)</p>
+
+<p style="margin-top: 1em"><b>milter_client_ptr</b> (FIXME,
+any)</p>
+
+<p style="margin-top: 1em"><b>milter_ctx</b> (FIXME,
+any)</p>
+
+<p style="margin-top: 1em"><b>milter_daemon_name</b>
+(FIXME, any)</p>
+
+<p style="margin-top: 1em"><b>milter_envfrom</b> (FIXME,
+envfrom*)</p>
+
+<p style="margin-top: 1em"><b>milter_envfrom_addr</b>
+(FIXME, envfrom*)</p>
+
+<p style="margin-top: 1em"><b>milter_envrcpt</b> (FIXME,
+envrcpt*)</p>
+
+<p style="margin-top: 1em"><b>milter_envrcpt_addr</b>
+(FIXME, envrcpt*)</p>
+
+<p style="margin-top: 1em"><b>milter_greylist_src</b>
+(FIXME, any)</p>
+
+<p style="margin-top: 1em"><b>milter_header</b> (FIXME,
+eoh*)</p>
+
+<p style="margin-top: 1em"><b>milter_header_name</b>
+(FIXME, header)</p>
+
+<p style="margin-top: 1em"><b>milter_header_size</b>
+(FIXME, eoh*)</p>
+
+<p style="margin-top: 1em"><b>milter_header_value</b>
+(FIXME, header)</p>
+
+<p style="margin-top: 1em"><b>milter_helo</b> (FIXME,
+helo*)</p>
+
+<p style="margin-top: 1em"><b>milter_hostaddr</b> (FIXME,
+any)</p>
+
+<p style="margin-top: 1em"><b>milter_hostname</b> (FIXME,
+any)</p>
+
+<p style="margin-top: 1em"><b>milter_id</b> (FIXME,
+any)</p>
+
+<p style="margin-top: 1em"><b>milter_mail_addr</b> (FIXME,
+data*)</p>
+
+<p style="margin-top: 1em"><b>milter_mail_host</b> (FIXME,
+data*)</p>
+
+<p style="margin-top: 1em"><b>milter_mail_mailer</b>
+(FIXME, data*)</p>
+
+<p style="margin-top: 1em"><b>milter_message_size</b>
+(FIXME, eom)</p>
+
+<p style="margin-top: 1em"><b>milter_mta_version</b>
+(FIXME, any)</p>
+
+<p style="margin-top: 1em"><b>milter_myhostname</b> (FIXME,
+any)</p>
+
+<p style="margin-top: 1em"><b>milter_queueid</b> (FIXME,
+eoh*)</p>
+
+<p style="margin-top: 1em"><b>milter_rcpt_addr</b> (FIXME,
+envrcpt)</p>
+
+<p style="margin-top: 1em"><b>milter_rcpt_host</b> (FIXME,
+envrcpt)</p>
+
+<p style="margin-top: 1em"><b>milter_rcpt_mailer</b>
+(FIXME, envrcpt)</p>
+
+<p style="margin-top: 1em"><b>milter_received</b> (FIXME,
+any)</p>
+
+<p style="margin-top: 1em"><b>milter_recipient_list</b>
+(FIXME, data*)</p>
+
+<p style="margin-top: 1em"><b>milter_recipients</b> (FIXME,
+envrcpt*)</p>
+
+<p style="margin-top: 1em"><b>milter_stage</b> (FIXME,
+any)</p>
+
+<p style="margin-top: 1em"><b>milter_stagename</b> (FIXME,
+any)</p>
+
+<p style="margin-top: 1em"><b>milter_subject</b> (FIXME,
+eoh*)</p>
+
+<p style="margin-top: 1em"><b>milter_tls_version</b>
+(FIXME, helo*)</p>
+
+<p style="margin-top: 1em"><b>milter_unknown_command</b>
+(FIXME, unknown)</p>
+
+<p style="margin-top: 1em"><b>spamd_score</b></p>
+
+<p style="margin-top: 1em"><b>spamd_spam</b></p>
+
+<p style="margin-top: 1em"><b>spamd_symbols</b></p>
+
+<p style="margin-top: 1em"><b>spf <br/>
+spf_reason</b></p>
+
+<p style="margin-top: 1em"><b>tarpit_delayed</b></p>
+
+<p style="margin-top: 1em"><b>FUNCTIONS <br/>
+cast <br/>
+list_contains</b></p>
+
+<p style="margin-top: 1em"><b>regex_imatch</b></p>
+
+<p style="margin-top: 1em"><b>regex_match</b></p>
+
+<p style="margin-top: 1em"><b>string_mailaddr</b></p>
+
+<p style="margin-top: 1em"><b>string_strcmp</b></p>
+
+<p style="margin-top: 1em"><b>string_strlen</b></p>
+
+<p style="margin-top: 1em"><b>IMPLEMENTATION NOTES</b></p>
+
+<p style="margin-left:6%;">Third party distributors of
+binary packages may split a full mopher build into several
+complementary packages in order to make some dependencies
+optional. In such cases, it is possible that some modules
+are not available on your system even though they are
+documented here.</p>
+
+<p style="margin-top: 1em"><b>SEE ALSO</b></p>
+
+<p style="margin-left:6%;">mopher(7), mopherd(8),
+mopherctl(8)</p>
+
+<p style="margin-left:6%; margin-top: 1em">BSD
+September&nbsp;30, 2014 BSD</p>
+<hr/>
+</body>
+</html>

@@ -1,0 +1,54 @@
+.Dd July 13, 2014
+.Dt MOPHERCTL 8
+.Os
+.Sh NAME
+.Nm mopherctl
+.Nd the mopher daemon control utility
+.Sh SYNOPSIS
+.Nm
+.Op Fl h
+.Op Fl d Ar level
+.Op Fl c Ar file
+.Op Fl s Ar host
+.Ar command
+.Sh DESCRIPTION
+.Nm
+controls the mopher daemon.
+.Pp
+Available options are:
+.Bl -tag -width Ds
+.It Fl h
+Show usage message.
+.It Fl d Ar level
+Set logging severity level to
+.Ar level
+.It Fl c Ar file
+Read configuration from
+.Ar file .
+.It Fl s Ar host
+Connect to
+.Ar host .
+.El
+.Pp
+.Ar command
+is one of the following:
+.Bl -tag -width Ds
+.It dump Ar table
+Print raw content of
+.Ar table .
+.It greylist dump
+Print formatted content of the greylist-table.
+.It greylist pass Ar origin Ar from Ar rcpt
+Temporarily whitelist triplet.
+.El
+.Sh FILES
+.Bl -tag -width Ds
+.It Pa @sysconfdir@/mopher/mopherd.conf
+Configuration file for the mopher daemon.
+.It Pa @sysconfdir@/mopher/mopherd.acl
+List of rules enforced by the mopher daemon.
+.El
+.Sh SEE ALSO
+.Xr mopher 7 ,
+.Xr mopherd.conf 5 ,
+.Xr mopherd.acl 5

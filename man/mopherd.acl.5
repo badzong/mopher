@@ -1,0 +1,601 @@
+.Dd September 30, 2014
+.Dt MOPHERD.ACL 5
+.Os
+.Sh NAME
+.Nm mopherd.acl
+.Nd the mopher daemon access control list
+.Sh DESCRIPTION
+The
+.Nm
+file contains a list of rules enforced by
+.Xr mopherd 8
+at one or more milter stages.
+.Pp
+Comment lines in
+.Nm
+start with the
+.Ql #
+character, empty lines are treated as comments.
+Statements are either definitions or rules and can span multiple lines.
+.Sh RULES
+A statement is a rule if it has the following structure:
+.Bd -ragged -offset indent
+.Sy stage condition action
+.Ed
+.Pp
+A
+.Em stage
+is generally named after a milter stage and it is therefore necessary to
+know how the available milter stages correspond to the various stages of
+a SMTP transaction:
+.Bl -column -offset indent ".Sy milter stage" ".Sy SMTP stage"
+.It Sy milter stage Ta Sy SMTP stage
+.It connect Ta (connection established)
+.It helo Ta HELO (hostname)
+.It envfrom Ta MAIL FROM: (sender)
+.It envrcpt Ta RCPT TO: (one recipient)
+.It data Ta DATA
+.It header Ta (one header)
+.It eoh Ta (empty line)
+.It body Ta (one line of body)
+.It eom Ta .
+.It close Ta QUIT
+.El
+.Pp
+The milter stages
+.Em envrcpt ,
+.Em header
+and
+.Em body
+can be entered one or more times during a SMTP transaction.
+If the remote host or the MTA closes the connection prematurely while
+being in any stage between
+.Em envfrom
+and
+.Em eom ,
+the additional stage
+.Em abort
+will be entered before entering
+.Em close .
+If the remote host issues unknown commands during a SMTP transaction,
+the additional stage
+.Em unknown
+will be entered.
+.Pp
+After entering a milter stage,
+.Em condition
+is evaluated.
+If the evaluation returns true,
+.Em action
+is taken.
+A condition is an
+.Em expression .
+.Sh EXPRESSIONS
+An expression is recursively defined as one or more expressions,
+associated by 
+.Em arithmetic ,
+.Em relational
+and
+.Em boolean operators .
+Basic expressions are
+.Em constants ,
+.Em variables ,
+.Em symbols
+and
+.Em functions .
+.Pp
+A
+.Em constant
+is either a string, integer, float or address:
+.Bd -literal -offset indent
+"foo"		# string
+"1"		# string
+""		# string
+100		# integer
+1.1		# float
+::1		# address
+127.0.0.1	# address
+.Ed
+.Pp
+Each integer may have one of the following optional suffixes:
+.Bl -tag -width 8n -offset indent -compact
+.It s[econd]
+multiply by 1
+.It m[inute]
+multiply by 60
+.It h[our]
+multiply by 3600
+.It d[ay]
+multiply by 86400
+.It K[ibi]
+multiply by 1024
+.It M[ebi]
+multiply by 1048576
+.It G[ibi]
+multiply by 1073741824
+.El
+.Pp
+A
+.Em variable
+begins with a
+.Ql $
+and is a resolvable entity that may be set at any milter stage.
+.Pp
+A
+.Em symbol
+is a resolvable entity that may or may not be available at a particular
+milter stage.
+.Pp
+A
+.Em function
+is a resolvable entity that is always available and has zero or more
+parameters.
+.Pp
+Variables, symbols and functions will only be resolved if they appear in
+an expression that is being evaluated.
+Resolving variables, symbols and functions may yield unknown values
+alias
+.Em null
+values.
+Unknown values have a certain effect on the way boolean operators work.
+If one or more operands in an arithmetic or relational operation is
+null, the result will be unknown and therefore null.
+.Pp
+.Em Arithmetic operations
+.Po
+.Ql + ,
+.Ql - ,
+.Ql * ,
+.Ql /
+.Pc
+on integers and floats work as one might expect.
+Implicit type conversion will take place if necessary and possible.
+Division
+.Pq Ql /
+of integers may yield truncated results while addition
+.Pq Ql +
+of strings will concatenate them:
+.Bd -literal -offset indent
+"foo" + "bar"	# "foobar"
+3 / 2		# 1
+3 / 2.0		# 1.5
+.Ed
+.Pp
+.Em Relational operations
+.Po
+.Ql <  ,
+.Ql <= ,
+.Ql >  ,
+.Ql >= ,
+.Ql == ,
+.Ql !=
+.Pc
+on integers, floats and strings work as one might expect.
+Implicit type conversion will take place if necessary and possible.
+.Pp
+.Em Boolean operators
+.Po
+.Ql \&! ,
+.Ql && ,
+.Ql ||
+.Pc
+mimic their counterparts within the Kleene logic which is a three-valued
+logic.
+Truth values of a 3VL consist of
+.Em true ,
+.Em false
+and a third, indeterminate value
+.Em unknown
+or
+.Em null .
+.Pp
+The truth table for
+.Ql \&!
+.Pq NOT
+and any expression
+.Em A :
+.Bl -column -offset indent ".Sy abcde" ".Sy abcde"
+.It Sy A Ta Sy !A
+.It false Ta true
+.It null  Ta null
+.It true  Ta false
+.El
+.Pp
+The truth table for
+.Ql &&
+.Pq AND ,
+.Ql ||
+.Pq OR
+and any expression
+.Em A
+and
+.Em B :
+.Bl -column -offset indent ".Sy abcde" ".Sy abcde" ".Sy abcde" ".Sy abcde"
+.It Sy A Ta Sy B Ta Sy A && B Ta Sy A || B
+.It false Ta false Ta false Ta false
+.It false Ta null  Ta false Ta null
+.It false Ta true  Ta false Ta true
+.It null  Ta false Ta false Ta null
+.It null  Ta null  Ta null  Ta null
+.It null  Ta true  Ta null  Ta true
+.It true  Ta false Ta false Ta true
+.It true  Ta null  Ta null  Ta true
+.It true  Ta true  Ta true  Ta true
+.El
+.Pp
+Evaluating an integer or a float will yield false if the particular
+value is 0, true otherwise.
+Evaluating a string will yield false if its value is
+.Qq
+.Pq empty
+or
+.Qq 0 ,
+true otherwise.
+Evaluating an address will yield false if the address is invalid, true
+otherwise.
+.Pp
+.Em Note :
+During the evaluation of any rule, action will only be taken if
+condition is true.
+false and null are equivalent in that case.
+.Sh ACTIONS
+An action describes how
+.Xr mopherd 8
+and therefore the MTA, should handle the current SMTP transaction.
+Actions may have parameters that may or may not be omitted.
+.Pp
+If the examples in the following list do not explicitly mention the
+stage and condition part of a rule, they are implied but omitted for
+reasons of brevity.
+.Bl -tag -width 4n
+.It Sy continue
+The continue action will stop the evaluation of any remaining rules tied
+to the current milter stage.
+Evaluation will continue at the next milter stage.
+.It Sy reject
+The reject action will reject the current SMTP transaction with a
+permanent error code and stop any further processing.
+.It Sy discard
+The discard action will accept the current SMTP transaction, discard the
+message silently and stop any further processing.
+.It Sy accept
+The accept action will accept the current SMTP transaction and stop any
+further processing.
+.It Sy tempfail
+The tempfail action will reject the current SMTP transaction with a
+temporary error code and stop any further processing.
+.It Sy greylist \
+Bo Sy delay Em exp Bc \
+Bo Sy attempts Em exp Bc \
+Bo Sy deadline Em exp Bc \
+Bo Sy visa Em exp Bc
+Until one of two possible thresholds are met, the greylist action will
+reject the current SMTP transaction with a temporary error code and stop
+any further processing.
+.Pp
+Greylisting an origin
+.Pq address or domain
+means keeping track of the effort made by that origin to deliver a
+message by a specific sender to a specific recipient.
+Effort is defined as either the number of
+.Em attempts
+made by the origin or the
+.Em delay
+he was willing to accept in order to carry out a particular SMTP
+transaction:
+.Bd -literal -offset indent
+# reject until 12 hours have passed
+#
+greylist delay 12h
+
+# reject until 2 attempts are recorded
+#
+greylist attempts 2
+
+# reject until 2 attempts are recorded within 4 hours
+#
+greylist attempts 2 deadline 4h
+
+# reject until 12 hours have passed
+#   or 5 attempts are recorded within 4 hours
+#
+greylist delay 12h attempts 5 deadline 4h
+.Ed
+.Pp
+After the required effort has been made,
+.Xr mopherd 8
+will upgrade the greylist triplet
+.Pq origin, sender and recipient combination
+to a
+.Em visa
+triplet.
+A visa triplet will allow for undelayed SMTP transactions until it
+expires:
+.Bd -literal -offset indent
+# reject until 12 hours have passed
+#   or 5 attempts are recorded within 4 hours
+#   and issue a visa for 7 days on success
+#
+greylist delay 12h attempts 5 deadline 4h visa 7d
+.Ed
+.Pp
+Successful SMTP transactions that resemble a valid visa triplet will
+automatically trigger the renewal of the corresponding visa.
+.Pp
+.Em Note :
+Right before any greylist rules, your
+.Nm
+should contain one empty greylist rule:
+.Bd -literal -offset indent
+# empty greylist rule
+#
+<stage> greylist
+.Ed
+.Pp
+An empty greylist rule will compare all existing greylist triplets with
+the current SMTP transaction and, in case a triplet matches, avoid the
+evaluation of subsequent greylist rules that are tied to potentially
+costly conditions.
+.It Sy tarpit Em exp
+The tarpit action will delay the current SMTP transaction (without
+rejecting it):
+.Bd -literal -offset indent
+# delay for 60 seconds
+#
+tarpit 60s
+.Ed
+.It Sy log Em exp
+The log action will log any custom message:
+.Bd -literal -offset indent
+# log "New connection from some.host.name!"
+#
+log "New connection from " + milter_hostname + "!"
+.Ed
+.It Sy set Em exp
+The set action will set a variable:
+.Bd -literal -offset indent
+# set $flag to 1
+#
+set $flag = 1
+.Ed
+.It Sy jump Em exp
+The jump action will stop the evaluation of any remaining rules tied to
+the current stage and jump to a different stage:
+.Bd -literal -offset indent
+# jump to first rule of stage2 if <condition> is true
+#
+stage1 <condition> jump stage2
+stage1 ...	# not evaluated if <condition> is true
+stage1 ...	# not evaluated if <condition> is true
+
+stage2 ...
+stage2 ...
+stage2 ...
+.Ed
+.Pp
+From the perspective of
+.Xr mopherd 8 ,
+there are no special stages.
+Every stage is just a named list of rules, while only an equally named
+stage will be processed during a specific milter stage.
+Within that process, jumps may happen and extend the original list.
+.Pp
+.Em Warning :
+Beware of circular jumps.
+.\".It Sy pipe Em exp
+.\"FIXME: EXPERIMENTAL
+.It Sy add header Em exp Sy value Em exp
+The add header action will add
+.Em header
+if it doesn't exist and replace
+its
+.Em value
+otherwise.
+.It Sy insert header Em exp Sy value Em exp Bo Sy index Em exp Bc
+The insert header action will always add
+.Em header .
+If
+.Em index
+is greater than the number of existing headers,
+.Em header
+will be added at the end of the list.
+If
+.Em index
+is 0
+.Pq default ,
+.Em header
+will be added at the beginning of the list.
+.It Sy change header Em exp Sy value Em exp Bo Sy index Em exp Bc
+The change header action will replace the
+.Em value
+of an existing
+.Em header .
+If multiple
+.Em header Ns s
+exist,
+.Em index
+may be used to replace only a particular occurence of
+.Em header .
+.It Sy delete header Em exp Bo Sy index Em exp Bc
+The delete header action will delete
+.Em header .
+If multiple
+.Em header Ns s
+exist,
+.Em index
+may be used to delete only a particular occurence of
+.Em header .
+.It Sy change from Em exp Bo Sy esmtp Em exp Bc
+The change from action will replace the envelope sender address.
+If
+.Em esmtp
+is not null, it will be interpreted as a string containing additional
+ESMTP arguments.
+.It Sy add rcpt Em exp Bo Sy esmtp Em exp Bc
+The add rcpt action will add an envelope recipient.
+If
+.Em esmtp
+is not null, it will be interpreted as a string containing additional
+ESMTP arguments.
+.It Sy delete rcpt Em exp
+The delete rcpt action will remove an envelope recipient.
+The recipient address must be surrounded by angle brackets.
+.\".It Sy change body Em exp Sy size Em exp
+.\"FIXME: size must go
+.El
+.Pp
+The actions
+.Em greylist ,
+.Em tempfail
+and
+.Em reject
+may be complemented by a custom SMTP reply:
+.Bl -tag -width 4n
+.It Ao action Ac Sy reply Em exp Bo Sy xcode Em exp Bc Sy message Em exp
+The MTA will use
+.Em reply
+as the SMTP reply code,
+.Em xcode
+as the extended SMTP reply code and
+.Em message
+as the SMTP reply message:
+.Bd -literal -offset indent
+# reject known spammer
+#
+reject reply 550 xcode "5.7.1" message "No thanks, bye!"
+.Ed
+.El
+.Pp
+The effect of
+.Em accept ,
+.Em greylist ,
+.Em tempfail ,
+.Em reject
+and
+.Em discard ,
+the timing of a reply and the visibility of its message depend all on
+the way a particular MTA implementation handles SMTP transactions.
+In other words,
+.Xr mopherd 8
+just passes its verdict
+.Pq and a reply
+but has no influence on whatever the MTA will do next.
+.Sh DEFINITIONS
+A definition is a placeholder for any
+.Em expression :
+.Bd -literal -offset indent
+.No # simplify your Nm No with definitions
+#
+.No define foo Em some complicated arithmetic expression
+.No define bar Em another complicated arithmetic expression
+
+connect log "foo = " + foo
+envrcpt log "bar = " + bar
+data    log "foo + bar = " + (foo + bar)
+.Ed
+.Pp
+The evaluation of definitions is not limited in any way.
+Definitions may contain symbols, functions, operators or anything
+else that also makes up expressions as defined in the beginning of this
+document.
+.Sh SYMBOLS
+The following list describes all symbols known to
+.Xr mopherd 8 .
+Type and stage availability are enclosed in parentheses.
+A symbol is either always available
+.Pq Em any ,
+exclusively bound to a milter stage
+.Pq Em name
+or bound to a milter stage and all stages following that stage
+.Pq Em name* .
+.Bl -tag -width 4n
+.It Sy counter_penpal Pq number, any
+.It Sy counter_relay Pq number, envrcpt
+.It Sy greylist_attempts Pq FIXME, envfrom*
+.It Sy greylist_connections Pq FIXME, envfrom*
+.It Sy greylist_created Pq FIXME, envfrom*
+.It Sy greylist_deadline Pq FIXME, envfrom*
+.It Sy greylist_delay Pq FIXME, envfrom*
+.It Sy greylist_delayed Pq FIXME, envfrom*
+.It Sy greylist_expire Pq FIXME, envfrom*
+.It Sy greylist_listed Pq FIXME, envfrom*
+.It Sy greylist_passed Pq FIXME, envfrom*
+.It Sy greylist_updated Pq FIXME, envfrom*
+.It Sy greylist_visa Pq FIXME, envfrom*
+.It Sy milter_action Pq FIXME, connect*
+.It Sy milter_addrstr Pq FIXME, any
+.It Sy milter_auth_authen Pq FIXME, envfrom*
+.It Sy milter_auth_author Pq FIXME, envfrom*
+.It Sy milter_auth_type Pq FIXME, envfrom*
+.It Sy milter_body Pq FIXME, eom
+.It Sy milter_body_size Pq FIXME, eom
+.It Sy milter_cert_issuer Pq FIXME, helo*
+.It Sy milter_cert_subject Pq FIXME, helo*
+.It Sy milter_cipher Pq FIXME, helo*
+.It Sy milter_cipher_bits Pq FIXME, helo*
+.It Sy milter_client Pq FIXME, any
+.It Sy milter_client_addr Pq FIXME, any
+.It Sy milter_client_connections Pq FIXME, connect
+.It Sy milter_client_name Pq FIXME, any
+.It Sy milter_client_port Pq FIXME, any
+.It Sy milter_client_ptr Pq FIXME, any
+.It Sy milter_ctx Pq FIXME, any
+.It Sy milter_daemon_name Pq FIXME, any
+.It Sy milter_envfrom Pq FIXME, envfrom*
+.It Sy milter_envfrom_addr Pq FIXME, envfrom*
+.It Sy milter_envrcpt Pq FIXME, envrcpt*
+.It Sy milter_envrcpt_addr Pq FIXME, envrcpt*
+.It Sy milter_greylist_src Pq FIXME, any
+.It Sy milter_header Pq FIXME, eoh*
+.It Sy milter_header_name Pq FIXME, header
+.It Sy milter_header_size Pq FIXME, eoh*
+.It Sy milter_header_value Pq FIXME, header
+.It Sy milter_helo Pq FIXME, helo*
+.It Sy milter_hostaddr Pq FIXME, any
+.It Sy milter_hostname Pq FIXME, any
+.It Sy milter_id Pq FIXME, any
+.It Sy milter_mail_addr Pq FIXME, data*
+.It Sy milter_mail_host Pq FIXME, data*
+.It Sy milter_mail_mailer Pq FIXME, data*
+.It Sy milter_message_size Pq FIXME, eom
+.It Sy milter_mta_version Pq FIXME, any
+.It Sy milter_myhostname Pq FIXME, any
+.It Sy milter_queueid Pq FIXME, eoh*
+.It Sy milter_rcpt_addr Pq FIXME, envrcpt
+.It Sy milter_rcpt_host Pq FIXME, envrcpt
+.It Sy milter_rcpt_mailer Pq FIXME, envrcpt
+.It Sy milter_received Pq FIXME, any
+.It Sy milter_recipient_list Pq FIXME, data*
+.It Sy milter_recipients Pq FIXME, envrcpt*
+.It Sy milter_stage Pq FIXME, any
+.It Sy milter_stagename Pq FIXME, any
+.It Sy milter_subject Pq FIXME, eoh*
+.It Sy milter_tls_version Pq FIXME, helo*
+.It Sy milter_unknown_command Pq FIXME, unknown
+.It Sy spamd_score
+.It Sy spamd_spam
+.It Sy spamd_symbols
+.It Sy spf
+.It Sy spf_reason
+.It Sy tarpit_delayed
+.El
+.Sh FUNCTIONS
+.Bl -tag -width 4n
+.It Sy cast
+.It Sy list_contains
+.It Sy regex_imatch
+.It Sy regex_match
+.It Sy string_mailaddr
+.It Sy string_strcmp
+.It Sy string_strlen
+.El
+.Sh IMPLEMENTATION NOTES
+Third party distributors of binary packages may split a full mopher
+build into several complementary packages in order to make some
+dependencies optional.
+In such cases, it is possible that some modules are not available on
+your system even though they are documented here.
+.Sh SEE ALSO
+.Xr mopher 7 ,
+.Xr mopherd 8 ,
+.Xr mopherctl 8
