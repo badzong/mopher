@@ -46,11 +46,11 @@ string_mailaddr(int argc, void **argv)
 int
 string_init(void)
 {
-	acl_function_register("string_strlen", AF_SIMPLE,
+	acl_function_register("strlen", AF_SIMPLE,
 	    (acl_function_callback_t) string_strlen, VT_STRING, 0);
-	acl_function_register("string_strcmp", AF_SIMPLE,
+	acl_function_register("strcmp", AF_SIMPLE,
 	    (acl_function_callback_t) string_strcmp, VT_STRING, VT_STRING, 0);
-	acl_function_register("string_mailaddr", AF_SIMPLE,
+	acl_function_register("mailaddr", AF_SIMPLE,
 	    (acl_function_callback_t) string_mailaddr, VT_STRING, 0);
 
 	return 0;

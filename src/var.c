@@ -172,7 +172,7 @@ error:
 }
 
 
-int
+VAR_INT_T
 var_data_size(var_t *v)
 {
 	if(v->v_type == VT_STRING) {

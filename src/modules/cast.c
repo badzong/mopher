@@ -9,7 +9,7 @@ static var_type_t cast_values[] = { VT_INT, VT_FLOAT, VT_STRING, VT_NULL };
 static var_t *
 type(int argc, ll_t *args)
 {
-	var_t *type, *var;
+	var_t *var;
 	ll_entry_t *pos;
 	char *ts;
 
@@ -34,6 +34,37 @@ type(int argc, ll_t *args)
 
 error:
 	log_error("type: bad arguments: usage type(expression)");
+	return NULL;
+}
+
+static var_t *
+len(int argc, ll_t *args)
+{
+	var_t *var;
+	ll_entry_t *pos;
+	VAR_INT_T size;
+
+	pos = LL_START(args);
+	var = ll_next(args, &pos);
+
+	if (argc != 1)
+	{
+		goto error;
+	}
+
+	if (var == NULL)
+	{
+		size = 0;
+	}
+	else
+	{
+		size = var_data_size(var);
+	}
+
+	return var_create(VT_INT, NULL, &size, VF_COPY | VF_EXP_FREE);
+
+error:
+	log_error("len: bad arguments: usage len(expression)");
 	return NULL;
 }
 
@@ -92,6 +123,8 @@ cast_init(void)
 
 	acl_function_register("type", AF_COMPLEX,
 	    (acl_function_callback_t) type);
+	acl_function_register("len", AF_COMPLEX,
+	    (acl_function_callback_t) len);
 	acl_function_register("cast", AF_COMPLEX,
 	    (acl_function_callback_t) cast);
 

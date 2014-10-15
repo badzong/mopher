@@ -67,7 +67,7 @@ typedef struct var_compact {
 void var_clear_name(var_t *v);
 void var_clear(var_t *v);
 void var_delete(var_t *v);
-int var_data_size(var_t *v);
+VAR_INT_T var_data_size(var_t *v);
 void var_rename(var_t *v, char *name, int flags);
 int var_init(var_t *v, var_type_t type, char *name, void *data, int flags);
 var_t * var_create(var_type_t type, char *name, void *data, int flags);
