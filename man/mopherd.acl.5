@@ -440,8 +440,8 @@ ESMTP arguments.
 .It Sy delete rcpt Em exp
 The delete rcpt action will remove an envelope recipient.
 The recipient address must be surrounded by angle brackets.
-.\".It Sy change body Em exp Sy size Em exp
-.\"FIXME: size must go
+.It Sy change body Em exp
+The change body action will replace the message body.
 .El
 .Pp
 The actions
@@ -509,85 +509,88 @@ exclusively bound to a milter stage
 or bound to a milter stage and all stages following that stage
 .Pq Em name* .
 .Bl -tag -width 4n
-.It Sy counter_penpal Pq number, any
-.It Sy counter_relay Pq number, envrcpt
-.It Sy greylist_attempts Pq FIXME, envfrom*
-.It Sy greylist_connections Pq FIXME, envfrom*
-.It Sy greylist_created Pq FIXME, envfrom*
-.It Sy greylist_deadline Pq FIXME, envfrom*
-.It Sy greylist_delay Pq FIXME, envfrom*
-.It Sy greylist_delayed Pq FIXME, envfrom*
-.It Sy greylist_expire Pq FIXME, envfrom*
-.It Sy greylist_listed Pq FIXME, envfrom*
-.It Sy greylist_passed Pq FIXME, envfrom*
-.It Sy greylist_updated Pq FIXME, envfrom*
-.It Sy greylist_visa Pq FIXME, envfrom*
-.It Sy milter_action Pq FIXME, connect*
-.It Sy milter_addrstr Pq FIXME, any
-.It Sy milter_auth_authen Pq FIXME, envfrom*
-.It Sy milter_auth_author Pq FIXME, envfrom*
-.It Sy milter_auth_type Pq FIXME, envfrom*
-.It Sy milter_body Pq FIXME, eom
-.It Sy milter_body_size Pq FIXME, eom
-.It Sy milter_cert_issuer Pq FIXME, helo*
-.It Sy milter_cert_subject Pq FIXME, helo*
-.It Sy milter_cipher Pq FIXME, helo*
-.It Sy milter_cipher_bits Pq FIXME, helo*
-.It Sy milter_client Pq FIXME, any
-.It Sy milter_client_addr Pq FIXME, any
-.It Sy milter_client_connections Pq FIXME, connect
-.It Sy milter_client_name Pq FIXME, any
-.It Sy milter_client_port Pq FIXME, any
-.It Sy milter_client_ptr Pq FIXME, any
-.It Sy milter_ctx Pq FIXME, any
-.It Sy milter_daemon_name Pq FIXME, any
-.It Sy milter_envfrom Pq FIXME, envfrom*
-.It Sy milter_envfrom_addr Pq FIXME, envfrom*
-.It Sy milter_envrcpt Pq FIXME, envrcpt*
-.It Sy milter_envrcpt_addr Pq FIXME, envrcpt*
-.It Sy milter_greylist_src Pq FIXME, any
-.It Sy milter_header Pq FIXME, eoh*
-.It Sy milter_header_name Pq FIXME, header
-.It Sy milter_header_size Pq FIXME, eoh*
-.It Sy milter_header_value Pq FIXME, header
-.It Sy milter_helo Pq FIXME, helo*
-.It Sy milter_hostaddr Pq FIXME, any
-.It Sy milter_hostname Pq FIXME, any
-.It Sy milter_id Pq FIXME, any
-.It Sy milter_mail_addr Pq FIXME, data*
-.It Sy milter_mail_host Pq FIXME, data*
-.It Sy milter_mail_mailer Pq FIXME, data*
-.It Sy milter_message_size Pq FIXME, eom
-.It Sy milter_mta_version Pq FIXME, any
-.It Sy milter_myhostname Pq FIXME, any
-.It Sy milter_queueid Pq FIXME, eoh*
-.It Sy milter_rcpt_addr Pq FIXME, envrcpt
-.It Sy milter_rcpt_host Pq FIXME, envrcpt
-.It Sy milter_rcpt_mailer Pq FIXME, envrcpt
-.It Sy milter_received Pq FIXME, any
-.It Sy milter_recipient_list Pq FIXME, data*
-.It Sy milter_recipients Pq FIXME, envrcpt*
-.It Sy milter_stage Pq FIXME, any
-.It Sy milter_stagename Pq FIXME, any
-.It Sy milter_subject Pq FIXME, eoh*
-.It Sy milter_tls_version Pq FIXME, helo*
-.It Sy milter_unknown_command Pq FIXME, unknown
-.It Sy spamd_score
-.It Sy spamd_spam
-.It Sy spamd_symbols
-.It Sy spf
-.It Sy spf_reason
-.It Sy tarpit_delayed
+.It Sy counter_penpal Pq int, any
+.It Sy counter_relay Pq int, envrcpt
+.It Sy greylist_attempts Pq ?, envfrom*
+.It Sy greylist_connections Pq ?, envfrom*
+.It Sy greylist_created Pq ?, envfrom*
+.It Sy greylist_deadline Pq ?, envfrom*
+.It Sy greylist_delay Pq ?, envfrom*
+.It Sy greylist_delayed Pq ?, envfrom*
+.It Sy greylist_expire Pq ?, envfrom*
+.It Sy greylist_listed Pq ?, envfrom*
+.It Sy greylist_passed Pq ?, envfrom*
+.It Sy greylist_updated Pq ?, envfrom*
+.It Sy greylist_visa Pq ?, envfrom*
+.It Sy milter_action Pq ?, connect*
+.It Sy milter_addrstr Pq ?, any
+.It Sy milter_auth_authen Pq ?, envfrom*
+.It Sy milter_auth_author Pq ?, envfrom*
+.It Sy milter_auth_type Pq ?, envfrom*
+.It Sy milter_body Pq ?, eom
+.It Sy milter_body_size Pq ?, eom
+.It Sy milter_cert_issuer Pq ?, helo*
+.It Sy milter_cert_subject Pq ?, helo*
+.It Sy milter_cipher Pq ?, helo*
+.It Sy milter_cipher_bits Pq ?, helo*
+.It Sy milter_client Pq ?, any
+.It Sy milter_client_addr Pq ?, any
+.It Sy milter_client_connections Pq ?, connect
+.It Sy milter_client_name Pq ?, any
+.It Sy milter_client_port Pq ?, any
+.It Sy milter_client_ptr Pq ?, any
+.It Sy milter_ctx Pq ?, any
+.It Sy milter_daemon_name Pq ?, any
+.It Sy milter_envfrom Pq ?, envfrom*
+.It Sy milter_envfrom_addr Pq ?, envfrom*
+.It Sy milter_envrcpt Pq ?, envrcpt*
+.It Sy milter_envrcpt_addr Pq ?, envrcpt*
+.It Sy milter_greylist_src Pq ?, any
+.It Sy milter_header Pq ?, eoh*
+.It Sy milter_header_name Pq ?, header
+.It Sy milter_header_size Pq ?, eoh*
+.It Sy milter_header_value Pq ?, header
+.It Sy milter_helo Pq ?, helo*
+.It Sy milter_hostaddr Pq ?, any
+.It Sy milter_hostname Pq ?, any
+.It Sy milter_id Pq ?, any
+.It Sy milter_mail_addr Pq ?, data*
+.It Sy milter_mail_host Pq ?, data*
+.It Sy milter_mail_mailer Pq ?, data*
+.It Sy milter_message_size Pq ?, eom
+.It Sy milter_mta_version Pq ?, any
+.It Sy milter_myhostname Pq ?, any
+.It Sy milter_queueid Pq ?, eoh*
+.It Sy milter_rcpt_addr Pq ?, envrcpt
+.It Sy milter_rcpt_host Pq ?, envrcpt
+.It Sy milter_rcpt_mailer Pq ?, envrcpt
+.It Sy milter_received Pq ?, any
+.It Sy milter_recipient_list Pq ?, data*
+.It Sy milter_recipients Pq ?, envrcpt*
+.It Sy milter_stage Pq ?, any
+.It Sy milter_stagename Pq ?, any
+.It Sy milter_subject Pq ?, eoh*
+.It Sy milter_tls_version Pq ?, helo*
+.It Sy milter_unknown_command Pq ?, unknown
+.It Sy spamd_score Pq float, eom
+.It Sy spamd_spam Pq int, eom
+.It Sy spamd_symbols Pq list, eom
+.It Sy spf Pq ?, envfrom*
+.It Sy spf_reason Pq ?, envfrom*
+.It Sy tarpit_delayed Pq int, any
 .El
 .Sh FUNCTIONS
+The following list describes all functions available in
+.Nm .
+Type of a particular return value is enclosed in parentheses:
 .Bl -tag -width 4n
-.It Sy cast
-.It Sy list_contains
-.It Sy regex_imatch
-.It Sy regex_match
-.It Sy string_mailaddr
-.It Sy string_strcmp
-.It Sy string_strlen
+.It Sy cast Pq ?\&
+.It Sy list_contains Pq ?\&
+.It Sy regex_imatch Pq ?\&
+.It Sy regex_match Pq ?\&
+.It Sy string_mailaddr Pq ?\&
+.It Sy string_strcmp Pq ?\&
+.It Sy string_strlen Pq ?\&
 .El
 .Sh IMPLEMENTATION NOTES
 Third party distributors of binary packages may split a full mopher
