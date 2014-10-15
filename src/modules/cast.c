@@ -7,6 +7,37 @@ static char *cast_keys[] = { "INT", "FLOAT", "STRING", NULL };
 static var_type_t cast_values[] = { VT_INT, VT_FLOAT, VT_STRING, VT_NULL };
 
 static var_t *
+type(int argc, ll_t *args)
+{
+	var_t *type, *var;
+	ll_entry_t *pos;
+	char *ts;
+
+	pos = LL_START(args);
+	var = ll_next(args, &pos);
+
+	if (argc != 1)
+	{
+		goto error;
+	}
+
+	if (var == NULL)
+	{
+		ts = "NULL";
+	}
+	else
+	{
+		ts = var_type_string(var);
+	}
+
+	return var_create(VT_STRING, NULL, ts, VF_COPY | VF_EXP_FREE);
+
+error:
+	log_error("type: bad arguments: usage type(expression)");
+	return NULL;
+}
+
+static var_t *
 cast(int argc, ll_t *args)
 {
 	var_t *type, *var, *copy;
@@ -59,6 +90,8 @@ cast_init(void)
 	var_type_t *v;
 	VAR_INT_T i;
 
+	acl_function_register("type", AF_COMPLEX,
+	    (acl_function_callback_t) type);
 	acl_function_register("cast", AF_COMPLEX,
 	    (acl_function_callback_t) cast);
 

@@ -794,6 +794,32 @@ var_true(const var_t * v)
 	return 0;
 }
 
+char *
+var_type_string(var_t *v)
+{
+        switch (v->v_type)
+        {
+        case VT_INT:
+                return "INT";
+        case VT_FLOAT:
+                return "FLOAT";
+        case VT_STRING:
+                return "STRING";
+        case VT_ADDR:
+                return "ADDR";
+        case VT_LIST:
+                return "LIST";
+        case VT_TABLE:
+                return "TABLE";
+        case VT_POINTER:
+                return "POINTER";
+        default:
+                break;
+        }
+        log_warning("var_type_string: bad type");
+        return "!ERROR!";
+}
+
 static int
 var_dump_list_or_table(var_t * v, char *buffer, int size)
 {

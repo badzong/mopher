@@ -76,6 +76,7 @@ var_t * var_scan(var_type_t type, char *name, char *str);
 var_t * var_scan_scheme(var_t *scheme, char *str);
 int var_compare(int *cmp, var_t * v1, var_t * v2);
 int var_true(const var_t * v);
+char *var_type_string(var_t *v);
 int var_dump_data(var_t * v, char *buffer, int size);
 int var_dump(var_t * v, char *buffer, int size);
 int var_dump_stdout(var_t * v);
