@@ -160,6 +160,7 @@ main(int argc, char **argv)
 	int dump = 0;
 	int greylist = 0;
 	int pass = 0;
+	int commands = 0;
 	char *table;
 	char *source;
 	char *from;
@@ -182,10 +183,12 @@ main(int argc, char **argv)
 			break;
 
 		case 'G':
+			++commands;
 			greylist = 1;
 			break;
 
 		case 'P':
+			++commands;
 			pass = 1;
 			break;
 
@@ -202,6 +205,7 @@ main(int argc, char **argv)
 			break;
 
 		case 'D':
+			++commands;
 			dump = 1;
 			table = optarg;
 			break;
@@ -212,8 +216,8 @@ main(int argc, char **argv)
 		}
 	}
 
-	// No command specified
-	if (!(dump | greylist | pass))
+	// mopherctl takes exactly 1 command -G | -D | -P
+	if (commands != 1)
 	{
 		moctl_usage();
 	}
