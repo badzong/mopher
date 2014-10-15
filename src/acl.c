@@ -140,14 +140,16 @@ acl_action_create(acl_action_type_t type, void *data)
 	aa = (acl_action_t *) malloc(sizeof (acl_action_t));
 	if (aa == NULL)
 	{
-		log_sys_error("acl_action_create: malloc");
-		return NULL;
+		log_sys_die(EX_OSERR, "acl_action_create: malloc");
 	}
 
 	memset(aa, 0, sizeof (acl_action_t));
 
 	aa->aa_type = type;
 	aa->aa_data = data;
+
+	// HACK: Read line number from parser_linenumber
+	aa->aa_line = parser_linenumber;
 
 	return aa;
 }
@@ -158,10 +160,6 @@ acl_action(acl_action_type_t type, void *data)
 	acl_action_t *aa;
 
 	aa = acl_action_create(type, data);
-	if (aa == NULL)
-	{
-		log_die(EX_SOFTWARE, "acl_action: acl_action_create failed");
-	}
 
 	return aa;
 }
@@ -1073,7 +1071,8 @@ acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 		acl_update(stage, response, mailspec);
 
 		log_message(LOG_ERR, mailspec, "match: stage=%s rule=%d "
-			"reply=%s", stagename, i, acl_stati[response]);
+			"line=%d reply=%s", stagename, i, aa->aa_line,
+			acl_stati[response]);
 
 		return response;
 	}

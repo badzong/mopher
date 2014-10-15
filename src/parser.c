@@ -7,7 +7,7 @@
 
 #define BUFLEN 1024
 
-static int parser_linenumber;
+int parser_linenumber;
 static char *parser_filename;
 
 

@@ -52,6 +52,9 @@ struct acl_action
 	acl_action_type_t	 aa_type;
 	void			*aa_data;
 	acl_reply_t		*aa_reply;
+
+	// Line number in mopherd.acl
+	int			 aa_line;
 };
 typedef struct acl_action acl_action_t;
 

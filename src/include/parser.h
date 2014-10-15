@@ -4,6 +4,8 @@
 #include <sys/types.h>
 #include <stdio.h>
 
+extern int parser_linenumber;
+
 /*
  * Prototypes
  */
