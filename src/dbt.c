@@ -685,12 +685,9 @@ dbt_janitor_cleanup(time_t now, dbt_t *dbt)
 
 	if (deleted)
 	{
-		log_error("Database cleanup: deleted %d stale records from "
-			"\"%s\"", deleted, dbt->dbt_name);
-	}
-	else
-	{
-		log_error("Database cleanup: \"%s\" is clean", dbt->dbt_name);
+		log_error("Database cleaning: disposed %d stale record%s from "
+			"%s table", deleted, deleted > 1 ? "s" : "",
+			dbt->dbt_name);
 	}
 
 	return deleted;
