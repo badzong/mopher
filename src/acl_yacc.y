@@ -12,7 +12,7 @@ int acl_lex(void);
 %token ID INTEGER FLOAT STRING ADDR VARIABLE CONTINUE XREJECT DISCARD ACCEPT
 %token TEMPFAIL GREYLIST VISA DEADLINE DELAY ATTEMPTS TARPIT SET LOG LEVEL 
 %token EQ NE LE GE AND OR DEFINE ADD HEADER VALUE INSERT CHANGE INDEX FROM
-%token ESMTP RCPT JUMP BODY SIZE DELETE REPLY XCODE MESSAGE IS_NULL PIPE IS_SET
+%token ESMTP RCPT JUMP BODY SIZE DELETE REPLY XCODE MSG IS_NULL PIPE IS_SET
 
 %union {
 	char			 c;
@@ -77,9 +77,8 @@ terminal	: CONTINUE		{ $$ = acl_action(ACL_CONTINUE, NULL); }
 		;
 
 
-reply		: REPLY exp		{ $$ = acl_reply($2); }
-		| reply MESSAGE exp	{ $$ = acl_reply_message($1, $3); }
-		| reply XCODE exp	{ $$ = acl_reply_xcode($1, $3); }
+reply		: REPLY exp MSG exp		{ $$ = acl_reply($2, NULL, $4); }
+		| REPLY exp XCODE exp MSG exp	{ $$ = acl_reply($2, $4, $6); }
 		;
 
 

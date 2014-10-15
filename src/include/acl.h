@@ -137,9 +137,7 @@ typedef struct acl_function acl_function_t;
  * Prototypes
  */
 
-acl_reply_t * acl_reply(exp_t *code);
-acl_reply_t * acl_reply_xcode(acl_reply_t *ar, exp_t *xcode);
-acl_reply_t * acl_reply_message(acl_reply_t *ar, exp_t *message);
+acl_reply_t * acl_reply(exp_t *code, exp_t *xcode, exp_t *msg);
 acl_action_t * acl_action(acl_action_type_t type, void *data);
 acl_action_t * acl_action_reply(acl_action_t *aa, acl_reply_t *ar);
 void acl_append(char *table, exp_t *exp, acl_action_t *aa);

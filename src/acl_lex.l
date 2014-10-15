@@ -108,7 +108,7 @@ comment		#.*$
 {delete}	return DELETE;
 {reply}		return REPLY;
 {xcode}		return XCODE;
-{message}	return MESSAGE;
+{message}	return MSG;
 {pipe}		return PIPE;
 {isset}		return IS_SET;
 

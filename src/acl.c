@@ -97,34 +97,18 @@ acl_reply_create(void)
 
 
 acl_reply_t *
-acl_reply(exp_t *code)
+acl_reply(exp_t *code, exp_t *xcode, exp_t *msg)
 {
 	acl_reply_t *ar;
 
 	ar = acl_reply_create();
+	
 	ar->ar_code = code;
-
-	return ar;
-}
-
-
-acl_reply_t *
-acl_reply_xcode(acl_reply_t *ar, exp_t *xcode)
-{
 	ar->ar_xcode = xcode;
+	ar->ar_message = msg;
 
 	return ar;
 }
-
-
-acl_reply_t *
-acl_reply_message(acl_reply_t *ar, exp_t *message)
-{
-	ar->ar_message = message;
-
-	return ar;
-}
-
 
 static void
 acl_action_delete(acl_action_t *aa)
