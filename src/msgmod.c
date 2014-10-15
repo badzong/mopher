@@ -8,6 +8,7 @@ static var_type_t msgmod_args_addhdr[] = { VT_STRING, VT_STRING, VT_NULL };
 static var_type_t msgmod_args_chghdr[] = { VT_STRING, VT_STRING, VT_NULL };
 static var_type_t msgmod_args_chghdr_x[] = { VT_STRING, VT_STRING, VT_INT,
     VT_NULL };
+static var_type_t msgmod_args_delhdr[] = { VT_STRING, VT_NULL };
 static var_type_t msgmod_args_inshdr[] = { VT_STRING, VT_STRING, VT_NULL };
 static var_type_t msgmod_args_inshdr_x[] = { VT_STRING, VT_STRING, VT_INT,
     VT_NULL };
@@ -16,13 +17,14 @@ static var_type_t msgmod_args_chgfrom_x[] = { VT_STRING, VT_STRING, VT_NULL };
 static var_type_t msgmod_args_addrcpt[] = { VT_STRING, VT_NULL };
 static var_type_t msgmod_args_addrcpt_x[] = { VT_STRING, VT_STRING, VT_NULL };
 static var_type_t msgmod_args_delrcpt[] = { VT_STRING, VT_NULL };
-static var_type_t msgmod_args_chgbody[] = { VT_STRING, VT_INT, VT_NULL };
+static var_type_t msgmod_args_chgbody[] = { VT_STRING, VT_NULL };
 
 
 static var_type_t *msgmod_args[] = {
     	msgmod_args_addhdr,		/* MM_ADDHDR, */
     	msgmod_args_chghdr,		/* MM_CHGHDR, */
     	msgmod_args_chghdr_x,		/* MM_CHGHDR_X, */
+    	msgmod_args_delhdr,		/* MM_DELHDR, */
     	msgmod_args_inshdr,		/* MM_INSHDR, */
     	msgmod_args_inshdr_x,		/* MM_INSHDR_X, */
     	msgmod_args_chgfrom,		/* MM_CHGFROM, */
@@ -217,6 +219,18 @@ msgmod(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 		break;
 	
 
+	case MM_DELHDR:
+		if (smfi_chgheader(ctx, args[0]->v_data, 1, NULL) != MI_SUCCESS)
+		{
+			log_error("msgmod: smfi_chgheader failed");
+			goto error;
+		}
+
+		log_debug("msgmod: delete header: %s (1)", args[0]->v_data);
+
+		break;
+
+
 	case MM_INSHDR:
 		if (smfi_insheader(ctx, 0, args[0]->v_data, args[1]->v_data)
 		    != MI_SUCCESS)
@@ -311,15 +325,14 @@ msgmod(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 	
 
 	case MM_CHGBODY:
-		x = args[1]->v_data;
-
-		if (smfi_replacebody(ctx, args[0]->v_data, *x) != MI_SUCCESS)
+		size = strlen(args[0]->v_data);
+		if (smfi_replacebody(ctx, args[0]->v_data, size) != MI_SUCCESS)
 		{
 			log_error("msgmod: smfi_replacebody failed");
 			goto error;
 		}
 
-		log_debug("msgmod: change body: %ld bytes", *x);
+		log_debug("msgmod: change body: %ld bytes", size);
 
 		break;
 	

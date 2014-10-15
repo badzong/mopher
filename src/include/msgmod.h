@@ -6,6 +6,7 @@ enum msgmod_type
 	MM_ADDHDR,
 	MM_CHGHDR,
 	MM_CHGHDR_X,
+	MM_DELHDR,
 	MM_INSHDR,
 	MM_INSHDR_X,
 	MM_CHGFROM,

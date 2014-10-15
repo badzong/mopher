@@ -77,8 +77,10 @@ terminal	: CONTINUE		{ $$ = acl_action(ACL_CONTINUE, NULL); }
 		;
 
 
-reply		: REPLY exp MSG exp		{ $$ = acl_reply($2, NULL, $4); }
-		| REPLY exp XCODE exp MSG exp	{ $$ = acl_reply($2, $4, $6); }
+reply		: REPLY exp MSG exp
+					{ $$ = acl_reply($2, NULL, $4); }
+		| REPLY exp XCODE exp MSG exp
+					{ $$ = acl_reply($2, $4, $6); }
 		;
 
 
@@ -114,6 +116,8 @@ mod		: ADD HEADER exp VALUE exp
 					{ $$ = msgmod_create(MM_CHGHDR, $3, $5, NULL); }
 		| CHANGE HEADER exp VALUE exp INDEX exp
 					{ $$ = msgmod_create(MM_CHGHDR_X, $3, $5, $7, NULL); }
+		| DELETE HEADER exp
+					{ $$ = msgmod_create(MM_DELHDR, $3, NULL); }
 		| CHANGE FROM exp
 					{ $$ = msgmod_create(MM_CHGFROM, $3, NULL); }
 		| CHANGE FROM exp ESMTP exp
@@ -124,8 +128,8 @@ mod		: ADD HEADER exp VALUE exp
 					{ $$ = msgmod_create(MM_ADDRCPT_X, $3, $5, NULL); }
 		| DELETE RCPT exp
 					{ $$ = msgmod_create(MM_DELRCPT, $3, NULL); }
-		| CHANGE BODY exp SIZE exp
-					{ $$ = msgmod_create(MM_CHGBODY, $3, $5, NULL); }
+		| CHANGE BODY exp
+					{ $$ = msgmod_create(MM_CHGBODY, $3, NULL); }
 		;
 
 exp		: '(' exp ')'		{ $$ = exp_parentheses($2); }
