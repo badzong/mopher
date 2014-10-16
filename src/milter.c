@@ -563,6 +563,11 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 		goto exit;
 	}
 
+	/*
+ 	 *  Set empty acl_* symbols
+ 	 */
+	acl_match(mp->mp_table, 0, MS_NULL, NULL, NULL, NULL, NULL);
+
 	log_message(LOG_ERR, mp->mp_table, "host=%s addr=%s", hostname,
 	    addrstr);
 

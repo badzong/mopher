@@ -65,6 +65,14 @@ static char *acl_stati[] = {
 	"PIPE"
 };
 
+static char *acl_match_symbols[] = {
+	"acl_matched",
+	"acl_stage_matched",
+	"acl_rule",
+	"acl_line",
+	"acl_response",
+	NULL
+};
 
 static void
 acl_reply_delete(acl_reply_t *ar)
@@ -318,7 +326,7 @@ acl_symbol_insert(char *symbol, acl_symbol_t *as)
 {
 	if (sht_insert(acl_symbols, symbol, as))
 	{
-		log_die(EX_SOFTWARE, "acl_symbol_register: sht_insert failed");
+		log_die(EX_SOFTWARE, "acl_symbol_insert: sht_insert failed");
 	}
 	
 	return;
@@ -785,6 +793,56 @@ acl_update_callback(acl_update_t callback)
 	return;
 }
 
+void
+acl_match(var_t *mailspec, VAR_INT_T matched, VAR_INT_T stage,
+    char *stagename, VAR_INT_T *rule, VAR_INT_T *line, char *response)
+{
+	VAR_INT_T *acl_matched;
+	VAR_INT_T *stage_matched;
+
+	acl_matched = vtable_get(mailspec, "acl_matched");
+	stage_matched = vtable_get(mailspec, "acl_stage_matched");
+
+	// Variables not set yet
+	if (acl_matched == NULL || stage_matched == NULL)
+	{
+		goto exit;
+	}
+
+	// Override symbols if stage_symbols were set in previous stage
+	if (*stage_matched < stage)
+	{
+		goto exit;
+	}
+
+	// Do not override acl symbols if another rule in this stage already
+	// matched.
+	if (*acl_matched)
+	{
+		return;
+	}
+
+exit:
+	// First match in this stage
+	if (matched)
+	{
+		log_message(LOG_ERR, mailspec, "match: stage=%s rule=%d "
+			"line=%d reply=%s", stagename, *rule, *line, response);
+	}
+
+	if (vtable_setv(mailspec,
+	    VT_INT, "acl_matched", &matched, VF_KEEPNAME | VF_COPYDATA,
+	    VT_INT, "acl_stage_matched", &stage, VF_KEEPNAME | VF_COPYDATA,
+	    VT_INT, "acl_rule", rule, VF_KEEPNAME | VF_COPYDATA,
+	    VT_INT, "acl_line", line, VF_KEEPNAME | VF_COPYDATA,
+	    VT_STRING, "acl_response", response, VF_KEEP,
+	    VT_NULL))
+	{
+		log_error("acl_update_mailspec: vtable_setv failed");
+	}
+
+	return;
+}
 
 static void
 acl_update(milter_stage_t stage, acl_action_type_t action, var_t *mailspec)
@@ -974,7 +1032,6 @@ error:
 	return r;
 }
 
-
 acl_action_type_t
 acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 {
@@ -984,7 +1041,7 @@ acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 	acl_action_t *aa;
 	acl_action_type_t response;
 	acl_action_handler_t action_handler;
-	int i;
+	VAR_INT_T i;
 
 	log_debug("acl: stage \"%s\"", stagename);
 
@@ -1068,11 +1125,9 @@ acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 			}
 		}
 
-		acl_update(stage, response, mailspec);
-
-		log_message(LOG_ERR, mailspec, "match: stage=%s rule=%d "
-			"line=%d reply=%s", stagename, i, aa->aa_line,
+		acl_match(mailspec, 1, stage, stagename, &i, &aa->aa_line,
 			acl_stati[response]);
+		acl_update(stage, response, mailspec);
 
 		return response;
 	}
@@ -1081,7 +1136,8 @@ exit:
 	/*
 	 * No rule matched
 	 */
-	log_info("acl: no match in \"%s\": continue", stagename);
+	log_message(LOG_INFO, mailspec, "acl: no match in \"%s\": continue",
+		stagename);
 
 	acl_update(stage, ACL_CONTINUE, mailspec);
 
@@ -1092,6 +1148,7 @@ void
 acl_init(void)
 {
 	acl_log_level_t *ll;
+	char **symbol;
 
 	acl_tables = sht_create(ACL_BUCKETS, (sht_delete_t) acl_rules_delete);
 	if (acl_tables == NULL)
@@ -1123,6 +1180,14 @@ acl_init(void)
 	{
 		acl_constant_register(VT_INT, ll->ll_name, &ll->ll_level,
 		    VF_KEEP);
+	}
+
+	/*
+	 * ACL symbols
+	 */
+	for (symbol = acl_match_symbols; *symbol != NULL; ++symbol)
+	{
+		acl_symbol_register(*symbol, MS_ANY, NULL, AS_NONE);
 	}
 	
 	return;

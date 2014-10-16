@@ -54,7 +54,7 @@ struct acl_action
 	acl_reply_t		*aa_reply;
 
 	// Line number in mopherd.acl
-	int			 aa_line;
+	VAR_INT_T		 aa_line;
 };
 typedef struct acl_action acl_action_t;
 
@@ -159,6 +159,7 @@ acl_log_t * acl_log_level(acl_log_t *al, exp_t *level);
 acl_action_type_t acl_log(milter_stage_t stage, char *stagename, var_t *mailspec, void *data);
 acl_action_type_t acl_jump(milter_stage_t stage, char *stagename, var_t *mailspec, void *data);
 acl_action_type_t acl_set(milter_stage_t stage, char *stagename, var_t *mailspec, void *data);
+void acl_match(var_t *mailspec, VAR_INT_T matched, VAR_INT_T stage, char *stagename, VAR_INT_T *rule, VAR_INT_T *line, char *response);
 void acl_update_callback(acl_update_t callback);
 acl_action_type_t acl(milter_stage_t stage, char *stagename, var_t *mailspec);
 void acl_init(void);
