@@ -13,6 +13,7 @@
 
 #define BUFLEN 1024
 #define RBL_BUCKETS 32
+#define RBL_NAME "rbl"
 
 static sht_t *rbl_table;
 
@@ -28,6 +29,20 @@ rbl_register(char *name, char *domain)
 	return 0;
 }
 
+int
+rbl_list(milter_stage_t stage, char *name, var_t *attrs)
+{
+	var_t *list;
+
+	list = vtable_list_get(attrs, RBL_NAME);
+	if (list == NULL)
+	{
+		log_error("rbl_query: vtable_list_get failed");
+		return -1;
+	}
+
+	return 0;
+}
 
 int
 rbl_query(milter_stage_t stage, char *name, var_t *attrs)
@@ -46,6 +61,8 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	char *p;
 	int i;
 
+	// Make sure rbl list exists
+	rbl_list(stage, name, attrs);
 
 	domain = sht_lookup(rbl_table, name);
 	if (domain == NULL)
@@ -172,9 +189,18 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 
 		free(resultstr);
 
+		// Set named symbol
 		if (vtable_set_new(attrs, VT_ADDR, name, data, VF_COPYNAME))
 		{
 			log_error("rbl_query: vtable_setv failed");
+			goto error;
+		}
+
+		// Append name to rbl list
+		if (vtable_list_append_new(attrs, VT_STRING, RBL_NAME,
+			name, VF_KEEP))
+		{
+			log_error("rbl_query: vtable_append_new failed");
 			goto error;
 		}
 	}
@@ -223,7 +249,7 @@ rbl_init(void)
 		return 0;
 	}
 		
-	rbl = cf_get(VT_TABLE, "rbl", NULL);
+	rbl = cf_get(VT_TABLE, RBL_NAME, NULL);
 	if (rbl == NULL)
 	{
 		log_notice("rbl: init: no RBLs configured");
@@ -243,6 +269,8 @@ rbl_init(void)
 		acl_symbol_register(v->v_name, MS_OFF_CONNECT, rbl_query,
 		    AS_CACHE);
 	}
+
+	acl_symbol_register(RBL_NAME, MS_OFF_CONNECT, rbl_list, AS_CACHE);
 
 	return 0;
 }
