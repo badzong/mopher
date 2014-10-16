@@ -572,6 +572,7 @@ or bound to a milter stage and all stages following that stage
 .It Sy milter_subject Pq ?, eoh*
 .It Sy milter_tls_version Pq ?, helo*
 .It Sy milter_unknown_command Pq ?, unknown
+.It Sy rbl Pq ?, any
 .It Sy spamd_score Pq float, eom
 .It Sy spamd_spam Pq int, eom
 .It Sy spamd_symbols Pq list, eom
@@ -585,12 +586,14 @@ The following list describes all functions available in
 Type of a particular return value is enclosed in parentheses:
 .Bl -tag -width 4n
 .It Sy cast Pq ?\&
+.It Sy len Pq ?\&
 .It Sy list_contains Pq ?\&
 .It Sy regex_imatch Pq ?\&
 .It Sy regex_match Pq ?\&
-.It Sy string_mailaddr Pq ?\&
-.It Sy string_strcmp Pq ?\&
-.It Sy string_strlen Pq ?\&
+.It Sy mailaddr Pq ?\&
+.It Sy strcmp Pq ?\&
+.It Sy strlen Pq ?\&
+.It Sy type Pq ?\&
 .El
 .Sh IMPLEMENTATION NOTES
 Third party distributors of binary packages may split a full mopher
