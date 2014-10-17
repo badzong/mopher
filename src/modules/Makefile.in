@@ -3,7 +3,7 @@
 include @top_srcdir@/Makefile.common
 
 SRC=			cast.c string.c list.c spamd.c rbl.c counter.c \
-			regex.c memdb.c @MOD_ACL_SPF@ @MOD_DB_BDB@ \
+			regex.c memdb.c dblog.c @MOD_ACL_SPF@ @MOD_DB_BDB@ \
 			@MOD_DB_MYSQL@
 MODULES=		$(SRC:.c=.so)
 

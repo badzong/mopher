@@ -85,5 +85,6 @@ var_compact_t * var_compress(var_t *v);
 var_t * var_decompress(var_compact_t *vc, var_t *scheme);
 var_t * var_cast_copy(var_type_t type, var_t *v);
 VAR_INT_T var_intval(var_t *v);
+void var_test(void);
 
 #endif /* _VAR_H_ */

@@ -183,6 +183,62 @@ vlist_record(var_t *scheme, ...)
 }
 
 
+var_t *
+vlist_record_from_table(var_t *scheme, var_t *table)
+{
+	var_t *record = NULL, *vs, *vt;
+	ll_t *ll;
+	ll_entry_t *pos;
+	void *data;
+	var_type_t type;
+	char *name;
+
+	record = vlist_create(scheme->v_name, VF_KEEPNAME);
+	if (record == NULL)
+	{
+		log_warning("vlist_record: vlist_create failed");
+		return NULL;
+	}
+
+	ll = scheme->v_data;
+	pos = LL_START(ll);
+
+	while ((vs = ll_next(ll, &pos)))
+	{
+		name = vs->v_name;
+		vt = vtable_lookup(table, name);
+
+		if (vt == NULL && vs->v_flags & VF_KEY)
+		{
+			log_error("vlist_record_from_table: \"%s\" is missing "
+				"in vtable and declared as key", name);
+			goto error;
+		}
+
+
+		data = vt == NULL ? NULL : vt->v_data;
+		type = vt == NULL ? VT_NULL : vt->v_type;
+
+		if (vlist_append_new(record, type, name, data,
+			VF_COPY | vs->v_flags) == -1)
+		{
+			log_warning("vlist_record_from_table: vlist_append_new"
+				" failed");
+			goto error;
+		}
+	}
+
+	return record;
+
+error:
+	if(record)
+	{
+		var_delete(record);
+	}
+	return NULL;
+}
+
+
 void *
 vlist_record_get(var_t *record, char *key)
 {

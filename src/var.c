@@ -17,6 +17,7 @@
 #define BUCKETS 256
 #define BUFLEN 1024
 #define STDOUT_BUFLEN 1024 * 64
+#define COMPRESS_FIELD_LIMIT sizeof (unsigned long long) * 8
 
 static hash_t
 var_hash(var_t * v)
@@ -169,30 +170,6 @@ error:
 	}
 
 	return NULL;
-}
-
-
-VAR_INT_T
-var_data_size(var_t *v)
-{
-	if(v->v_type == VT_STRING) {
-		return strlen((char *) v->v_data) + 1;
-	}
-
-	if(v->v_type == VT_INT) {
-		return sizeof(VAR_INT_T);
-	}
-
-	if(v->v_type == VT_FLOAT) {
-		return sizeof(VAR_FLOAT_T);
-	}
-
-	if(v->v_type == VT_ADDR) {
-		return sizeof(var_sockaddr_t);
-	}
-
-	log_warning("var_data_size: bad type");
-	return 0;
 }
 
 
@@ -939,7 +916,7 @@ var_dump_data(var_t * v, char *buffer, int size)
 
 	case VT_LIST:
 	case VT_TABLE:
-		len = var_dump_list_or_table(v, buffer, size);
+		len = var_dump_list_or_table(v, buffer, size) + 1;
 		break;
 
 	case VT_POINTER:
@@ -1037,20 +1014,40 @@ static int
 var_compress_data(char **buffer, int *len, var_t *v)
 {
 	char *p;
-	int n;
+	void *data;
+	int size;
+	char dump[BUFLEN];
 
-	n = var_data_size(v);
+	// CAVEAT: Lists and table are compressed as strings
+	if (v->v_type == VT_LIST || v->v_type == VT_TABLE)
+	{
+		size = var_dump_data(v, dump, sizeof dump);
+		if (size == -1)
+		{
+			log_error("var_compress: var_dump_data failed");
+			return -1;
+		}
 
-	p = realloc(*buffer, *len + n);
+		// Add \0 to size
+		++size;
+		data = dump;
+	}
+	else
+	{
+		size = var_data_size(v);
+		data = v->v_data;
+	}
+
+	p = realloc(*buffer, *len + size);
 	if (p == NULL) {
 		log_sys_warning("var_compress_data: realloc");
 		return -1;
 	}
 
-	memcpy(p + *len, v->v_data, n);
+	memcpy(p + *len, data, size);
 
 	*buffer = p;
-	*len += n;
+	*len += size;
 
 	return *len;
 }
@@ -1060,20 +1057,20 @@ var_compress(var_t *v)
 {
 	var_compact_t *vc = NULL;
 	var_t *item;
-	char **p;
-	int *i;
 	ll_t *ll;
 	ll_entry_t *pos;
+	int klen = 0;
+	int dlen = 0;
+	char *key = NULL;
+	char *data = NULL;
+	unsigned long long *null_fields;
+	char **buffer;
+	int *len;
+	int n;
 
 	if(v->v_type != VT_LIST) {
 		log_warning("var_compress: bad type");
 		return NULL;
-	}
-
-	vc = var_compact_create();
-	if (vc == NULL) {
-		log_warning("var_compress: var_compact_create failed");
-		goto error;
 	}
 
 	/*
@@ -1082,27 +1079,74 @@ var_compress(var_t *v)
 	ll = v->v_data;
 	pos = LL_START(ll);
 
-	while ((item = ll_next(ll, &pos))) {
-		if (item->v_data == NULL) {
+	for (n = 0; (item = ll_next(ll, &pos)); ++n)
+	{
+		if (n >= COMPRESS_FIELD_LIMIT)
+		{
+			log_error("var_compress: field limit reached");
+			goto error;
+		}
+
+		if (item->v_flags & VF_KEY && item->v_data == NULL)
+		{
+			log_error("var_compress: key without value");
+			goto error;
+		}
+
+		// First data item.
+		// CAVEAT: Some records only have key items
+		if (dlen == 0 && (item->v_flags & VF_KEY) == 0)
+		{
+			dlen = sizeof (unsigned long long);
+			data = (char *) malloc(dlen);
+			null_fields = (unsigned long long *) data;
+			*null_fields = 0;
+		}
+
+		// NULL item
+		if (item->v_data == NULL)
+		{
+			// data might be reallocd
+			null_fields = (unsigned long long *) data;
+			*null_fields |= 1<<n;
 			continue;
 		}
 
-		p = item->v_flags & VF_KEY ? &vc->vc_key : &vc->vc_data;
-		i = item->v_flags & VF_KEY ? &vc->vc_klen : &vc->vc_dlen;
+		buffer = item->v_flags & VF_KEY ? &key : &data;
+		len = item->v_flags & VF_KEY ? &klen : &dlen;
 
-		if (var_compress_data(p, i, item) == -1) {
-			log_warning("var_record_pack: var_compress_data"
-				" failed");
+		if (var_compress_data(buffer, len, item) == -1) {
+			log_warning("var_compress: var_compress_data failed");
 			goto error;
 		}
 	}
+
+	vc = var_compact_create();
+	if (vc == NULL) {
+		log_warning("var_compress: var_compact_create failed");
+		goto error;
+	}
+
+	vc->vc_key = key;
+	vc->vc_klen = klen;
+	vc->vc_data = data;
+	vc->vc_dlen = dlen;
 
 	return vc;
 
 
 error:
 
-	if(vc) {
+	if(key)
+	{
+		free(key);
+	}
+	if(data)
+	{
+		free(data);
+	}
+	if(vc)
+	{
 		free(vc);
 	}
 
@@ -1114,11 +1158,15 @@ var_t *
 var_decompress(var_compact_t *vc, var_t *scheme)
 {
 	var_t *v = NULL, *item = NULL, *list = NULL;
-	void *p;
+	void *buffer;
 	int k = 0, d = 0;
-	int *i;
+	int *len;
 	ll_t *ll;
 	ll_entry_t *pos;
+	unsigned long long null_fields=0;
+	int n;
+
+	char dump[8192];
 
 	if(scheme->v_type != VT_LIST) {
 		log_warning("var_decompress: bad type");
@@ -1134,25 +1182,43 @@ var_decompress(var_compact_t *vc, var_t *scheme)
 	ll = scheme->v_data;
 	pos = LL_START(ll);
 
-	while ((item = ll_next(ll, &pos))) {
-		p = item->v_flags & VF_KEY ? vc->vc_key : vc->vc_data;
-		i = item->v_flags & VF_KEY ? &k : &d;
+	for (n = 0; (item = ll_next(ll, &pos)); ++n) {
+		if (d == 0 && (item->v_flags & VF_KEY) == 0)
+		{
+			null_fields = *(unsigned long long *) vc->vc_data;
+			d = sizeof (unsigned long long);
+		}
 
-		v = var_create(item->v_type, item->v_name, p + *i,
-			VF_COPYNAME | VF_COPYDATA | item->v_flags);
+		buffer = item->v_flags & VF_KEY ? vc->vc_key : vc->vc_data;
+		len = item->v_flags & VF_KEY ? &k : &d;
+
+		// Data is NULL
+		if ((item->v_flags & VF_KEY) == 0 && null_fields & (1<<n))
+		{
+			v = var_create(item->v_type, item->v_name, NULL,
+				VF_COPY | item->v_flags);
+		}
+		else
+		{
+			v = var_create(item->v_type, item->v_name,
+				buffer + *len,
+				VF_COPYNAME | VF_COPYDATA | item->v_flags);
+		}
 
 		if(v == NULL) {
 			log_warning("var_decompress: var_create failed");
 			goto error;
 		}
 
-		*i += var_data_size(v);
+		*len += var_data_size(v);
 
 		if(vlist_append(list, v) == -1) {
 			log_warning("var_decompress: vlist_append failed");
 			goto error;
 		}
 	}
+
+	var_dump_data(list, dump, sizeof dump);
 
 	return list;
 
@@ -1168,6 +1234,40 @@ error:
 	}
 
 	return NULL;
+}
+
+
+VAR_INT_T
+var_data_size(var_t *v)
+{
+	if (v->v_data == NULL)
+	{
+		return 0;
+	}
+
+	switch (v->v_type)
+	{
+	case VT_STRING:
+		return strlen((char *) v->v_data) + 1;
+
+	case VT_INT:
+		return sizeof(VAR_INT_T);
+
+	case VT_FLOAT:
+		return sizeof(VAR_FLOAT_T);
+
+	case VT_ADDR:
+		return sizeof(var_sockaddr_t);
+
+	case VT_NULL:
+		return 0;
+
+	default:
+		break;
+	}
+
+	log_warning("var_data_size: bad type");
+	return 0;
 }
 
 
@@ -1332,3 +1432,80 @@ var_intval(var_t *v)
 
 	return i;
 }
+
+#ifdef DEBUG
+
+void
+var_test(void)
+{
+	var_t *scheme;
+	var_compact_t *vc;
+
+	VAR_INT_T key_int = 1;
+	VAR_INT_T data_int = 2;
+	VAR_FLOAT_T key_float = 3.3;
+	VAR_FLOAT_T data_float = 4.4;
+	char *key_string = "foo";
+	char *data_string = "bar";
+	var_t *record;
+
+	VAR_INT_T *pi;
+	VAR_FLOAT_T *pf;
+	char *ps;
+
+	scheme = vlist_scheme("test",
+		"key_int",		VT_INT,		VF_KEEPNAME | VF_KEY,
+		"key_float",		VT_FLOAT,	VF_KEEPNAME | VF_KEY,
+		"key_string",		VT_STRING,	VF_KEEPNAME | VF_KEY,
+		"data_int",		VT_INT,		VF_KEEPNAME,
+		"data_int_null",	VT_INT,		VF_KEEPNAME,
+		"data_float",		VT_FLOAT,	VF_KEEPNAME,
+		"data_float_null",	VT_FLOAT,	VF_KEEPNAME,
+		"data_string",		VT_STRING,	VF_KEEPNAME,
+		"data_string_null",	VT_STRING,	VF_KEEPNAME,
+		NULL);
+	TEST_ASSERT(scheme != NULL, "vlist_scheme failed");
+
+	record = vlist_record(scheme, &key_int, &key_float, key_string,
+		&data_int, NULL, &data_float, NULL, data_string, NULL);
+	TEST_ASSERT(record != NULL, "vlist_record failed");
+
+	vc = var_compress(record);
+	TEST_ASSERT(vc != NULL, "var_compress failed");
+
+	var_delete(record);
+	record = var_decompress(vc, scheme);
+	var_compact_delete(vc);
+	TEST_ASSERT(record != NULL, "var_decompress failed");
+
+	pi = (VAR_INT_T *) vlist_record_get(record, "key_int");
+	TEST_ASSERT(pi != NULL, "vlist_record_get key not found");
+	TEST_ASSERT(*pi == key_int, "var_decompress returnd bad value");
+	pi = (VAR_INT_T *) vlist_record_get(record, "data_int");
+	TEST_ASSERT(pi != NULL, "vlist_record_get key not found");
+	TEST_ASSERT(*pi == data_int, "var_decompress returnd bad value");
+	pi = (VAR_INT_T *) vlist_record_get(record, "data_int_null");
+	TEST_ASSERT(pi == NULL, "var_decompress returnd bad value");
+
+	pf = (VAR_FLOAT_T *) vlist_record_get(record, "key_float");
+	TEST_ASSERT(pf != NULL, "vlist_record_get key not found");
+	TEST_ASSERT(*pf == key_float, "var_decompress returnd bad value");
+	pf = (VAR_FLOAT_T *) vlist_record_get(record, "data_float");
+	TEST_ASSERT(pf != NULL, "vlist_record_get key not found");
+	TEST_ASSERT(*pf == data_float, "var_decompress returnd bad value");
+	pf = (VAR_FLOAT_T *) vlist_record_get(record, "data_float_null");
+	TEST_ASSERT(pf == NULL, "var_decompress returnd bad value");
+
+	ps = (char *) vlist_record_get(record, "key_string");
+	TEST_ASSERT(ps != NULL, "vlist_record_get key not found");
+	TEST_ASSERT(strcmp(ps, "foo") == 0, "var_decompress returnd bad value");
+	ps = (char *) vlist_record_get(record, "data_string");
+	TEST_ASSERT(ps != NULL, "vlist_record_get key not found");
+	TEST_ASSERT(strcmp(ps, "bar") == 0, "var_decompress returnd bad value");
+	ps = (char *) vlist_record_get(record, "data_string_null");
+	TEST_ASSERT(ps == NULL, "var_decompress returnd bad value");
+
+	var_delete(record);
+	var_delete(scheme);
+}
+#endif

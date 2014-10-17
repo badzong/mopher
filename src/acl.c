@@ -532,7 +532,6 @@ acl_symbol_get(var_t *mailspec, char *name)
 		return NULL;
 	}
 
-
 	if ((as->as_stages & *stage) == 0)
 	{
 		stagename = vtable_get(mailspec, "milter_stagename");

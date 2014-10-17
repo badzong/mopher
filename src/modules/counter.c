@@ -27,11 +27,11 @@ counter_lookup(milter_stage_t stage, char *name, var_t *mailspec)
 	log_message(LOG_DEBUG, mailspec, "counter_lookup: %s", name);
 
 	/*
-	 * mailter_hostaddr is not set. See milter_connect for details.
+	 * milter_addrstr is not set. See milter_connect for details.
 	 */
-	if (vtable_is_null(mailspec, "milter_hostaddr"))
+	if (vtable_is_null(mailspec, "milter_addrstr"))
 	{
-		log_debug("counter_lookup: milter_hostaddr is NULL");
+		log_debug("counter_lookup: milter_addrstr is NULL");
 
 		if (vtable_set_null(mailspec, "counter_relay", VF_KEEPNAME) ||
 		    vtable_set_null(mailspec, "counter_penpal", VF_KEEPNAME))
@@ -99,11 +99,11 @@ static int
 counter_add_relay(dbt_t *dbt, var_t *mailspec)
 {
 	var_t *record;
-	void *hostaddr;
+	char *addrstr;
 	VAR_INT_T *received;
 	VAR_INT_T created, updated, expire, count;
 
-	if (vtable_dereference(mailspec, "milter_hostaddr", &hostaddr,
+	if (vtable_dereference(mailspec, "milter_addrstr", &addrstr,
 	    "milter_received", &received, NULL) != 2)
 	{
 		log_error("counter_add_penpal: vtable_dereference failed");
@@ -115,7 +115,7 @@ counter_add_relay(dbt_t *dbt, var_t *mailspec)
 	expire  = *received + cf_counter_expire_low;
 	count   = 1;
 
-	record = vlist_record(dbt->dbt_scheme, hostaddr, &created, &updated,
+	record = vlist_record(dbt->dbt_scheme, addrstr, &created, &updated,
 	    &expire, &count);
 
 
@@ -143,13 +143,13 @@ static int
 counter_add_penpal(dbt_t *dbt, var_t *mailspec)
 {
 	var_t *record;
-	void *hostaddr;
+	char *source;
 	char *envfrom;
 	char *envrcpt;
 	VAR_INT_T *received;
 	VAR_INT_T created, updated, expire, count;
 
-	if (vtable_dereference(mailspec, "milter_greylist_src", &hostaddr,
+	if (vtable_dereference(mailspec, "milter_greylist_src", &source,
 	    "milter_envfrom_addr", &envfrom, "milter_envrcpt_addr", &envrcpt,
 	    "milter_received", &received, NULL) != 4)
 	{
@@ -162,7 +162,7 @@ counter_add_penpal(dbt_t *dbt, var_t *mailspec)
 	expire  = *received + cf_counter_expire_low;
 	count   = 1;
 
-	record = vlist_record(dbt->dbt_scheme, hostaddr, envfrom, envrcpt,
+	record = vlist_record(dbt->dbt_scheme, source, envfrom, envrcpt,
 	    &created, &updated, &expire, &count);
 
 	if (record == NULL) {
@@ -294,11 +294,11 @@ counter_update(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 	}
 
 	/*
-	 * mailter_hostaddr is not set. See milter_connect for details.
+	 * milter_addrstr is not set. See milter_connect for details.
 	 */
-	if (vtable_is_null(mailspec, "milter_hostaddr"))
+	if (vtable_is_null(mailspec, "milter_addrstr"))
 	{
-		log_debug("counter_update: milter_hostaddr is NULL");
+		log_debug("counter_update: milter_addrstr is NULL");
 		return 0;
 	}
 
@@ -347,7 +347,7 @@ counter_init(void)
 	var_t *penpal_scheme;
 
 	relay_scheme = vlist_scheme("counter_relay",
-		"milter_hostaddr",		VT_ADDR,	VF_KEEPNAME | VF_KEY,
+		"milter_addrstr",		VT_STRING,	VF_KEEPNAME | VF_KEY,
 		"counter_relay_created",	VT_INT,		VF_KEEPNAME,
 		"counter_relay_updated",	VT_INT,		VF_KEEPNAME,
 		"counter_relay_expire",		VT_INT,		VF_KEEPNAME,

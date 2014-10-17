@@ -55,6 +55,7 @@ static milter_symbol_t milter_symbols[] = {
 	{ "milter_header_value", MS_HEADER },
 	{ "milter_header", MS_OFF_EOH },
 	{ "milter_header_size", MS_OFF_EOH },
+	{ "milter_message_id", MS_OFF_EOH },
 	{ "milter_subject", MS_OFF_EOH },
 	{ "milter_body", MS_EOM },
 	{ "milter_body_size", MS_EOM },
@@ -828,9 +829,15 @@ milter_header(SMFICTX * ctx, char *headerf, char *headerv)
 		messageid = util_strdupenc(headerv, "<>");
 		if (messageid)
 		{
+			if (vtable_set_new(mp->mp_table, VT_STRING,
+				"milter_message_id", messageid, VF_KEEPNAME))
+			{
+				log_error("milter_header: vtable_set_new failed");
+				goto exit;
+			}
+
 			log_message(LOG_ERR, mp->mp_table, "message-id=%s",
 				messageid);
-			free(messageid);
 		}
 	}
 
