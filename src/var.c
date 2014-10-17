@@ -916,7 +916,7 @@ var_dump_data(var_t * v, char *buffer, int size)
 
 	case VT_LIST:
 	case VT_TABLE:
-		len = var_dump_list_or_table(v, buffer, size) + 1;
+		len = var_dump_list_or_table(v, buffer, size);
 		break;
 
 	case VT_POINTER:
@@ -1201,8 +1201,7 @@ var_decompress(var_compact_t *vc, var_t *scheme)
 		else
 		{
 			v = var_create(item->v_type, item->v_name,
-				buffer + *len,
-				VF_COPYNAME | VF_COPYDATA | item->v_flags);
+				buffer + *len, VF_COPY | item->v_flags);
 		}
 
 		if(v == NULL) {
@@ -1448,6 +1447,7 @@ var_test(void)
 	char *key_string = "foo";
 	char *data_string = "bar";
 	var_t *record;
+	var_t *v;
 
 	VAR_INT_T *pi;
 	VAR_FLOAT_T *pf;
@@ -1478,7 +1478,9 @@ var_test(void)
 	var_compact_delete(vc);
 	TEST_ASSERT(record != NULL, "var_decompress failed");
 
-	pi = (VAR_INT_T *) vlist_record_get(record, "key_int");
+	v = vlist_record_lookup(record, "key_int");
+	pi = (VAR_INT_T *) v->v_data;
+	TEST_ASSERT((v->v_type | VF_KEY) != 0, "Key got lost");
 	TEST_ASSERT(pi != NULL, "vlist_record_get key not found");
 	TEST_ASSERT(*pi == key_int, "var_decompress returnd bad value");
 	pi = (VAR_INT_T *) vlist_record_get(record, "data_int");
@@ -1487,7 +1489,9 @@ var_test(void)
 	pi = (VAR_INT_T *) vlist_record_get(record, "data_int_null");
 	TEST_ASSERT(pi == NULL, "var_decompress returnd bad value");
 
-	pf = (VAR_FLOAT_T *) vlist_record_get(record, "key_float");
+	v = vlist_record_lookup(record, "key_float");
+	pf = (VAR_FLOAT_T *) v->v_data;
+	TEST_ASSERT((v->v_type | VF_KEY) != 0, "Key got lost");
 	TEST_ASSERT(pf != NULL, "vlist_record_get key not found");
 	TEST_ASSERT(*pf == key_float, "var_decompress returnd bad value");
 	pf = (VAR_FLOAT_T *) vlist_record_get(record, "data_float");
@@ -1496,7 +1500,9 @@ var_test(void)
 	pf = (VAR_FLOAT_T *) vlist_record_get(record, "data_float_null");
 	TEST_ASSERT(pf == NULL, "var_decompress returnd bad value");
 
-	ps = (char *) vlist_record_get(record, "key_string");
+	v = vlist_record_lookup(record, "key_string");
+	ps = (char *) v->v_data;
+	TEST_ASSERT((v->v_type | VF_KEY) != 0, "Key got lost");
 	TEST_ASSERT(ps != NULL, "vlist_record_get key not found");
 	TEST_ASSERT(strcmp(ps, "foo") == 0, "var_decompress returnd bad value");
 	ps = (char *) vlist_record_get(record, "data_string");

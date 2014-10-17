@@ -109,7 +109,6 @@ error:
 	return -1;
 }
 
-
 static int
 memdb_set(dbt_t *dbt, var_t *record)
 {

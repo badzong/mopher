@@ -240,7 +240,7 @@ error:
 
 
 void *
-vlist_record_get(var_t *record, char *key)
+vlist_record_lookup(var_t *record, char *key)
 {
 	ll_t *list = record->v_data;
 	ll_entry_t *pos;
@@ -254,9 +254,24 @@ vlist_record_get(var_t *record, char *key)
 	{
 		if (strcmp(item->v_name, key) == 0)
 		{
-			return item->v_data;
+			return item;
 		}
 	}
+
+	return NULL;
+}
+
+
+void *
+vlist_record_get(var_t *record, char *key)
+{
+	var_t *item;
+
+	item = vlist_record_lookup(record, key);
+	if (item != NULL)
+	{
+		return item->v_data;
+	}	
 
 	return NULL;
 }
