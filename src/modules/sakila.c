@@ -9,9 +9,9 @@
 
 #include <mopher.h>
 
-#define MY_QUERY_LEN 2048
+#define MY_QUERY_LEN 8192
 #define MY_STRING_LEN 320
-#define MY_BUCKETS 64
+#define MY_BUCKETS 128
 
 
 /*
@@ -806,7 +806,7 @@ sakila_prepare_cleanup(dbt_t *dbt, ht_t *storage)
 	int len;
 
 	if (dbt->dbt_sql_invalid_where == NULL) {
-		log_error("sakila_prepare_cleanup: dbt_sql_invalid_where is NULL");
+		log_debug("sakila_prepare_cleanup: dbt_sql_invalid_where is NULL");
 		return NULL;
 	}
 
@@ -841,8 +841,8 @@ sakila_prepare(dbt_t *dbt)
 	sakila_buffer_t *mb;
 
 	static sakila_prepare_callback_t callback[] = { sakila_prepare_select,
-	    sakila_prepare_update, sakila_prepare_insert, sakila_prepare_delete,
-	    sakila_prepare_cleanup };
+	    sakila_prepare_update, sakila_prepare_insert,
+	    sakila_prepare_delete, sakila_prepare_cleanup };
 
 	storage = ht_create(MY_BUCKETS, (ht_hash_t) sakila_buffer_hash,
 	    (ht_match_t) sakila_buffer_match, (ht_delete_t) sakila_buffer_delete);
@@ -875,7 +875,7 @@ sakila_prepare(dbt_t *dbt)
 	for (qt = MY_SELECT; qt < MY_MAX; ++qt)
 	{
 		mh->sakila_query[qt] = callback[qt](dbt, storage);
-		if (mh->sakila_query[qt] == NULL)
+		if (mh->sakila_query[qt] == NULL && qt != MY_CLEANUP)
 		{
 			log_error("sakila_prepare: query callback failed");
 			return -1;
@@ -1410,8 +1410,14 @@ static int
 sakila_cleanup(dbt_t *dbt)
 {
 	sakila_handle_t *mh = dbt->dbt_handle;
-	MYSQL_STMT *stmt = mh->sakila_query[MY_CLEANUP]->sakila_stmt;
+	MYSQL_STMT *stmt;
 	my_ulonglong affected;
+
+	stmt = mh->sakila_query[MY_CLEANUP]->sakila_stmt;
+	if (stmt == NULL)
+	{
+		return 0;
+	}
 
 	if (mysql_stmt_execute(stmt))
 	{

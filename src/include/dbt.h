@@ -62,7 +62,6 @@ typedef int (*dbt_validate_t)(dbt_t *dbt, var_t *record);
 #define DBT_DB_OPEN(dbt) (dbt)->dbt_driver->dd_open(dbt)
 #define DBT_DB_CLOSE(DBT) (dbt)->dbt_driver->dd_close(dbt)
 #define DBT_VALIDATE(dbt, var) (dbt)->dbt_validate(dbt, var)
-#define DBT_SCHEDULE_CLEANUP(dbt, now) ((dbt)->dbt_cleanup_schedule = now + (dbt)->dbt_cleanup_interval)
 
 #define DBT_COMMON_INVALID_SQL "COMMON"
 

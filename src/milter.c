@@ -1086,6 +1086,8 @@ milter_db_init(void)
 	}
 
 	milter_state_dbt.dbt_scheme = milter_state_scheme;
+	milter_state_dbt.dbt_cleanup_interval = -1;
+
 	dbt_register("state", &milter_state_dbt);
 
 	return;
