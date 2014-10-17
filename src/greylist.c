@@ -299,14 +299,14 @@ greylist_init(void)
 	 */
 	for (p = greylist_tuple_symbols; *p; ++p)
 	{
-		acl_symbol_register(*p, MS_OFF_ENVFROM, greylist_tuple_symbol,
+		acl_symbol_register(*p, MS_OFF_ENVRCPT, greylist_tuple_symbol,
 		    AS_CACHE);
 	}
 
-	acl_symbol_register("greylist_listed", MS_OFF_ENVFROM, greylist_listed,
+	acl_symbol_register("greylist_listed", MS_OFF_ENVRCPT, greylist_listed,
 	    AS_NOCACHE);
 
-	acl_symbol_register("greylist_delayed", MS_OFF_ENVFROM,
+	acl_symbol_register("greylist_delayed", MS_OFF_ENVRCPT,
 	    greylist_delayed, AS_CACHE);
 
 	return;
