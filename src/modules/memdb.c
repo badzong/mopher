@@ -12,16 +12,16 @@
 static dbt_driver_t dbt_driver;
 
 static hash_t
-memdb_record_hash(var_compact_t *vc)
+memdb_record_hash(vp_t *vp)
 {
-	return HASH(vc->vc_key, vc->vc_klen);
+	return HASH(vp->vp_key, vp->vp_klen);
 }
 
 
 static int
-memdb_record_match(var_compact_t *vc1, var_compact_t *vc2)
+memdb_record_match(vp_t *vp1, vp_t *vp2)
 {
-	if (memcmp(vc1->vc_key, vc2->vc_key, vc1->vc_klen))
+	if (memcmp(vp1->vp_key, vp2->vp_key, vp1->vp_klen))
 	{
 		return 0;
 	}
@@ -31,9 +31,9 @@ memdb_record_match(var_compact_t *vc1, var_compact_t *vc2)
 
 
 static void
-memdb_record_delete(var_compact_t *vc)
+memdb_record_delete(vp_t *vp)
 {
-	var_compact_delete(vc);
+	vp_delete(vp);
 
 	return;
 }
@@ -74,11 +74,11 @@ static int
 memdb_get(dbt_t *dbt, var_t *record, var_t **result)
 {
 	ht_t *ht = dbt->dbt_handle;
-	var_compact_t *key = NULL, *data;
+	vp_t *key = NULL, *data;
 
-	key = var_compress(record);
+	key = vp_pack(record);
 	if (key == NULL) {
-		log_error("memdb_get: var_compress failed");
+		log_error("memdb_get: vp_pack failed");
 		goto error;
 	}
 
@@ -89,21 +89,21 @@ memdb_get(dbt_t *dbt, var_t *record, var_t **result)
 		goto exit;
 	}
 
-	*result = var_decompress(data, dbt->dbt_scheme);
+	*result = vp_unpack(data, dbt->dbt_scheme);
 	if (*result == NULL) {
-		log_error("memdb_get: var_decompress failed");
+		log_error("memdb_get: vp_unpack failed");
 		goto error;
 	}
 
 exit:
-	var_compact_delete(key);
+	vp_delete(key);
 
 	return 0;
 
 error:
 
 	if (key) {
-		var_compact_delete(key);
+		vp_delete(key);
 	}
 
 	return -1;
@@ -113,16 +113,16 @@ static int
 memdb_set(dbt_t *dbt, var_t *record)
 {
 	ht_t *ht = dbt->dbt_handle;
-	var_compact_t *vc = NULL;
+	vp_t *vp = NULL;
 
-	vc = var_compress(record);
-	if (vc == NULL) {
-		log_error("memdb_set: var_compress failed");
+	vp = vp_pack(record);
+	if (vp == NULL) {
+		log_error("memdb_set: vp_pack failed");
 		goto error;
 	}
 
-	ht_remove(ht, vc);
-	if (ht_insert(ht, vc))
+	ht_remove(ht, vp);
+	if (ht_insert(ht, vp))
 	{
 		log_error("memdb_set: ht_insert failed");
 		goto error;
@@ -131,8 +131,8 @@ memdb_set(dbt_t *dbt, var_t *record)
 	return 0;
 
 error:
-	if (vc) {
-		var_compact_delete(vc);
+	if (vp) {
+		vp_delete(vp);
 	}
 
 	return -1;
@@ -143,23 +143,23 @@ static int
 memdb_del(dbt_t *dbt, var_t *record)
 {
 	ht_t *ht = dbt->dbt_handle;
-	var_compact_t *vc = NULL;
+	vp_t *vp = NULL;
 
-	vc = var_compress(record);
-	if (vc == NULL) {
-		log_error("memdb_set: var_compress failed");
+	vp = vp_pack(record);
+	if (vp == NULL) {
+		log_error("memdb_set: vp_pack failed");
 		goto error;
 	}
 
-	ht_remove(ht, vc);
-	var_compact_delete(vc);
+	ht_remove(ht, vp);
+	vp_delete(vp);
 
 	return 0;
 
 
 error:
-	if (vc) {
-		var_compact_delete(vc);
+	if (vp) {
+		vp_delete(vp);
 	}
 
 	return -1;
@@ -171,15 +171,15 @@ memdb_walk(dbt_t *dbt, dbt_db_callback_t callback)
 {
 	ht_t *ht = dbt->dbt_handle;
 	ht_pos_t pos;
-	var_compact_t *vc;
+	vp_t *vp;
 	var_t *record;
 
 	ht_start(ht, &pos);
-	while ((vc = ht_next(ht, &pos)))
+	while ((vp = ht_next(ht, &pos)))
 	{
-		record = var_decompress(vc, dbt->dbt_scheme);
+		record = vp_unpack(vp, dbt->dbt_scheme);
 		if (record == NULL) {
-			log_error("memdb_walk: var_decompress failed");
+			log_error("memdb_walk: vp_unpack failed");
 			return -1;
 		}
 

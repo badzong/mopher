@@ -50,13 +50,6 @@ typedef struct var {
 } var_t;
 
 
-typedef struct var_compact {
-	char	*vc_data;
-	int	 vc_dlen;
-	char	*vc_key;
-	int	 vc_klen;
-} var_compact_t;
-
 #define VAR_COPY(v) var_create(v->v_type, v->v_name, v->v_data, VF_COPY)
 #define VAR_MAX_TYPE(v1, v2) ((v1)->v_type > (v2)->v_type ? (v1)->v_type : (v2)->v_type)
 
@@ -80,11 +73,7 @@ char *var_type_string(var_t *v);
 int var_dump_data(var_t * v, char *buffer, int size);
 int var_dump(var_t * v, char *buffer, int size);
 int var_dump_stdout(var_t * v);
-void var_compact_delete(var_compact_t *vc);
-var_compact_t * var_compress(var_t *v);
-var_t * var_decompress(var_compact_t *vc, var_t *scheme);
 var_t * var_cast_copy(var_type_t type, var_t *v);
 VAR_INT_T var_intval(var_t *v);
-void var_test(void);
 
 #endif /* _VAR_H_ */

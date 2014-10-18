@@ -55,22 +55,23 @@ bdb_get(dbt_t *dbt, var_t *record, var_t **result)
 {
 	DB *db = dbt->dbt_handle;
 	DBT k, d;
-	var_compact_t *vc = NULL;
+	vp_t *lookup = NULL;
+	vp_t rec;
 	int r;
 
 	*result = NULL;
 
-	vc = var_compress(record);
-	if (vc == NULL) {
-		log_warning("bdb_get: var_compress failed");
+	lookup = vp_pack(record);
+	if (lookup == NULL) {
+		log_warning("bdb_get: vp_pack failed");
 		goto error;
 	}
 
 	memset(&k, 0, sizeof(k));
 	memset(&d, 0, sizeof(d));
 
-	k.data = vc->vc_key;
-	k.size = vc->vc_klen;
+	k.data = lookup->vp_key;
+	k.size = lookup->vp_klen;
 
 	r = db->get(db, &k, &d, 0);
 	switch (r) {
@@ -84,30 +85,23 @@ bdb_get(dbt_t *dbt, var_t *record, var_t **result)
 		goto error;
 	}
 
-	vc->vc_data = d.data;
-	vc->vc_dlen = d.size;
+	vp_init(&rec, k.data, k.size, d.data, d.size);
 
-	*result = var_decompress(vc, dbt->dbt_scheme);
+	*result = vp_unpack(&rec, dbt->dbt_scheme);
 	if (*result == NULL) {
-		log_warning("bdb_get: var_decompress failed");
+		log_warning("bdb_get: vp_unpack failed");
 		goto error;
 	}
 
 exit:
-	// CAVEAT: free'd by libdb
-	vc->vc_data = NULL;
-	vc->vc_dlen = 0;
-	var_compact_delete(vc);
+	vp_delete(lookup);
 
 	return 0;
 
 error:
 
-	if (vc) {
-		// CAVEAT: free'd by libdb
-		vc->vc_data = NULL;
-		vc->vc_dlen = 0;
-		var_compact_delete(vc);
+	if (lookup) {
+		vp_delete(lookup);
 	}
 
 	return -1;
@@ -119,22 +113,22 @@ bdb_set(dbt_t *dbt, var_t *v)
 {
 	DB *db = dbt->dbt_handle;
 	DBT k, d;
-	var_compact_t *vc = NULL;
+	vp_t *vp = NULL;
 	int r;
 
-	vc = var_compress(v);
-	if (vc == NULL) {
-		log_warning("bdb_set: var_compress failed");
+	vp = vp_pack(v);
+	if (vp == NULL) {
+		log_warning("bdb_set: vp_pack failed");
 		goto error;
 	}
 
 	memset(&k, 0, sizeof(k));
 	memset(&d, 0, sizeof(d));
 
-	k.data = vc->vc_key;
-	k.size = vc->vc_klen;
-	d.data = vc->vc_data;
-	d.size = vc->vc_dlen;
+	k.data = vp->vp_key;
+	k.size = vp->vp_klen;
+	d.data = vp->vp_data;
+	d.size = vp->vp_dlen;
 
 	r = db->put(db, &k, &d, 0);
 	if (r) {
@@ -142,13 +136,13 @@ bdb_set(dbt_t *dbt, var_t *v)
 		goto error;
 	}
 
-	var_compact_delete(vc);
+	vp_delete(vp);
 
 	return 0;
 
 error:
-	if (vc) {
-		var_compact_delete(vc);
+	if (vp) {
+		vp_delete(vp);
 	}
 
 	return -1;
@@ -160,22 +154,22 @@ bdb_del(dbt_t *dbt, var_t *v)
 {
 	DB *db =dbt->dbt_handle;
 	DBT k, d;
-	var_compact_t *vc;
+	vp_t *vp;
 	int r;
 
-	vc = var_compress(v);
-	if (vc == NULL) {
-		log_warning("bdb_del: var_compress failed");
+	vp = vp_pack(v);
+	if (vp == NULL) {
+		log_warning("bdb_del: vp_pack failed");
 		goto error;
 	}
 
 	memset(&k, 0, sizeof k);
 	memset(&d, 0, sizeof d);
 
-	k.data = vc->vc_key;
-	k.size = vc->vc_klen;
-	d.data = vc->vc_data;
-	d.size = vc->vc_dlen;
+	k.data = vp->vp_key;
+	k.size = vp->vp_klen;
+	d.data = vp->vp_data;
+	d.size = vp->vp_dlen;
 
 	r = db->del(db, &k, 0);
 	if (r) {
@@ -183,14 +177,14 @@ bdb_del(dbt_t *dbt, var_t *v)
 		goto error;
 	}
 
-	var_compact_delete(vc);
+	vp_delete(vp);
 
 	return 0;
 
 
 error:
-	if (vc) {
-		var_compact_delete(vc);
+	if (vp) {
+		vp_delete(vp);
 	}
 
 	return -1;
@@ -203,7 +197,7 @@ bdb_walk(dbt_t *dbt, dbt_db_callback_t callback)
 	DB *db = dbt->dbt_handle;
 	DBT k, d;
 	int r;
-	var_compact_t vc;
+	vp_t vp;
 	var_t *record;
 	int flags;
 
@@ -212,14 +206,11 @@ bdb_walk(dbt_t *dbt, dbt_db_callback_t callback)
 
 	for(flags = R_FIRST; (r = db->seq(db, &k, &d, flags)) == 0; flags = R_NEXT)
 	{
-		vc.vc_key = k.data;
-		vc.vc_klen = k.size;
-		vc.vc_data = d.data;
-		vc.vc_dlen = d.size;
+		vp_init(&vp, k.data, k.size, d.data, d.size);
 
-		record = var_decompress(&vc, dbt->dbt_scheme);
+		record = vp_unpack(&vp, dbt->dbt_scheme);
 		if (record == NULL) {
-			log_warning("bdb_walk: var_decompress failed");
+			log_warning("bdb_walk: vp_unpack failed");
 			return -1;
 		}
 

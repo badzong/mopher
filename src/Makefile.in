@@ -4,7 +4,7 @@ include @top_srcdir@/Makefile.common
 
 GENSRC=			cf_yacc.c acl_yacc.c cf_lex.c acl_lex.c
 SRC=			$(GENSRC) defs.c cf.c acl.c milter.c module.c \
-			ll.c ht.c sht.c var.c vlist.c vtable.c log.c \
+			ll.c ht.c sht.c var.c vp.c vlist.c vtable.c log.c \
 			hash.c util.c dbt.c greylist.c sock.c client.c \
 			server.c exp.c parser.c tarpit.c msgmod.c \
 			pipe.c regdom.c test.c

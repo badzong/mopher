@@ -21,6 +21,7 @@
 #include <sock.h>
 #include <util.h>
 #include <var.h>
+#include <vp.h>
 #include <vlist.h>
 #include <vtable.h>
 #include <client.h>
