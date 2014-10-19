@@ -104,6 +104,7 @@ dblog_init(void)
 		"milter_id",			VT_INT,		VF_KEEPNAME | VF_KEY,
 		"milter_received",		VT_INT,		VF_KEEPNAME,
 		"milter_addrstr",		VT_STRING,	VF_KEEPNAME,
+		"milter_hostname",		VT_STRING,	VF_KEEPNAME,
 		"milter_helo",			VT_STRING,	VF_KEEPNAME,
 		"milter_greylist_src",		VT_STRING,	VF_KEEPNAME,
 		"milter_envfrom_addr",		VT_STRING,	VF_KEEPNAME,
