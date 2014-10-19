@@ -58,7 +58,7 @@ vp_init(vp_t *vp, void *key, int klen, void *data, int dlen)
 static int
 vp_field_is_null(vp_t *vp, int field)
 {
-	if (*vp->vp_null_fields & (1 << field))
+	if (*vp->vp_null_fields & ((vp_null_t) 1 << field))
 	{
 		return 1;
 	}
@@ -70,9 +70,7 @@ vp_set_null(vp_t *vp, int field)
 {
 	// vp_data might be reallocd
 	vp->vp_null_fields = (vp_null_t *) vp->vp_data;
-
-	*vp->vp_null_fields |= 1 << field;
-
+	*vp->vp_null_fields |= ((vp_null_t) 1 << field);
 	return;
 }
 
@@ -145,7 +143,6 @@ vp_pack(var_t *record)
 	ll_t *ll;
 	ll_entry_t *pos;
 	int field_is_key = 0;
-	int first_data_field = 1;
 	int n;
 	int r;
 
@@ -167,31 +164,26 @@ vp_pack(var_t *record)
 		goto error;
 	}
 
+	if(vp_prepend_meta(vp))
+	{
+		log_error("vp_pack: vp_prepend_meta failed");
+		goto error;
+	}
+
 	pos = LL_START(ll);
 	for (n = 0; (item = ll_next(ll, &pos)); ++n)
 	{
 		field_is_key = item->v_flags & VF_KEY;
 
-		if (field_is_key &&item->v_data == NULL)
-		{
-			log_error("vp_pack: key without value");
-			goto error;
-		}
-
-		// First data field
-		if (!field_is_key && first_data_field == 1)
-		{
-			if(vp_prepend_meta(vp))
-			{
-				log_error("vp_pack: vp_prepend_meta failed");
-				goto error;
-			}
-			first_data_field = 0;
-		}
-
 		// NULL item
 		if (item->v_data == NULL)
 		{
+			if (field_is_key)
+			{
+				log_error("vp_pack: key without value");
+				goto error;
+			}
+
 			vp_set_null(vp, n);
 			continue;
 		}
@@ -268,7 +260,8 @@ vp_unpack(vp_t *vp, var_t *scheme)
 		// This should not be possible
 		if (vp_field_is_null(vp, n) && field_is_key)
 		{
-			log_error("var_unpack: afraid to unpack null key");
+			log_error("var_unpack: afraid to unpack null key in "
+				"field %d", n);
 			goto error;
 		}
 
