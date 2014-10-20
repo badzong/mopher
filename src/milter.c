@@ -993,7 +993,7 @@ milter_abort(SMFICTX * ctx)
 		goto exit;
 	}
 
-	log_message(LOG_DEBUG, mp->mp_table, "");
+	log_message(LOG_ERR, mp->mp_table, "");
 
 	milter_acl(MS_ABORT, MSN_ABORT, mp);
 

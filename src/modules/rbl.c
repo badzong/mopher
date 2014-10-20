@@ -99,7 +99,8 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	 */
 	if (addr->ss_family != AF_INET)
 	{
-		log_error("rbl_query: address family not supported");
+		log_message(LOG_ERR, attrs, "rbl_query: %s: address family not"
+			" supported", name);
 
 		if (vtable_set_new(attrs, VT_ADDR, name, NULL, VF_COPYNAME))
 		{
