@@ -35,7 +35,7 @@ src/regdom_test.c: regdom_test.dat
 
 README: man/mopher.7
 	groff -mdoc -Tascii $> $^ | col -bx | \
-		sed -r ":a;/^(FILES|SEE ALSO)/{:b;N;/\n[A-Z]/!bb; \
+		sed ":a;/^FILES\$$/{:b;N;/\n[A-Z]/!bb; \
 			s/.*\n//;ba};1d;\$$d;" >$@
 
 clean:

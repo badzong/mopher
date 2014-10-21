@@ -83,6 +83,9 @@ DESCRIPTION
      cies optional.  In such cases, it is possible that some modules are not
      available on your system even though they are listed here.
 
+SEE ALSO
+     mopherd(8), mopherctl(8), mopherd.conf(5), mopherd.acl(5)
+
 AUTHORS
      Manuel Badzong, manuel@badzong.com
      Petar Bogdanovic, petar@smokva.net
