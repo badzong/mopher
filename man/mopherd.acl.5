@@ -574,14 +574,32 @@ or bound to a milter stage and all stages following that stage
 .It Sy milter_subject Pq ?, eoh*
 .It Sy milter_tls_version Pq ?, helo*
 .It Sy milter_unknown_command Pq ?, unknown
-.It Sy rbl Pq ?, connect*
+.It Sy rbl Pq list, connect*
 .It Sy spamd_score Pq float, eom
+Score of current message, as reported by SpamAssassin.
 .It Sy spamd_spam Pq int, eom
+Binary verdict on current message, as reported by SpamAssassin.
 .It Sy spamd_symbols Pq list, eom
-.It Sy spf Pq ?, envfrom*
-.It Sy spf_reason Pq ?, envfrom*
+List of tests whose criteria were met by current message, as reported by
+SpamAssassin.
+.It Sy spf Pq string, envfrom*
+Sender policy evaluation result for current host.
+Compareable with the following pre-defined symbols:
+.Sy SPF_NEUTRAL ,
+.Sy SPF_PASS ,
+.Sy SPF_FAIL ,
+.Sy SPF_SOFTFAIL .
+.It Sy spf_reason Pq string, envfrom*
 .It Sy tarpit_delayed Pq int, any
 .El
+.Pp
+.Em Note :
+Evaluating certain symbols will trigger queries or other costly
+operations.
+In such cases,
+.Xr mopherd 8
+will save the result after the first evaluation and serve all subsequent
+lookups from its cache.
 .Sh FUNCTIONS
 The following list describes all functions available in
 .Nm .
