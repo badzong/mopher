@@ -14,8 +14,7 @@ that is often consulted by the MTA, mopher's design is modular and its
 language can be extended through a variety of loadable mopher
 modules.
 .Pp
-The following list only describes mopher's core features, while mopher's
-remaining functionality is part of its available modules:
+The following list describes mopher's core features:
 .Bl -tag -width Ds
 .It Sy Greylisting
 Mopher supports indiscriminate and selective greylisting.
@@ -38,9 +37,9 @@ Mopher supports delaying incoming mail delivery attempts.
 Tarpitting, like any other action, can be applied selectively.
 .It Sy Generic Storage
 All tables kept by mopher are accessed through a generic interface.
-The selection of back-ends is therefore only limited by the amount of
+The selection of backends is therefore only limited by the amount of
 available database modules.
-Currently, several back-end modules are provided.
+Currently, several backend modules are provided.
 .It Sy Custom Logging
 Mopher uses a well structured default log format and allows for
 additional custom logging at any stage, which also includes the access
@@ -61,6 +60,27 @@ understanding of SMTP and its various stages.
 Users are also encouraged to consult
 .Xr mopherd.acl 5 ,
 in order to get an overview of the basic language and its expressions.
+.Pp
+The following list describes mopher's module features:
+.Bl -tag -width Ds
+.It Sy Local: SpamAssassin
+Support for spamd-queries.
+.It Sy Network: Black- and Whitelists
+Support for DNSBL-queries.
+.It Sy Network: Sender Policy Framework
+Support for SPF-queries.
+.It Sy Backend: Berkeley DB
+Support for legacy BDB storage.
+.It Sy Backend: MySQL
+Support for MySQL storage.
+.El
+.Pp
+.Em Note :
+Third party distributors of binary packages may split a full mopher
+build into several complementary packages in order to make some
+dependencies optional.
+In such cases, it is possible that some modules are not available on
+your system even though they are listed here.
 .Sh FILES
 .Bl -tag -width Ds
 .It Pa @sbindir@/mopherd
