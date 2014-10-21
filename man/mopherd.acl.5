@@ -510,20 +510,28 @@ exclusively bound to a milter stage
 .Pq Em name
 or bound to a milter stage and all stages following that stage
 .Pq Em name* .
+.Pp
+.Em Note :
+Evaluating certain symbols will trigger queries or other costly
+operations.
+In such cases,
+.Xr mopherd 8
+will save the result after the first evaluation and serve all subsequent
+lookups from its cache.
 .Bl -tag -width 4n
 .It Sy counter_penpal Pq int, any
 .It Sy counter_relay Pq int, envrcpt
-.It Sy greylist_attempts Pq ?, envfrom*
-.It Sy greylist_connections Pq ?, envfrom*
-.It Sy greylist_created Pq ?, envfrom*
-.It Sy greylist_deadline Pq ?, envfrom*
-.It Sy greylist_delay Pq ?, envfrom*
-.It Sy greylist_delayed Pq ?, envfrom*
-.It Sy greylist_expire Pq ?, envfrom*
-.It Sy greylist_listed Pq ?, envfrom*
-.It Sy greylist_passed Pq ?, envfrom*
-.It Sy greylist_updated Pq ?, envfrom*
-.It Sy greylist_visa Pq ?, envfrom*
+.It Sy greylist_attempts Pq int, envfrom*
+.It Sy greylist_connections Pq int, envfrom*
+.It Sy greylist_created Pq int, envfrom*
+.It Sy greylist_deadline Pq int, envfrom*
+.It Sy greylist_delay Pq int, envfrom*
+.It Sy greylist_delayed Pq int, envfrom*
+.It Sy greylist_expire Pq int, envfrom*
+.It Sy greylist_listed Pq int, envfrom*
+.It Sy greylist_passed Pq int, envfrom*
+.It Sy greylist_updated Pq int, envfrom*
+.It Sy greylist_visa Pq int, envfrom*
 .It Sy milter_action Pq ?, connect*
 .It Sy milter_addrstr Pq ?, any
 .It Sy milter_auth_authen Pq ?, envfrom*
@@ -576,12 +584,11 @@ or bound to a milter stage and all stages following that stage
 .It Sy milter_unknown_command Pq ?, unknown
 .It Sy rbl Pq list, connect*
 .It Sy spamd_score Pq float, eom
-Score of current message, as reported by SpamAssassin.
+SpamAssassin score of current message.
 .It Sy spamd_spam Pq int, eom
-Binary verdict on current message, as reported by SpamAssassin.
+SpamAssassin verdict on current message.
 .It Sy spamd_symbols Pq list, eom
-List of tests whose criteria were met by current message, as reported by
-SpamAssassin.
+List of positive SpamAssassin tests for current message.
 .It Sy spf Pq string, envfrom*
 Sender policy evaluation result for current host.
 Compareable with the following pre-defined symbols:
@@ -591,29 +598,21 @@ Compareable with the following pre-defined symbols:
 .Sy SPF_SOFTFAIL .
 .It Sy spf_reason Pq string, envfrom*
 .It Sy tarpit_delayed Pq int, any
+Accumulated tarpit delay in seconds.
 .El
-.Pp
-.Em Note :
-Evaluating certain symbols will trigger queries or other costly
-operations.
-In such cases,
-.Xr mopherd 8
-will save the result after the first evaluation and serve all subsequent
-lookups from its cache.
 .Sh FUNCTIONS
 The following list describes all functions available in
 .Nm .
-Type of a particular return value is enclosed in parentheses:
 .Bl -tag -width 4n
-.It Sy cast Pq ?\&
-.It Sy len Pq ?\&
-.It Sy list_contains Pq ?\&
-.It Sy regex_imatch Pq ?\&
-.It Sy regex_match Pq ?\&
-.It Sy mailaddr Pq ?\&
-.It Sy strcmp Pq ?\&
-.It Sy strlen Pq ?\&
-.It Sy type Pq ?\&
+.It Fn cast
+.It Fn len
+.It Fn list_contains
+.It Fn regex_imatch
+.It Fn regex_match
+.It Fn mailaddr
+.It Fn strcmp
+.It Fn strlen
+.It Fn type
 .El
 .Sh IMPLEMENTATION NOTES
 Third party distributors of binary packages may split a full mopher
