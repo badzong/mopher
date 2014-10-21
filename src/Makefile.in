@@ -2,12 +2,14 @@
 
 include @top_srcdir@/Makefile.common
 
+PROG+=			test_run # built, not installed
+
 GENSRC=			cf_yacc.c acl_yacc.c cf_lex.c acl_lex.c
 SRC=			$(GENSRC) defs.c cf.c acl.c milter.c module.c \
-			ll.c ht.c sht.c var.c vp.c vlist.c vtable.c log.c \
-			hash.c util.c dbt.c greylist.c sock.c client.c \
-			server.c exp.c parser.c tarpit.c msgmod.c \
-			pipe.c regdom.c test.c
+			ll.c ht.c sht.c var.c vp.c vlist.c vtable.c \
+			log.c hash.c util.c dbt.c greylist.c sock.c \
+			client.c server.c exp.c parser.c tarpit.c \
+			msgmod.c pipe.c regdom.c test.c
 OBJ=			$(SRC:.c=.o) cf_defaults.o
 
 CFLAGS+=		-I@top_srcdir@ -I@top_srcdir@/src/include
@@ -28,14 +30,8 @@ all: $(PROG)
 $(PROG): $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $@.c $(OBJ) $(LDFLAGS)
 
-test_run: test_run.c $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $@.c $(OBJ) $(LDFLAGS)
-
-test: test_run
-	./test_run
-
 clean:
-	-rm test_run $(PROG) $(GENSRC:.c=.[ch]) $(OBJ)
+	-rm $(PROG) $(GENSRC:.c=.[ch]) $(OBJ)
 
 .SUFFIXES: .conf .l .y .c .o
 .y.o:	# unset
