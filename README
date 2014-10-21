@@ -1,0 +1,97 @@
+
+NAME
+     mopher -- versatile mail filter
+
+DESCRIPTION
+     The mail gopher (mopher) is an extension to all mail transfer agents
+     (MTAs) that implement the Sendmail Milter API.  It reads a list of rules
+     and acts on each incoming mail delivery attempt based on various criteria
+     and existing states.  Since the general idea behind mopher is to replace
+     the chain of milters that is often consulted by the MTA, mopher's design
+     is modular and its language can be extended through a variety of loadable
+     mopher modules.
+
+     The following list describes mopher's core features:
+
+     Greylisting
+             Mopher supports indiscriminate and selective greylisting.  It
+             lists either individual addresses or whole domains (based on
+             reverse lookups and rules provided by Mozilla's Public Suffix
+             List) and keeps track of all retries by a particular origin.
+             Listing domains avoids cases where several load balancing MTAs
+             are trying to deliver the same message, while counting retries
+             (and acting upon the result) can speed up the inevitable.
+
+     Whitelisting
+             Mopher supports whitelisting origins (address or domain) based on
+             their amount of successfully delivered messages.  It also tracks
+             penpals, which are triplets containing the origin, the sender-
+             and the recipient-address.  Whitelisting based on penpals is the
+             prefered strategy when dealing with Email providers that host
+             large numbers of legitimate users but also significant amounts of
+             spammers.
+
+     Tarpitting
+             Mopher supports delaying incoming mail delivery attempts.
+             Tarpitting, like any other action, can be applied selectively.
+
+     Generic Storage
+             All tables kept by mopher are accessed through a generic inter-
+             face.  The selection of backends is therefore only limited by the
+             amount of available database modules.  Currently, several backend
+             modules are provided.
+
+     Custom Logging
+             Mopher uses a well structured default log format and allows for
+             additional custom logging at any stage, which also includes the
+             access to all symbols available at that particular stage.
+
+     Custom Headers
+             The injection of custom headers is possible.  Like with custom
+             logging, all symbols available at a particular stage are also
+             available when defining a custom header and its content.
+
+     Control Socket
+             Communication with a running mopher daemon is possible through
+             its control socket.  Available actions are currently limited to
+             the printing of tables and modifying of greylist items.
+
+     Successfully configuring and running mopher requires a basic understand-
+     ing of SMTP and its various stages.  Users are also encouraged to consult
+     mopherd.acl(5), in order to get an overview of the basic language and its
+     expressions.
+
+     The following list describes mopher's module features:
+
+     Local: SpamAssassin
+             Support for spamd-queries.
+
+     Network: Black- and Whitelists
+             Support for DNSBL-queries.
+
+     Network: Sender Policy Framework
+             Support for SPF-queries.
+
+     Backend: Berkeley DB
+             Support for legacy BDB storage.
+
+     Backend: MySQL
+             Support for MySQL storage.
+
+     Note: Third party distributors of binary packages may split a full mopher
+     build into several complementary packages in order to make some dependen-
+     cies optional.  In such cases, it is possible that some modules are not
+     available on your system even though they are listed here.
+
+AUTHORS
+     Manuel Badzong, manuel@badzong.com
+     Petar Bogdanovic, petar@smokva.net
+
+BUGS
+     Any issues related to building, running or configuring mopher can be
+     reported at the following location:
+           https://github.com/badzong/mopher/issues
+
+     There is also a general discussion mailing-list:
+           https://groups.google.com/d/forum/mopher
+
