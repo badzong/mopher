@@ -184,18 +184,18 @@ Backend drivers will translate all requests to generic tables into
 requests as they are understood by that particular backend or library.
 .Pp
 The two most common types of backend drivers require one of the
-following two configuration directives when configuring the
+following two configuration directives when, for example, configuring the
 .Em greylist
 table:
 .Bd -literal -offset indent
-# illustrative example raw_db,
+# illustrative raw_db backend,
 # implementing a whole RDBMS
 table[greylist] = {
 	driver		= "raw_db",
 	path		= "/path/to/greylist.db"
 }
 
-# illustrative example net_db,
+# illustrative net_db backend,
 # implementing socket access methods to a RDBMS
 table[greylist] = {
 	driver		= "net_db",
@@ -219,7 +219,7 @@ driver and therefore lose all its content as soon as
 shuts down.
 .It Sy bdb Pq Berkeley DB
 Embedded database for key/value data.
-Uses the legacy format/API (1.85) that is in most distributions either
+Uses the legacy format/API (1.85) that in most distributions is either
 part of the standard C library or offered separately by one of the more
 recent db software-packages.
 .It Sy sakila Pq MySQL
