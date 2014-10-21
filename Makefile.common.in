@@ -6,8 +6,6 @@ sbindir=		@sbindir@
 libdir=			@libdir@
 sysconfdir=		@sysconfdir@
 mandir=			@datarootdir@/man
-man1dir=		$(mandir)/man1
-man5dir=		$(mandir)/man5
 
 # Program paths
 #
@@ -41,6 +39,7 @@ PROGRAM_PATH=		@sbindir@
 MODULE_PATH=		@libdir@/mopher
 CONFIG_PATH=		@sysconfdir@/mopher
 CONFIG_INST?=		$(CONFIG_PATH)
+MAN_PATH=		@mandir@
 
 MOPHERD_CONF=		$(CONFIG_PATH)/mopherd.conf
 MOPHERD_ACL=		$(CONFIG_PATH)/mopherd.acl
@@ -49,4 +48,7 @@ REGDOM_RULES=		$(CONFIG_PATH)/effective_tld_names.dat
 # Files
 #
 PROG=			mopherd mopherctl
-CONF=			mopherd.conf.example mopherd.acl.example effective_tld_names.dat
+CONF=			mopherd.acl.example mopherd.conf.example \
+			effective_tld_names.dat
+MAN=			mopher.7 mopherctl.8 mopherd.8 mopherd.acl.5 \
+			mopherd.conf.5

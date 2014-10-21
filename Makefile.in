@@ -2,7 +2,6 @@
 
 include Makefile.common
 
-MAN1=			man/mopherd.1.gz
 SUBDIR=			src/modules src
 MAKE_SUBDIR=		for i in $(SUBDIR); do \
 				(cd $$i && $(MAKE) $$target); done
@@ -12,10 +11,7 @@ all: subdir
 subdir:
 	$(MAKE_SUBDIR)
 
-test: all
-	cd src && make test
-
-install: install_program install_modules install_config
+install: install_program install_modules install_config install_man
 
 install_program:
 	$(INSTALL_DIR) $(DESTDIR)$(PROGRAM_PATH)
@@ -30,12 +26,15 @@ install_modules:
 install_config:
 	$(INSTALL_DIR) $(DESTDIR)$(CONFIG_INST)
 	for C in $(CONF); do \
-		$(INSTALL_DATA) config/$$C \
-			$(DESTDIR)$(CONFIG_INST); \
+		$(INSTALL_DATA) config/$$C $(DESTDIR)$(CONFIG_INST); \
 	done
 
 install_man:
-	$(INSTALL_DATA) $(MAN1) $(man1dir)
+	for M in $(MAN); do \
+		sect=man$${M##*.}; \
+		$(INSTALL_DIR) $(DESTDIR)$(MAN_PATH)/$$sect; \
+		$(INSTALL_DATA) man/$$M $(DESTDIR)$(MAN_PATH)/$$sect
+	done
 
 uninstall:
 	-for P in $(PROG); do \
