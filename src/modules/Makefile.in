@@ -8,9 +8,13 @@ SRC=			cast.c string.c list.c spamd.c rbl.c counter.c \
 MODULES=		$(SRC:.c=.so)
 
 CFLAGS+=		-I@top_srcdir@ -I@top_srcdir@/src/include $(BDB_DB185_H)
+CFLAGS.bdb.so?=		$(BDB_DB185_H)
+
+LDFLAGS=		# unset
+LDFLAGS+=		-shared -nostartfiles -fPIC @LDFLAGS@
 LDFLAGS.spf.so?=	-lspf2
-LDFLAGS.sakila.so?=	-lmysqlclient
 LDFLAGS.bdb.so?=	$(BDB_LIBS)
+LDFLAGS.sakila.so?=	-lmysqlclient
 
 all: $(MODULES)
 
@@ -19,4 +23,4 @@ clean:
 
 .SUFFIXES: .c .so
 .c.so:
-	$(CC) $(CFLAGS) $(LDFLAGS.modules) $(LDFLAGS.$@) -o $@ $<
+	$(CC) $(CFLAGS) $(CFLAGS.$@) $(LDFLAGS) $(LDFLAGS.$@) -o $@ $<
