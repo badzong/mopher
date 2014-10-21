@@ -1,4 +1,4 @@
-.Dd October 15, 2014
+.Dd July 13, 2014
 .Dt MOPHERCTL 8
 .Os
 .Sh NAME
@@ -10,9 +10,7 @@
 .Op Fl d Ar level
 .Op Fl c Ar file
 .Op Fl s Ar host
-.Op Fl G
-.Op Fl D Ar table
-.Op Fl P Ar origin from rcpt
+.Ar command
 .Sh DESCRIPTION
 .Nm
 controls the mopher daemon.
@@ -30,12 +28,17 @@ Read configuration from
 .It Fl s Ar host
 Connect to
 .Ar host .
-.It Fl G
-Print formatted content of the greylist-table.
-.It Fl D Ar table
+.El
+.Pp
+.Ar command
+is one of the following:
+.Bl -tag -width Ds
+.It dump Ar table
 Print raw content of
 .Ar table .
-.It Fl P Ar origin Ar from Ar rcpt
+.It greylist dump
+Print formatted content of the greylist-table.
+.It greylist pass Ar origin Ar from Ar rcpt
 Temporarily whitelist triplet.
 .El
 .Sh FILES
