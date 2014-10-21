@@ -376,9 +376,11 @@ stage2 ...
 From the perspective of
 .Xr mopherd 8 ,
 there are no special stages.
-Every stage is just a named list of rules, while only an equally named
-stage will be processed during a specific milter stage.
-Within that process, jumps may happen and extend the original list.
+Every stage is just a named list of rules, but only stages that are
+named after one of the known milter stages will be entered during SMTP
+transactions.
+Therefore, jumping stages is a way of conditionally extending milter
+stages.
 .Pp
 .Em Warning :
 Beware of circular jumps.
