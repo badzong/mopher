@@ -20,10 +20,11 @@ The following list describes mopher's core features:
 Mopher supports indiscriminate and selective greylisting.
 It lists either individual addresses or whole domains (based on reverse
 lookups and rules provided by Mozilla's Public Suffix List) and keeps
-track of all retries by that particular origin.
-Listing domains avoids cases, where several load balancing MTAs are
-trying to deliver the same message, while counting retries and acting
-upon the result can speed up the inevitable.
+track of all retries by a particular origin.
+Listing domains avoids cases where several load balancing MTAs are
+trying to deliver the same message, while counting retries
+.Pq and acting upon the result
+can speed up the inevitable.
 .It Sy Whitelisting
 Mopher supports whitelisting origins (address or domain) based on their
 amount of successfully delivered messages.
