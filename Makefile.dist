@@ -30,9 +30,8 @@ regdom_test.dat:
 
 src/regdom_test.c: regdom_test.dat
 	echo "/* Generated file. See Makefile.dist for details */" >$@
-	echo >>$@
-	sed "s/checkPublicSuffix(/{/; s/null/NULL/g; s/'/\"/g; s/);/, 0},/;" $> \
-		 $^ >>$@
+	sed "s/checkPublicSuffix(\(.*\));/{\1, 0},/; \
+		s/null/NULL/g; s/'/\"/g;" $> $^ >>$@
 
 clean:
 	-rm -rf $(OUT) $(DISTDIR) $(DISTDIR).tar $(DISTDIR).tar.gz
