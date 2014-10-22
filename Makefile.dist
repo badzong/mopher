@@ -6,7 +6,7 @@ SRC=			AUTHORS CHANGES LICENSE Makefile.common.in \
 OUT=			Makefile Makefile.common autom4te.cache \
 			config.h config.log config.status configure \
 			regdom_rules.dat regdom_rules.py regdom_test.dat \
-			src/Makefile src/modules/Makefile
+			src/Makefile src/modules/Makefile man/Makefile
 
 DIST=			mopher
 VERSION=		0.4.1

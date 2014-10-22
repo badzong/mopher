@@ -2,7 +2,7 @@
 
 include Makefile.common
 
-SUBDIR=			src/modules src
+SUBDIR=			src/modules src man
 MAKE_SUBDIR=		for i in $(SUBDIR); do \
 				(cd $$i && $(MAKE) $$target); done
 
@@ -33,7 +33,7 @@ install_man:
 	for M in $(MAN); do \
 		sect=man$${M##*.}; \
 		$(INSTALL_DIR) $(DESTDIR)$(MAN_PATH)/$$sect; \
-		$(INSTALL_DATA) man/$$M $(DESTDIR)$(MAN_PATH)/$$sect
+		$(INSTALL_DATA) man/$$M $(DESTDIR)$(MAN_PATH)/$$sect; \
 	done
 
 uninstall:
@@ -42,6 +42,10 @@ uninstall:
 	done
 	-rm -ri $(DESTDIR)$(MODULE_PATH)
 	-rm -ri $(DESTDIR)$(CONFIG_INST)
+	-for M in $(MAN); do \
+		sect=man$${M##*.}; \
+		rm -i $(DESTDIR)$(MAN_PATH)/$$sect/$$M; \
+	done
 
 clean:
 	target=$@; $(MAKE_SUBDIR)

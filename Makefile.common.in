@@ -5,7 +5,6 @@ exec_prefix=		@exec_prefix@
 sbindir=		@sbindir@
 libdir=			@libdir@
 sysconfdir=		@sysconfdir@
-mandir=			@datarootdir@/man
 
 # Program paths
 #
@@ -39,7 +38,7 @@ PROGRAM_PATH=		@sbindir@
 MODULE_PATH=		@libdir@/mopher
 CONFIG_PATH=		@sysconfdir@/mopher
 CONFIG_INST?=		$(CONFIG_PATH)
-MAN_PATH=		@mandir@
+MAN_PATH=		@datarootdir@/man
 
 MOPHERD_CONF=		$(CONFIG_PATH)/mopherd.conf
 MOPHERD_ACL=		$(CONFIG_PATH)/mopherd.acl

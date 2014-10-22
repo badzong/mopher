@@ -157,6 +157,7 @@ AC_CONFIG_FILES([
 	Makefile.common
 	src/Makefile
 	src/modules/Makefile
+	man/Makefile
 ])
 
 AC_OUTPUT

@@ -1,0 +1,14 @@
+# Makefile, man
+
+include @top_srcdir@/Makefile.common
+
+all: $(MAN)
+
+clean:
+	-rm $(MAN)
+
+.SUFFIXES: .in
+.in:
+	sed "	s,@libdir[@],$(libdir),g; \
+		s,@sbindir[@],$(sbindir),g; \
+		s,@sysconfdir[@],$(sysconfdir),g;" $< >$@
