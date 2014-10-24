@@ -1,3 +1,18 @@
+0.5: 2014-10-24
+
+  FEATURES
+
+  * New man pages
+  * Support for BerkeleyDB 1.85
+  * 3 valued logic for boolean expressions in ACL
+  * Load regdom rules from filesystem
+  * Unified socket configuration format
+  * Renamed moco to mopherctl
+  * Renamed mail.acl to mopherd.acl
+  * Database logging (EXPERIMENTAL)
+  * Added unit test infrastructure
+  * Various bugfixes
+
 0.4.1: 2013-04-13
 
   * Fixed Message-ID logging
