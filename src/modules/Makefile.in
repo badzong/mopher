@@ -7,7 +7,7 @@ SRC=			cast.c string.c list.c spamd.c rbl.c counter.c \
 			@MOD_DB_MYSQL@
 MODULES=		$(SRC:.c=.so)
 
-CFLAGS+=		-I@top_srcdir@ -I@top_srcdir@/src/include $(BDB_DB185_H)
+CFLAGS+=		-I@top_srcdir@ -I@top_srcdir@/src/include
 CFLAGS.bdb.so?=		$(BDB_DB185_H)
 
 LDFLAGS=		# unset
