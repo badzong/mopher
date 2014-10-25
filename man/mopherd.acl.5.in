@@ -673,26 +673,61 @@ Accumulated tarpit delay in seconds.
 .Sh FUNCTIONS
 The following list describes all functions available in
 .Nm .
+.Pp
+.Em Note :
+While all parameters are expressions that need to be evaluated first,
+the parameter nomenclature hints at what type the function expects.
+In cases where no particular type is expected,
+.Em exp
+is used.
 .Bl -tag -width 4n
-.It Fn cast type exp
-Evaluates expression and casts result to type.
-.It Fn len exp
-Storage size of evaluated expression.
-.It Fn list_contains list exp
-Returns true if list contains expression. False otherwise.
-.It Fn regex_imatch pattern exp
-Tests if expression matches pattern case-insensitive. Uses libpcre.
-.It Fn regex_match pattern exp
-Tests if expression matches pattern. Uses libpcre.
-.It Fn mailaddr exp
-Strips <> from mail adresses.
-.It Fn strcmp exp1 exp2
-Evaluates exp1 and exp2 as strings and compares them. Return an integer less
-than, equal to, or greater than zero.
-.It Fn strlen exp
-Evaluates expression as string and returns its length as integer.
-.It Fn type exp
-Evaluates expression and returns the variable type.
+.It Ft type Fn cast type exp
+Returns
+.Em exp
+converted to
+.Em type .
+.It Ft int Fn len exp
+Returns storage size of
+.Em exp .
+.It Ft bool Fn list_contains list exp
+Evaluates true if
+.Em exp
+is in
+.Em list ,
+false otherwise.
+.It Ft bool Fn regex_imatch pattern str
+Evaluates true if
+.Em str
+matches
+.Pq case insensitive
+.Em pattern ,
+false otherwise.
+.It Ft bool Fn regex_match pattern str
+Evaluates true if
+.Em str
+matches
+.Em pattern ,
+false otherwise.
+.It Ft string Fn mailaddr str
+Returns
+.Em str
+without enclosing angle brackets
+.Po
+.Ql < ,
+.Ql >
+.Pc .
+.It Ft int Fn strcmp str1 str2
+Returns an integer greater than, equal to, or less than 0, according
+to whether
+.Em str1
+is greater than, equal to, or less than
+.Em str2 .
+.It Ft string Fn strlen str
+Returns length of
+.Em str .
+.It Ft string Fn type exp
+Returns type of
+.Em exp .
 .El
 .Sh IMPLEMENTATION NOTES
 Third party distributors of binary packages may split a full mopher
