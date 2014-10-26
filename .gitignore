@@ -1,4 +1,3 @@
-build
 config.status
 config.log
 configure
@@ -7,16 +6,14 @@ Makefile.common
 config.h
 autom4te.cache
 regdom_test.dat
-src/acl_yacc.h
-src/cf_yacc.h
+src/acl_lex.c
+src/acl_yacc.[ch]
+src/cf_lex.c
+src/cf_yacc.[ch]
 src/mopherctl
 src/mopherd
 src/test_run
-man/mopher.7
-man/mopherctl.8
-man/mopherd.8
-man/mopherd.acl.5
-man/mopherd.conf.5
+man/mopher*.[0-9]
 *.o
 *.so
 *.tar.gz
