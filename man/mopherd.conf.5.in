@@ -245,8 +245,9 @@ for additional information on usage and behaviour.
 .Ss Relay and Penpal Counter
 .Em counter
 counts the amount of successfully delivered messages by an origin
-(address or domain) or penpal (origin, sender and recipient
-combination).
+.Pq address or domain
+or penpal
+.Pq origin, sender and recipient combination .
 Both counters are stored in tables and therefore require the selection
 of a backend driver:
 .Bd -literal -offset indent
