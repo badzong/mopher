@@ -519,145 +519,213 @@ In such cases,
 will save the result after the first evaluation and serve all subsequent
 lookups from its cache.
 .Bl -tag -width 4n
-.It Sy counter_penpal Pq int, any
-Number of successfully delivered emails by this relay having common envelope
-sender and envelope recipient address. Can be used for automatic whitelisting.
-.It Sy counter_relay Pq int, envrcpt
-Number of successfully delivered emails by this relay. Can be used for
-automatic whitelisting.
+.\"
+.It Sy counter_penpal Pq int, envrcpt
+Number of delivered messages by current penpal
+.Pq origin, sender and recipient combination .
+.\"
+.It Sy counter_relay Pq int, any
+Number of delivered messages by current relay
+.Pq address or domain .
+.\"
 .It Sy greylist_attempts Pq int, envfrom*
 Number of delivery attempts a server needs to perform to pass greylisting.
+.\"
 .It Sy greylist_connections Pq int, envfrom*
 Number of delivery attempts a server has already made to pass greylisting.
+.\"
 .It Sy greylist_created Pq int, envfrom*
 Creation time of the greylist record belonging to this connection.
+.\"
 .It Sy greylist_deadline Pq int, envfrom*
 Number of seconds the relay is given to perform the requested delivery
 attempts.
+.\"
 .It Sy greylist_delay Pq int, envfrom*
 Number of seconds the relay has to wait until greylisting is finished and
 delivery is possible.
+.\"
 .It Sy greylist_delayed Pq int, envfrom*
 Number of seconds the message was effectively delayed by greylisting.
+.\"
 .It Sy greylist_expire Pq int, envfrom*
 UNIX timestamp when this record will be deleted from the database.
+.\"
 .It Sy greylist_listed Pq int, envfrom*
 If true this message has a greylist tuple in the database.
+.\"
 .It Sy greylist_passed Pq int, envfrom*
 Number of messages passed greylistung using this record.
+.\"
 .It Sy greylist_updated Pq int, envfrom*
 UNIX timestamp when this record was last modified.
+.\"
 .It Sy greylist_visa Pq int, envfrom*
 Number of seconds this record can be used as visa for subsquent messages.
+.\"
 .It Sy milter_action Pq int, connect*
 Internal action identifer of the last returned action. Do not use.
+.\"
 .It Sy milter_addrstr Pq string, any
 Address string of the connecting host.
+.\"
 .It Sy milter_auth_authen Pq string, envfrom*
 Content of the '{auth_authen}' macro.
+.\"
 .It Sy milter_auth_author Pq string, envfrom*
 Content of the '{auth_author}' macro.
+.\"
 .It Sy milter_auth_type Pq string, envfrom*
 Content of the '{auth_type}' macro.
+.\"
 .It Sy milter_body Pq string, eom
 String containing the whole message body.
+.\"
 .It Sy milter_body_size Pq int, eom
 Size of message body in bytes.
+.\"
 .It Sy milter_cert_issuer Pq string, helo*
 Content of the '{cert_issuer}' macro.
+.\"
 .It Sy milter_cert_subject Pq string, helo*
 Content of the '{cert_subject}' macro.
+.\"
 .It Sy milter_cipher Pq string, helo*
 Content of the '{cipher}' macro.
+.\"
 .It Sy milter_cipher_bits Pq string, helo*
 Content of the '{cipher_bits}' macro.
+.\"
 .It Sy milter_client Pq string, any
 Content of the '{client}' macro.
+.\"
 .It Sy milter_client_addr Pq string, any
 Content of the '{client_addr}' macro.
+.\"
 .It Sy milter_client_connections Pq string, connect
 Content of the '{client_connections}' macro.
+.\"
 .It Sy milter_client_name Pq string, any
 Content of the '{client_name}' macro.
+.\"
 .It Sy milter_client_port Pq string, any
 Content of the '{client_port}' macro.
+.\"
 .It Sy milter_client_ptr Pq string, any
 Content of the '{client_ptr}' macro.
+.\"
 .It Sy milter_ctx Pq pointer, any
 Internal milter context pointer. Do not use.
+.\"
 .It Sy milter_daemon_name Pq string, any
 Content of the '{daemon_name}' macro.
+.\"
 .It Sy milter_envfrom Pq string, envfrom*
 Raw envelope from address.
+.\"
 .It Sy milter_envfrom_addr Pq string, envfrom*
 Envelope from address.
+.\"
 .It Sy milter_envrcpt Pq string, envrcpt*
 Raw envelope recipient address.
+.\"
 .It Sy milter_envrcpt_addr Pq string, envrcpt*
 Envelope recipient address.
+.\"
 .It Sy milter_greylist_src Pq string, any
 Source address used for greylisting. If the sending relay has a reverse DNS
 record the domain name is used (See regdom.c). Otherwise the IP address.
+.\"
 .It Sy milter_header Pq string, eoh*
 String containing all email headers.
+.\"
 .It Sy milter_header_name Pq string, header
 Name of the current header field. Only available in header stage.
+.\"
 .It Sy milter_header_size Pq int, eoh*
 Size of the current header field in bytes. Only available in header stage.
+.\"
 .It Sy milter_header_value Pq string, header
 Value of the current header field. Only available in header stage.
+.\"
 .It Sy milter_helo Pq ?, helo*
 Helo string received by the relaying MTA.
+.\"
 .It Sy milter_hostaddr Pq addr, any
 Address of the relaying MTA.
+.\"
 .It Sy milter_hostname Pq istring, any
 Reverse DNS name of the relaying MTA.
+.\"
 .It Sy milter_id Pq int, any
 Unique integer identifying this particular connection.
+.\"
 .It Sy milter_mail_addr Pq string, data*
 Content of the '{mail_addr}' macro.
+.\"
 .It Sy milter_mail_host Pq string, data*
 Content of the '{mail_host}' macro.
+.\"
 .It Sy milter_mail_mailer Pq string, data*
 Content of the '{mail_mailer}' macro.
+.\"
 .It Sy milter_message_size Pq int, eom
 Size of the entire message in bytes.
+.\"
 .It Sy milter_mta_version Pq string, any
 Content of the 'v' macro.
+.\"
 .It Sy milter_myhostname Pq string, any
 Content of the 'j' macro.
+.\"
 .It Sy milter_queueid Pq string, eoh*
 Content of the 'i' macro.
+.\"
 .It Sy milter_rcpt_addr Pq string, envrcpt
 Content of the '{rcpt_addr}' macro.
+.\"
 .It Sy milter_rcpt_host Pq string, envrcpt
 Content of the '{rcpt_host}' macro.
+.\"
 .It Sy milter_rcpt_mailer Pq string, envrcpt
 Content of the '{rcpt_mailer}' macro.
+.\"
 .It Sy milter_received Pq string, any
 UNIX timestamp holding the connection time.
+.\"
 .It Sy milter_recipient_list Pq list, data*
 List of envelope recipient addresses.
+.\"
 .It Sy milter_recipients Pq int, envrcpt*
 Number of recipients.
+.\"
 .It Sy milter_stage Pq int, any
 Internal number of the current milter stage. Do not use.
+.\"
 .It Sy milter_stagename Pq string, any
 Stage name of the current milter stage.
+.\"
 .It Sy milter_subject Pq string, eoh*
 Content of the subject header field.
+.\"
 .It Sy milter_tls_version Pq string, helo*
 Content of the '{tls_version}' macro.
+.\"
 .It Sy milter_unknown_command Pq string, unknown
 Set in unknown stage. Contains the command not known to the MTA.
+.\"
 .It Sy rbl Pq list, connect*
 List of machted rbls.
+.\"
 .It Sy spamd_score Pq float, eom
 SpamAssassin score of current message.
+.\"
 .It Sy spamd_spam Pq int, eom
 SpamAssassin verdict on current message.
+.\"
 .It Sy spamd_symbols Pq list, eom
 List of positive SpamAssassin tests for current message.
+.\"
 .It Sy spf Pq string, envfrom*
 Sender policy evaluation result for current host.
 Compareable with the following pre-defined symbols:
@@ -665,8 +733,10 @@ Compareable with the following pre-defined symbols:
 .Sy SPF_PASS ,
 .Sy SPF_FAIL ,
 .Sy SPF_SOFTFAIL .
+.\"
 .It Sy spf_reason Pq string, envfrom*
 SPF reason supplied by libspf.
+.\"
 .It Sy tarpit_delayed Pq int, any
 Accumulated tarpit delay in seconds.
 .El
@@ -681,20 +751,24 @@ In cases where no particular type is expected,
 .Em exp
 is used.
 .Bl -tag -width 4n
+.\"
 .It Ft type Fn cast type exp
 Returns
 .Em exp
 converted to
 .Em type .
+.\"
 .It Ft int Fn len exp
 Returns storage size of
 .Em exp .
+.\"
 .It Ft bool Fn list_contains list exp
 Evaluates true if
 .Em exp
 is in
 .Em list ,
 false otherwise.
+.\"
 .It Ft bool Fn regex_imatch pattern str
 Evaluates true if
 .Em str
@@ -702,12 +776,14 @@ matches
 .Pq case insensitive
 .Em pattern ,
 false otherwise.
+.\"
 .It Ft bool Fn regex_match pattern str
 Evaluates true if
 .Em str
 matches
 .Em pattern ,
 false otherwise.
+.\"
 .It Ft string Fn mailaddr str
 Returns
 .Em str
@@ -716,15 +792,18 @@ without enclosing angle brackets
 .Ql < ,
 .Ql >
 .Pc .
+.\"
 .It Ft int Fn strcmp str1 str2
 Returns an integer greater than, equal to, or less than 0, according
 to whether
 .Em str1
 is greater than, equal to, or less than
 .Em str2 .
+.\"
 .It Ft string Fn strlen str
 Returns length of
 .Em str .
+.\"
 .It Ft string Fn type exp
 Returns type of
 .Em exp .
