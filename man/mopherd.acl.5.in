@@ -521,11 +521,11 @@ lookups from its cache.
 .Bl -tag -width 4n
 .\"
 .It Sy counter_penpal Pq int, envrcpt
-Number of delivered messages by current penpal
+Number of previously delivered messages by current penpal
 .Pq origin, sender and recipient combination .
 .\"
 .It Sy counter_relay Pq int, any
-Number of delivered messages by current relay
+Number of previously delivered messages by current relay
 .Pq address or domain .
 .\"
 .It Sy greylist_attempts Pq int, envfrom*
@@ -570,13 +570,19 @@ Internal action identifer of the last returned action. Do not use.
 Address string of the connecting host.
 .\"
 .It Sy milter_auth_authen Pq string, envfrom*
-Content of the '{auth_authen}' macro.
+Content of the
+.Sq Brq auth_authen
+macro.
 .\"
 .It Sy milter_auth_author Pq string, envfrom*
-Content of the '{auth_author}' macro.
+Content of the
+.Sq Brq auth_author
+macro.
 .\"
 .It Sy milter_auth_type Pq string, envfrom*
-Content of the '{auth_type}' macro.
+Content of the
+.Sq Brq auth_type
+macro.
 .\"
 .It Sy milter_body Pq string, eom
 String containing the whole message body.
@@ -585,40 +591,62 @@ String containing the whole message body.
 Size of message body in bytes.
 .\"
 .It Sy milter_cert_issuer Pq string, helo*
-Content of the '{cert_issuer}' macro.
+Content of the
+.Sq Brq cert_issuer
+macro.
 .\"
 .It Sy milter_cert_subject Pq string, helo*
-Content of the '{cert_subject}' macro.
+Content of the
+.Sq Brq cert_subject
+macro.
 .\"
 .It Sy milter_cipher Pq string, helo*
-Content of the '{cipher}' macro.
+Content of the
+.Sq Brq cipher
+macro.
 .\"
 .It Sy milter_cipher_bits Pq string, helo*
-Content of the '{cipher_bits}' macro.
+Content of the
+.Sq Brq cipher_bits
+macro.
 .\"
 .It Sy milter_client Pq string, any
-Content of the '{client}' macro.
+Content of the
+.Sq Brq client
+macro.
 .\"
 .It Sy milter_client_addr Pq string, any
-Content of the '{client_addr}' macro.
+Content of the
+.Sq Brq client_addr
+macro.
 .\"
 .It Sy milter_client_connections Pq string, connect
-Content of the '{client_connections}' macro.
+Content of the
+.Sq Brq client_connections
+macro.
 .\"
 .It Sy milter_client_name Pq string, any
-Content of the '{client_name}' macro.
+Content of the
+.Sq Brq client_name
+macro.
 .\"
 .It Sy milter_client_port Pq string, any
-Content of the '{client_port}' macro.
+Content of the
+.Sq Brq client_port
+macro.
 .\"
 .It Sy milter_client_ptr Pq string, any
-Content of the '{client_ptr}' macro.
+Content of the
+.Sq Brq client_ptr
+macro.
 .\"
 .It Sy milter_ctx Pq pointer, any
 Internal milter context pointer. Do not use.
 .\"
 .It Sy milter_daemon_name Pq string, any
-Content of the '{daemon_name}' macro.
+Content of the
+.Sq Brq daemon_name
+macro.
 .\"
 .It Sy milter_envfrom Pq string, envfrom*
 Raw envelope from address.
@@ -661,34 +689,52 @@ Reverse DNS name of the relaying MTA.
 Unique integer identifying this particular connection.
 .\"
 .It Sy milter_mail_addr Pq string, data*
-Content of the '{mail_addr}' macro.
+Content of the
+.Sq Brq mail_addr
+macro.
 .\"
 .It Sy milter_mail_host Pq string, data*
-Content of the '{mail_host}' macro.
+Content of the
+.Sq Brq mail_host
+macro.
 .\"
 .It Sy milter_mail_mailer Pq string, data*
-Content of the '{mail_mailer}' macro.
+Content of the
+.Sq Brq mail_mailer
+macro.
 .\"
 .It Sy milter_message_size Pq int, eom
 Size of the entire message in bytes.
 .\"
 .It Sy milter_mta_version Pq string, any
-Content of the 'v' macro.
+Content of the
+.Sq v
+macro.
 .\"
 .It Sy milter_myhostname Pq string, any
-Content of the 'j' macro.
+Content of the
+.Sq j
+macro.
 .\"
 .It Sy milter_queueid Pq string, eoh*
-Content of the 'i' macro.
+Content of the
+.Sq i
+macro.
 .\"
 .It Sy milter_rcpt_addr Pq string, envrcpt
-Content of the '{rcpt_addr}' macro.
+Content of the
+.Sq Brq rcpt_addr
+macro.
 .\"
 .It Sy milter_rcpt_host Pq string, envrcpt
-Content of the '{rcpt_host}' macro.
+Content of the
+.Sq Brq rcpt_host
+macro.
 .\"
 .It Sy milter_rcpt_mailer Pq string, envrcpt
-Content of the '{rcpt_mailer}' macro.
+Content of the
+.Sq Brq rcpt_mailer
+macro.
 .\"
 .It Sy milter_received Pq string, any
 UNIX timestamp holding the connection time.
@@ -709,7 +755,9 @@ Stage name of the current milter stage.
 Content of the subject header field.
 .\"
 .It Sy milter_tls_version Pq string, helo*
-Content of the '{tls_version}' macro.
+Content of the
+.Sq Brq tls_version
+macro.
 .\"
 .It Sy milter_unknown_command Pq string, unknown
 Set in unknown stage. Contains the command not known to the MTA.
