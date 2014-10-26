@@ -521,47 +521,57 @@ lookups from its cache.
 .Bl -tag -width 4n
 .\"
 .It Sy counter_penpal Pq int, envrcpt
-Number of previously delivered messages by current penpal
-.Pq origin, sender and recipient combination .
+Number of previously delivered messages by origin for penpal.
 .\"
 .It Sy counter_relay Pq int, any
-Number of previously delivered messages by current origin
-.Pq address or domain .
+Number of previously delivered messages by origin.
 .\"
 .It Sy greylist_attempts Pq int, envfrom*
-Number of delivery attempts a server needs to perform to pass greylisting.
+Number of delivery attempts required for origin to whitelist \%penpal.
 .\"
 .It Sy greylist_connections Pq int, envfrom*
-Number of delivery attempts a server has already made to pass greylisting.
+Number of attempts made by origin to deliver for penpal.
 .\"
 .It Sy greylist_created Pq int, envfrom*
-Creation time of the greylist record belonging to this connection.
+Time of first attempt made by origin to deliver for penpal.
 .\"
 .It Sy greylist_deadline Pq int, envfrom*
-Number of seconds the relay is given to perform the requested delivery
-attempts.
+Number of seconds given to origin to perform
+.Em greylist_attempts ,
+starting from
+.Em greylist_created .
 .\"
 .It Sy greylist_delay Pq int, envfrom*
-Number of seconds the relay has to wait until greylisting is finished and
-delivery is possible.
+Waiting period in seconds required for origin to whitelist penpal.
 .\"
 .It Sy greylist_delayed Pq int, envfrom*
-Number of seconds the message was effectively delayed by greylisting.
+Number of seconds waited by origin to deliver for penpal.
 .\"
 .It Sy greylist_expire Pq int, envfrom*
-UNIX timestamp when this record will be deleted from the database.
+Expiration timestamp of greylist record created by origin trying to
+deliver for penpal at
+.Em greylist_created .
 .\"
 .It Sy greylist_listed Pq int, envfrom*
-If true this message has a greylist tuple in the database.
+True
+.Pq 1 ,
+if an existing greylist record is associated with origin trying to
+deliver for penpal.
+False
+.Pq 0
+otherwise.
 .\"
 .It Sy greylist_passed Pq int, envfrom*
-Number of messages passed greylistung using this record.
+Number of delivered messages by origin for penpal after associated
+greylist record was upgraded to visa.
 .\"
 .It Sy greylist_updated Pq int, envfrom*
-UNIX timestamp when this record was last modified.
+Modification timestamp of greylist record created by origin trying to
+deliver for penpal at
+.Em greylist_created .
 .\"
 .It Sy greylist_visa Pq int, envfrom*
-Number of seconds this record can be used as visa for subsquent messages.
+Validity period of upgraded greylist record in seconds.
 .\"
 .It Sy milter_action Pq int, connect*
 Internal action identifer of the last returned action. Do not use.
