@@ -1,70 +1,59 @@
-0.5: 2014-10-24
+Recent changes to mopher's source.
 
-  FEATURES
+Version 0.5.0
+24.10.2014
+    This release contains many new features, almost 18 months of
+        successful testing in production environments and a variety of
+        adjustments and bugfixes.
+    Serious attempt at complete documentation, multiple man pages added:
+        mopher.7 mopherctl.8 mopherd.8 mopherd.acl.5 mopherd.conf.5
+    The bdb backend switched to legacy BDB format (1.85), libdb is no
+        longer a dependency on BSD systems with dbopen(3) in libc.
+    Mozilla's Public Suffix rule list is no longer compiled into mopher
+        but a regular file that may be updated and reloaded.
+    The experimental database logging module (dblog) was added.  Its
+        purpose is a fast history of structured session data, easy to
+        query and translate into statistics or periodic reports.
+    Introduction of basic unit test infrastructure.
+    moco was renamed to mopherctl, see mopherctl(8).
+    mail.acl was renamed to mopherd.acl, see mopherd.acl(5).
 
-  * New man pages
-  * Support for BerkeleyDB 1.85
-  * 3 valued logic for boolean expressions in ACL
-  * Load regdom rules from filesystem
-  * Unified socket configuration format
-  * Renamed moco to mopherctl
-  * Renamed mail.acl to mopherd.acl
-  * Database logging (EXPERIMENTAL)
-  * Added unit test infrastructure
-  * Various bugfixes
+Version 0.4.1
+13.04.2013
+    Fixed Message-ID logging
+    Updated regdom rules
 
-0.4.1: 2013-04-13
+Version 0.4.0
+06.12.2012
+    Fixed possible format string reevaluation in log.c
+    Fixed handling of NULL host addresses
 
-  * Fixed Message-ID logging
-  * Updated regdom rules
+Version 0.3.0
+26.11.2012
+    Moco now supports dumping all database tables
+    Counter_penpal uses greylist_src as MTA address
+    Log Message-ID in default logging
+    Consistent logging format
+    Added pipe action (EXPERIMENTAL)
+    Identify servers public suffix used for greylisting (Petar Bogdanovic)
+    Support LDFLAGS #7 (Petar Bogdanovic)
+    Fixed update bug in counter.c
+    Fixed bad message size bug
+    Fixed ignored cf_default_deadline #10
+    Fixed typo in sht.c #8 (Petar Bogdanovic)
 
+Version 0.2.0
+03.06.2012
+    New greylist logging format
+    Mopher control socket
+    Mopher control socket client moco (EXPERIMENTAL)
+    Improved Makefiles (Petar Bogdanovic)
+    Fixed garbled remaining attempts #1
+    Fixed bad spamd header format #3
+    Fixed ACL evaluation bug #5
 
-0.4: 2012-12-06
+Version 0.1.0
+23.01.2012
+    First release
 
-  BUGFIXES
-
-  * Fixed possible format string reevaluation in log.c
-  * Fixed handling of NULL host addresses
-
-
-0.3: 2012-11-26
-
-  FEATURES
-
-  * Moco now supports dumping all database tables
-  * Counter_penpal uses greylist_src as MTA address
-  * Log Message-ID in default logging
-  * Consistent logging format
-  * Added pipe action (EXPERIMENTAL)
-  * Identify servers public suffix used for greylisting (Petar Bogdanovic)
-  * Support LDFLAGS #7 (Petar Bogdanovic)
-
-
-  BUGFIXES
-
-  * Update bug in counter.c
-  * Bad message size bug
-  * Ignored cf_default_deadline #10
-  * Typo in sht.c #8 (Petar Bogdanovic)
-
-
-0.2: 2012-06-03
-
-  FEATURES
-
-  * New greylist logging format
-  * Mopher control socket
-  * Mopher control socket client moco (EXPERIMENTAL)
-  * Improved Makefiles (Petar Bogdanovic)
-
-
-  BUGFIXES
-
-  * Garbeled remaining attempts #1
-  * Bad spamd header format #3
-  * ACL evaluation bug #5
-
-
-0.1: 2012-01-23
-
-  * First release
+# vim: expandtab:ts=4:sw=4
