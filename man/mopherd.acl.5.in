@@ -525,7 +525,7 @@ Number of previously delivered messages by current penpal
 .Pq origin, sender and recipient combination .
 .\"
 .It Sy counter_relay Pq int, any
-Number of previously delivered messages by current relay
+Number of previously delivered messages by current origin
 .Pq address or domain .
 .\"
 .It Sy greylist_attempts Pq int, envfrom*
