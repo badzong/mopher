@@ -12,6 +12,11 @@ src/cf_yacc.h
 src/mopherctl
 src/mopherd
 src/test_run
+man/mopher.7
+man/mopherctl.8
+man/mopherd.8
+man/mopherd.acl.5
+man/mopherd.conf.5
 *.o
 *.so
 *.tar.gz
