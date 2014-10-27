@@ -1152,6 +1152,9 @@ milter_id_init(void)
 void
 milter_init(void)
 {
+	int runs_as_nobody;
+	int runs_as_nogroup;
+
 	/*
 	 * Load configuration
 	 */
@@ -1163,6 +1166,16 @@ milter_init(void)
 	 */
 	if (getuid() == 0)
 	{
+		runs_as_nobody = strcmp(cf_mopherd_user, "nobody") == 0;
+		runs_as_nogroup = strcmp(cf_mopherd_group, "nogroup") == 0;
+
+		if (runs_as_nobody || runs_as_nogroup)
+		{
+			log_warning("warning: running with%s%s",
+				runs_as_nobody?  " user=nobody": "",
+				runs_as_nogroup? " group=nogroup": "");
+		}
+
 		if (cf_mopherd_group)
 		{
 			log_debug("group: %s", cf_mopherd_group);
