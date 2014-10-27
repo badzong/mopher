@@ -260,8 +260,7 @@ cf_load_file(char *file)
 	}
 
 	if (exists == 0) {
-		log_warning("cf_load_file: \"%s\" does not exist. Using defaults",
-			file);
+		log_warning("%s does not exist. Using defaults.", file);
 		return;
 	}
 

@@ -94,7 +94,7 @@ parser(char *path, FILE ** input, int (*parser_callback) (void))
 	struct stat fs;
 
 	if (stat(path, &fs) == -1) {
-		log_sys_error("parser: stat '%s'", path);
+		log_sys_error("%s", path);
 		return -1;
 	}
 

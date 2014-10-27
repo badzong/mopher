@@ -635,7 +635,7 @@ util_setgid(char *name)
 	gr = getgrnam(name);
 	if (gr == NULL)
 	{
-		log_sys_die(EX_SOFTWARE, "util_setgid: getgrnam");
+		log_die(EX_SOFTWARE, "unknown group: %s", name);
 	}
 
 	if (setgid(gr->gr_gid))
@@ -659,7 +659,7 @@ util_setuid(char *name)
 	pw = getpwnam(name);
 	if (pw == NULL)
 	{
-		log_sys_die(EX_SOFTWARE, "util_setuid: getpwnam");
+		log_die(EX_SOFTWARE, "unknown user: %s", name);
 	}
 
 	if (setuid(pw->pw_uid))
