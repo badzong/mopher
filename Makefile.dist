@@ -9,7 +9,7 @@ OUT=			Makefile Makefile.common autom4te.cache \
 			src/Makefile src/modules/Makefile man/Makefile
 
 DIST=			mopher
-VERSION=		0.4.1
+VERSION=		0.5.0
 DISTDIR=		$(DIST)-$(VERSION)
 
 all: bootstrap

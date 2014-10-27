@@ -38,8 +38,12 @@ main(int argc, char **argv)
 	foreground = 0;
 	loglevel = LOG_WARNING;
 
-	while ((opt = getopt(argc, argv, "fhCd:c:p:")) != -1) {
+	while ((opt = getopt(argc, argv, "?hvfCd:c:p:")) != -1) {
 		switch(opt) {
+		case 'v':
+			printf("%s-%s\n", BINNAME, PACKAGE_VERSION);
+			exit(EX_OK);
+			break;
 		case 'f':
 			foreground = 1;
 			break;
@@ -64,7 +68,7 @@ main(int argc, char **argv)
 		default:
 			fprintf(stderr, "Usage: %s [-c file] [-d N] [-f] [-h]\n", 
 				BINNAME);
-			fprintf(stderr, "Start the %s mail filter system.\n\n", 
+			fprintf(stderr, "Start the mail filter daemon %s.\n\n", 
 				BINNAME);
 			fprintf(stderr, "  -c file    Read configuration from file\n");
 			fprintf(stderr, "  -C         Check configuration file syntax\n");
@@ -72,7 +76,8 @@ main(int argc, char **argv)
 			fprintf(stderr, "  -f         Don't detach into background\n");
 			fprintf(stderr, "  -h         Show this message\n");
 			fprintf(stderr, "  -p file    Write PID to file\n");
-			fprintf(stderr, "\nTry man %s (1) for more information.\n", BINNAME);
+			fprintf(stderr, "  -v         Show version information\n");
+			fprintf(stderr, "\nTry man %s (8) for more information.\n", BINNAME);
 
 			exit(EX_USAGE);
 		}
