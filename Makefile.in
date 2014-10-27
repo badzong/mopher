@@ -26,7 +26,8 @@ install_modules:
 install_config:
 	$(INSTALL_DIR) $(DESTDIR)$(CONFIG_INST)
 	for C in $(CONF); do \
-		$(INSTALL_DATA) config/$$C $(DESTDIR)$(CONFIG_INST); \
+                DESTFILE=$(DESTDIR)$(CONFIG_INST)/$$C; \
+		test -f $$DESTFILE || $(INSTALL_DATA) config/$$C $$DESTFILE; \
 	done
 
 install_man:

@@ -47,7 +47,7 @@ REGDOM_RULES=		$(CONFIG_PATH)/effective_tld_names.dat
 # Files
 #
 PROG=			mopherd mopherctl
-CONF=			mopherd.acl.example mopherd.conf.example \
+CONF=			mopherd.acl mopherd.acl.example mopherd.conf.example \
 			effective_tld_names.dat
 MAN=			mopher.7 mopherctl.8 mopherd.8 mopherd.acl.5 \
 			mopherd.conf.5
