@@ -753,7 +753,7 @@ Content of macro
 .It Sy milter_unknown_command Pq string, unknown
 Unknown command issued by origin.
 .\"
-.It Sy rbl Pq list, connect*
+.It Sy dnsbl Pq list, connect*
 List of non-null DNSBL query results.
 .\"
 .It Sy spamd_score Pq float, eom

@@ -279,17 +279,17 @@ and
 .Em counter_expire_high .
 .El
 .Ss DNSBL Resolver
-.Em rbl
+.Em dnsbl
 maps DNSBL query results to
 .Xr mopherd.acl 5
 symbols.
 Each black- or whitelist needs to be defined through the indexed keyword
-.Em rbl
+.Em dnsbl
 before it can be used in
 .Xr mopherd.acl 5 :
 .Bd -literal -offset indent
-rbl[list_foo] = blacklist.foo.org
-rbl[list_bar] = whitelist.bar.net
+dnsbl[list_foo] = blacklist.foo.org
+dnsbl[list_bar] = whitelist.bar.net
 .Ed
 .Pp
 where the name of the index is the name of the symbol exported to
