@@ -1,0 +1,73 @@
+# Makefile
+
+DIST?=			mopher
+VERSION?=		0.5.0
+CONTACT?=		mopher@googlegroups.com
+
+AUTOLIST+=		autom4te.cache
+AUTOLIST+=		config.h
+AUTOLIST+=		config.log
+AUTOLIST+=		config.status
+AUTOLIST+=		config/Makefile
+AUTOLIST+=		configure
+AUTOLIST+=		make/mk.common
+AUTOLIST+=		man/Makefile
+AUTOLIST+=		src/Makefile
+AUTOLIST+=		src/modules/Makefile
+OUT+=			$(AUTOLIST)
+
+DISTLIST+=		CHANGES
+DISTLIST+=		LICENSE
+DISTLIST+=		Makefile
+DISTLIST+=		README
+DISTLIST+=		config
+DISTLIST+=		config.h.in
+DISTLIST+=		configure
+DISTLIST+=		make
+DISTLIST+=		man
+DISTLIST+=		src
+
+DISTDIR?=		$(DIST)-$(VERSION)
+DISTPKG?=		$(DISTDIR).tgz
+
+dist: $(DISTPKG)
+
+$(DISTPKG): $(DISTDIR)
+	tar czf $@ $> $^
+OUT+=	$(DISTPKG)
+
+$(DISTDIR): $(DISTLIST)
+	mkdir $@
+	cp -PRp $> $^ $@
+OUT+=	$(DISTDIR)
+
+configure: configure.ac
+	DIST=$(DIST) VERSION=$(VERSION) CONTACT=$(CONTACT) aclocal
+	DIST=$(DIST) VERSION=$(VERSION) CONTACT=$(CONTACT) autoconf
+OUT+=	configure
+
+regdom_test.dat:
+	p=http://hg.mozilla.org/mozilla-central/raw-file/tip/netwerk/test/unit/data; \
+	wget -O- $$p/test_psl.txt >$@
+OUT+=	regdom_test.dat
+
+src/regdom_test.c: regdom_test.dat
+	echo "/* Generated file, see make/mk.admin for details. */" >$@
+	sed "s/checkPublicSuffix(\(.*\));/{\1, 0},/; \
+		s/null/NULL/g; s/'/\"/g;" $> $^ >>$@
+
+README: man/mopher.7.in
+	groff -mdoc -Tascii $> $^ | col -bx | \
+		sed ":a;/^FILES\$$/{:b;N;/\n[A-Z]/!bb; \
+			s/.*\n//;ba};1d;\$$d;" >$@
+
+distclean:
+	-rm -rf $(OUT)
+
+.gitignore:
+	echo "# Generated file, see make/mk.admin for details." >$@
+	for i in $(OUT); do \
+		echo "$$i"; done >>$@
+	for i in $(SUBDIR); do \
+		(cd $$i && $(MAKE) ignore) | \
+			sed -n "s,^IGNORE: ,$$i/,p" >>$@; done

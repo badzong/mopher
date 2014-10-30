@@ -67,7 +67,7 @@ Syslog severity level (0-7) for messages logged by the
 .Em log
 keyword in
 .Xr mopherd.acl 5 .
-.It Sy acl_path Pq Qq @sysconfdir@/mopher/mopherd.acl
+.It Sy acl_path Pq Qq @CONFIG_PATH@/mopherd.acl
 Path to
 .Xr mopherd.acl 5 .
 .\" .It Sy cleanup_interval Pq 10m
@@ -133,7 +133,7 @@ Default timeout for any communication between mopher and MTAs.
 .\" .It Sy milter_wait Pq 1s
 .\" FIXME: rephrase
 .\" Number of seconds mopherd waits for all milter threads to close upon exit.
-.It Sy module_path Pq Qq @libdir@/mopher
+.It Sy module_path Pq Qq @MODULE_PATH@
 Path to loadable mopher modules.
 .Xr mopherd 8
 will load all available modules in

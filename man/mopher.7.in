@@ -84,15 +84,15 @@ In such cases, it is possible that some modules are not available on
 your system even though they are listed here.
 .Sh FILES
 .Bl -tag -width Ds
-.It Pa @sbindir@/mopherd
+.It Pa @PROGRAM_PATH@/mopherd
 The mopher daemon.
-.It Pa @sbindir@/mopherctl
+.It Pa @PROGRAM_PATH@/mopherctl
 The mopher daemon control utility.
-.It Pa @sysconfdir@/mopher/mopherd.conf
+.It Pa @CONFIG_PATH@/mopherd.conf
 Configuration file for the mopher daemon.
-.It Pa @sysconfdir@/mopher/mopherd.acl
+.It Pa @CONFIG_PATH@/mopherd.acl
 List of rules enforced by the mopher daemon.
-.It Pa @libdir@/mopher
+.It Pa @MODULE_PATH@
 Directory containing loadable mopher modules.
 .El
 .Sh SEE ALSO

@@ -35,9 +35,9 @@ Create a PID file in
 .El
 .Sh FILES
 .Bl -tag -width Ds
-.It Pa @sysconfdir@/mopher/mopherd.conf
+.It Pa @CONFIG_PATH@/mopherd.conf
 Configuration file for the mopher daemon.
-.It Pa @sysconfdir@/mopher/mopherd.acl
+.It Pa @CONFIG_PATH@/mopherd.acl
 List of rules enforced by the mopher daemon.
 .El
 .Sh SEE ALSO

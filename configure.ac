@@ -1,5 +1,7 @@
 AC_PREREQ([2.64])
-AC_INIT([mopher], m4_esyscmd([printf %s ${VERSION:-0.0}]), [mopher@mopher.net])
+AC_INIT(m4_esyscmd([printf %s ${DIST:-unnamed}]),
+  m4_esyscmd([printf %s ${VERSION:-0.0.0}]),
+  m4_esyscmd([printf %s ${CONTACT:-nonexistent}]))
 
 AC_SUBST([PACKAGE], [$PACKAGE_NAME])
 AC_SUBST([VERSION], [$PACKAGE_VERSION])
@@ -20,25 +22,6 @@ then
   AC_MSG_ERROR([objcopy not found. Make sure you have GNU binutils installed.])
 fi
 
-AC_PATH_PROG([AR], [ar])
-if test -z "$AR"
-then
-  AC_MSG_ERROR([ar not found. Make sure you have GNU binutils installed.])
-fi
-
-# tar and gzip are used to make dist.
-AC_PATH_PROG([GZIP], [gzip])
-if test -z "$GZIP"
-then
-  AC_MSG_WARN([gzip not found.])
-fi
-
-AC_PATH_PROG([TAR], [tar])
-if test -z "$TAR"
-then
-  AC_MSG_WARN([tar not found.])
-fi
-
 # check for install
 AC_PATH_PROG([INSTALL], [install])
 if test -z "$INSTALL"
@@ -51,6 +34,34 @@ AC_PATH_PROG([SED], [sed])
 if test -z "$SED"
 then
   AC_MSG_WARN([sed not found.])
+fi
+
+# check for rmdir
+AC_PATH_PROG([RMDIR], [rmdir])
+if test -z "$RMDIR"
+then
+  AC_MSG_WARN([rmdir not found.])
+fi
+
+# check for rm
+AC_PATH_PROG([RM], [rm])
+if test -z "$RM"
+then
+  AC_MSG_WARN([rm not found.])
+fi
+
+# check for ld
+AC_PATH_PROG([LD], [ld])
+if test -z "$LD"
+then
+  AC_MSG_WARN([ld not found.])
+fi
+
+# check for test
+AC_PATH_PROG([TEST], [test])
+if test -z "$TEST"
+then
+  AC_MSG_WARN([test not found.])
 fi
 
 # Checks prerequisites
@@ -153,11 +164,11 @@ AC_SUBST([MOD_LIBS])
 # So far no further checks
 
 AC_CONFIG_FILES([
-	Makefile
-	Makefile.common
+	config/Makefile
+	make/mk.common
+	man/Makefile
 	src/Makefile
 	src/modules/Makefile
-	man/Makefile
 ])
 
 AC_OUTPUT

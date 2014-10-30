@@ -1,48 +1,95 @@
 # Makefile, src
 
-include @top_srcdir@/Makefile.common
 
-PROG+=			test_run # built, not installed
+# OUT_[A-Z]:
+#	built on `all'
+#	removed on `clean'
+#
+OUT_A+=			acl_lex.c
+OUT_A+=			acl_yacc.c
+OUT_A+=			acl_yacc.h
+OUT_A+=			cf_lex.c
+OUT_A+=			cf_yacc.c
+OUT_A+=			cf_yacc.h
+OUT_B+=			acl.o
+OUT_B+=			acl_lex.o
+OUT_B+=			acl_yacc.o
+OUT_B+=			cf.o
+OUT_B+=			cf_defaults.o
+OUT_B+=			cf_lex.o
+OUT_B+=			cf_yacc.o
+OUT_B+=			client.o
+OUT_B+=			dbt.o
+OUT_B+=			defs.o
+OUT_B+=			exp.o
+OUT_B+=			greylist.o
+OUT_B+=			hash.o
+OUT_B+=			ht.o
+OUT_B+=			ll.o
+OUT_B+=			log.o
+OUT_B+=			milter.o
+OUT_B+=			module.o
+OUT_B+=			msgmod.o
+OUT_B+=			parser.o
+OUT_B+=			pipe.o
+OUT_B+=			regdom.o
+OUT_B+=			server.o
+OUT_B+=			sht.o
+OUT_B+=			sock.o
+OUT_B+=			tarpit.o
+OUT_B+=			test.o
+OUT_B+=			util.o
+OUT_B+=			var.o
+OUT_B+=			vlist.o
+OUT_B+=			vp.o
+OUT_B+=			vtable.o
+OUT_C+=			test_run
+OUT_D+=			mopherctl
+OUT_D+=			mopherd
 
-GENSRC=			cf_yacc.c acl_yacc.c cf_lex.c acl_lex.c
-SRC=			$(GENSRC) defs.c cf.c acl.c milter.c module.c \
-			ll.c ht.c sht.c var.c vp.c vlist.c vtable.c \
-			log.c hash.c util.c dbt.c greylist.c sock.c \
-			client.c server.c exp.c parser.c tarpit.c \
-			msgmod.c pipe.c regdom.c test.c
-OBJ=			$(SRC:.c=.o) cf_defaults.o
+# INST:
+#	installed on `install'
+#	uninstalled on `uninstall'
+#
+INST=			$(OUT_D:=.sbin)
 
-CFLAGS+=		-I@top_srcdir@ -I@top_srcdir@/src/include
-CFLAGS.defs.o=		-DMODULE_PATH=\"$(MODULE_PATH)\" \
-			-DMOPHERD_CONF=\"$(MOPHERD_CONF)\" \
-			-DMOPHERD_ACL=\"$(MOPHERD_ACL)\" \
-			-DREGDOM_RULES=\"$(REGDOM_RULES)\"
+# *FLAGS
+#
+YFLAGS.cf_yacc.c+=	-pcf_
+YFLAGS.acl_yacc.c+=	-pacl_
+LFLAGS.cf_lex.c+=	-Pcf_
+LFLAGS.acl_lex.c+=	-Pacl_
+CFLAGS+=		-I@top_srcdir@
+CFLAGS+=		-I@top_srcdir@/src/include
+CFLAGS.defs.o+=		-DMODULE_PATH=\"$(MODULE_PATH)\"
+CFLAGS.defs.o+=		-DMOPHERD_CONF=\"$(MOPHERD_CONF)\"
+CFLAGS.defs.o+=		-DMOPHERD_ACL=\"$(MOPHERD_ACL)\"
+CFLAGS.defs.o+=		-DREGDOM_RULES=\"$(REGDOM_RULES)\"
+LDFLAGS+=		-rdynamic
+LDFLAGS+=		@LIBS@
+LDFLAGS+=		@MOD_LIBS@
 
-YFLAGS.cf_yacc.c=	-pcf_
-YFLAGS.acl_yacc.c=	-pacl_
-XFLAGS.cf_lex.c=	-Pcf_
-XFLAGS.acl_lex.c=	-Pacl_
 
-.PHONY: all
+include @top_srcdir@/make/mk.common
 
-all: $(PROG)
 
-$(PROG): $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $@.c $(OBJ) $(LDFLAGS)
+$(OUT_B):		$(OUT_A)
+$(OUT_C) $(OUT_D):	$(OUT_B)
+	@CC@ $(CFLAGS) -o $@ $@.c $> $^ $(LDFLAGS)
 
-clean:
-	-rm $(PROG) $(GENSRC:.c=.[ch]) $(OBJ)
-
-.SUFFIXES: .conf .l .y .c .o
-.y.o:	# unset
-.l.o:	# unset
+.SUFFIXES:
+.SUFFIXES:		.conf .y .l .h .c .o
+.y.h:			# unset
+.y.o:			# unset
+.l.h:			# unset
+.l.o:			# unset
 .y.c:
-	$(YACC) $(YFLAGS) $(YFLAGS.$@) -o $@ $<
+	@YACC@ -d $(YFLAGS) $(YFLAGS.$@) -o $@ $<
 .l.c:
-	$(LEX) -t $(XFLAGS.$@) $< > $@
+	@LEX@ -t $(LFLAGS) $(LFLAGS.$@) $< >$@
 .c.o:
-	$(CC) $(CFLAGS) $(CFLAGS.$@) -c $< -o $@
+	@CC@ -c $(CFLAGS) $(CFLAGS.$@) $< -o $@
 .conf.o:
-	$(LD) -r -b binary -o $@ $> $^
-	$(OBJCOPY) --rename-section \
+	@LD@ -r -b binary -o $@ $> $^
+	@OBJCOPY@ --rename-section \
 		.data=.rodata,alloc,load,readonly,data,contents $@ $@

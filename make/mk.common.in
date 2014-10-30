@@ -1,0 +1,94 @@
+# mk.common
+
+
+# flags
+CFLAGS+=		@CFLAGS@
+CFLAGS+=		-Wall
+LDFLAGS+=		@LDFLAGS@
+
+# paths
+prefix?=		@prefix@
+exec_prefix?=		@exec_prefix@
+PROGRAM_PATH?=		@sbindir@
+MODULE_PATH?=		@libdir@/mopher
+CONFIG_PATH?=		@sysconfdir@/mopher
+CONFIG_XPATH?=		$(CONFIG_PATH)
+MAN_PATH?=		@datarootdir@/man
+
+# files
+MOPHERD_CONF?=		$(CONFIG_PATH)/mopherd.conf
+MOPHERD_ACL?=		$(CONFIG_PATH)/mopherd.acl
+REGDOM_RULES?=		$(CONFIG_PATH)/effective_tld_names.dat
+
+
+# build/clean
+#
+#
+OUT=		$(OUT_A) $(OUT_B) $(OUT_C) $(OUT_D) $(OUT_E) $(OUT_F) \
+		$(OUT_G) $(OUT_H) $(OUT_I) $(OUT_J) $(OUT_K) $(OUT_L) \
+		$(OUT_M) $(OUT_N) $(OUT_O) $(OUT_P) $(OUT_Q) $(OUT_R) \
+		$(OUT_S) $(OUT_T) $(OUT_U) $(OUT_V) $(OUT_W) $(OUT_X) \
+		$(OUT_Y) $(OUT_Z)
+
+build: $(OUT)
+
+clean:
+	@rm -fv $(OUT)
+
+ignore:
+	@for i in $(OUT); do \
+		echo IGNORE: "$$i"; done
+
+
+# install/uninstall
+#
+#
+SH_SET_OPTS=	f=$${i%.*}; \
+		s=$${i\#\#*.}; \
+		case $$s in \
+		lib) \
+			dest="$(DESTDIR)$(MODULE_PATH)"; \
+			mode=755; \
+			;; \
+		sbin) \
+			dest="$(DESTDIR)$(PROGRAM_PATH)"; \
+			mode=755; \
+			;; \
+		man) \
+			dest="$(DESTDIR)$(MAN_PATH)"; \
+			dest="$$dest/man$${f\#\#*.}"; \
+			mode=644; \
+			;; \
+		conf) \
+			dest="$(DESTDIR)$(CONFIG_XPATH)"; \
+			mode=644; \
+			conf=y; \
+			;; \
+		esac;
+SH_SKIP_CONF=	if @TEST@ -n "$$conf" && \
+		   @TEST@ -f "$$dest/$$f"; then \
+			echo skipping configuration file "$$dest/$$f"; \
+			continue; \
+		fi;
+
+install: build
+	@set -e; \
+	for i in $(INST); do \
+		$(SH_SET_OPTS) \
+		$(SH_SKIP_CONF) \
+		echo installing "$$dest/$$f"; \
+		@INSTALL@ -d "$$dest"; \
+		@INSTALL@ -m "$$mode" "$$f" "$$dest"; \
+	done
+
+uninstall:
+	@set -e; \
+	for i in $(INST); do \
+		$(SH_SET_OPTS) \
+		$(SH_SKIP_CONF) \
+		echo removing "$$dest/$$f"; \
+		@RM@ -f "$$dest/$$f"; \
+		if @TEST@ "$${dest##*/}" = mopher; then \
+			@RMDIR@ "$$dest" 2>/dev/null ||:; \
+		fi; \
+	done
