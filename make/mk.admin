@@ -71,3 +71,4 @@ distclean:
 	for i in $(SUBDIR); do \
 		(cd $$i && $(MAKE) ignore) | \
 			sed -n "s,^IGNORE: ,$$i/,p" >>$@; done
+.PHONY:	.gitignore
