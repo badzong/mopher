@@ -49,8 +49,6 @@ dbt_driver_register(dbt_driver_t *dd)
 static void
 dbt_close(dbt_t *dbt)
 {
-	int r = 0;
-
 	if (!dbt->dbt_open)
 	{
 		return;
@@ -58,10 +56,7 @@ dbt_close(dbt_t *dbt)
 
 	if ((dbt->dbt_driver->dd_flags & DBT_LOCK))
 	{
-		r |= pthread_mutex_destroy(&dbt->dbt_driver->dd_lock);
-		r |= pthread_mutex_destroy(&dbt->dbt_driver->dd_walk_lock);
-
-		if (r)
+		if(pthread_mutex_destroy(&dbt->dbt_driver->dd_mutex))
 		{
 			log_sys_error("dbt_register: ptrhead_mutex_destroy");
 		}
@@ -85,7 +80,7 @@ dbt_close(dbt_t *dbt)
 }
 
 static int
-dbt_lock(dbt_t *dbt, pthread_mutex_t *mutex)
+dbt_lock(dbt_t *dbt)
 {
 	/*
          * No locking required.
@@ -95,7 +90,7 @@ dbt_lock(dbt_t *dbt, pthread_mutex_t *mutex)
 		return 0;
 	}
 
-	if (pthread_mutex_lock(mutex))
+	if (pthread_mutex_lock(&dbt->dbt_driver->dd_mutex))
 	{
 		log_sys_error("dbt_lock: pthread_mutex_lock");
 		return -1;
@@ -105,32 +100,19 @@ dbt_lock(dbt_t *dbt, pthread_mutex_t *mutex)
 }
 
 static void
-dbt_unlock(dbt_t *dbt, pthread_mutex_t *mutex)
+dbt_unlock(dbt_t *dbt)
 {
 	if ((dbt->dbt_driver->dd_flags & DBT_LOCK) == 0)
 	{
 		return;
 	}
 
-	if (pthread_mutex_unlock(mutex))
+	if (pthread_mutex_unlock(&dbt->dbt_driver->dd_mutex))
 	{
-		log_sys_error("dbt_db_unlock: pthread_mutex_unlock");
+		log_sys_error("dbt_unlock: pthread_mutex_unlock");
 	}
 
 	return;
-}
-
-static int
-dbt_db_lock(dbt_t *dbt)
-{
-	return dbt_lock(dbt, &dbt->dbt_driver->dd_lock);
-}
-
-
-static void
-dbt_db_unlock(dbt_t *dbt)
-{
-	return dbt_unlock(dbt, &dbt->dbt_driver->dd_lock);
 }
 
 int
@@ -140,14 +122,14 @@ dbt_db_get(dbt_t *dbt, var_t *record, var_t **result)
 
 	*result = NULL;
 
-	if (dbt_db_lock(dbt))
+	if (dbt_lock(dbt))
 	{
 		return -1;
 	}
 
 	r = dbt->dbt_driver->dd_get(dbt, record, result);
 
-	dbt_db_unlock(dbt);
+	dbt_unlock(dbt);
 
 	return r;
 }
@@ -158,7 +140,7 @@ dbt_db_set(dbt_t *dbt, var_t *record)
 {
 	int r;
 
-	if (dbt_db_lock(dbt))
+	if (dbt_lock(dbt))
 	{
 		return -1;
 	}
@@ -170,7 +152,7 @@ dbt_db_set(dbt_t *dbt, var_t *record)
 
 	r = dbt->dbt_driver->dd_set(dbt, record);
 
-	dbt_db_unlock(dbt);
+	dbt_unlock(dbt);
 
 	return r;
 }
@@ -181,14 +163,14 @@ dbt_db_del(dbt_t *dbt, var_t *record)
 {
 	int r;
 
-	if (dbt_db_lock(dbt))
+	if (dbt_lock(dbt))
 	{
 		return -1;
 	}
 
 	r = dbt->dbt_driver->dd_del(dbt, record);
 
-	dbt_db_unlock(dbt);
+	dbt_unlock(dbt);
 
 	return r;
 }
@@ -199,7 +181,7 @@ dbt_db_walk(dbt_t *dbt, dbt_db_callback_t callback)
 {
 	int r;
 
-	if(dbt_lock(dbt, &dbt->dbt_driver->dd_walk_lock) == -1)
+	if(dbt_lock(dbt) == -1)
 	{
 		log_error("dbt_db_walk: dbt_lock failed");
 		return -1;
@@ -207,7 +189,7 @@ dbt_db_walk(dbt_t *dbt, dbt_db_callback_t callback)
 	
 	r = dbt->dbt_driver->dd_walk(dbt, callback);
 
-	dbt_unlock(dbt, &dbt->dbt_driver->dd_walk_lock);
+	dbt_unlock(dbt);
 
 	return r;
 }
@@ -222,14 +204,14 @@ dbt_db_sync(dbt_t *dbt)
 		return 0;
 	}
 
-	if (dbt_db_lock(dbt))
+	if (dbt_lock(dbt))
 	{
 		return -1;
 	}
 
 	r = dbt->dbt_driver->dd_sync(dbt);
 
-	dbt_db_unlock(dbt);
+	dbt_unlock(dbt);
 
 	return r;
 }
@@ -239,14 +221,14 @@ dbt_db_cleanup(dbt_t *dbt)
 {
 	int r;
 
-	if (dbt_db_lock(dbt))
+	if (dbt_lock(dbt))
 	{
 		return -1;
 	}
 
 	r = dbt->dbt_driver->dd_sql_cleanup(dbt);
 
-	dbt_db_unlock(dbt);
+	dbt_unlock(dbt);
 
 	return r;
 }
@@ -823,7 +805,6 @@ static void
 dbt_open_database(dbt_t *dbt)
 {
 	dbt_driver_t *dd;
-	int r = 0;
 
 	/*
 	 * Lookup database driver
@@ -842,13 +823,17 @@ dbt_open_database(dbt_t *dbt)
 	 */
 	if ((dd->dd_flags & DBT_LOCK))
 	{
-		r |= pthread_mutex_init(&dd->dd_lock, NULL);
-		r |= pthread_mutex_init(&dd->dd_walk_lock, NULL);
-
-		if (r)
+		if(pthread_mutexattr_init(&dd->dd_mutexattr))
 		{
-			log_sys_die(EX_SOFTWARE,
-			    "dbt_open_database: ptrhead_mutex_init");
+			log_die(EX_SOFTWARE, "dbt_open_database: ptrhead_mutexattr_init failed");
+		}
+		if(pthread_mutexattr_settype(&dd->dd_mutexattr, PTHREAD_MUTEX_RECURSIVE))
+		{
+			log_die(EX_SOFTWARE, "dbt_open_database: ptrhead_mutexattr_settype failed");
+		}
+		if(pthread_mutex_init(&dd->dd_mutex, &dd->dd_mutexattr))
+		{
+			log_die(EX_SOFTWARE, "dbt_open_database: ptrhead_mutex_init failed");
 		}
 	}
 
