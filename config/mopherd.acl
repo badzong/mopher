@@ -1,6 +1,6 @@
 # DEFAULT MOPHERD.ACL
 # 
-# This file ships with the mopher source distribution. It cointains only a few
+# This file ships with the mopher source distribution. It contains only a few
 # basic rules to make mopher run out of the box. Make sure you adjust the rules
 # to your needs. For detailed information on the mopherd.acl syntax refer to
 # mopherd.acl(5).
