@@ -43,9 +43,8 @@ OUT_B+=			var.o
 OUT_B+=			vlist.o
 OUT_B+=			vp.o
 OUT_B+=			vtable.o
-OUT_C+=			test_run
-OUT_D+=			mopherctl
-OUT_D+=			mopherd
+OUT_C+=			mopherctl
+OUT_C+=			mopherd
 
 # INST:
 #	installed on `install'
@@ -73,8 +72,8 @@ LDFLAGS+=		@MOD_LIBS@
 include @top_srcdir@/make/mk.common
 
 
-$(OUT_B):		$(OUT_A)
-$(OUT_C) $(OUT_D):	$(OUT_B)
+$(OUT_B):	$(OUT_A)
+$(OUT_C):	$(OUT_B)
 	@CC@ $(CFLAGS) -o $@ $@.c $> $^ $(LDFLAGS)
 
 .SUFFIXES:
