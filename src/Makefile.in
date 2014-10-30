@@ -50,7 +50,7 @@ OUT_C+=			mopherd
 #	installed on `install'
 #	uninstalled on `uninstall'
 #
-INST=			$(OUT_D:=.sbin)
+INST=			$(OUT_C:=.sbin)
 
 # *FLAGS
 #
@@ -72,8 +72,8 @@ LDFLAGS+=		@MOD_LIBS@
 include @top_srcdir@/make/mk.common
 
 
-$(OUT_B):	$(OUT_A)
-$(OUT_C):	$(OUT_B)
+$(OUT_B): $(OUT_A)
+$(OUT_C): $(OUT_B)
 	@CC@ $(CFLAGS) -o $@ $@.c $> $^ $(LDFLAGS)
 
 .SUFFIXES:
