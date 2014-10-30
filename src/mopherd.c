@@ -2,12 +2,68 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <libgen.h>
 
 #include <mopher.h>
 
-void
+static int
+run_tests(int optind, int argc, char **argv)
+{
+#ifndef DEBUG
+	fprintf(stderr, "Test not available. Rebuild mopher with -DDEBUG.\n");
+	exit(EX_SOFTWARE);
+#else
+	int test_start, seconds, stat;
+	test_handler_t *handler;
+	int i;
+
+	test_handler_t test_handlers[] = {
+		{"sht.c", sht_test},
+		{"vp.c", vp_test},
+		{"exp.c", exp_test},
+		{"dbt.c", dbt_test},
+		{"regdom.c", regdom_test},
+		{ NULL, NULL }
+	};
+
+	log_init("mopher test", LOG_ERR, 0, 1);
+	log_error("Start tests..\n");
+	test_start = time(NULL);
+
+	for(handler = test_handlers; handler->th_name; ++handler)
+	{
+		stat = test_tests;
+
+		// Test only modules given on argv
+		if (argc > optind)
+		{
+			for (i = optind; i < argc; ++i)
+			{
+				if (!strcmp(argv[i], handler->th_name))
+				{
+					break;
+				}
+			}
+			if (i == argc)
+			{
+				continue;
+			}
+		}
+
+		handler->th_callback(); // Dies on error
+		log_error("%-12s: %4d OK", handler->th_name, test_tests-stat);
+	}
+
+	seconds = time(NULL) - test_start;
+	log_error("\n%d tests in %d seconds.", test_tests, seconds);
+
+	return 0;
+#endif
+}
+
+static void
 mopherd_unlink_pidfile(char *pidfile)
 {
 	if (pidfile == NULL)
@@ -31,14 +87,15 @@ mopherd_unlink_pidfile(char *pidfile)
 int
 main(int argc, char **argv)
 {
-	int r, opt, foreground, loglevel, check_config;
+	int r, opt, foreground, loglevel, check_config, test;
 	char *pidfile = NULL;
 
 	check_config = 0;
 	foreground = 0;
+	test = 0;
 	loglevel = LOG_WARNING;
 
-	while ((opt = getopt(argc, argv, "?hvfCd:c:p:")) != -1) {
+	while ((opt = getopt(argc, argv, "?hvfCTd:c:p:")) != -1) {
 		switch(opt) {
 		case 'v':
 			printf("%s-%s\n", BINNAME, PACKAGE_VERSION);
@@ -65,6 +122,11 @@ main(int argc, char **argv)
 			pidfile = optarg;
 			break;
 
+		case 'T':
+			test = 1;
+			break;
+			
+
 		default:
 			fprintf(stderr, "Usage: %s [-c file] [-d N] [-f] [-h]\n", 
 				BINNAME);
@@ -76,11 +138,20 @@ main(int argc, char **argv)
 			fprintf(stderr, "  -f         Don't detach into background\n");
 			fprintf(stderr, "  -h         Show this message\n");
 			fprintf(stderr, "  -p file    Write PID to file\n");
+			fprintf(stderr, "  -T         Run mopher unit tests\n");
 			fprintf(stderr, "  -v         Show version information\n");
 			fprintf(stderr, "\nTry man %s (8) for more information.\n", BINNAME);
 
 			exit(EX_USAGE);
 		}
+	}
+
+	/*
+	 * Run tests
+	 */
+	if (test)
+	{
+		return run_tests(optind, argc, argv);
 	}
 
 	/*
