@@ -1,14 +1,30 @@
 # Makefile, man
 
-include @top_srcdir@/Makefile.common
 
-all: $(MAN)
+# OUT_[A-Z]:
+#	built on `all'
+#	removed on `clean'
+#
+OUT_A+=			mopher.7
+OUT_A+=			mopherctl.8
+OUT_A+=			mopherd.8
+OUT_A+=			mopherd.acl.5
+OUT_A+=			mopherd.conf.5
 
-clean:
-	-rm $(MAN)
+# INST:
+#	installed on `install'
+#	uninstalled on `uninstall'
+#
+INST=			$(OUT_A:=.man)
 
-.SUFFIXES: .in
+
+include @top_srcdir@/make/mk.common
+
+
+.SUFFIXES:
+.SUFFIXES:		.in
 .in:
-	sed "	s,@libdir[@],$(libdir),g; \
-		s,@sbindir[@],$(sbindir),g; \
-		s,@sysconfdir[@],$(sysconfdir),g;" $< >$@
+	@SED@ " \
+		s,@PROGRAM_PATH[@],$(PROGRAM_PATH),g; \
+		s,@MODULE_PATH[@],$(MODULE_PATH),g; \
+		s,@CONFIG_PATH[@],$(CONFIG_PATH),g;" $< >$@

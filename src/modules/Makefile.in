@@ -1,26 +1,46 @@
 # Makefile, modules
 
-include @top_srcdir@/Makefile.common
 
-SRC=			cast.c string.c list.c spamd.c rbl.c counter.c \
-			regex.c memdb.c dblog.c @MOD_ACL_SPF@ @MOD_DB_BDB@ \
-			@MOD_DB_MYSQL@
-MODULES=		$(SRC:.c=.so)
+# OUT_[A-Z]:
+#	built on `all'
+#	removed on `clean'
+#
+OUT_A+=			cast.so
+OUT_A+=			counter.so
+OUT_A+=			dblog.so
+OUT_A+=			list.so
+OUT_A+=			memdb.so
+OUT_A+=			rbl.so
+OUT_A+=			regex.so
+OUT_A+=			spamd.so
+OUT_A+=			string.so
+OUT_A+=			@MOD_ACL_SPF@
+OUT_A+=			@MOD_DB_BDB@
+OUT_A+=			@MOD_DB_MYSQL@
 
-CFLAGS+=		-I@top_srcdir@ -I@top_srcdir@/src/include
-CFLAGS.bdb.so?=		$(BDB_DB185_H)
+# INST:
+#	installed on `install'
+#	uninstalled on `uninstall'
+#
+INST=			$(OUT_A:=.lib)
 
-LDFLAGS=		# unset
-LDFLAGS+=		-shared -nostartfiles -fPIC @LDFLAGS@
-LDFLAGS.spf.so?=	-lspf2
-LDFLAGS.bdb.so?=	$(BDB_LIBS)
-LDFLAGS.sakila.so?=	-lmysqlclient
+# *FLAGS
+#
+CFLAGS+=		-I@top_srcdir@
+CFLAGS+=		-I@top_srcdir@/src/include
+CFLAGS.bdb.so+=		@BDB_DB185_H@
+LDFLAGS+=		-nostartfiles
+LDFLAGS+=		-shared
+LDFLAGS+=		-fPIC
+LDFLAGS.bdb.so+=	@BDB_LIBS@
+LDFLAGS.sakila.so+=	-lmysqlclient
+LDFLAGS.spf.so+=	-lspf2
 
-all: $(MODULES)
 
-clean:
-	-rm $(MODULES)
+include @top_srcdir@/make/mk.common
 
-.SUFFIXES: .c .so
+
+.SUFFIXES:
+.SUFFIXES:		.c .so
 .c.so:
-	$(CC) $(CFLAGS) $(CFLAGS.$@) $(LDFLAGS) $(LDFLAGS.$@) -o $@ $<
+	@CC@ $(CFLAGS) $(CFLAGS.$@) $(LDFLAGS) $(LDFLAGS.$@) -o $@ $<

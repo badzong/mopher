@@ -1,0 +1,16 @@
+# Makefile, config
+
+
+# INST:
+#	installed on `install'
+#	uninstalled on `uninstall'
+#
+INST=			$(INST_CONF:=.conf)
+
+INST_CONF+=		effective_tld_names.dat
+INST_CONF+=		mopherd.acl
+INST_CONF+=		mopherd.acl.example
+INST_CONF+=		mopherd.conf.example
+
+
+include @top_srcdir@/make/mk.common
