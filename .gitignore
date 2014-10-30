@@ -18,7 +18,7 @@ src/modules/counter.so
 src/modules/dblog.so
 src/modules/list.so
 src/modules/memdb.so
-src/modules/rbl.so
+src/modules/dnsbl.so
 src/modules/regex.so
 src/modules/spamd.so
 src/modules/string.so
@@ -62,7 +62,6 @@ src/var.o
 src/vlist.o
 src/vp.o
 src/vtable.o
-src/test_run
 src/mopherctl
 src/mopherd
 man/mopher.7
