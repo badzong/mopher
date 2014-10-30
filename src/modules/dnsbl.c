@@ -12,17 +12,17 @@
 #include <mopher.h>
 
 #define BUFLEN 1024
-#define RBL_BUCKETS 32
-#define RBL_NAME "rbl"
+#define DNSBL_BUCKETS 32
+#define DNSBL_NAME "dnsbl"
 
-static sht_t *rbl_table;
+static sht_t *dnsbl_table;
 
 static int
-rbl_register(char *name, char *domain)
+dnsbl_register(char *name, char *domain)
 {
-	if (sht_insert(rbl_table, name, domain))
+	if (sht_insert(dnsbl_table, name, domain))
 	{
-		log_error("rbl_register: sht_insert failed");
+		log_error("dnsbl_register: sht_insert failed");
 		return -1;
 	}
 
@@ -30,14 +30,14 @@ rbl_register(char *name, char *domain)
 }
 
 int
-rbl_list(milter_stage_t stage, char *name, var_t *attrs)
+dnsbl_list(milter_stage_t stage, char *name, var_t *attrs)
 {
 	var_t *list;
 
-	list = vtable_list_get(attrs, RBL_NAME);
+	list = vtable_list_get(attrs, DNSBL_NAME);
 	if (list == NULL)
 	{
-		log_error("rbl_query: vtable_list_get failed");
+		log_error("dnsbl_query: vtable_list_get failed");
 		return -1;
 	}
 
@@ -45,7 +45,7 @@ rbl_list(milter_stage_t stage, char *name, var_t *attrs)
 }
 
 int
-rbl_query(milter_stage_t stage, char *name, var_t *attrs)
+dnsbl_query(milter_stage_t stage, char *name, var_t *attrs)
 {
 	char *domain;
 	struct sockaddr_storage *addr;
@@ -61,20 +61,20 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	char *p;
 	int i;
 
-	// Make sure rbl list exists
-	rbl_list(stage, name, attrs);
+	// Make sure dnsbl list exists
+	dnsbl_list(stage, name, attrs);
 
-	domain = sht_lookup(rbl_table, name);
+	domain = sht_lookup(dnsbl_table, name);
 	if (domain == NULL)
 	{
-		log_error("rbl_query: unknown rbl \"%s\"", name);
+		log_error("dnsbl_query: unknown dnsbl \"%s\"", name);
 		goto error;
 	}
 
 	if (acl_symbol_dereference(attrs, "milter_hostaddr", &addr,
 	    "milter_addrstr", &addrstr, NULL))
 	{
-		log_error("rbl_query: acl_symbol_dereference failed");
+		log_error("dnsbl_query: acl_symbol_dereference failed");
 		goto error;
 	}
 
@@ -83,11 +83,11 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	 */
 	if (addr == NULL)
 	{
-		log_debug("rbl_query: address is NULL");
+		log_debug("dnsbl_query: address is NULL");
 
 		if (vtable_set_new(attrs, VT_ADDR, name, NULL, VF_COPYNAME))
 		{
-			log_error("rbl_query: vtable_setv failed");
+			log_error("dnsbl_query: vtable_setv failed");
 			goto error;
 		}
 
@@ -99,12 +99,12 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	 */
 	if (addr->ss_family != AF_INET)
 	{
-		log_message(LOG_ERR, attrs, "rbl_query: %s: address family not"
+		log_message(LOG_ERR, attrs, "dnsbl_query: %s: address family not"
 			" supported", name);
 
 		if (vtable_set_new(attrs, VT_ADDR, name, NULL, VF_COPYNAME))
 		{
-			log_error("rbl_query: vtable_setv failed");
+			log_error("dnsbl_query: vtable_setv failed");
 			goto error;
 		}
 
@@ -148,7 +148,7 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 		break;
 
 	default:
-		log_error("rbl_query: getaddrinfo: %s", gai_strerror(e));
+		log_error("dnsbl_query: getaddrinfo: %s", gai_strerror(e));
 		goto error;
 	}
 
@@ -157,11 +157,11 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 	 */
 	if (e)
 	{
-		log_debug("rbl_query: RBL record \"%s\" not found", query);
+		log_debug("dnsbl_query: DNSBL record \"%s\" not found", query);
 
 		if (vtable_set_new(attrs, VT_ADDR, name, NULL, VF_COPYNAME))
 		{
-			log_error("rbl_query: vtable_setv failed");
+			log_error("dnsbl_query: vtable_setv failed");
 			goto error;
 		}
 	}
@@ -174,18 +174,18 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 		data = util_hostaddr((struct sockaddr_storage *) ai->ai_addr);
 		if (data == NULL)
 		{
-			log_error("rbl_query: util_hostaddr failed");
+			log_error("dnsbl_query: util_hostaddr failed");
 			goto error;
 		}
 
 		resultstr = util_addrtostr(data);
 		if (resultstr == NULL)
 		{
-			log_error("rbl_query: util_addrtostr failed");
+			log_error("dnsbl_query: util_addrtostr failed");
 			goto error;
 		}
 
-		log_message(LOG_ERR, attrs, "rbl_query: addr=%s rbl=%s "
+		log_message(LOG_ERR, attrs, "dnsbl_query: addr=%s dnsbl=%s "
 		    "result=%s", addrstr, domain, resultstr);
 
 		free(resultstr);
@@ -193,15 +193,15 @@ rbl_query(milter_stage_t stage, char *name, var_t *attrs)
 		// Set named symbol
 		if (vtable_set_new(attrs, VT_ADDR, name, data, VF_COPYNAME))
 		{
-			log_error("rbl_query: vtable_setv failed");
+			log_error("dnsbl_query: vtable_setv failed");
 			goto error;
 		}
 
-		// Append name to rbl list
-		if (vtable_list_append_new(attrs, VT_STRING, RBL_NAME,
+		// Append name to dnsbl list
+		if (vtable_list_append_new(attrs, VT_STRING, DNSBL_NAME,
 			name, VF_KEEP))
 		{
-			log_error("rbl_query: vtable_append_new failed");
+			log_error("dnsbl_query: vtable_append_new failed");
 			goto error;
 		}
 	}
@@ -235,54 +235,54 @@ error:
 
 
 int
-rbl_init(void)
+dnsbl_init(void)
 {
-	var_t *rbl;
+	var_t *dnsbl;
 	ht_t *config;
 	ht_pos_t pos;
 	var_t *v;
 
-	rbl_table = sht_create(RBL_BUCKETS, NULL);
+	dnsbl_table = sht_create(DNSBL_BUCKETS, NULL);
 
-	if (rbl_table == NULL)
+	if (dnsbl_table == NULL)
 	{
-		log_error("rbl: init: sht_create failed");
+		log_error("dnsbl: init: sht_create failed");
 		return 0;
 	}
 		
-	rbl = cf_get(VT_TABLE, RBL_NAME, NULL);
-	if (rbl == NULL)
+	dnsbl = cf_get(VT_TABLE, DNSBL_NAME, NULL);
+	if (dnsbl == NULL)
 	{
-		log_notice("rbl: init: no RBLs configured");
+		log_notice("dnsbl: init: no DNSBLs configured");
 		return 0;
 	}
 
-	config = rbl->v_data;
+	config = dnsbl->v_data;
 	ht_start(config, &pos);
 	while ((v = ht_next(config, &pos)))
 	{
-		if (rbl_register(v->v_name, v->v_data))
+		if (dnsbl_register(v->v_name, v->v_data))
 		{
-			log_error("rbl: init: rbl_register failed");
+			log_error("dnsbl: init: dnsbl_register failed");
 			return -1;
 		}
 		
-		acl_symbol_register(v->v_name, MS_OFF_CONNECT, rbl_query,
+		acl_symbol_register(v->v_name, MS_OFF_CONNECT, dnsbl_query,
 		    AS_CACHE);
 	}
 
-	acl_symbol_register(RBL_NAME, MS_OFF_CONNECT, rbl_list, AS_CACHE);
+	acl_symbol_register(DNSBL_NAME, MS_OFF_CONNECT, dnsbl_list, AS_CACHE);
 
 	return 0;
 }
 
 
 void
-rbl_fini(void)
+dnsbl_fini(void)
 {
-	if (rbl_table)
+	if (dnsbl_table)
 	{
-		sht_delete(rbl_table);
+		sht_delete(dnsbl_table);
 	}
 
 	return;

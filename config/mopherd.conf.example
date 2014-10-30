@@ -53,7 +53,7 @@
 #}
 
 
-# RBL symbols
+# DNSBL symbols
 #
-#rbl[rbl_example] = "rbl.example.tld"
-#rbl[rbl_blacklist] = "bl.blacklist.tld"
+#dnsbl[bl_example] = "rbl.example.tld"
+#dnsbl[bl_blacklist] = "bl.blacklist.tld"

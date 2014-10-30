@@ -52,7 +52,7 @@ dblog_update(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 
 	dblog_dump_string(mailspec, "milter_recipient_list");
 	dblog_dump_string(mailspec, "spamd_symbols");
-	dblog_dump_string(mailspec, "rbl");
+	dblog_dump_string(mailspec, "dnsbl");
 
 	expire = time(NULL) + cf_dblog_expire;
 
@@ -137,7 +137,7 @@ dblog_init(void)
 		"spamd_spam",			VT_INT,		VF_KEEPNAME,
 		"spamd_score",			VT_FLOAT,	VF_KEEPNAME,
 		"spamd_symbols_str",		VT_STRING,	VF_KEEPNAME,
-		"rbl_str",			VT_STRING,	VF_KEEPNAME,
+		"dnsbl_str",			VT_STRING,	VF_KEEPNAME,
 		"dblog_expire",			VT_INT,		VF_KEEPNAME,
 		NULL);
 
