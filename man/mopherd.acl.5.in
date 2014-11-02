@@ -577,7 +577,7 @@ Validity period of upgraded greylist record in seconds.
 .\"FIXME: do not use, do not mention
 .\"Internal action identifer of the last returned action. Do not use.
 .\"
-.It Sy milter_addrstr Pq string, any
+.It Sy milter_hostaddr_str Pq string, any
 Address string of connecting host.
 .\"
 .It Sy milter_auth_authen Pq string, envfrom*

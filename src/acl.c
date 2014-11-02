@@ -525,7 +525,7 @@ acl_symbol_get(var_t *mailspec, char *name)
 		return NULL;
 	}
 
-	stage = vtable_get(mailspec, "milter_stage");
+	stage = vtable_get(mailspec, "stage");
 	if (stage == NULL)
 	{
 		log_debug("acl_symbol_get: milter stage not set");
@@ -534,7 +534,7 @@ acl_symbol_get(var_t *mailspec, char *name)
 
 	if ((as->as_stages & *stage) == 0)
 	{
-		stagename = vtable_get(mailspec, "milter_stagename");
+		stagename = vtable_get(mailspec, "stagename");
 		log_notice("acl_symbol_get: symbol \"%s\" not available at %s",
 		    name, stagename);
 

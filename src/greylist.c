@@ -156,7 +156,7 @@ greylist_listed(milter_stage_t stage, char *name, var_t *mailspec)
 		goto load;
 	}
 
-	recipients = vtable_get(mailspec, "milter_recipients");
+	recipients = vtable_get(mailspec, "recipients");
 	if (recipients == NULL)
 	{
 		log_error("greylist_listed: vtable_get failed");
@@ -216,7 +216,7 @@ greylist_tuple_symbol(milter_stage_t stage, char *name, var_t *mailspec)
 		goto load;
 	}
 
-	recipients = vtable_get(mailspec, "milter_recipients");
+	recipients = vtable_get(mailspec, "recipients");
 	if (recipients == NULL)
 	{
 		log_error("greylist_tuple_symbol: vtable_get failed");
@@ -266,9 +266,9 @@ greylist_init(void)
 	char **p;
 
 	scheme = vlist_scheme("greylist",
-		"milter_greylist_src",	VT_STRING,	VF_KEEPNAME | VF_KEY, 
-		"milter_envfrom_addr",	VT_STRING,	VF_KEEPNAME | VF_KEY,
-		"milter_envrcpt_addr",	VT_STRING,	VF_KEEPNAME | VF_KEY,
+		"greylist_src",	VT_STRING,	VF_KEEPNAME | VF_KEY, 
+		"envfrom_addr",	VT_STRING,	VF_KEEPNAME | VF_KEY,
+		"envrcpt_addr",	VT_STRING,	VF_KEEPNAME | VF_KEY,
 		"greylist_created",	VT_INT,		VF_KEEPNAME,
 		"greylist_updated",	VT_INT,		VF_KEEPNAME,
 		"greylist_expire",	VT_INT,		VF_KEEPNAME,
@@ -711,9 +711,9 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 	/*
 	 * Get source, enfrom, envrcpt, recipients and received
 	 */
-	if (vtable_dereference(mailspec, "milter_greylist_src", &source,
-	    "milter_envfrom_addr", &envfrom, "milter_envrcpt_addr", &envrcpt,
-	    "milter_recipient_list", &recipients, "milter_received", &received,
+	if (vtable_dereference(mailspec, "greylist_src", &source,
+	    "envfrom_addr", &envfrom, "envrcpt_addr", &envrcpt,
+	    "recipient_list", &recipients, "received", &received,
 	    NULL) < 4)
 	{
 		log_error("greylist: vtable_dereference failed");

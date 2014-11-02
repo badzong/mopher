@@ -125,7 +125,7 @@ log_message(int type, var_t *mailspec, char *f, ...)
 	char message[BUFLEN];
 
 
-	if (vtable_dereference(mailspec, "milter_id", &id, "milter_stagename",
+	if (vtable_dereference(mailspec, "id", &id, "stagename",
 	    &stage, NULL) != 2)
 	{
 		log_log(LOG_ERR, 0, "log_message: vtable_dereference failed");

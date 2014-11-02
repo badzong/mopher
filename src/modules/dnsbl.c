@@ -49,7 +49,7 @@ dnsbl_query(milter_stage_t stage, char *name, var_t *attrs)
 {
 	char *domain;
 	struct sockaddr_storage *addr;
-	char *addrstr = NULL;
+	char *hostaddr_str = NULL;
 	char addrbytes[16];
 	char query[BUFLEN];
 	struct addrinfo *ai = NULL;
@@ -71,8 +71,8 @@ dnsbl_query(milter_stage_t stage, char *name, var_t *attrs)
 		goto error;
 	}
 
-	if (acl_symbol_dereference(attrs, "milter_hostaddr", &addr,
-	    "milter_addrstr", &addrstr, NULL))
+	if (acl_symbol_dereference(attrs, "hostaddr", &addr, "hostaddr_str",
+		&hostaddr_str, NULL))
 	{
 		log_error("dnsbl_query: acl_symbol_dereference failed");
 		goto error;
@@ -111,7 +111,7 @@ dnsbl_query(milter_stage_t stage, char *name, var_t *attrs)
 		return 0;
 	}
 
-	strncpy(addrbytes, addrstr, sizeof addrbytes);
+	strncpy(addrbytes, hostaddr_str, sizeof addrbytes);
 	addrbytes[sizeof addrbytes - 1] = 0;
 		
 	/*
@@ -186,7 +186,7 @@ dnsbl_query(milter_stage_t stage, char *name, var_t *attrs)
 		}
 
 		log_message(LOG_ERR, attrs, "dnsbl_query: addr=%s dnsbl=%s "
-		    "result=%s", addrstr, domain, resultstr);
+		    "result=%s", hostaddr_str, domain, resultstr);
 
 		free(resultstr);
 
@@ -222,7 +222,7 @@ error:
 
 	if (resultstr)
 	{
-		free(addrstr);
+		free(hostaddr_str);
 	}
 
 	if (ai)

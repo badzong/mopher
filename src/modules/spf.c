@@ -39,9 +39,9 @@ spf(milter_stage_t stage, char *name, var_t *attrs)
 	struct sockaddr_in6 *sin6;
 	int r;
 
-	if (acl_symbol_dereference(attrs, "milter_hostaddr", &ss,
-		"milter_envfrom", &envfrom, "milter_envrcpt", &envrcpt,
-		"milter_helo", &helo, NULL))
+	if (acl_symbol_dereference(attrs, "hostaddr", &ss,
+		"envfrom", &envfrom, "envrcpt", &envrcpt,
+		"helo", &helo, NULL))
 	{
 		log_error("spf: acl_symbol_dereference failed");
 		goto error;

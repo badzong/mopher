@@ -34,32 +34,33 @@
  */
 static milter_symbol_t milter_symbols[] = {
 	{ "milter_ctx", MS_ANY },
-	{ "milter_action", MS_OFF_CONNECT },
-	{ "milter_id", MS_ANY },
-	{ "milter_stage", MS_ANY },
-	{ "milter_stagename", MS_ANY }, 
-	{ "milter_unknown_command", MS_UNKNOWN },
-	{ "milter_received", MS_ANY },
-	{ "milter_hostaddr", MS_ANY },
-	{ "milter_addrstr", MS_ANY },
-	{ "milter_hostname", MS_ANY },
-	{ "milter_greylist_src", MS_ANY },
-	{ "milter_helo", MS_OFF_HELO },
-	{ "milter_envfrom", MS_OFF_ENVFROM },
-	{ "milter_envfrom_addr", MS_OFF_ENVFROM },
-	{ "milter_envrcpt", MS_OFF_ENVRCPT },
-	{ "milter_envrcpt_addr", MS_OFF_ENVRCPT },
-	{ "milter_recipients", MS_OFF_ENVRCPT },
-	{ "milter_recipient_list", MS_OFF_DATA },
-	{ "milter_header_name", MS_HEADER },
-	{ "milter_header_value", MS_HEADER },
-	{ "milter_header", MS_OFF_EOH },
-	{ "milter_header_size", MS_OFF_EOH },
-	{ "milter_message_id", MS_OFF_EOH },
-	{ "milter_subject", MS_OFF_EOH },
-	{ "milter_body", MS_EOM },
-	{ "milter_body_size", MS_EOM },
-	{ "milter_message_size", MS_EOM },
+	{ "action", MS_OFF_CONNECT },
+	{ "id", MS_ANY },
+	{ "stage", MS_ANY },
+	{ "stagename", MS_ANY }, 
+	{ "unknown_command", MS_UNKNOWN },
+	{ "received", MS_ANY },
+	{ "hostaddr", MS_ANY },
+	{ "hostaddr_str", MS_ANY },
+	{ "hostname", MS_ANY },
+	{ "greylist_src", MS_ANY },
+	{ "helo", MS_OFF_HELO },
+	{ "envfrom", MS_OFF_ENVFROM },
+	{ "envfrom_addr", MS_OFF_ENVFROM },
+	{ "envrcpt", MS_OFF_ENVRCPT },
+	{ "envrcpt_addr", MS_OFF_ENVRCPT },
+	{ "recipients", MS_OFF_ENVRCPT },
+	{ "recipient_list", MS_OFF_DATA },
+	{ "header_name", MS_HEADER },
+	{ "header_value", MS_HEADER },
+	{ "header", MS_OFF_EOH },
+	{ "header_size", MS_OFF_EOH },
+	{ "message_id", MS_OFF_EOH },
+	{ "queue_id", MS_OFF_DATA },
+	{ "subject", MS_OFF_EOH },
+	{ "body", MS_EOM },
+	{ "body_size", MS_EOM },
+	{ "message_size", MS_EOM },
 	{ NULL, 0 }
 };
 
@@ -127,7 +128,7 @@ milter_macro_lookup(milter_stage_t stage, char *macro, var_t *attrs)
 	int r;
 
 	r = acl_symbol_dereference(attrs, "milter_ctx", &ctx,
-		"milter_stagename", &stagename, NULL);
+		"stagename", &stagename, NULL);
 	if (r)
 	{
 		log_error("milter_macro_lookup: acl_symbol_dereference "
@@ -153,7 +154,7 @@ milter_acl(milter_stage_t stage, char *stagename, milter_priv_t * mp)
 	VAR_INT_T action;
 
 	action = acl(stage, stagename, mp->mp_table);
-	if (vtable_setv(mp->mp_table, VT_INT, "milter_action", &action,
+	if (vtable_setv(mp->mp_table, VT_INT, "action", &action,
 	    VF_KEEPNAME | VF_COPYDATA, VT_NULL))
 	{
 		log_error("milter_acl: vtable_setv failed");
@@ -304,7 +305,7 @@ static milter_priv_t *
 milter_common_init(SMFICTX *ctx, VAR_INT_T stage, char *stagename)
 {
 	milter_priv_t *mp = NULL;
-	char *queueid;
+	char *queue_id;
 
 	if (pthread_rwlock_rdlock(&milter_reload_lock))
 	{
@@ -342,8 +343,8 @@ milter_common_init(SMFICTX *ctx, VAR_INT_T stage, char *stagename)
 	 */
 	else
 	{
-		if (vtable_rename(mp->mp_table, "milter_stage",
-		    "milter_laststage"))
+		if (vtable_rename(mp->mp_table, "stage",
+		    "laststage"))
 		{
 			log_error("milter_common_init: vtable_rename failed");
 			goto error;
@@ -352,8 +353,8 @@ milter_common_init(SMFICTX *ctx, VAR_INT_T stage, char *stagename)
 
 	if (vtable_setv(mp->mp_table,
 	    VT_POINTER, "milter_ctx", ctx, VF_KEEP,
-	    VT_INT, "milter_stage", &stage, VF_KEEPNAME | VF_COPYDATA,
-	    VT_STRING, "milter_stagename", stagename, VF_KEEP,
+	    VT_INT, "stage", &stage, VF_KEEPNAME | VF_COPYDATA,
+	    VT_STRING, "stagename", stagename, VF_KEEP,
 	    VT_NULL))
 	{
 		log_error("milter_common_init: vtable_setv failed");
@@ -361,24 +362,24 @@ milter_common_init(SMFICTX *ctx, VAR_INT_T stage, char *stagename)
 	}
 
 	/*
-	 * Try to lookup queueid if neccessary.
+	 * Try to lookup queue_id if neccessary.
 	 */
-	if (vtable_lookup(mp->mp_table, "milter_queueid"))
+	if (vtable_lookup(mp->mp_table, "queue_id"))
 	{
 		return mp;
 	}
 
-	queueid = smfi_getsymval(ctx, "i");
-	if (queueid)
+	queue_id = smfi_getsymval(ctx, "i");
+	if (queue_id)
 	{
-		if (vtable_set_new(mp->mp_table, VT_STRING, "milter_queueid",
-		    queueid, VF_KEEPNAME | VF_COPYDATA))
+		if (vtable_set_new(mp->mp_table, VT_STRING, "queue_id",
+		    queue_id, VF_KEEPNAME | VF_COPYDATA))
 		{
 			log_error("milter_common_init: vtable_set_new failed");
 			goto error;
 		}
 
-		log_message(LOG_ERR, mp->mp_table, "queueid=%s", queueid);
+		log_message(LOG_ERR, mp->mp_table, "queue_id=%s", queue_id);
 	}
 
 	return mp;
@@ -443,7 +444,7 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 	milter_priv_t *mp = NULL;
 	VAR_INT_T now;
 	struct sockaddr_storage *ha_clean = NULL;
-	char *addrstr;
+	char *hostaddr_str;
 	char source[256];
 	VAR_INT_T id;
 	sfsistat stat = SMFIS_TEMPFAIL;
@@ -479,14 +480,14 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 		}
 	}
 
-	addrstr = util_addrtostr(ha_clean);
-	if (addrstr == NULL)
+	hostaddr_str = util_addrtostr(ha_clean);
+	if (hostaddr_str == NULL)
 	{
 		log_error("milter_connect: util_addrtostr failed");
 		goto exit;
 	}
 
-	if (greylist_source(source, sizeof source, hostname, addrstr) == -1)
+	if (greylist_source(source, sizeof source, hostname, hostaddr_str) == -1)
 	{
 		log_error("milter_connect: greylist_source failed");
 		goto exit;
@@ -494,12 +495,12 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 
 
 	if (vtable_setv(mp->mp_table,
-	    VT_INT, "milter_id", &id, VF_KEEPNAME | VF_COPYDATA,
-	    VT_INT, "milter_received", &now, VF_KEEPNAME | VF_COPYDATA,
-	    VT_STRING, "milter_hostname", hostname, VF_KEEPNAME | VF_COPYDATA,
-	    VT_ADDR, "milter_hostaddr", ha_clean, VF_KEEPNAME,
-	    VT_STRING, "milter_addrstr", addrstr, VF_KEEPNAME,
-	    VT_STRING, "milter_greylist_src", source,
+	    VT_INT, "id", &id, VF_KEEPNAME | VF_COPYDATA,
+	    VT_INT, "received", &now, VF_KEEPNAME | VF_COPYDATA,
+	    VT_STRING, "hostname", hostname, VF_KEEPNAME | VF_COPYDATA,
+	    VT_ADDR, "hostaddr", ha_clean, VF_KEEPNAME,
+	    VT_STRING, "hostaddr_str", hostaddr_str, VF_KEEPNAME,
+	    VT_STRING, "greylist_src", source,
 		VF_KEEPNAME | VF_COPYDATA,
 	    VT_NULL))
 	{
@@ -513,7 +514,7 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 	acl_match(mp->mp_table, 0, MS_NULL, NULL, NULL, NULL, NULL);
 
 	log_message(LOG_ERR, mp->mp_table, "host=%s addr=%s", hostname,
-	    addrstr);
+	    hostaddr_str);
 
 	stat = milter_acl(MS_CONNECT, MSN_CONNECT, mp);
 
@@ -536,7 +537,7 @@ milter_unknown(SMFICTX * ctx, const char *cmd)
 		goto exit;
 	}
 		
-	if (vtable_set_new(mp->mp_table, VT_STRING, "milter_unknown_command",
+	if (vtable_set_new(mp->mp_table, VT_STRING, "unknown_command",
 	    (char *) cmd, VF_KEEPNAME | VF_COPYDATA))
 	{
 		log_error("milter_unknown: vtable_set_new failed");
@@ -566,7 +567,7 @@ milter_helo(SMFICTX * ctx, char *helostr)
 		goto exit;
 	}
 
-	if (vtable_set_new(mp->mp_table, VT_STRING, "milter_helo", helostr,
+	if (vtable_set_new(mp->mp_table, VT_STRING, "helo", helostr,
 	    VF_KEEPNAME | VF_COPYDATA))
 	{
 		log_error("milter_helo: vtable_set_new failed");
@@ -604,8 +605,8 @@ milter_envfrom(SMFICTX * ctx, char **argv)
 	}
 
 	if (vtable_setv(mp->mp_table,
-	    VT_STRING, "milter_envfrom", argv[0], VF_KEEPNAME | VF_COPYDATA,
-	    VT_STRING, "milter_envfrom_addr", from, VF_KEEPNAME | VF_COPYDATA,
+	    VT_STRING, "envfrom", argv[0], VF_KEEPNAME | VF_COPYDATA,
+	    VT_STRING, "envfrom_addr", from, VF_KEEPNAME | VF_COPYDATA,
 	    VT_NULL))
 	{
 		log_error("milter_envfrom: vtable_setv failed");
@@ -645,9 +646,9 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 	}
 
 	if (vtable_setv(mp->mp_table,
-	    VT_STRING, "milter_envrcpt", argv[0], VF_KEEPNAME | VF_COPYDATA,
-	    VT_STRING, "milter_envrcpt_addr", rcpt, VF_KEEPNAME | VF_COPYDATA,
-	    VT_INT, "milter_recipients", &mp->mp_recipients,
+	    VT_STRING, "envrcpt", argv[0], VF_KEEPNAME | VF_COPYDATA,
+	    VT_STRING, "envrcpt_addr", rcpt, VF_KEEPNAME | VF_COPYDATA,
+	    VT_INT, "recipients", &mp->mp_recipients,
 		VF_KEEPNAME | VF_COPYDATA,
 	    VT_NULL))
 	{
@@ -673,7 +674,7 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 	}
 
 	if (vtable_list_append_new(mp->mp_table, VT_STRING,
-	    "milter_recipient_list", rcpt, VF_KEEPNAME | VF_COPYDATA))
+	    "recipient_list", rcpt, VF_KEEPNAME | VF_COPYDATA))
 	{
 		log_error("milter_envrcpt: vtable_list_append_new failed");
 		stat = SMFIS_TEMPFAIL;
@@ -700,7 +701,7 @@ milter_data(SMFICTX * ctx)
 		goto exit;
 	}
 
-	if (vtable_set_new(mp->mp_table, VT_INT, "milter_recipients",
+	if (vtable_set_new(mp->mp_table, VT_INT, "recipients",
 	    &mp->mp_recipients, VF_KEEPNAME | VF_COPYDATA))
 	{
 		log_error("milter_data: vtable_set_new failed");
@@ -754,13 +755,13 @@ milter_header(SMFICTX * ctx, char *headerf, char *headerv)
 	mp->mp_headerlen += len - 1;
 
 	if (vtable_setv(mp->mp_table,
-	    VT_STRING, "milter_header_name", headerf,
+	    VT_STRING, "header_name", headerf,
 		VF_KEEPNAME | VF_COPYDATA,
-	    VT_STRING, "milter_header_value", headerv,
+	    VT_STRING, "header_value", headerv,
 		VF_KEEPNAME | VF_COPYDATA,
 	    VT_NULL))
 	{
-		log_error("milter_header: vtable_setv failed");
+		log_error("header: vtable_setv failed");
 		goto exit;
 	}
 
@@ -773,7 +774,7 @@ milter_header(SMFICTX * ctx, char *headerf, char *headerv)
 		if (messageid)
 		{
 			if (vtable_set_new(mp->mp_table, VT_STRING,
-				"milter_message_id", messageid, VF_KEEPNAME))
+				"message_id", messageid, VF_KEEPNAME))
 			{
 				log_error("milter_header: vtable_set_new failed");
 				goto exit;
@@ -789,7 +790,7 @@ milter_header(SMFICTX * ctx, char *headerf, char *headerv)
 	 */
 	if (strcasecmp(headerf, "Subject") == 0)
 	{
-		if (vtable_set_new(mp->mp_table, VT_STRING, "milter_subject",
+		if (vtable_set_new(mp->mp_table, VT_STRING, "subject",
 			headerv, VF_KEEPNAME | VF_COPYDATA))
 		{
 			log_error("milter_header: vtable_set_new failed");
@@ -822,8 +823,8 @@ milter_eoh(SMFICTX * ctx)
 	}
 
 	if (vtable_setv(mp->mp_table,
-	    VT_STRING, "milter_header", mp->mp_header, VF_KEEP,
-	    VT_INT, "milter_header_size", &mp->mp_headerlen,
+	    VT_STRING, "header", mp->mp_header, VF_KEEP,
+	    VT_INT, "header_size", &mp->mp_headerlen,
 		VF_KEEPNAME | VF_COPYDATA,
 	    VT_NULL))
 	{
@@ -898,11 +899,11 @@ milter_eom(SMFICTX * ctx)
 	message_size = mp->mp_bodylen + mp->mp_headerlen + 2;
 
 	if (vtable_setv(mp->mp_table,
-	    VT_INT, "milter_body_size", &mp->mp_bodylen,
+	    VT_INT, "body_size", &mp->mp_bodylen,
 		VF_KEEPNAME | VF_COPYDATA,
-	    VT_INT, "milter_message_size", &message_size,
+	    VT_INT, "message_size", &message_size,
 		VF_KEEPNAME | VF_COPYDATA,
-	    VT_STRING, "milter_body", mp->mp_body, VF_KEEP,
+	    VT_STRING, "body", mp->mp_body, VF_KEEP,
 	    VT_NULL))
 	{
 		log_error("milter_eom: vtable_setv failed");
@@ -1000,7 +1001,7 @@ milter_db_init(void)
 	 */
 	milter_state_scheme = vlist_scheme("state",
 		"version",	VT_INT,		VF_KEEPNAME | VF_KEY,
-		"milter_id",	VT_INT,		VF_KEEPNAME,
+		"id",		VT_INT,		VF_KEEPNAME,
 		NULL);
 	if (milter_state_scheme == NULL)
 	{
@@ -1041,7 +1042,7 @@ milter_id_init(void)
 	 */
 	if (milter_state_record)
 	{
-		milter_id = vlist_record_get(milter_state_record, "milter_id");
+		milter_id = vlist_record_get(milter_state_record, "id");
 		if (milter_id == NULL)
 		{
 			log_die(EX_SOFTWARE, "milter_db_init: "
@@ -1350,9 +1351,9 @@ milter_dump_message(char *buffer, int size, var_t *mailspec)
 	char *header, *body;
 	int total;
 
-	if (acl_symbol_dereference(mailspec, "milter_header", &header,
-	    "milter_header_size", &header_size, "milter_body", &body,
-	    "milter_body_size", &body_size, NULL))
+	if (acl_symbol_dereference(mailspec, "header", &header,
+	    "header_size", &header_size, "body", &body,
+	    "body_size", &body_size, NULL))
 	{
 		log_error("milter_dump_message: vtable_dereference failed");
 		return -1;
@@ -1387,7 +1388,7 @@ milter_message(var_t *mailspec, char **message)
 	VAR_INT_T *message_size;
 	int size;
 
-	message_size = vtable_get(mailspec, "milter_message_size");
+	message_size = vtable_get(mailspec, "message_size");
 	if (message_size == NULL)
 	{
 		log_error("milter_message: vtable_get failed");

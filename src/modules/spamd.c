@@ -83,7 +83,7 @@ static int
 spamd_header(var_t *attrs, char *header, int len)
 {
 	char *hostname;
-	char *addrstr;
+	char *hostaddr_str;
 	char *helo;
 	char *envfrom;
 	VAR_INT_T recipients;
@@ -97,11 +97,10 @@ spamd_header(var_t *attrs, char *header, int len)
 	const char *fmt;
 	
 
-	r = acl_symbol_dereference(attrs, "milter_received", &t,
-		"milter_hostname", &hostname, "milter_helo", &helo,
-		"milter_envfrom_addr", &envfrom, "milter_envrcpt_addr",
-		&envrcpt, "milter_recipients", &recipients, "milter_queueid",
-		&queueid, "milter_addrstr", &addrstr, NULL);
+	r = acl_symbol_dereference(attrs, "received", &t, "hostname",
+		&hostname, "helo", &helo, "envfrom_addr", &envfrom,
+		"envrcpt_addr", &envrcpt, "recipients", &recipients, "queueid",
+		&queueid, "hostaddr_str", &hostaddr_str, NULL);
 	if (r)
 	{
 		log_error("spamd_header: acl_symbol_dereference failed");
@@ -140,13 +139,14 @@ spamd_header(var_t *attrs, char *header, int len)
 	/*
  	 * Handle RDNS None
  	 */
-	if (spamd_rdns_none(hostname, addrstr))
+	if (spamd_rdns_none(hostname, hostaddr_str))
 	{
-		r = snprintf(host, sizeof(host), "[%s]", addrstr);
+		r = snprintf(host, sizeof(host), "[%s]", hostaddr_str);
 	}
 	else
 	{
-		r = snprintf(host, sizeof(host), "%s [%s]", hostname, addrstr);
+		r = snprintf(host, sizeof(host), "%s [%s]", hostname,
+			hostaddr_str);
 	}
 
 	if (r >= sizeof(host))
@@ -192,7 +192,7 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 	/*
          * Get message size
          */
-	message_size = vtable_get(attrs, "milter_message_size");
+	message_size = vtable_get(attrs, "message_size");
 	if (message_size == NULL)
 	{
 		log_error("spamd_query: vtable_get failed");
