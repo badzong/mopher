@@ -38,11 +38,11 @@ error:
 }
 
 static var_t *
-len(int argc, ll_t *args)
+size(int argc, ll_t *args)
 {
 	var_t *var;
 	ll_entry_t *pos;
-	VAR_INT_T size;
+	VAR_INT_T len;
 
 	pos = LL_START(args);
 	var = ll_next(args, &pos);
@@ -54,14 +54,14 @@ len(int argc, ll_t *args)
 
 	if (var == NULL)
 	{
-		size = 0;
+		len = 0;
 	}
 	else
 	{
-		size = var_data_size(var);
+		len = var_data_size(var);
 	}
 
-	return var_create(VT_INT, NULL, &size, VF_COPY | VF_EXP_FREE);
+	return var_create(VT_INT, NULL, &len, VF_COPY | VF_EXP_FREE);
 
 error:
 	log_error("len: bad arguments: usage len(expression)");
@@ -123,8 +123,8 @@ cast_init(void)
 
 	acl_function_register("type", AF_COMPLEX,
 	    (acl_function_callback_t) type);
-	acl_function_register("len", AF_COMPLEX,
-	    (acl_function_callback_t) len);
+	acl_function_register("size", AF_COMPLEX,
+	    (acl_function_callback_t) size);
 	acl_function_register("cast", AF_COMPLEX,
 	    (acl_function_callback_t) cast);
 
