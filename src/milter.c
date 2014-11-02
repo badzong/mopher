@@ -65,43 +65,6 @@ static milter_symbol_t milter_symbols[] = {
 
 
 /*
- * http://www.postfix.org/MILTER_README.html (2009-09-26)
- */
-static milter_macro_t milter_macro_symbols[] = {
-	{ "milter_mta_version", "v", MS_ANY },
-	{ "milter_queueid", "i", MS_OFF_EOH },
-	{ "milter_myhostname", "j", MS_ANY },
-	{ "milter_client", "_", MS_ANY },
-	{ "milter_auth_authen", "{auth_authen}", MS_OFF_ENVFROM },
-	{ "milter_auth_author", "{auth_author}", MS_OFF_ENVFROM },
-	{ "milter_auth_type", "{auth_type}", MS_OFF_ENVFROM },
-	{ "milter_client_addr", "{client_addr}", MS_ANY },
-	{ "milter_client_connections", "{client_connections}", MS_CONNECT },
-	{ "milter_client_name", "{client_name}", MS_ANY },
-	{ "milter_client_port", "{client_port}", MS_ANY },
-	{ "milter_client_ptr", "{client_ptr}", MS_ANY },
-	{ "milter_cert_issuer", "{cert_issuer}", MS_OFF_HELO },
-	{ "milter_cert_subject", "{cert_subject}", MS_OFF_HELO },
-	{ "milter_cipher_bits", "{cipher_bits}", MS_OFF_HELO },
-	{ "milter_cipher", "{cipher}", MS_OFF_HELO },
-	{ "milter_daemon_name", "{daemon_name}", MS_ANY },
-	{ "milter_mail_addr", "{mail_addr}", MS_OFF_DATA },
-	{ "milter_mail_host", "{mail_host}", MS_OFF_DATA },
-	{ "milter_mail_mailer", "{mail_mailer}", MS_OFF_DATA },
-	{ "milter_rcpt_addr", "{rcpt_addr}", MS_ENVRCPT },
-	{ "milter_rcpt_host", "{rcpt_host}", MS_ENVRCPT },
-	{ "milter_rcpt_mailer", "{rcpt_mailer}", MS_ENVRCPT },
-	{ "milter_tls_version", "{tls_version}", MS_OFF_HELO },
-	{ NULL, NULL, 0 }
-};
-
-
-/*
- * Macros are loaded into a hash table
- */
-static sht_t *milter_macro_table;
-
-/*
  * Rwlock for reloading
  */
 static pthread_rwlock_t milter_reload_lock = PTHREAD_RWLOCK_INITIALIZER;
@@ -155,10 +118,9 @@ milter_get_id(void)
 }
 
 
-static int
-milter_macro_lookup(milter_stage_t stage, char *name, var_t *attrs)
+char *
+milter_macro_lookup(milter_stage_t stage, char *macro, var_t *attrs)
 {
-	milter_macro_t *mm;
 	char *value;
 	SMFICTX *ctx;
 	char *stagename;
@@ -170,37 +132,18 @@ milter_macro_lookup(milter_stage_t stage, char *name, var_t *attrs)
 	{
 		log_error("milter_macro_lookup: acl_symbol_dereference "
 		    "failed");
-		return -1;
+		return NULL;
 	}
 
-	mm = sht_lookup(milter_macro_table, name);
-	if (mm == NULL) {
-		log_error("milter_macro_lookup: unkown macro \"%s\"", name);
-		return -1;
-	}
-
-	if ((stage & mm->mm_stage) == 0) {
-		log_error("milter_macro_lookup: \"%s (%s)\" not set at \"%s\""
-			" stage", mm->mm_macro, name, stagename);
-		return -1;
-	}
-
-	value = smfi_getsymval(ctx, mm->mm_macro);
+	value = smfi_getsymval(ctx, macro);
 	if (value == NULL)
 	{
-		log_error("milter_macro_lookup: smfi_getsymval failed for"
-			" \"%s\"", mm->mm_macro);
-		return SMFIS_TEMPFAIL;
+		log_error("milter_macro_lookup: smfi_getsymval failed for "
+			"macro %s in %s stage", macro, stagename);
+		return NULL;
 	}
 
-	if (vtable_set_new(attrs, VT_STRING, mm->mm_name, value,
-	    VF_KEEPNAME | VF_COPYDATA))
-	{
-		log_error("milter_macro_lookup: vtable_set failed");
-		return -1;
-	}
-
-	return 0;
+	return value;
 }
 
 
@@ -1036,7 +979,6 @@ static void
 milter_load_symbols(void)
 {
 	milter_symbol_t *ms;
-	milter_macro_t *mm;
 
 	/*
 	 * Symbols without callbacks set by milter.c (the other one)
@@ -1044,26 +986,6 @@ milter_load_symbols(void)
 	for (ms = milter_symbols; ms->ms_name; ++ms)
 	{
 		acl_symbol_register(ms->ms_name, ms->ms_stage, NULL, AS_CACHE);
-	}
-
-	/*
-	 * Initialize macro table
-	 */
-	milter_macro_table = sht_create(BUCKETS, NULL);
-	if (milter_macro_table == NULL)
-	{
-		log_die(EX_SOFTWARE, "milter: init: sht_create failed");
-	}
-
-	for (mm = milter_macro_symbols; mm->mm_name; ++mm)
-	{
-		if (sht_insert(milter_macro_table, mm->mm_name, mm))
-		{
-			log_die(EX_SOFTWARE, "milter: init: sht_insert failed");
-		}
-
-		acl_symbol_register(mm->mm_name, mm->mm_stage, milter_macro_lookup,
-		    AS_CACHE);
 	}
 
 	return;
@@ -1231,11 +1153,6 @@ milter_clear(void)
 	dbt_clear();
 	module_clear();
 	cf_clear();
-
-	/*
-	 * Free macro tables
-	 */
-	sht_delete(milter_macro_table);
 
 	/*
 	 * Free milter_state_record

@@ -72,7 +72,8 @@ enum acl_symbol_type
 	AS_NULL = 0,
 	AS_CONSTANT,
 	AS_SYMBOL,
-	AS_FUNCTION
+	AS_FUNCTION,
+	AS_MACRO
 };
 typedef enum acl_symbol_type acl_symbol_type_t;
 

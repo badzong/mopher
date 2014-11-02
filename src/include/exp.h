@@ -13,7 +13,8 @@ enum exp_type
 	EX_SYMBOL,
 	EX_FUNCTION,
 	EX_VARIABLE,
-	EX_OPERATION
+	EX_OPERATION,
+	EX_MACRO
 };
 typedef enum exp_type exp_type_t;
 
@@ -52,6 +53,7 @@ extern var_t exp_false;
  * Prototypes
  */
 
+exp_t * exp_create(exp_type_t type, void *data);
 void exp_delete(exp_t *exp);
 void exp_define(char *name, exp_t *exp);
 exp_t * exp_parentheses(exp_t *exp);

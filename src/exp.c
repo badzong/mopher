@@ -57,6 +57,7 @@ exp_delete(exp_t *exp)
 	case EX_SYMBOL:
 	case EX_VARIABLE:
 	case EX_OPERATION:
+	case EX_MACRO:
 		free(exp->ex_data);
 		break;
 
@@ -70,7 +71,7 @@ exp_delete(exp_t *exp)
 }
 
 
-static exp_t *
+exp_t *
 exp_create(exp_type_t type, void *data)
 {
 	exp_t *exp;
@@ -147,13 +148,6 @@ exp_symbol(char *symbol)
 	}
 		
 	return exp_create(EX_SYMBOL, symbol);
-}
-
-
-exp_t *
-exp_variable(char *variable)
-{
-	return exp_create(EX_VARIABLE, variable);
 }
 
 
@@ -556,6 +550,45 @@ exp_eval_variable(exp_t *exp, var_t *mailspec)
 	}
 
 	return value;
+}
+
+	
+static var_t *
+exp_eval_macro(exp_t *exp, var_t *mailspec)
+{
+	VAR_INT_T *stage;
+	var_t *v;
+	char *value;
+
+	if (exp->ex_type != EX_MACRO)
+	{
+		log_error("exp_eval_macro: bad type");
+		return NULL;
+	}
+
+	stage = vtable_get(mailspec, "milter_stage");
+	if (stage == NULL)
+	{
+		log_error("exp_eval_macro: milter stage not set");
+		return NULL;
+	}
+
+	value = milter_macro_lookup(*stage, exp->ex_data, mailspec);
+	if (value == NULL)
+	{
+		log_error("exp_eval_macro: milter_macro_lookup failed");
+		return NULL;
+	}
+
+	v = var_create(VT_STRING, exp->ex_data, value, VF_KEEPNAME |
+		VF_COPYDATA | VF_EXP_FREE);
+	if (v == NULL)
+	{
+		log_error("exp_eval_macro: var_create failed");
+		return NULL;
+	}
+
+	return v;
 }
 
 	
@@ -1132,6 +1165,7 @@ exp_eval(exp_t *exp, var_t *mailspec)
 	case EX_FUNCTION:	return exp_eval_function(exp, mailspec);
 	case EX_OPERATION:	return exp_eval_operation(exp, mailspec);
 	case EX_VARIABLE:	return exp_eval_variable(exp, mailspec);
+	case EX_MACRO:		return exp_eval_macro(exp, mailspec);
 
 	default:
 		log_error("exp_eval: bad type");

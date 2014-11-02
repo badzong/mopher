@@ -46,13 +46,14 @@ or		\|\|
 
 op		[-+*/!()<>=,]
 multiplier	[smhdwMy]
+cbr		[{}]
 
 /*
  * Hack: is NULL operator
  */
 isnull		==[ \t]*null
 
-id		[a-zA-Z][a-zA-Z0-9_-]+
+id		[a-zA-Z_][a-zA-Z0-9_-]*
 variable	\$[a-zA-Z][a-zA-Z0-9_-]+
 integer		[+-]?[0-9]+
 float		[+-]?[0-9]+\.[0-9]+
@@ -114,6 +115,7 @@ comment		#.*$
 
 {op}		return acl_text[0];
 {multiplier}	return acl_text[0];
+{cbr}		return acl_text[0];
 {isnull}	return IS_NULL;
 
 {integer}	return parser_tok_int(INTEGER, &acl_lval.i, acl_text);
