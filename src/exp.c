@@ -54,6 +54,10 @@ exp_delete(exp_t *exp)
 		ll_delete(exp->ex_data, NULL);
 		break;
 
+	case EX_REGEX:
+		rgx_delete(exp->ex_data);
+		break;
+
 	case EX_SYMBOL:
 	case EX_VARIABLE:
 	case EX_OPERATION:
@@ -244,6 +248,29 @@ exp_function(char *id, exp_t *args)
 	ef->ef_args = args;
 
 	return exp_create(EX_FUNCTION, ef);
+}
+
+exp_t *
+exp_regex(char *pattern)
+{
+	regex_t * rgx;
+	exp_t * exp;
+
+	rgx = rgx_create(pattern);
+	if (rgx == NULL)
+	{
+		log_die(EX_SOFTWARE, "exp_regex: rgx_create failed");
+	}
+
+	free(pattern);
+
+	exp = exp_create(EX_REGEX, rgx);
+	if (exp == NULL)
+	{
+		log_die(EX_SOFTWARE, "exp_regex: exp_create failed");
+	}
+
+	return exp;
 }
 
 
@@ -982,6 +1009,17 @@ exp_isset(var_t *mailspec, exp_t *exp)
 	return EXP_FALSE;
 }
 
+static var_t *
+exp_eval_regex(var_t *left, regex_t *pattern)
+{
+	if (rgx_match(pattern, left->v_data))
+	{
+		return EXP_TRUE;
+	}
+
+	return EXP_FALSE;
+}
+
 var_t *
 exp_eval_operation(exp_t *exp, var_t *mailspec)
 {
@@ -1032,6 +1070,16 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 		    "failed");
 		goto exit;
 	}
+
+	/*
+         * Regex operator
+	 */
+	if (eo->eo_operator == '~')
+	{
+		result = exp_eval_regex(left, eo->eo_operand[1]->ex_data);
+		goto exit;
+	}
+			
 
 	if (eo->eo_operand[1])
 	{

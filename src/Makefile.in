@@ -43,6 +43,7 @@ OUT_B+=			var.o
 OUT_B+=			vlist.o
 OUT_B+=			vp.o
 OUT_B+=			vtable.o
+OUT_B+=			rgx.o
 OUT_C+=			mopherctl
 OUT_C+=			mopherd
 
