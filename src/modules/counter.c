@@ -27,11 +27,11 @@ counter_lookup(milter_stage_t stage, char *name, var_t *mailspec)
 	log_message(LOG_DEBUG, mailspec, "counter_lookup: %s", name);
 
 	/*
-	 * milter_addrstr is not set. See milter_connect for details.
+	 * hostaddr_str is not set. See milter_connect for details.
 	 */
-	if (vtable_is_null(mailspec, "milter_addrstr"))
+	if (vtable_is_null(mailspec, "hostaddr_str"))
 	{
-		log_debug("counter_lookup: milter_addrstr is NULL");
+		log_debug("counter_lookup: hostaddr_str is NULL");
 
 		if (vtable_set_null(mailspec, "counter_relay", VF_KEEPNAME) ||
 		    vtable_set_null(mailspec, "counter_penpal", VF_KEEPNAME))
@@ -56,7 +56,7 @@ counter_lookup(milter_stage_t stage, char *name, var_t *mailspec)
 			goto load;
 		}
 
-		recipients = vtable_get(mailspec, "milter_recipients");
+		recipients = vtable_get(mailspec, "recipients");
 		if (recipients == NULL)
 		{
 			log_error("counter_lookup: vtable_get failed");
@@ -99,12 +99,12 @@ static int
 counter_add_relay(dbt_t *dbt, var_t *mailspec)
 {
 	var_t *record;
-	char *addrstr;
+	char *hostaddr_str;
 	VAR_INT_T *received;
 	VAR_INT_T created, updated, expire, count;
 
-	if (vtable_dereference(mailspec, "milter_addrstr", &addrstr,
-	    "milter_received", &received, NULL) != 2)
+	if (vtable_dereference(mailspec, "hostaddr_str", &hostaddr_str, "received",
+		&received, NULL) != 2)
 	{
 		log_error("counter_add_penpal: vtable_dereference failed");
 		return -1;
@@ -115,7 +115,7 @@ counter_add_relay(dbt_t *dbt, var_t *mailspec)
 	expire  = *received + cf_counter_expire_low;
 	count   = 1;
 
-	record = vlist_record(dbt->dbt_scheme, addrstr, &created, &updated,
+	record = vlist_record(dbt->dbt_scheme, hostaddr_str, &created, &updated,
 	    &expire, &count);
 
 
@@ -149,9 +149,9 @@ counter_add_penpal(dbt_t *dbt, var_t *mailspec)
 	VAR_INT_T *received;
 	VAR_INT_T created, updated, expire, count;
 
-	if (vtable_dereference(mailspec, "milter_greylist_src", &source,
-	    "milter_envfrom_addr", &envfrom, "milter_envrcpt_addr", &envrcpt,
-	    "milter_received", &received, NULL) != 4)
+	if (vtable_dereference(mailspec, "greylist_src", &source,
+	    "envfrom_addr", &envfrom, "envrcpt_addr", &envrcpt,
+	    "received", &received, NULL) != 4)
 	{
 		log_error("counter_add_penpal: vtable_dereference failed");
 		return -1;
@@ -224,7 +224,7 @@ counter_update_record(dbt_t *dbt, char *prefix, var_t *mailspec, counter_add_t a
 		return add(dbt, mailspec);
 	}
 
-	received = vtable_get(mailspec, "milter_received");
+	received = vtable_get(mailspec, "received");
 	if (received == NULL)
 	{
 		log_error("counter_update_record: milter_received not set");
@@ -294,16 +294,16 @@ counter_update(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 	}
 
 	/*
-	 * milter_addrstr is not set. See milter_connect for details.
+	 * hostaddr_str is not set. See milter_connect for details.
 	 */
-	if (vtable_is_null(mailspec, "milter_addrstr"))
+	if (vtable_is_null(mailspec, "hostaddr_str"))
 	{
-		log_debug("counter_update: milter_addrstr is NULL");
+		log_debug("counter_update: hostaddr_str is NULL");
 		return 0;
 	}
 
-	if (vtable_dereference(mailspec, "milter_action", &action,
-	    "milter_laststage", &laststage, NULL) != 2)
+	if (vtable_dereference(mailspec, "action", &action,
+	    "laststage", &laststage, NULL) != 2)
 	{
 		log_error("counter_update: vtable_dereference failed");
 		return -1;
@@ -347,7 +347,7 @@ counter_init(void)
 	var_t *penpal_scheme;
 
 	relay_scheme = vlist_scheme("counter_relay",
-		"milter_addrstr",		VT_STRING,	VF_KEEPNAME | VF_KEY,
+		"hostaddr_str",			VT_STRING,	VF_KEEPNAME | VF_KEY,
 		"counter_relay_created",	VT_INT,		VF_KEEPNAME,
 		"counter_relay_updated",	VT_INT,		VF_KEEPNAME,
 		"counter_relay_expire",		VT_INT,		VF_KEEPNAME,
@@ -355,9 +355,9 @@ counter_init(void)
 		NULL);
 
 	penpal_scheme = vlist_scheme("counter_penpal",
-		"milter_greylist_src",		VT_STRING,	VF_KEEPNAME | VF_KEY,
-		"milter_envfrom_addr",		VT_STRING,	VF_KEEPNAME | VF_KEY,
-		"milter_envrcpt_addr",		VT_STRING,	VF_KEEPNAME | VF_KEY,
+		"greylist_src",			VT_STRING,	VF_KEEPNAME | VF_KEY,
+		"envfrom_addr",			VT_STRING,	VF_KEEPNAME | VF_KEY,
+		"envrcpt_addr",			VT_STRING,	VF_KEEPNAME | VF_KEY,
 		"counter_penpal_created",	VT_INT,		VF_KEEPNAME,
 		"counter_penpal_updated",	VT_INT,		VF_KEEPNAME,
 		"counter_penpal_expire",	VT_INT,		VF_KEEPNAME,

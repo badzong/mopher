@@ -566,7 +566,7 @@ exp_eval_macro(exp_t *exp, var_t *mailspec)
 		return NULL;
 	}
 
-	stage = vtable_get(mailspec, "milter_stage");
+	stage = vtable_get(mailspec, "stage");
 	if (stage == NULL)
 	{
 		log_error("exp_eval_macro: milter stage not set");
