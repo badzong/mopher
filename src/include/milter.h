@@ -50,7 +50,6 @@ typedef struct milter_priv {
 } milter_priv_t;
 
 typedef struct milter_macro {
-	char		*mm_name;
 	char		*mm_macro;
 	milter_stage_t	 mm_stage;
 } milter_macro_t;
@@ -73,4 +72,5 @@ int8_t milter(void);
 int milter_set_reply(var_t *mailspec, char *code, char *xcode, char *message);
 int milter_dump_message(char *buffer, int size, var_t *mailspec);
 int milter_message(var_t *mailspec, char **message);
+char * milter_macro_lookup(milter_stage_t stage, char *macro, var_t *attrs);
 #endif /* _MILTER_H_ */

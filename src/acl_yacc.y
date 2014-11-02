@@ -32,7 +32,7 @@ int acl_lex(void);
 %type <i>	INTEGER number
 %type <d>	FLOAT
 %type <ss>	ADDR
-%type <exp>	exp function symbol constant set tarpit pipe
+%type <exp>	exp function symbol constant set tarpit pipe variable macro
 %type <aa>	action terminal
 %type <ar>	reply
 %type <gl>	greylist
@@ -94,7 +94,8 @@ greylist	: greylist VISA exp	{ $$ = greylist_visa($1, $3); }
 tarpit		: TARPIT exp		{ $$ = $2; }
 		;
 
-set		: SET VARIABLE '=' exp	{ $$ = exp_operation('=', exp_variable($2), $4); }
+set		: SET VARIABLE '=' exp
+					{ $$ = exp_operation('=', exp_create(EX_VARIABLE, $2), $4); }
 		;
 
 jump		: JUMP ID		{ $$ = $2; }
@@ -150,10 +151,11 @@ exp		: '(' exp ')'		{ $$ = exp_parentheses($2); }
 		| exp OR exp		{ $$ = exp_operation(OR, $1, $3); }
 		| exp IS_NULL		{ $$ = exp_operation(IS_NULL, $1, NULL); }
 		| IS_SET symbol		{ $$ = exp_operation(IS_SET, $2, NULL); }
-		| VARIABLE		{ $$ = exp_variable($1); }
+		| variable
 		| constant
 		| symbol
 		| function
+		| macro
 		;
 
 function	: ID '(' exp ')'	{ $$ = exp_function($1, $3); }
@@ -161,6 +163,12 @@ function	: ID '(' exp ')'	{ $$ = exp_function($1, $3); }
 		;
 
 symbol		: ID 			{ $$ = exp_symbol($1); }
+		;
+
+variable	: VARIABLE		{ $$ = exp_create(EX_VARIABLE, $1); }
+		;
+
+macro		: '{' ID '}'		{ $$ = exp_create(EX_MACRO, $2); }
 		;
 
 constant	: STRING		{ $$ = exp_constant(VT_STRING, $1, VF_REF); }
