@@ -41,10 +41,12 @@ int acl_lex(void);
 %type <mm>	mod
 
 %left ','
+%left IS_NULL
 %left AND OR
 %left EQ NE LE GE '<' '>'
 %left '+' '-'
 %left '*' '/'
+%left '~'
 %right '='
 %right '!'
 
