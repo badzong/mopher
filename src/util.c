@@ -58,6 +58,11 @@ util_strmail(char *buffer, int size, const char *src)
 	char *start, *end;
 	int len;
 
+	if (src == NULL)
+	{
+		return -1;
+	}
+
 	start = strchr(src, '<');
 	if (start == NULL)
 	{
@@ -100,6 +105,11 @@ util_strtoaddr(const char *str)
 	struct sockaddr_storage *ss;
 	struct sockaddr_in *sin;
 	struct sockaddr_in6 *sin6;
+
+	if (str == NULL)
+	{
+		return NULL;
+	}
 
 	if((ss = (struct sockaddr_storage *)
 		malloc(sizeof(struct sockaddr_storage))) == NULL) {
@@ -178,6 +188,11 @@ util_addrtoint(struct sockaddr_storage *ss)
 {
 	struct sockaddr_in *sin;
 
+	if (ss == NULL)
+	{
+		return -1;
+	}
+
 	sin = (struct sockaddr_in *) ss;
 
 	/*
@@ -195,6 +210,11 @@ int
 util_file_exists(char *path)
 {
 	struct stat fs;
+
+	if (path == NULL)
+	{
+		return -1;
+	}
 
 	if (stat(path, &fs) == 0) {
 		return 1;
@@ -847,3 +867,84 @@ util_tolower(char *p)
 
 	return;
 }
+
+
+#ifdef DEBUG
+
+void
+util_test(void)
+{
+	char *p;
+	char buffer[BUFLEN];
+	struct sockaddr_storage *ss;
+	unsigned long ul;
+
+	/*
+	 * util_strdupenc
+	 */
+	p = util_strdupenc("<test>", "<>");
+	TEST_ASSERT(p != NULL, "util_strdupenc failed");
+	TEST_ASSERT(strcmp(p, "test") == 0, "util_strdupenc returned wrong value");
+	free(p);
+
+	p = util_strdupenc("-test-", "--");
+	TEST_ASSERT(p != NULL, "util_strdupenc failed");
+	TEST_ASSERT(strcmp(p, "test") == 0, "util_strdupenc returned wrong value");
+	free(p);
+
+	p = util_strdupenc("test", "<>");
+	TEST_ASSERT(p != NULL, "util_strdupenc failed");
+	TEST_ASSERT(strcmp(p, "test") == 0, "util_strdupenc returned wrong value");
+	free(p);
+
+	/*
+	 * util_strmail
+	 */
+	TEST_ASSERT(util_strmail(buffer, sizeof buffer, "Test <test@test.com>") > 0, "util_strmail failed");
+	TEST_ASSERT(strcmp(buffer, "test@test.com") == 0, "util_strmail returnd wrong result: %s", buffer);
+	TEST_ASSERT(util_strmail(buffer, sizeof buffer, "Test >test@test.com<") == -1, "util_strmail should fail here");
+	TEST_ASSERT(util_strmail(buffer, sizeof buffer, NULL) == -1, "util_strmail should fail here");
+
+	/*
+         * util_strtoaddr, util_addrtostr
+	 */
+	ss = util_strtoaddr("127.0.0.1");
+	TEST_ASSERT(ss != NULL, "util_strtoaddr failed");
+
+	p = util_addrtostr(ss);
+	TEST_ASSERT(p != NULL, "util_addrtostr failed");
+	TEST_ASSERT(strcmp(p, "127.0.0.1") == 0, "util_addrtostr or util_strtoaddr failed");
+	free(p);
+	free(ss);
+
+	ss = util_strtoaddr("1234::5678");
+	TEST_ASSERT(ss != NULL, "util_strtoaddr failed");
+
+	p = util_addrtostr(ss);
+	TEST_ASSERT(p != NULL, "util_addrtostr failed");
+	TEST_ASSERT(strcmp(p, "1234::5678") == 0, "util_addrtostr or util_strtoaddr failed");
+	free(p);
+	free(ss);
+
+	TEST_ASSERT(util_strtoaddr(NULL) == NULL, "util_strtoaddr should return NULL");
+
+	/*
+	 * util_addrtoint
+	 */
+	ss = util_strtoaddr("1.1.1.1");
+	TEST_ASSERT(ss != NULL, "util_strtoaddr failed");
+	ul = util_addrtoint(ss);
+	TEST_ASSERT(ul == 0x01010101, "util_addrtoint failed. Expected %lx got %lx", 0x01010101, ul);
+	free(ss);
+
+	TEST_ASSERT(util_addrtoint(NULL) == -1, "util_addrtoint should fail here");
+
+	/*
+	 * util_file_exists
+	 */
+	TEST_ASSERT(util_file_exists("/") == 1, "Root should exist");
+	TEST_ASSERT(util_file_exists("/nonexistent") == 0, "/nonexistent should not exist");
+	TEST_ASSERT(util_file_exists(NULL) == -1, "This should fail");
+}
+
+#endif
