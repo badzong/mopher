@@ -1010,9 +1010,18 @@ exp_isset(var_t *mailspec, exp_t *exp)
 }
 
 static var_t *
-exp_eval_regex(var_t *left, regex_t *pattern)
+exp_eval_regex(int op, var_t *left, regex_t *pattern)
 {
-	if (rgx_match(pattern, left->v_data))
+	int match;
+
+	match = rgx_match(pattern, left->v_data);
+
+	if (op == NR)
+	{
+		match = !match;
+	}
+
+	if (match)
 	{
 		return EXP_TRUE;
 	}
@@ -1074,9 +1083,9 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 	/*
          * Regex operator
 	 */
-	if (eo->eo_operator == '~')
+	if (eo->eo_operator == '~' || eo->eo_operator == NR)
 	{
-		result = exp_eval_regex(left, eo->eo_operand[1]->ex_data);
+		result = exp_eval_regex(eo->eo_operator, left, eo->eo_operand[1]->ex_data);
 		goto exit;
 	}
 			
