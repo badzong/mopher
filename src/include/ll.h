@@ -37,6 +37,7 @@ int32_t ll_insert_head(ll_t * ll, void *data);
 int32_t ll_insert_tail(ll_t * ll, void *data);
 void * ll_remove_head(ll_t * ll);
 void * ll_next(ll_t * ll, ll_entry_t **position);
+void ll_test(void);
 
 /*
  * Macros

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include <ll.h>
+#include <test.h>
 
 void
 ll_init(ll_t * ll)
@@ -162,3 +163,57 @@ ll_next(ll_t * ll, ll_entry_t **position)
 
 	return entry->lle_data;
 }
+
+#ifdef DEBUG
+
+static int test_array[] = {1,2,3,4,5,6,7,8,9,10,0};
+static int test_i;
+
+static void
+ll_test_callback(int *p)
+{
+	++test_i;
+	TEST_ASSERT(*p == test_i, "Wrong value: expect %d, got %d", test_i, *p);
+	return;
+}
+
+void
+ll_test(void)
+{
+	ll_t ll;
+	ll_t *pll;
+	int i = 0;
+	int *p;
+
+	pll = &ll;
+	ll_init(pll);
+	for (p = test_array; *p; ++p, ++i)
+	{
+		TEST_ASSERT(ll_insert_tail(pll, p) > 0, "LL_INSERT failed");
+	}
+	ll_walk(pll, (void *) ll_test_callback);
+
+	while(i--)
+	{
+		TEST_ASSERT(ll_remove_head(pll) != NULL, "LL_REMOVE failed");
+	}
+	TEST_ASSERT(pll->ll_size == 0, "list has size %d. should be empty", pll->ll_size);
+
+	i = test_i = 0;
+	pll = ll_create();
+	TEST_ASSERT(pll != NULL, "ll_create failed");
+	for (p = test_array; *p; ++p, ++i)
+	{
+		TEST_ASSERT(ll_insert_tail(pll, p) > 0, "LL_INSERT failed");
+	}
+	ll_walk(pll, (void *) ll_test_callback);
+
+	while(i--)
+	{
+		TEST_ASSERT(ll_remove_head(pll) != NULL, "LL_REMOVE failed");
+	}
+	TEST_ASSERT(pll->ll_size == 0, "list has size %d. should be empty", pll->ll_size);
+	ll_delete(pll, NULL);
+}
+
+#endif

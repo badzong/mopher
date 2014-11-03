@@ -20,6 +20,7 @@ run_tests(int optind, int argc, char **argv)
 	int i;
 
 	test_handler_t test_handlers[] = {
+		{"ll.c", ll_test},
 		{"sht.c", sht_test},
 		{"vp.c", vp_test},
 		{"exp.c", exp_test},
