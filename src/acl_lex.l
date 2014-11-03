@@ -43,6 +43,7 @@ le		<=
 ge		>=
 and		&&
 or		\|\|
+nr		!~
 
 op		[-+*/!()<>=,~]
 multiplier	[smhdwMy]
@@ -95,6 +96,7 @@ comment		#.*$
 {ge}		return GE;
 {and}		return AND;
 {or}		return OR;
+{nr}		return NR;
 {add}		return ADD;
 {header}	return HEADER;
 {value}		return VALUE;
