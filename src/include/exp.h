@@ -14,8 +14,7 @@ enum exp_type
 	EX_FUNCTION,
 	EX_VARIABLE,
 	EX_OPERATION,
-	EX_MACRO,
-	EX_REGEX
+	EX_MACRO
 };
 typedef enum exp_type exp_type_t;
 
@@ -64,7 +63,6 @@ exp_t * exp_list(exp_t *list, exp_t *exp);
 exp_t * exp_constant(var_type_t type, void *data, int flags);
 exp_t * exp_operation(int operator, exp_t *op1, exp_t *op2);
 exp_t * exp_function(char *id, exp_t *args);
-exp_t * exp_regex(char *pattern);
 void exp_free_list(ll_t *list);
 void exp_free(var_t *v);
 var_t * exp_eval_list(exp_t *exp, var_t *mailspec);

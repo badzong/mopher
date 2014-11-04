@@ -1121,7 +1121,7 @@ var_as_string(var_t *v)
 		return NULL;
 	}
 
-	copy = var_create(VT_STRING, NULL, buffer, VF_COPY);
+	copy = var_create(VT_STRING, v->v_name, buffer, VF_COPY);
 	if (copy == NULL)
 	{
 		log_error("var_as_string: var_create failed");
