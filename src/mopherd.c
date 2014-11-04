@@ -72,7 +72,6 @@ main(int argc, char **argv)
 
 		case 'C':
 			check_config = 1;
-			loglevel = 0;
 			break;
 
 		case 'p':
