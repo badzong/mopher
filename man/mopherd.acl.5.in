@@ -349,7 +349,7 @@ The log action will log any custom message:
 .Bd -literal -offset indent
 # log "New connection from some.host.name!"
 #
-log "New connection from " + milter_hostname + "!"
+log "New connection from " + hostname + "!"
 .Ed
 .It Sy set Em exp
 The set action will set a variable:
@@ -501,7 +501,7 @@ Definitions may contain symbols, functions, operators or anything
 else that also makes up expressions as defined in the beginning of this
 document.
 .Sh SYMBOLS
-The following list describes all symbols known to
+The following list describes symbols known to
 .Xr mopherd 8 .
 Type and stage availability are enclosed in parentheses.
 A symbol is either always available
@@ -520,11 +520,39 @@ will save the result after the first evaluation and serve all subsequent
 lookups from its cache.
 .Bl -tag -width 4n
 .\"
+.It Bro Em id Brc Pq string
+Content of Sendmail macro
+.Sq Brq Em id ,
+where
+.Em id
+is an unquoted \%identifier string.
+.\"
+.It Sy body Pq string, eom
+String containing the whole message body.
+.\"
+.It Sy body_size Pq int, eom
+Size of message body in bytes.
+.\"
 .It Sy counter_penpal Pq int, envrcpt
 Number of previously delivered messages by origin for penpal.
 .\"
 .It Sy counter_relay Pq int, any
 Number of previously delivered messages by origin.
+.\"
+.It Sy dnsbl Pq list, connect*
+List of non-null DNSBL query results.
+.\"
+.It Sy envfrom Pq string, envfrom*
+Raw envelope from address.
+.\"
+.It Sy envfrom_addr Pq string, envfrom*
+Envelope from address.
+.\"
+.It Sy envrcpt Pq string, envrcpt*
+Raw envelope recipient address.
+.\"
+.It Sy envrcpt_addr Pq string, envrcpt*
+Envelope recipient address.
 .\"
 .It Sy greylist_attempts Pq int, envfrom*
 Number of delivery attempts required for origin to whitelist \%penpal.
@@ -573,188 +601,48 @@ deliver for penpal at
 .It Sy greylist_visa Pq int, envfrom*
 Validity period of upgraded greylist record in seconds.
 .\"
-.\".It Sy milter_action Pq int, connect*
-.\"FIXME: do not use, do not mention
-.\"Internal action identifer of the last returned action. Do not use.
+.It Sy header_name Pq string, header
+Name of current header.
 .\"
-.It Sy milter_hostaddr_str Pq string, any
+.It Sy header_value Pq string, header
+Value of current header.
+.\"
+.It Sy headers Pq string, eoh*
+String containing message headers.
+.\"
+.It Sy headers_size Pq int, eoh*
+Size of message headers in bytes.
+.\"
+.It Sy helo Pq ?, helo*
+HELO identification as stated by origin.
+.\"
+.It Sy hostaddr Pq addr, any
+Address of origin.
+.\"
+.It Sy hostaddr_str Pq string, any
 Address string of connecting host.
 .\"
-.It Sy milter_auth_authen Pq string, envfrom*
-Content of macro
-.Sq Brq auth_authen
+.It Sy hostname Pq istring, any
+Name of origin, usually a forward-confirmed reverse DNS lookup.
 .\"
-.It Sy milter_auth_author Pq string, envfrom*
-Content of macro
-.Sq Brq auth_author
+.It Sy id Pq int, any
+Unique integer identifying current connection.
 .\"
-.It Sy milter_auth_type Pq string, envfrom*
-Content of macro
-.Sq Brq auth_type
+.It Sy message_size Pq int, eom
+Size of entire message in bytes.
 .\"
-.It Sy milter_body Pq string, eom
-String containing the whole message body.
-.\"
-.It Sy milter_body_size Pq int, eom
-Size of message body in bytes.
-.\"
-.It Sy milter_cert_issuer Pq string, helo*
-Content of macro
-.Sq Brq cert_issuer
-.\"
-.It Sy milter_cert_subject Pq string, helo*
-Content of macro
-.Sq Brq cert_subject
-.\"
-.It Sy milter_cipher Pq string, helo*
-Content of macro
-.Sq Brq cipher
-.\"
-.It Sy milter_cipher_bits Pq string, helo*
-Content of macro
-.Sq Brq cipher_bits
-.\"
-.It Sy milter_client Pq string, any
-Content of macro
-.Sq Brq client
-.\"
-.It Sy milter_client_addr Pq string, any
-Content of macro
-.Sq Brq client_addr
-.\"
-.It Sy milter_client_connections Pq string, connect
-Content of macro
-.Sq Brq client_connections
-.\"
-.It Sy milter_client_name Pq string, any
-Content of macro
-.Sq Brq client_name
-.\"
-.It Sy milter_client_port Pq string, any
-Content of macro
-.Sq Brq client_port
-.\"
-.It Sy milter_client_ptr Pq string, any
-Content of macro
-.Sq Brq client_ptr
-.\"
-.\".It Sy milter_ctx Pq pointer, any
-.\"FIXME: do not use, do not mention
-.\"Internal milter context pointer. Do not use.
-.\"
-.It Sy milter_daemon_name Pq string, any
-Content of macro
-.Sq Brq daemon_name
-.\"
-.It Sy milter_envfrom Pq string, envfrom*
-Raw envelope from address.
-.\"
-.It Sy milter_envfrom_addr Pq string, envfrom*
-Envelope from address.
-.\"
-.It Sy milter_envrcpt Pq string, envrcpt*
-Raw envelope recipient address.
-.\"
-.It Sy milter_envrcpt_addr Pq string, envrcpt*
-Envelope recipient address.
-.\"
-.It Sy milter_greylist_src Pq string, any
+.It Sy origin Pq string, any
 Origin identifier used for greylisting
 .Pq address or domain .
 .\"
-.It Sy milter_header Pq string, eoh*
-String containing message headers.
-.\"
-.It Sy milter_header_name Pq string, header
-Name of current header.
-.\"
-.It Sy milter_header_size Pq int, eoh*
-Size of current header in bytes.
-.\"
-.It Sy milter_header_value Pq string, header
-Value of current header.
-.\"
-.It Sy milter_helo Pq ?, helo*
-HELO identification as stated by origin.
-.\"
-.It Sy milter_hostaddr Pq addr, any
-Address of origin.
-.\"
-.It Sy milter_hostname Pq istring, any
-Name of origin, usually a forward-confirmed reverse DNS lookup.
-.\"
-.It Sy milter_id Pq int, any
-Unique integer identifying current connection.
-.\"
-.It Sy milter_mail_addr Pq string, data*
-Content of macro
-.Sq Brq mail_addr
-.\"
-.It Sy milter_mail_host Pq string, data*
-Content of macro
-.Sq Brq mail_host
-.\"
-.It Sy milter_mail_mailer Pq string, data*
-Content of macro
-.Sq Brq mail_mailer
-.\"
-.It Sy milter_message_size Pq int, eom
-Size of entire message in bytes.
-.\"
-.It Sy milter_mta_version Pq string, any
-Content of macro
-.Sq v
-.\"
-.It Sy milter_myhostname Pq string, any
-Content of macro
-.Sq j
-.\"
-.It Sy milter_queueid Pq string, eoh*
-Content of macro
-.Sq i
-.\"
-.It Sy milter_rcpt_addr Pq string, envrcpt
-Content of macro
-.Sq Brq rcpt_addr
-.\"
-.It Sy milter_rcpt_host Pq string, envrcpt
-Content of macro
-.Sq Brq rcpt_host
-.\"
-.It Sy milter_rcpt_mailer Pq string, envrcpt
-Content of macro
-.Sq Brq rcpt_mailer
-.\"
-.It Sy milter_received Pq string, any
+.It Sy received Pq string, any
 Begin of connection timestamp.
 .\"
-.It Sy milter_recipient_list Pq list, data*
+.It Sy recipient_list Pq list, data*
 List of envelope recipient addresses.
 .\"
-.It Sy milter_recipients Pq int, envrcpt*
+.It Sy recipients Pq int, envrcpt*
 Number of recipients.
-.\"
-.\".It Sy milter_stage Pq int, any
-.\"FIXME: do not use, do not mention
-.\"Internal number of the current milter stage. Do not use.
-.\"
-.It Sy milter_stagename Pq string, any
-Name of current milter stage.
-.\"
-.It Sy milter_subject Pq string, eoh*
-Content of
-.Sq Subject
-header.
-.\"
-.It Sy milter_tls_version Pq string, helo*
-Content of macro
-.Sq Brq tls_version
-.\"
-.It Sy milter_unknown_command Pq string, unknown
-Unknown command issued by origin.
-.\"
-.It Sy dnsbl Pq list, connect*
-List of non-null DNSBL query results.
 .\"
 .It Sy spamd_score Pq float, eom
 SpamAssassin score of current message.
@@ -777,54 +665,44 @@ Compareable with the following pre-defined symbols:
 Reason for evaluation result in
 .Em spf .
 .\"
+.It Sy stagename Pq string, any
+Name of current milter stage.
+.\"
+.It Sy subject Pq string, eoh*
+Content of
+.Sq Subject
+header.
+.\"
 .It Sy tarpit_delayed Pq int, any
 Accumulated tarpit delay in seconds.
+.\"
+.It Sy unknown_command Pq string, unknown
+Unknown command issued by origin.
+.\"
 .El
 .Sh FUNCTIONS
-The following list describes all functions available in
+The following list describes functions available in
 .Nm .
 .Pp
 .Em Note :
-While all parameters are expressions that need to be evaluated first,
-the parameter nomenclature hints at what type the function expects.
-In cases where no particular type is expected,
-.Em exp
-is used.
+While all parameters are expressions, some functions expect a
+\%particular type after evaluation.
 .Bl -tag -width 4n
 .\"
-.It Ft type Fn cast type exp
+.It Fn cast type exp
 Returns
 .Em exp
 converted to
-.Em type .
+.Em type
+.Pq string .
 .\"
-.It Ft int Fn len exp
-Returns storage size of
+.It Fn size exp
+Returns storage size
+.Pq int
+of
 .Em exp .
 .\"
-.It Ft bool Fn list_contains list exp
-Evaluates true if
-.Em exp
-is in
-.Em list ,
-false otherwise.
-.\"
-.It Ft bool Fn regex_imatch pattern str
-Evaluates true if
-.Em str
-matches
-.Pq case insensitive
-.Em pattern ,
-false otherwise.
-.\"
-.It Ft bool Fn regex_match pattern str
-Evaluates true if
-.Em str
-matches
-.Em pattern ,
-false otherwise.
-.\"
-.It Ft string Fn mailaddr str
+.It Fn mailaddr str
 Returns
 .Em str
 without enclosing angle brackets
@@ -833,19 +711,23 @@ without enclosing angle brackets
 .Ql >
 .Pc .
 .\"
-.It Ft int Fn strcmp str1 str2
+.It Fn strcmp str1 str2
 Returns an integer greater than, equal to, or less than 0, according
 to whether
 .Em str1
 is greater than, equal to, or less than
 .Em str2 .
 .\"
-.It Ft string Fn strlen str
-Returns length of
+.It Fn strlen str
+Returns length
+.Pq int
+of
 .Em str .
 .\"
-.It Ft string Fn type exp
-Returns type of
+.It Fn type exp
+Returns type
+.Pq string
+of
 .Em exp .
 .El
 .Sh IMPLEMENTATION NOTES
