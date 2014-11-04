@@ -29,7 +29,6 @@ esmtp		esmtp
 jump		jump
 rcpt		rcpt
 body		body
-size		size
 delete		delete
 reply		reply
 xcode		xcode
@@ -108,7 +107,6 @@ comment		#.*$
 {rcpt}		return RCPT;
 {jump}		return JUMP;
 {body}		return BODY;
-{size}		return SIZE;
 {delete}	return DELETE;
 {reply}		return REPLY;
 {xcode}		return XCODE;
