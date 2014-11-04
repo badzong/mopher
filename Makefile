@@ -12,7 +12,7 @@ TARGETS+=	uninstall
 
 $(TARGETS):
 	for i in $(SUBDIR); do \
-		(cd $$i && $(MAKE) $@); done
+		(cd $$i && $(MAKE) $@) || exit 1; done
 
 
 include make/mk.admin

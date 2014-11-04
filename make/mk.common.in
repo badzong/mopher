@@ -2,6 +2,7 @@
 
 
 # flags
+YFLAGS+=		@YFLAGS@
 CFLAGS+=		@CFLAGS@
 CFLAGS+=		-Wall
 LDFLAGS+=		@LDFLAGS@
