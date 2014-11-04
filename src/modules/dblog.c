@@ -106,7 +106,7 @@ dblog_init(void)
 		"hostaddr_str",		VT_STRING,	VF_KEEPNAME,
 		"hostname",		VT_STRING,	VF_KEEPNAME,
 		"helo",			VT_STRING,	VF_KEEPNAME,
-		"greylist_src",		VT_STRING,	VF_KEEPNAME,
+		"origin",		VT_STRING,	VF_KEEPNAME,
 		"envfrom_addr",		VT_STRING,	VF_KEEPNAME,
 		"envrcpt_addr",		VT_STRING,	VF_KEEPNAME,
 		"recipients",		VT_INT,		VF_KEEPNAME,

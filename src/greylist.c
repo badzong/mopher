@@ -24,42 +24,6 @@ static char *greylist_tuple_symbols[] = { "greylist_created",
     "greylist_visa", "greylist_passed",
     NULL };
 
-int
-greylist_source(char *buffer, int size, char *hostname, char *hostaddr)
-{
-	/*
-	 * Save only the domainname in the greylist tuple. Useful for
-	 * greylisting mail farms.
-	 */
-	int len;
-
-	// Hostname is known
-	if (strcmp(hostaddr, "(null)") && strncmp(hostname + 1, hostaddr, strlen(hostaddr)))
-	{
-		// Make sure we have punycode
-		len = regdom_punycode(buffer, size, hostname);
-		if (len == -1)
-		{
-			log_error("greylist_source: regdom failed");
-		}
-
-		return len;
-	}
-
- 	// Hostname is unset "(null)" or set to hostaddr
-	len = strlen(hostaddr);
-	if (len >= size)
-	{
-		log_error("greylist_source: buffer exhausted");
-		return -1;
-	}
-
-	strcpy(buffer, hostaddr);
-
-	return len;
-}
-
-
 greylist_t *
 greylist_deadline(greylist_t *gl, exp_t *deadline)
 {
@@ -266,7 +230,7 @@ greylist_init(void)
 	char **p;
 
 	scheme = vlist_scheme("greylist",
-		"greylist_src",	VT_STRING,	VF_KEEPNAME | VF_KEY, 
+		"origin",	VT_STRING,	VF_KEEPNAME | VF_KEY, 
 		"envfrom_addr",	VT_STRING,	VF_KEEPNAME | VF_KEY,
 		"envrcpt_addr",	VT_STRING,	VF_KEEPNAME | VF_KEY,
 		"greylist_created",	VT_INT,		VF_KEEPNAME,
@@ -442,7 +406,7 @@ append:
 
 
 static int
-greylist_add(greylist_t *gl, var_t *mailspec, char *source, char *envfrom,
+greylist_add(greylist_t *gl, var_t *mailspec, char *origin, char *envfrom,
     char *envrcpt, VAR_INT_T received)
 {
 	var_t *record;
@@ -480,7 +444,7 @@ greylist_add(greylist_t *gl, var_t *mailspec, char *source, char *envfrom,
 	/*
 	 * Create and store record
 	 */
-	record = vlist_record(greylist_dbt.dbt_scheme, source, envfrom,
+	record = vlist_record(greylist_dbt.dbt_scheme, origin, envfrom,
 	    envrcpt, &created, &updated, &expire, &connections, &deadline,
 	    &delay, &attempts, &visa, &passed);
 
@@ -508,7 +472,7 @@ greylist_add(greylist_t *gl, var_t *mailspec, char *source, char *envfrom,
 
 static int
 greylist_recipient(greylist_t * gl, VAR_INT_T *delayed, var_t *mailspec,
-    char *source, char *envfrom, char *envrcpt, VAR_INT_T received)
+    char *origin, char *envfrom, char *envrcpt, VAR_INT_T received)
 {
 	var_t *lookup = NULL, *record = NULL;
 	VAR_INT_T *created;
@@ -528,7 +492,7 @@ greylist_recipient(greylist_t * gl, VAR_INT_T *delayed, var_t *mailspec,
 	/*
 	 * Lookup greylist record
 	 */
-	lookup = vlist_record(greylist_dbt.dbt_scheme, source, envfrom,
+	lookup = vlist_record(greylist_dbt.dbt_scheme, origin, envfrom,
 	    envrcpt, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 	if (lookup == NULL)
@@ -675,7 +639,7 @@ update:
 
 add:
 
-	return greylist_add(gl, mailspec, source, envfrom, envrcpt, received);
+	return greylist_add(gl, mailspec, origin, envfrom, envrcpt, received);
 
 
 error:
@@ -697,7 +661,7 @@ acl_action_type_t
 greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 {
 	greylist_t *gl = data;
-	char *source;
+	char *origin;
 	char *envfrom;
 	char *envrcpt;
 	ll_t *recipients;
@@ -709,9 +673,9 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 
 
 	/*
-	 * Get source, enfrom, envrcpt, recipients and received
+	 * Get origin, enfrom, envrcpt, recipients and received
 	 */
-	if (vtable_dereference(mailspec, "greylist_src", &source,
+	if (vtable_dereference(mailspec, "origin", &origin,
 	    "envfrom_addr", &envfrom, "envrcpt_addr", &envrcpt,
 	    "recipient_list", &recipients, "received", &received,
 	    NULL) < 4)
@@ -726,7 +690,7 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 	 */
 	if (stage == MS_ENVRCPT)
 	{
-		defer = greylist_recipient(gl, &max_delay, mailspec, source,
+		defer = greylist_recipient(gl, &max_delay, mailspec, origin,
 		    envfrom, envrcpt, *received);
 	}
 
@@ -740,7 +704,7 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 			 */
 			envrcpt = rcpt->v_data;
 			defer = greylist_recipient(gl, &delay, mailspec,
-			    source, envfrom, envrcpt, *received);
+			    origin, envfrom, envrcpt, *received);
 
 			/*
 			 * We are in message context! Greylist if any recipient
@@ -787,7 +751,7 @@ greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 }
 
 int
-greylist_pass(char *source, char *envfrom, char *envrcpt)
+greylist_pass(char *origin, char *envfrom, char *envrcpt)
 {
 	var_t *lookup = NULL, *record = NULL;
 	VAR_INT_T *created;
@@ -804,7 +768,7 @@ greylist_pass(char *source, char *envfrom, char *envrcpt)
 	/*
 	 * Lookup greylist record
 	 */
-	lookup = vlist_record(greylist_dbt.dbt_scheme, source, envfrom,
+	lookup = vlist_record(greylist_dbt.dbt_scheme, origin, envfrom,
 	    envrcpt, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 	if (lookup == NULL)
@@ -883,7 +847,7 @@ error:
 int
 greylist_dump_record(dbt_t *dbt, var_t *record)
 {
-	char *source;
+	char *origin;
 	char *envfrom;
 	char *envrcpt;
 	VAR_INT_T *created;
@@ -911,7 +875,7 @@ greylist_dump_record(dbt_t *dbt, var_t *record)
 		return -1;
 	}
 
-	if (vlist_dereference(record, &source, &envfrom, &envrcpt, &created, &updated,
+	if (vlist_dereference(record, &origin, &envfrom, &envrcpt, &created, &updated,
             &expire, &connections, &deadline, &delay, &attempts, &visa,
             &passed))
         {
@@ -928,14 +892,14 @@ greylist_dump_record(dbt_t *dbt, var_t *record)
 	{
 		len = snprintf(dump, sizeof dump,
 		    "%s: %s > %s: status=visa, messages=%ld, expires=%d\n",
-		    source, envfrom, envrcpt, *passed, expire_time);
+		    origin, envfrom, envrcpt, *passed, expire_time);
 	}
 	else
 	{
 		delay_time = now - *created;
 		len = snprintf(dump, sizeof dump, "%s: %s > %s: "
 		    "status=defer, delay=%d/%ld, attempts=%ld/%ld, "
-		    "expires=%d\n", source, envfrom, envrcpt, delay_time,
+		    "expires=%d\n", origin, envfrom, envrcpt, delay_time,
 		    *delay, *connections, *attempts, expire_time);
 	}
 

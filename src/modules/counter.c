@@ -143,13 +143,13 @@ static int
 counter_add_penpal(dbt_t *dbt, var_t *mailspec)
 {
 	var_t *record;
-	char *source;
+	char *origin;
 	char *envfrom;
 	char *envrcpt;
 	VAR_INT_T *received;
 	VAR_INT_T created, updated, expire, count;
 
-	if (vtable_dereference(mailspec, "greylist_src", &source,
+	if (vtable_dereference(mailspec, "origin", &origin,
 	    "envfrom_addr", &envfrom, "envrcpt_addr", &envrcpt,
 	    "received", &received, NULL) != 4)
 	{
@@ -162,7 +162,7 @@ counter_add_penpal(dbt_t *dbt, var_t *mailspec)
 	expire  = *received + cf_counter_expire_low;
 	count   = 1;
 
-	record = vlist_record(dbt->dbt_scheme, source, envfrom, envrcpt,
+	record = vlist_record(dbt->dbt_scheme, origin, envfrom, envrcpt,
 	    &created, &updated, &expire, &count);
 
 	if (record == NULL) {
@@ -355,7 +355,7 @@ counter_init(void)
 		NULL);
 
 	penpal_scheme = vlist_scheme("counter_penpal",
-		"greylist_src",			VT_STRING,	VF_KEEPNAME | VF_KEY,
+		"origin",			VT_STRING,	VF_KEEPNAME | VF_KEY,
 		"envfrom_addr",			VT_STRING,	VF_KEEPNAME | VF_KEY,
 		"envrcpt_addr",			VT_STRING,	VF_KEEPNAME | VF_KEY,
 		"counter_penpal_created",	VT_INT,		VF_KEEPNAME,

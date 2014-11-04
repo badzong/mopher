@@ -43,7 +43,7 @@ static milter_symbol_t milter_symbols[] = {
 	{ "hostaddr", MS_ANY },
 	{ "hostaddr_str", MS_ANY },
 	{ "hostname", MS_ANY },
-	{ "greylist_src", MS_ANY },
+	{ "origin", MS_ANY },
 	{ "helo", MS_OFF_HELO },
 	{ "envfrom", MS_OFF_ENVFROM },
 	{ "envfrom_addr", MS_OFF_ENVFROM },
@@ -116,6 +116,42 @@ milter_get_id(void)
 	}
 
 	return r;
+}
+
+
+static int
+milter_origin(char *buffer, int size, char *hostname, char *hostaddr)
+{
+	/*
+	 * Save only the domainname in the greylist tuple. Useful for
+	 * greylisting mail farms.
+	 */
+	int len;
+
+	// Hostname is known
+	if (strcmp(hostaddr, "(null)") && strncmp(hostname + 1, hostaddr, strlen(hostaddr)))
+	{
+		// Make sure we have punycode
+		len = regdom_punycode(buffer, size, hostname);
+		if (len == -1)
+		{
+			log_error("milter_origin: regdom failed");
+		}
+
+		return len;
+	}
+
+ 	// Hostname is unset "(null)" or set to hostaddr
+	len = strlen(hostaddr);
+	if (len >= size)
+	{
+		log_error("milter_origin: buffer exhausted");
+		return -1;
+	}
+
+	strcpy(buffer, hostaddr);
+
+	return len;
 }
 
 
@@ -445,7 +481,7 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 	VAR_INT_T now;
 	struct sockaddr_storage *ha_clean = NULL;
 	char *hostaddr_str;
-	char source[256];
+	char origin[256];
 	VAR_INT_T id;
 	sfsistat stat = SMFIS_TEMPFAIL;
 
@@ -487,9 +523,9 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 		goto exit;
 	}
 
-	if (greylist_source(source, sizeof source, hostname, hostaddr_str) == -1)
+	if (milter_origin(origin, sizeof origin, hostname, hostaddr_str) == -1)
 	{
-		log_error("milter_connect: greylist_source failed");
+		log_error("milter_connect: milter_origin failed");
 		goto exit;
 	}
 
@@ -500,7 +536,7 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 	    VT_STRING, "hostname", hostname, VF_KEEPNAME | VF_COPYDATA,
 	    VT_ADDR, "hostaddr", ha_clean, VF_KEEPNAME,
 	    VT_STRING, "hostaddr_str", hostaddr_str, VF_KEEPNAME,
-	    VT_STRING, "greylist_src", source,
+	    VT_STRING, "origin", origin,
 		VF_KEEPNAME | VF_COPYDATA,
 	    VT_NULL))
 	{
