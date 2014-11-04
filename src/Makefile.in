@@ -7,51 +7,54 @@
 #
 OUT_A+=			acl_lex.c
 OUT_A+=			acl_yacc.c
-OUT_A+=			acl_yacc.h
 OUT_A+=			cf_lex.c
 OUT_A+=			cf_yacc.c
-OUT_A+=			cf_yacc.h
-OUT_B+=			acl.o
-OUT_B+=			acl_lex.o
-OUT_B+=			acl_yacc.o
-OUT_B+=			cf.o
-OUT_B+=			cf_defaults.o
-OUT_B+=			cf_lex.o
-OUT_B+=			cf_yacc.o
-OUT_B+=			client.o
-OUT_B+=			dbt.o
-OUT_B+=			defs.o
-OUT_B+=			exp.o
-OUT_B+=			greylist.o
-OUT_B+=			hash.o
-OUT_B+=			ht.o
-OUT_B+=			ll.o
-OUT_B+=			log.o
-OUT_B+=			milter.o
-OUT_B+=			module.o
-OUT_B+=			msgmod.o
-OUT_B+=			parser.o
-OUT_B+=			pipe.o
-OUT_B+=			regdom.o
-OUT_B+=			server.o
-OUT_B+=			sht.o
-OUT_B+=			sock.o
-OUT_B+=			tarpit.o
-OUT_B+=			test.o
-OUT_B+=			util.o
-OUT_B+=			var.o
-OUT_B+=			vlist.o
-OUT_B+=			vp.o
-OUT_B+=			vtable.o
-OUT_B+=			rgx.o
-OUT_C+=			mopherctl
-OUT_C+=			mopherd
+
+OUT_B+=			acl_yacc.h
+OUT_B+=			cf_yacc.h
+
+OUT_C+=			acl.o
+OUT_C+=			acl_lex.o
+OUT_C+=			acl_yacc.o
+OUT_C+=			cf.o
+OUT_C+=			cf_defaults.o
+OUT_C+=			cf_lex.o
+OUT_C+=			cf_yacc.o
+OUT_C+=			client.o
+OUT_C+=			dbt.o
+OUT_C+=			defs.o
+OUT_C+=			exp.o
+OUT_C+=			greylist.o
+OUT_C+=			hash.o
+OUT_C+=			ht.o
+OUT_C+=			ll.o
+OUT_C+=			log.o
+OUT_C+=			milter.o
+OUT_C+=			module.o
+OUT_C+=			msgmod.o
+OUT_C+=			parser.o
+OUT_C+=			pipe.o
+OUT_C+=			regdom.o
+OUT_C+=			rgx.o
+OUT_C+=			server.o
+OUT_C+=			sht.o
+OUT_C+=			sock.o
+OUT_C+=			tarpit.o
+OUT_C+=			test.o
+OUT_C+=			util.o
+OUT_C+=			var.o
+OUT_C+=			vlist.o
+OUT_C+=			vp.o
+OUT_C+=			vtable.o
+
+OUT_D+=			mopherctl
+OUT_D+=			mopherd
 
 # INST:
 #	installed on `install'
 #	uninstalled on `uninstall'
 #
-INST=			$(OUT_C:=.sbin)
+INST=			$(OUT_D:=.sbin)
 
 # *FLAGS
 #
@@ -74,7 +77,8 @@ include @top_srcdir@/make/mk.common
 
 
 $(OUT_B): $(OUT_A)
-$(OUT_C): $(OUT_B)
+$(OUT_C): $(OUT_A) $(OUT_B)
+$(OUT_D): $(OUT_C)
 	@CC@ $(CFLAGS) -o $@ $@.c $> $^ $(LDFLAGS)
 
 .SUFFIXES:

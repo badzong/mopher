@@ -19,16 +19,15 @@ src/modules/dblog.so
 src/modules/list.so
 src/modules/memdb.so
 src/modules/dnsbl.so
-src/modules/regex.so
 src/modules/spamd.so
 src/modules/string.so
 src/modules/bdb.so
 src/modules/sakila.so
 src/acl_lex.c
 src/acl_yacc.c
-src/acl_yacc.h
 src/cf_lex.c
 src/cf_yacc.c
+src/acl_yacc.h
 src/cf_yacc.h
 src/acl.o
 src/acl_lex.o
@@ -52,6 +51,7 @@ src/msgmod.o
 src/parser.o
 src/pipe.o
 src/regdom.o
+src/rgx.o
 src/server.o
 src/sht.o
 src/sock.o
