@@ -65,8 +65,6 @@ exp_t * exp_operation(int operator, exp_t *op1, exp_t *op2);
 exp_t * exp_function(char *id, exp_t *args);
 void exp_free_list(ll_t *list);
 void exp_free(var_t *v);
-var_t * exp_eval_list(exp_t *exp, var_t *mailspec);
-var_t * exp_eval_function(exp_t *exp, var_t *mailspec);
 var_t * exp_math_int(int op, var_t *left, var_t *right);
 var_t * exp_math_float(int op, var_t *left, var_t *right);
 var_t * exp_math_string(int op, var_t *left, var_t *right);

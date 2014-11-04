@@ -284,7 +284,7 @@ exp_free(var_t *v)
 }
 
 
-var_t *
+static var_t *
 exp_eval_list(exp_t *exp, var_t *mailspec)
 {
 	ll_t *exp_list = exp->ex_data;
@@ -430,7 +430,7 @@ error:
 }
 
 
-var_t *
+static var_t *
 exp_eval_function(exp_t *exp, var_t *mailspec)
 {
 	exp_function_t *ef = exp->ex_data;
@@ -656,7 +656,7 @@ exp_assign(exp_t *left, exp_t *right, var_t *mailspec)
 	return value;
 }
 
-var_t *
+static var_t *
 exp_compare(int op, var_t *left, var_t *right)
 {
 	void *l, *r;
@@ -1099,6 +1099,43 @@ error:
 }
 
 var_t *
+exp_eval_in(var_t *needle, var_t *haystack)
+{
+	var_t *v;
+	ll_t *list;
+	ll_entry_t *pos;
+	int cmp;
+
+	if (needle->v_data == NULL || haystack->v_data == NULL)
+	{
+		return NULL;
+	}
+
+	if (haystack->v_type != VT_LIST)
+	{
+		log_error("exp_eval_in: in operator only works on lists");
+		return NULL;
+	}
+
+	list = haystack->v_data;
+	pos = LL_START(list);
+	while ((v = ll_next(list, &pos)))
+	{
+		if (var_compare(&cmp, needle, v))
+		{
+			log_error("exp_eval_in: var_compare failed");
+		}
+
+		if (cmp == 0)
+		{
+			return EXP_TRUE;
+		}
+	}
+
+	return EXP_FALSE;
+}
+
+var_t *
 exp_eval_operation(exp_t *exp, var_t *mailspec)
 {
 	var_t *left = NULL, *right = NULL, *copy;
@@ -1181,6 +1218,11 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 		case '~':
 		case NR:
 			result = exp_eval_regex(eo->eo_operator, left, right);
+			goto exit;
+
+		// In
+		case IN:
+			result = exp_eval_in(left, right);
 			goto exit;
 
 		default:

@@ -79,7 +79,7 @@ static var_t *milter_state_scheme;
 static VAR_INT_T milter_state_version = 1; // State database scheme version
 
 /*
- * Saved milter_id
+ * Saved id
  */
 static VAR_INT_T milter_id_int;
 static VAR_INT_T *milter_id;
@@ -458,7 +458,7 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 
 	if ((id = milter_get_id()) == -1)
 	{
-		log_error("milter_connect: milter_id failed");
+		log_error("milter_connect: milter_get_id failed");
 		goto exit;
 	}
 
