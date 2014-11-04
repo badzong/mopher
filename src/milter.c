@@ -725,7 +725,7 @@ milter_header(SMFICTX * ctx, char *headerf, char *headerv)
 	milter_priv_t *mp;
 	int32_t len;
 	sfsistat stat = SMFIS_TEMPFAIL;
-	char *messageid;
+	char *message_id;
 
 	mp = milter_common_init(ctx, MS_HEADER, MSN_HEADER);
 	if (mp == NULL)
@@ -766,22 +766,22 @@ milter_header(SMFICTX * ctx, char *headerf, char *headerv)
 	}
 
 	/*
-         * log message id
+         * log message_id
          */
 	if (strcasecmp(headerf, "Message-ID") == 0)
 	{
-		messageid = util_strdupenc(headerv, "<>");
-		if (messageid)
+		message_id = util_strdupenc(headerv, "<>");
+		if (message_id)
 		{
 			if (vtable_set_new(mp->mp_table, VT_STRING,
-				"message_id", messageid, VF_KEEPNAME))
+				"message_id", message_id, VF_KEEPNAME))
 			{
 				log_error("milter_header: vtable_set_new failed");
 				goto exit;
 			}
 
-			log_message(LOG_ERR, mp->mp_table, "message-id=%s",
-				messageid);
+			log_message(LOG_ERR, mp->mp_table, "message_id=%s",
+				message_id);
 		}
 	}
 

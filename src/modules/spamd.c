@@ -88,7 +88,7 @@ spamd_header(var_t *attrs, char *header, int len)
 	char *envfrom;
 	VAR_INT_T recipients;
 	char *envrcpt;
-	char *queueid;
+	char *queue_id;
 	time_t t;
 	char timestamp[BUFLEN];
 	char host[BUFLEN];
@@ -99,8 +99,8 @@ spamd_header(var_t *attrs, char *header, int len)
 
 	r = acl_symbol_dereference(attrs, "received", &t, "hostname",
 		&hostname, "helo", &helo, "envfrom_addr", &envfrom,
-		"envrcpt_addr", &envrcpt, "recipients", &recipients, "queueid",
-		&queueid, "hostaddr_str", &hostaddr_str, NULL);
+		"envrcpt_addr", &envrcpt, "recipients", &recipients, "queue_id",
+		&queue_id, "hostaddr_str", &hostaddr_str, NULL);
 	if (r)
 	{
 		log_error("spamd_header: acl_symbol_dereference failed");
@@ -156,7 +156,7 @@ spamd_header(var_t *attrs, char *header, int len)
 	}
 
 	len = snprintf(header, len, fmt, helo, host, cf_hostname,
-		envfrom, BINNAME, queueid, envrcpt, timestamp);
+		envfrom, BINNAME, queue_id, envrcpt, timestamp);
 
 	return len;
 }
