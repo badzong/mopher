@@ -1,5 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
+#include <regex.h>
+#include <ctype.h>
 
 #include <mopher.h>
 #include "acl_yacc.h"
@@ -52,10 +54,6 @@ exp_delete(exp_t *exp)
 
 	case EX_LIST:
 		ll_delete(exp->ex_data, NULL);
-		break;
-
-	case EX_REGEX:
-		rgx_delete(exp->ex_data);
 		break;
 
 	case EX_SYMBOL:
@@ -249,30 +247,6 @@ exp_function(char *id, exp_t *args)
 
 	return exp_create(EX_FUNCTION, ef);
 }
-
-exp_t *
-exp_regex(char *pattern)
-{
-	regex_t * rgx;
-	exp_t * exp;
-
-	rgx = rgx_create(pattern);
-	if (rgx == NULL)
-	{
-		log_die(EX_SOFTWARE, "exp_regex: rgx_create failed");
-	}
-
-	free(pattern);
-
-	exp = exp_create(EX_REGEX, rgx);
-	if (exp == NULL)
-	{
-		log_die(EX_SOFTWARE, "exp_regex: exp_create failed");
-	}
-
-	return exp;
-}
-
 
 void
 exp_free_list(ll_t *list)
@@ -1010,11 +984,94 @@ exp_isset(var_t *mailspec, exp_t *exp)
 }
 
 static var_t *
-exp_eval_regex(int op, var_t *left, regex_t *pattern)
+exp_eval_regex(int op, var_t *left, var_t *right)
 {
+	char *p;
+	int e;
+	char error[1024];
+	int flags = REG_EXTENDED | REG_NOSUB;
 	int match;
+	regex_t r;
 
-	match = rgx_match(pattern, left->v_data);
+	var_t *pattern_copy = NULL;
+	var_t *str_copy = NULL;
+
+	char *pattern;
+	char *str;
+
+	if (left->v_data == NULL || right->v_data == NULL)
+	{
+		return NULL;
+	}
+
+	// Make sure left is a string
+	if (left->v_type != VT_STRING)
+	{
+		str_copy = var_cast_copy(VT_STRING, left);
+		if (str_copy == NULL)
+		{
+			log_error("exp_eval_regex: var_cast_copy failed");
+			goto error;
+		}
+		str = str_copy->v_data;
+	}
+	else
+	{
+		str = left->v_data;
+	}
+
+	// Make sure right is a string
+	if (right->v_type != VT_STRING)
+	{
+		pattern_copy = var_cast_copy(VT_STRING, right);
+		if (pattern_copy == NULL)
+		{
+			log_error("exp_eval_regex: var_cast_copy failed");
+			goto error;
+		}
+		pattern = pattern_copy->v_data;
+	}
+	else
+	{
+		pattern = right->v_data;
+	}
+
+	// Test if pattern contains upper case chars
+	flags = REG_EXTENDED | REG_NOSUB;
+	for (p = pattern; *p; ++p)
+	{
+		if (isupper(*p))
+		{
+			break;
+		}
+	}
+	// If pattern is all lower perform case insensitiv matching
+	if(*p == 0)
+	{
+		flags |= REG_ICASE;
+	}
+
+	e = regcomp(&r, pattern, flags);
+	if (e)
+	{
+		regerror(e, &r, error, sizeof error);
+		log_error("exp_eval_regex: regcomp: %s", error);
+		goto error;
+	}
+
+	// Regexec returns 0 if pattern matched.
+	match = regexec(&r, str, 0, NULL, 0);
+
+	// free memory
+	regfree(&r);
+	if (str_copy)
+	{
+		var_delete(str_copy);
+	}
+	if (pattern_copy)
+	{
+		var_delete(pattern_copy);
+	}
 
 	if (op == NR)
 	{
@@ -1023,10 +1080,22 @@ exp_eval_regex(int op, var_t *left, regex_t *pattern)
 
 	if (match)
 	{
-		return EXP_TRUE;
+		return EXP_FALSE;
 	}
 
-	return EXP_FALSE;
+	return EXP_TRUE;
+
+error:
+	if (str_copy)
+	{
+		var_delete(str_copy);
+	}
+	if (pattern_copy)
+	{
+		var_delete(pattern_copy);
+	}
+
+	return NULL;
 }
 
 var_t *
@@ -1080,16 +1149,6 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 		goto exit;
 	}
 
-	/*
-         * Regex operator
-	 */
-	if (eo->eo_operator == '~' || eo->eo_operator == NR)
-	{
-		result = exp_eval_regex(eo->eo_operator, left, eo->eo_operand[1]->ex_data);
-		goto exit;
-	}
-			
-
 	if (eo->eo_operand[1])
 	{
 		right = exp_eval(eo->eo_operand[1], mailspec);
@@ -1116,6 +1175,12 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 		case EQ:
 		case NE:
 			result = exp_compare(eo->eo_operator, left, right);
+			goto exit;
+
+		// Regex
+		case '~':
+		case NR:
+			result = exp_eval_regex(eo->eo_operator, left, right);
 			goto exit;
 
 		default:

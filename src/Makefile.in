@@ -35,7 +35,6 @@ OUT_C+=			msgmod.o
 OUT_C+=			parser.o
 OUT_C+=			pipe.o
 OUT_C+=			regdom.o
-OUT_C+=			rgx.o
 OUT_C+=			server.o
 OUT_C+=			sht.o
 OUT_C+=			sock.o

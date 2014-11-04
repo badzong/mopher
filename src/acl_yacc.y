@@ -12,8 +12,7 @@ int acl_lex(void);
 %token ID INTEGER FLOAT STRING ADDR VARIABLE CONTINUE XREJECT DISCARD ACCEPT
 %token TEMPFAIL GREYLIST VISA DEADLINE DELAY ATTEMPTS TARPIT SET LOG LEVEL 
 %token EQ NE LE GE AND OR DEFINE ADD HEADER VALUE INSERT CHANGE INDEX FROM
-%token ESMTP RCPT JUMP BODY SIZE DELETE REPLY XCODE MSG IS_NULL PIPE IS_SET
-%token REGEX NR
+%token ESMTP RCPT JUMP BODY SIZE DELETE REPLY XCODE MSG IS_NULL PIPE IS_SET NR
 
 %union {
 	char			 c;
@@ -29,11 +28,11 @@ int acl_lex(void);
 	msgmod_t		*mm;
 }
 
-%type <str>	STRING ID VARIABLE REGEX jump
+%type <str>	STRING ID VARIABLE jump
 %type <i>	INTEGER number
 %type <d>	FLOAT
 %type <ss>	ADDR
-%type <exp>	exp function symbol constant set tarpit pipe variable macro regex
+%type <exp>	exp function symbol constant set tarpit pipe variable macro
 %type <aa>	action terminal
 %type <ar>	reply
 %type <gl>	greylist
@@ -46,9 +45,9 @@ int acl_lex(void);
 %left EQ NE LE GE '<' '>'
 %left '+' '-'
 %left '*' '/'
-%left '~' NR
 %right '='
 %right '!'
+%right '~' NR
 
 %%
 
@@ -154,8 +153,8 @@ exp		: '(' exp ')'		{ $$ = exp_parentheses($2); }
 		| exp OR exp		{ $$ = exp_operation(OR, $1, $3); }
 		| exp IS_NULL		{ $$ = exp_operation(IS_NULL, $1, NULL); }
 		| IS_SET symbol		{ $$ = exp_operation(IS_SET, $2, NULL); }
-		| exp '~' regex		{ $$ = exp_operation('~', $1, $3); }
-		| exp NR regex		{ $$ = exp_operation(NR, $1, $3); }
+		| exp '~' exp		{ $$ = exp_operation('~', $1, $3); }
+		| exp NR exp		{ $$ = exp_operation(NR, $1, $3); }
 		| variable
 		| constant
 		| symbol
@@ -174,9 +173,6 @@ variable	: VARIABLE		{ $$ = exp_create(EX_VARIABLE, $1); }
 		;
 
 macro		: '{' ID '}'		{ $$ = exp_create(EX_MACRO, $2); }
-		;
-
-regex		: REGEX 		{ $$ = exp_regex($1); }
 		;
 
 constant	: STRING		{ $$ = exp_constant(VT_STRING, $1, VF_REF); }
