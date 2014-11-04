@@ -872,7 +872,7 @@ util_tolower(char *p)
 #ifdef DEBUG
 
 void
-util_test(void)
+util_test(int n)
 {
 	char *p;
 	char buffer[BUFLEN];

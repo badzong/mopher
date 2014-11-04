@@ -329,7 +329,7 @@ error:
 #ifdef DEBUG
 
 void
-vp_test(void)
+vp_test(int n)
 {
 	var_t *scheme;
 	vp_t *vp;

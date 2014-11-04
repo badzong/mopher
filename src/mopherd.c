@@ -9,105 +9,13 @@
 #include <mopher.h>
 
 static int
-run_tests(int optind, int argc, char **argv)
+mopherd_test(int optind, int argc, char **argv)
 {
 #ifndef DEBUG
 	fprintf(stderr, "Test not available. Rebuild mopher with -DDEBUG.\n");
 	exit(EX_SOFTWARE);
 #else
-	int test_start, seconds, stat;
-	test_handler_t *handler;
-	int i, j;
-
-	#define TEST_THREADS 20
-	static int test_threads = TEST_THREADS;
-	static pthread_t test_thread[TEST_THREADS];
-
-	test_handler_t multi_threaded_tests[] = {
-		{"util.c", util_test},
-		{"vp.c", vp_test},
-		{"exp.c", exp_test},
-		{ NULL, NULL }
-	};
-
-	test_handler_t single_threaded_tests[] = {
-		{"ll.c", ll_test}, //FIXME: Move to multi-threaded tests
-		{"sht.c", sht_test}, //FIXME: Move to multi-threaded tests
-		{"regdom.c", regdom_test}, //FIXME: Move to multi-threaded tests
-		{"dbt.c", dbt_test},
-		{ NULL, NULL }
-	};
-
-	log_init("mopher test", LOG_ERR, 0, 1);
-	log_error("Start tests..\n");
-	test_start = time(NULL);
-
-	// Multi-threaded tests
-	for(handler = multi_threaded_tests; handler->th_name; ++handler)
-	{
-		stat = test_tests;
-
-		// Test only modules given on argv
-		if (argc > optind)
-		{
-			for (i = optind; i < argc; ++i)
-			{
-				if (!strcmp(argv[i], handler->th_name))
-				{
-					break;
-				}
-			}
-			if (i == argc)
-			{
-				continue;
-			}
-		}
-
-		// Start threads
-		bzero(test_thread, sizeof test_thread);
-		for (j = 0; j < test_threads; ++j)
-		{
-			util_thread_create(test_thread + j, handler->th_callback, NULL);
-		}
-
-		// Join threads
-		for (j = 0; j < test_threads; ++j)
-		{
-			util_thread_join(test_thread[j]);
-		}
-
-		//handler->th_callback(); // Dies on error
-		log_error("%-12s: %4d OK", handler->th_name, test_tests-stat);
-	}
-
-	// Single threaded tests
-	for(handler = single_threaded_tests; handler->th_name; ++handler)
-	{
-		stat = test_tests;
-
-		// Test only modules given on argv
-		if (argc > optind)
-		{
-			for (i = optind; i < argc; ++i)
-			{
-				if (!strcmp(argv[i], handler->th_name))
-				{
-					break;
-				}
-			}
-			if (i == argc)
-			{
-				continue;
-			}
-		}
-
-		handler->th_callback(); // Dies on error
-		log_error("%-12s: %4d OK", handler->th_name, test_tests-stat);
-	}
-
-	seconds = time(NULL) - test_start;
-	log_error("\n%d tests in %d seconds.", test_tests, seconds);
-
+	test_run(optind, argc, argv);
 	return 0;
 #endif
 }
@@ -200,7 +108,7 @@ main(int argc, char **argv)
 	 */
 	if (test)
 	{
-		return run_tests(optind, argc, argv);
+		return mopherd_test(optind, argc, argv);
 	}
 
 	/*

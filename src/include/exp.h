@@ -79,5 +79,5 @@ var_t * exp_eval(exp_t *exp, var_t *mailspec);
 int exp_is_true(exp_t *exp, var_t *mailspec);
 void exp_init(void);
 void exp_clear(void);
-void exp_test(void);
+void exp_test(int n);
 #endif /* _EXP_H_ */

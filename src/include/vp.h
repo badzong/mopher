@@ -21,6 +21,6 @@ void vp_init(vp_t *vp, void *key, int klen, void *data, int dlen);
 void vp_delete(vp_t *vp);
 vp_t * vp_pack(var_t *v);
 var_t * vp_unpack(vp_t *vp, var_t *scheme);
-void vp_test(void);
+void vp_test(int n);
 
 #endif /* _VP_H_ */
