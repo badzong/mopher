@@ -750,6 +750,11 @@ dbt_janitor(void *arg)
 		sht_start(dbt_tables, &pos);
 		while ((dbt = sht_next(dbt_tables, &pos)))
 		{
+			if (dbt->dbt_cleanup_interval == -1)
+			{
+				continue;
+			}
+
 			if (dbt->dbt_cleanup_schedule < schedule)
 			{
 				schedule = dbt->dbt_cleanup_schedule;
