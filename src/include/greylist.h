@@ -36,7 +36,6 @@ typedef struct greylist greylist_t;
  * Prototypes
  */
 
-int greylist_source(char *buffer, int size, char *hostname, char *hostaddr);
 greylist_t * greylist_deadline(greylist_t *gl, exp_t *deadline);
 greylist_t * greylist_delay(greylist_t *gl, exp_t *delay);
 greylist_t * greylist_attempts(greylist_t *gl, exp_t *attempts);
