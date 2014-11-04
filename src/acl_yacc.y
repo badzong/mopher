@@ -13,6 +13,7 @@ int acl_lex(void);
 %token TEMPFAIL GREYLIST VISA DEADLINE DELAY ATTEMPTS TARPIT SET LOG LEVEL 
 %token EQ NE LE GE AND OR DEFINE ADD HEADER VALUE INSERT CHANGE INDEX FROM
 %token ESMTP RCPT JUMP BODY SIZE DELETE REPLY XCODE MSG IS_NULL PIPE IS_SET NR
+%token IN
 
 %union {
 	char			 c;
@@ -48,6 +49,7 @@ int acl_lex(void);
 %right '='
 %right '!'
 %right '~' NR
+%right IN
 
 %%
 
@@ -151,6 +153,7 @@ exp		: '(' exp ')'		{ $$ = exp_parentheses($2); }
 		| exp LE exp		{ $$ = exp_operation(LE, $1, $3); }
 		| exp AND exp		{ $$ = exp_operation(AND, $1, $3); }
 		| exp OR exp		{ $$ = exp_operation(OR, $1, $3); }
+		| exp IN exp		{ $$ = exp_operation(IN, $1, $3); }
 		| exp IS_NULL		{ $$ = exp_operation(IS_NULL, $1, NULL); }
 		| IS_SET symbol		{ $$ = exp_operation(IS_SET, $2, NULL); }
 		| exp '~' exp		{ $$ = exp_operation('~', $1, $3); }

@@ -36,6 +36,7 @@ xcode		xcode
 message		message
 pipe		pipe
 isset		isset
+in		in
 
 eq		==
 ne		!=
@@ -114,6 +115,7 @@ comment		#.*$
 {message}	return MSG;
 {pipe}		return PIPE;
 {isset}		return IS_SET;
+{in}		return IN;
 
 {op}		return acl_text[0];
 {multiplier}	return acl_text[0];
