@@ -816,8 +816,15 @@ util_dirname(char *buffer, int size, char *path)
 {
 	struct stat s;
 	char *p;
+	int len;
 
-	if (size < strlen(path) + 1)
+	if (path == NULL)
+	{
+		return -1;
+	}
+
+	len = strlen(path);
+	if (size < len + 1)
 	{
 		log_error("util_dirname: buffer exhausted");
 		return -1;
@@ -836,6 +843,11 @@ util_dirname(char *buffer, int size, char *path)
 	 */
 	if (s.st_mode & S_IFDIR)
 	{
+		while(buffer[--len] == '/' && len > 1)
+		{
+			buffer[len] = 0;
+		}
+
 		return 0;
 	}
 
@@ -876,8 +888,10 @@ util_test(int n)
 {
 	char *p;
 	char buffer[BUFLEN];
-	struct sockaddr_storage *ss;
+	struct sockaddr_storage *ss, *addr1, *addr2;
+	struct timespec ts;
 	unsigned long ul;
+	int i;
 
 	/*
 	 * util_strdupenc
@@ -945,6 +959,84 @@ util_test(int n)
 	TEST_ASSERT(util_file_exists("/") == 1, "Root should exist");
 	TEST_ASSERT(util_file_exists("/nonexistent") == 0, "/nonexistent should not exist");
 	TEST_ASSERT(util_file_exists(NULL) == -1, "This should fail");
+
+	/*
+ 	 * util_file
+ 	 */
+	TEST_ASSERT((i = util_file("/etc/fstab", &p)) > 0, "util_file failed");
+	TEST_ASSERT(strlen(p) == i, "util_file should return string of %d bytes. Got %d", i, strlen(p));
+	free(p);
+
+	TEST_ASSERT((i = util_file("/etc/hosts", &p)) > 0, "util_file failed");
+	TEST_ASSERT(strlen(p) == i, "util_file should return string of %d bytes. Got %d", i, strlen(p));
+	free(p);
+
+	TEST_ASSERT(util_file("/nonexisten", &p) == -1, "util_file should fail here");
+
+	/*
+	 * util_addrcmp
+	 */
+	addr1 = util_strtoaddr("192.168.1.1");
+	addr2 = util_strtoaddr("192.168.1.1");
+
+	TEST_ASSERT(util_addrcmp(addr1, addr2) == 0, "util_addrcmp failed");
+	free(addr2);
+
+	addr2 = util_strtoaddr("192.168.1.2");
+	TEST_ASSERT(util_addrcmp(addr1, addr2) == -1, "util_addrcmp failed");
+	free(addr2);
+
+	addr2 = util_strtoaddr("192.168.1.0");
+	TEST_ASSERT(util_addrcmp(addr1, addr2) == 1, "util_addrcmp failed");
+	free(addr2);
+
+	addr2 = util_strtoaddr("::1");
+	TEST_ASSERT(util_addrcmp(addr1, addr2) == -1, "util_addrcmp failed");
+	free(addr1);
+
+	addr1 = util_strtoaddr("::1");
+	TEST_ASSERT(util_addrcmp(addr1, addr2) == 0, "util_addrcmp failed");
+	free(addr2);
+
+	addr2 = util_strtoaddr("::2");
+	TEST_ASSERT(util_addrcmp(addr1, addr2) == -1, "util_addrcmp failed");
+	free(addr1);
+	free(addr2);
+
+	/*
+	 * util_now
+	 */
+	TEST_ASSERT(util_now(&ts) == 0, "util_now failed");
+
+	/*
+	 * util_concat
+	 */
+	TEST_ASSERT(util_concat(buffer, sizeof buffer, "foo", "bar", "99", NULL) == 8, "util_concat failed");
+	TEST_ASSERT(strcmp(buffer, "foobar99") == 0, "util_concat produced bad string");
+
+	/*
+	 * util_dirname
+	 */
+	TEST_ASSERT(util_dirname(buffer, sizeof buffer, "/etc/fstab") == 0, "util_dirname failed");
+	TEST_ASSERT(strcmp(buffer, "/etc") == 0, "util_dirname returned bad value: %s", buffer);
+
+	TEST_ASSERT(util_dirname(buffer, sizeof buffer, "/tmp") == 0, "util_dirname failed");
+	TEST_ASSERT(strcmp(buffer, "/tmp") == 0, "util_dirname returned bad value: %s", buffer);
+
+	TEST_ASSERT(util_dirname(buffer, sizeof buffer, "/tmp/") == 0, "util_dirname failed");
+	TEST_ASSERT(strcmp(buffer, "/tmp") == 0, "util_dirname returned bad value: %s", buffer);
+
+	TEST_ASSERT(util_dirname(buffer, sizeof buffer, "/") == 0, "util_dirname failed");
+	TEST_ASSERT(strcmp(buffer, "/") == 0, "util_dirname returned bad value: %s", buffer);
+
+	/*
+         * util_tolower
+         */
+	strncpy(buffer, "FOOBAR", sizeof buffer);
+	util_tolower(buffer);
+	TEST_ASSERT(strcmp(buffer, "foobar") == 0, "util_tolower failed");
+	
+	return;
 }
 
 #endif
