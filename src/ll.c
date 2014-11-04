@@ -27,29 +27,29 @@ ll_create()
 }
 
 void
-ll_walk(ll_t * ll, void (*callback) (void *data))
+ll_walk(ll_t * ll, void (*callback) (void *item, void *item_data), void *data)
 {
 	ll_entry_t *entry;
 
 	for (entry = ll->ll_head; entry; entry = entry->lle_next) {
-		callback(entry->lle_data);
+		callback(entry->lle_data, data);
 	}
 
 	return;
 }
 
 void
-ll_clear(ll_t * ll, void (*destroy) (void *data))
+ll_clear(ll_t * ll, void (*destroy)(void *data))
 {
 	ll_entry_t *entry;
 	ll_entry_t *next;
 
-	if (destroy != NULL) {
-		ll_walk(ll, destroy);
-	}
-
 	for (entry = ll->ll_head; entry; entry = next) {
 		next = entry->lle_next;
+		if (destroy != NULL)
+		{
+			destroy(entry->lle_data);
+		}
 		free(entry);
 	}
 
@@ -167,23 +167,23 @@ ll_next(ll_t * ll, ll_entry_t **position)
 #ifdef DEBUG
 
 static int test_array[] = {1,2,3,4,5,6,7,8,9,10,0};
-static int test_i;
 
 static void
-ll_test_callback(int *p)
+ll_test_callback(int *p, int *index)
 {
-	++test_i;
-	TEST_ASSERT(*p == test_i, "Wrong value: expect %d, got %d", test_i, *p);
+	++(*index);
+	TEST_ASSERT(*p == *index, "Wrong value: expect %d, got %d", *index, *p);
 	return;
 }
 
 void
-ll_test(void)
+ll_test(int n)
 {
 	ll_t ll;
 	ll_t *pll;
-	int i = 0;
 	int *p;
+	int i = 0;
+	int index = 0;
 
 	pll = &ll;
 	ll_init(pll);
@@ -191,7 +191,7 @@ ll_test(void)
 	{
 		TEST_ASSERT(ll_insert_tail(pll, p) > 0, "LL_INSERT failed");
 	}
-	ll_walk(pll, (void *) ll_test_callback);
+	ll_walk(pll, (void *) ll_test_callback, &index);
 
 	while(i--)
 	{
@@ -199,14 +199,14 @@ ll_test(void)
 	}
 	TEST_ASSERT(pll->ll_size == 0, "list has size %d. should be empty", pll->ll_size);
 
-	i = test_i = 0;
+	i = index = 0;
 	pll = ll_create();
 	TEST_ASSERT(pll != NULL, "ll_create failed");
 	for (p = test_array; *p; ++p, ++i)
 	{
 		TEST_ASSERT(ll_insert_tail(pll, p) > 0, "LL_INSERT failed");
 	}
-	ll_walk(pll, (void *) ll_test_callback);
+	ll_walk(pll, (void *) ll_test_callback, &index);
 
 	while(i--)
 	{

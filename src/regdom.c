@@ -319,7 +319,7 @@ error:
 
 #ifdef DEBUG
 void
-regdom_test(void)
+regdom_test(int n)
 {
 	struct regdom_test_case {
 		char *rtc_test;

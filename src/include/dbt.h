@@ -85,6 +85,6 @@ void dbt_init(int start_threads);
 void dbt_clear();
 dbt_t * dbt_lookup(char *name);
 int dbt_dump(char **dump, char *tablename);
-void dbt_test(void);
+void dbt_test(int n);
 
 #endif /* _DBT_H_ */

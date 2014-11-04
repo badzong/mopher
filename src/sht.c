@@ -262,7 +262,7 @@ sht_next(sht_t *sht, ht_pos_t *pos)
 
 #ifdef DEBUG
 void
-sht_test(void)
+sht_test(int n)
 {
 	sht_t *ht;
 	struct sht_test {

@@ -1366,7 +1366,7 @@ exp_test_const_init(void)
 }
 
 void
-exp_test(void)
+exp_test(int n)
 {
 	var_t *v;
 

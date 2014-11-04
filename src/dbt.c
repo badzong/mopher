@@ -1341,7 +1341,7 @@ dbt_test_driver(char *config, char *driver)
 }
 
 void
-dbt_test(void)
+dbt_test(int n)
 {
 	dbt_test_driver("test_memdb", "memdb.so");
 	dbt_test_driver("test_bdb", "bdb.so");
