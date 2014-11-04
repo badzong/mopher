@@ -8,7 +8,10 @@ extern int test_tests;
 struct test_handler
 {
 	char *th_name;
-	void (*th_callback)(int n);
+	char *th_descr;
+	void (*th_init)(void);
+	void (*th_test)(int n);
+	void (*th_clear)(void);
 };
 typedef struct test_handler test_handler_t;
 

@@ -1366,12 +1366,16 @@ exp_test_const_init(void)
 }
 
 void
+exp_test_init(void)
+{
+	exp_init();
+	exp_test_const_init();
+}
+
+void
 exp_test(int n)
 {
 	var_t *v;
-
-	exp_init();
-	exp_test_const_init();
 
 	// exp_is_true
 	TEST_ASSERT(!exp_is_true(exp_test_int_0, NULL), "exp_is_true failed");
@@ -1757,9 +1761,6 @@ exp_test(int n)
 	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
 	v = exp_eval(exp_operation(EQ, exp_operation('/', exp_test_int_3, exp_test_float_3), exp_test_int_2), NULL);
 	TEST_ASSERT(v == EXP_TRUE, "exp_eval failed");
-
-	// Cleanup
-	exp_clear();
 
 	return;
 }
