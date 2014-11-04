@@ -60,6 +60,7 @@ integer		[+-]?[0-9]+
 float		[+-]?[0-9]+\.[0-9]+
 string		\"[^\"]*\"
 addr		(([0-9]{1,3}\.){3}[0-9]{1,3}|[0-9a-fA-F:]{1,34}:[0-9a-fA-F]{1,4})
+macro		\{[^}]+\}
 
 comment		#.*$
 
@@ -126,6 +127,7 @@ comment		#.*$
 {addr}		return parser_tok_addr(ADDR, &acl_lval.ss, acl_text);
 {id}		return parser_tok_str(ID, &acl_lval.str, acl_text);
 {variable}	return parser_tok_str(VARIABLE, &acl_lval.str, acl_text + 1);
+{macro}		return parser_tok_str(MACRO, &acl_lval.str, acl_text);
 
 {comment}	;
 [ \t]		;
