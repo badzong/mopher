@@ -53,8 +53,8 @@ static milter_symbol_t milter_symbols[] = {
 	{ "recipient_list", MS_OFF_DATA },
 	{ "header_name", MS_HEADER },
 	{ "header_value", MS_HEADER },
-	{ "header", MS_OFF_EOH },
-	{ "header_size", MS_OFF_EOH },
+	{ "headers", MS_OFF_EOH },
+	{ "headers_size", MS_OFF_EOH },
 	{ "message_id", MS_OFF_EOH },
 	{ "queue_id", MS_OFF_DATA },
 	{ "subject", MS_OFF_EOH },
@@ -859,8 +859,8 @@ milter_eoh(SMFICTX * ctx)
 	}
 
 	if (vtable_setv(mp->mp_table,
-	    VT_STRING, "header", mp->mp_header, VF_KEEP,
-	    VT_INT, "header_size", &mp->mp_headerlen,
+	    VT_STRING, "headers", mp->mp_header, VF_KEEP,
+	    VT_INT, "headers_size", &mp->mp_headerlen,
 		VF_KEEPNAME | VF_COPYDATA,
 	    VT_NULL))
 	{
@@ -1387,8 +1387,8 @@ milter_dump_message(char *buffer, int size, var_t *mailspec)
 	char *header, *body;
 	int total;
 
-	if (acl_symbol_dereference(mailspec, "header", &header,
-	    "header_size", &header_size, "body", &body,
+	if (acl_symbol_dereference(mailspec, "headers", &header,
+	    "headers_size", &header_size, "body", &body,
 	    "body_size", &body_size, NULL))
 	{
 		log_error("milter_dump_message: vtable_dereference failed");
