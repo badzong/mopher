@@ -79,7 +79,7 @@ test_in_argv(test_handler_t *handler, int optind, int argc, char *argv[])
 static void
 test_thread(test_data_t *data)
 {
-	data->td_handler->th_callback(data->td_number);
+	data->td_handler->th_test(data->td_number);
 	return;
 }
 
@@ -101,6 +101,7 @@ test_threads(int threads, test_handler_t *handler)
 	pthread_t *thread;
 	ll_t thread_list;
 	test_data_t *data;
+	char buffer[BUFLEN];
 
 	stat = test_tests;
 	ll_init(&thread_list);
@@ -136,7 +137,15 @@ test_threads(int threads, test_handler_t *handler)
 	tests_run = test_tests - stat;
 	tests_per_thread = tests_run / threads;
 
-	log_error("%-12s: %4d OK (%d/thread)", handler->th_name, tests_run,
+
+	if (handler->th_descr)
+	{
+		snprintf(buffer, sizeof buffer, "%s/%s", handler->th_name,
+			handler->th_descr);
+	}
+	
+	log_error("%-23s: %4d OK (%d/thread)",
+		handler->th_descr? buffer: handler->th_name, tests_run,
 		tests_per_thread);
 }
 
@@ -147,18 +156,18 @@ test_run(int optind, int argc, char **argv)
 	test_handler_t *handler;
 
 	test_handler_t multi_threaded_tests[] = {
-		{"ll.c", ll_test},
-		{"sht.c", sht_test},
-		{"util.c", util_test},
-		{"vp.c", vp_test},
-		{ NULL, NULL }
-	};
-
-	test_handler_t single_threaded_tests[] = {
-		{"regdom.c", regdom_test},
-		{"exp.c", exp_test},
-		{"dbt.c", dbt_test},
-		{ NULL, NULL }
+		{"ll.c", NULL, NULL, ll_test, NULL},
+		{"sht.c", NULL, NULL, sht_test, NULL},
+		{"util.c", NULL, NULL, util_test, NULL},
+		{"vp.c", NULL, NULL, vp_test, NULL},
+		{"regdom.c", NULL, regdom_init, regdom_test, regdom_clear},
+		{"exp.c", NULL, exp_test_init, exp_test, exp_clear},
+                {"dbt.c", "memdb.c (stage 1)", dbt_test_memdb_init, dbt_test_stage1, dbt_test_clear },
+                {"dbt.c", "bdb.c (stage 1)", dbt_test_bdb_init, dbt_test_stage1, dbt_test_clear },
+                {"dbt.c", "bdb.c (stage 2)", dbt_test_bdb_init, dbt_test_stage2, dbt_test_clear },
+                {"dbt.c", "mysql.c (stage 1)", dbt_test_mysql_init, dbt_test_stage1, dbt_test_clear },
+                {"dbt.c", "mysql.c (stage 2)", dbt_test_mysql_init, dbt_test_stage2, dbt_test_clear },
+		{ NULL, NULL, NULL, NULL, NULL }
 	};
 
 	log_init("mopher test", LOG_ERR, 0, 1);
@@ -167,20 +176,24 @@ test_run(int optind, int argc, char **argv)
 	// Multi-threaded tests
 	for(handler = multi_threaded_tests; handler->th_name; ++handler)
 	{
-		if (test_in_argv(handler, optind, argc, argv))
+		if (!test_in_argv(handler, optind, argc, argv))
 		{
-			// Start test
-			test_threads(TEST_THREADS, handler);
+			continue;
 		}
-	}
 
-	// Single threaded tests
-	for(handler = single_threaded_tests; handler->th_name; ++handler)
-	{
-		if (test_in_argv(handler, optind, argc, argv))
+		// Initialize test
+		if (handler->th_init != NULL)
 		{
-			// Start test
-			test_threads(1, handler);
+			handler->th_init();
+		}
+
+		// Start test
+		test_threads(TEST_THREADS, handler);
+
+		// Finalize test
+		if (handler->th_clear != NULL)
+		{
+			handler->th_clear();
 		}
 	}
 

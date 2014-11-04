@@ -318,22 +318,22 @@ error:
 
 
 #ifdef DEBUG
+
+struct regdom_test_case {
+	char *rtc_test;
+	char *rtc_exp;
+	int   rtc_last;
+};
+
 void
 regdom_test(int n)
 {
-	struct regdom_test_case {
-		char *rtc_test;
-		char *rtc_exp;
-		int   rtc_last;
-	};
 	struct regdom_test_case *rtc;
 	struct regdom_test_case test_domains[] = {
 #include "regdom_test.c"
 		{NULL, NULL, 1}
 	};
 	char *test, *exp, *got, *dup;
-
-	regdom_init();
 
 	for (rtc = test_domains; !rtc->rtc_last; ++rtc)
 	{
@@ -363,8 +363,6 @@ regdom_test(int n)
 			free(dup);
 		}
 	}
-
-	regdom_clear();
 
 	return;
 }
