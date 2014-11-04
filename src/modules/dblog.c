@@ -112,7 +112,7 @@ dblog_init(void)
 		"recipients",		VT_INT,		VF_KEEPNAME,
 		"recipient_list_str",	VT_STRING,	VF_KEEPNAME,
 		"message_size",		VT_INT,		VF_KEEPNAME,
-		"queueid",		VT_STRING,	VF_KEEPNAME,
+		"queue_id",		VT_STRING,	VF_KEEPNAME,
 		"message_id",		VT_STRING,	VF_KEEPNAME,
 		"acl_matched",		VT_INT,		VF_KEEPNAME,
 		"acl_stage_matched",	VT_INT,		VF_KEEPNAME,
