@@ -74,15 +74,18 @@ A condition is an
 An expression is recursively defined as one or more expressions,
 associated by 
 .Em arithmetic ,
-.Em relational
+.Em relational ,
+.Em pattern ,
+.Em list
 and
 .Em boolean operators .
 Basic expressions are
 .Em constants ,
 .Em variables ,
-.Em symbols
+.Em symbols ,
+.Em functions
 and
-.Em functions .
+.Em lists .
 .Pp
 A
 .Em constant
@@ -119,17 +122,25 @@ A
 .Em variable
 begins with a
 .Ql $
-and is a resolvable entity that may be set at any milter stage.
+and is a resolvable entity that may be set at any milter stage
+.Pq see Sx ACTIONS Ns : Em set No action .
 .Pp
 A
 .Em symbol
 is a resolvable entity that may or may not be available at a particular
-milter stage.
+milter stage
+.Pq see Sx SYMBOLS .
 .Pp
 A
 .Em function
 is a resolvable entity that is always available and has zero or more
-parameters.
+parameters
+.Pq see Sx FUNCTIONS .
+.Pp
+A
+.Em list
+is a searchable entity with zero or more items
+.Pq see Sx LISTS .
 .Pp
 Variables, symbols and functions will only be resolved if they appear in
 an expression that is being evaluated.
@@ -146,19 +157,24 @@ null, the result will be unknown and therefore null.
 .Ql + ,
 .Ql - ,
 .Ql * ,
-.Ql /
+.Ql / ,
+.Ql %
 .Pc
 on integers and floats work as one might expect.
 Implicit type conversion will take place if necessary and possible.
 Division
 .Pq Ql /
-of integers may yield truncated results while addition
+of integers may yield truncated results, addition
 .Pq Ql +
-of strings will concatenate them:
+of strings will concatenate them and modulo reduction
+.Pq Ql %
+is only defined on integers:
 .Bd -literal -offset indent
 "foo" + "bar"	# "foobar"
 3 / 2		# 1
 3 / 2.0		# 1.5
+3 % 2		# 1
+3 % 2.0		# error
 .Ed
 .Pp
 .Em Relational operations
@@ -172,6 +188,30 @@ of strings will concatenate them:
 .Pc
 on integers, floats and strings work as one might expect.
 Implicit type conversion will take place if necessary and possible.
+.Pp
+.Em Pattern operators
+.Po
+.Ql ~ ,
+.Ql !~
+.Pc
+associate two string operands and interpret the operand on the
+right-hand side as a sequence pattern described using POSIX Extended
+Regular Expressions.
+The pattern is case-sensitive if it contains at least one upper case
+letter, case-insensitive otherwise.
+.Pp
+.Ql ~
+evaluates true if the string operand on the left-hand side
+matches the pattern, false othervise.
+.Ql !~
+operates the same way, but inverts the evaluation result.
+.Pp
+.Em List operators
+.Po
+.Ql in
+.Pc
+are only defined on lists
+.Pq see Sx LISTS .
 .Pp
 .Em Boolean operators
 .Po
@@ -223,16 +263,28 @@ and
 .It true  Ta true  Ta true  Ta true
 .El
 .Pp
-Evaluating an integer or a float will yield false if the particular
-value is 0, true otherwise.
-Evaluating a string will yield false if its value is
+Evaluating an
+.Em integer
+or a
+.Em float
+will yield false if the particular value is 0, true otherwise.
+.Pp
+Evaluating a
+.Em string
+will yield false if its value is
 .Qq
 .Pq empty
 or
 .Qq 0 ,
 true otherwise.
-Evaluating an address will yield false if the address is invalid, true
-otherwise.
+.Pp
+Evaluating an
+.Em address
+will yield false if the address is invalid, true otherwise.
+.Pp
+Evaluating a
+.Em list
+will yield false if the list is empty, true otherwise.
 .Pp
 .Em Note :
 During the evaluation of any rule, action will only be taken if
@@ -351,7 +403,7 @@ The log action will log any custom message:
 #
 log "New connection from " + hostname + "!"
 .Ed
-.It Sy set Em exp
+.It Sy set $ Ns Em id No = Em exp
 The set action will set a variable:
 .Bd -literal -offset indent
 # set $flag to 1
@@ -500,6 +552,38 @@ The evaluation of definitions is not limited in any way.
 Definitions may contain symbols, functions, operators or anything
 else that also makes up expressions as defined in the beginning of this
 document.
+.Sh LISTS
+A list is a searchable entity containing zero or more objects of any
+type.
+In
+.Nm ,
+a comma-separated list of expressions enclosed in parentheses
+constitutes a list:
+.Bd -literal -offset indent
+# list containing strings, floats and addresses
+#
+("foo", "1", "", 100 + 1.1, ::1, 127.0.0.1)
+.Ed
+.Pp
+Lists may be assigned to variables and searched with the
+.Ql in
+operator:
+.Bd -literal -offset indent
+# assign list to $list
+#
+set $list = ("foo", "1", "", 100 + 1.1, ::1, 127.0.0.1)
+
+# search $list for items
+#
+"foo" in $list	# true
+100   in $list	# false
+101.1 in $list	# true
+::1   in $list	# true
+.Ed
+.Pp
+While there may be few use cases for custom lists,
+.Xr mopherd 8
+often uses lists for certain multi-valued symbols.
 .Sh SYMBOLS
 The following list describes symbols known to
 .Xr mopherd 8 .
@@ -686,7 +770,7 @@ The following list describes functions available in
 .Pp
 .Em Note :
 While all parameters are expressions, some functions expect a
-\%particular type after evaluation.
+\%particular type after parameter evaluation.
 .Bl -tag -width 4n
 .\"
 .It Fn cast type exp
