@@ -1,4 +1,4 @@
-/* Generated file. See Makefile.dist for details */
+/* Generated file, see make/mk.admin for details. */
 // Any copyright is dedicated to the Public Domain.
 // http://creativecommons.org/publicdomain/zero/1.0/
 
