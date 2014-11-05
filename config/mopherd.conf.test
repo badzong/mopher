@@ -1,0 +1,31 @@
+cleanup_interval      = 1
+greylist_visa         = 2
+greylist_deadline     = 3
+
+dblog = 1
+dblog_expire = 1
+
+table[state]          = {
+    driver            = "bdb",
+    path              = "/tmp/state.bdb"
+}
+
+table[greylist]       = {
+    driver            = "bdb",
+    path              = "/tmp/greylist.bdb"
+}
+
+table[counter_relay]  = {
+    driver            = "bdb",
+    path              = "/tmp/counter_relay.bdb"
+}
+
+table[counter_penpal] = {
+    driver            = "bdb",
+    path              = "/tmp/counter_penpal.bdb"
+}
+
+table[dblog] = {
+    driver            = "bdb",
+    path              = "/tmp/dblog.bdb"
+}
