@@ -46,4 +46,6 @@ int msgmod_add_rcpt(void *ctx, int argc, var_t *args[]);
 int msgmod_delete_rcpt(void *ctx, int argc, var_t *args[]);
 int msgmod_change_body(void *ctx, int argc, var_t *args[]);
 
+void msgmod_test(int n);
+
 #endif /* _MSGMOD_H_ */

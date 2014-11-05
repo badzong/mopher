@@ -73,8 +73,6 @@ msgmod_get_callback(msgmod_mod_t mod, msgmod_target_t target)
 		break;
 	}
 
-	parser_error("syntax error (msgmod callback)");
-
 	return NULL;
 }
 
@@ -94,7 +92,10 @@ msgmod_create(msgmod_mod_t mod, msgmod_target_t target, ...)
 	mm->mm_callback = msgmod_get_callback(mod, target);
 	if (mm->mm_callback == NULL)
 	{
-		log_die(EX_SOFTWARE, "msgmod_create: msgmod_get_callback failed");
+		parser_error("syntax error (msgmod callback)");
+
+		// Not reached.
+		return NULL;
 	}
 	
 	mm->mm_args = ll_create();
@@ -473,3 +474,34 @@ error:
 
 	return action;
 }
+
+#ifdef DEBUG
+
+void
+msgmod_test(int n)
+{
+	TEST_ASSERT(msgmod_get_target(strdup("from")) == MT_FROM, "msgmod_get_target returned wrong valued");
+	TEST_ASSERT(msgmod_get_target(strdup("rcpt")) == MT_RCPT, "msgmod_get_target returned wrong valued");
+	TEST_ASSERT(msgmod_get_target(strdup("header")) == MT_HEADER, "msgmod_get_target returned wrong valued");
+	TEST_ASSERT(msgmod_get_target(strdup("body")) == MT_BODY, "msgmod_get_target returned wrong valued");
+	TEST_ASSERT(msgmod_get_target(strdup("FROM")) == MT_FROM, "msgmod_get_target returned wrong valued");
+	TEST_ASSERT(msgmod_get_target(strdup("Header")) == MT_HEADER, "msgmod_get_target returned wrong valued");
+
+	TEST_ASSERT(msgmod_get_callback(MO_ADD, MT_HEADER) == msgmod_add_header, "msgmod_get_callback returned wrong callback");
+	TEST_ASSERT(msgmod_get_callback(MO_CHG, MT_HEADER) == msgmod_change_header, "msgmod_get_callback returned wrong callback");
+	TEST_ASSERT(msgmod_get_callback(MO_DEL, MT_HEADER) == msgmod_delete_header, "msgmod_get_callback returned wrong callback");
+	TEST_ASSERT(msgmod_get_callback(MO_INS, MT_HEADER) == msgmod_insert_header, "msgmod_get_callback returned wrong callback");
+	TEST_ASSERT(msgmod_get_callback(MO_CHG, MT_FROM) == msgmod_change_from, "msgmod_get_callback returned wrong callback");
+	TEST_ASSERT(msgmod_get_callback(MO_ADD, MT_RCPT) == msgmod_add_rcpt, "msgmod_get_callback returned wrong callback");
+	TEST_ASSERT(msgmod_get_callback(MO_DEL, MT_RCPT) == msgmod_delete_rcpt, "msgmod_get_callback returned wrong callback");
+	TEST_ASSERT(msgmod_get_callback(MO_CHG, MT_BODY) == msgmod_change_body, "msgmod_get_callback returned wrong callback");
+
+	TEST_ASSERT(msgmod_get_callback(MO_ADD, MT_BODY) == NULL, "msgmod_get_callback returned wrong callback");
+	TEST_ASSERT(msgmod_get_callback(MO_ADD, MT_FROM) == NULL, "msgmod_get_callback returned wrong callback");
+	TEST_ASSERT(msgmod_get_callback(MO_CHG, MT_RCPT) == NULL, "msgmod_get_callback returned wrong callback");
+	TEST_ASSERT(msgmod_get_callback(MO_INS, MT_FROM) == NULL, "msgmod_get_callback returned wrong callback");
+
+	return;
+}
+
+#endif
