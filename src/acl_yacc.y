@@ -45,15 +45,13 @@ int acl_lex(void);
 %type <mm_t>	target
 
 %left ','
-%left IS_NULL
-%left AND OR
+%right '!'
 %left EQ NE LE GE '<' '>'
+%left AND OR
 %left '+' '-'
 %left '*' '/' '%'
 %right '='
-%right '!'
-%right '~' NR
-%right IN
+%nonassoc IS_NULL, IN, '~', NR
 
 %%
 
