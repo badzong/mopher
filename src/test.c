@@ -160,6 +160,7 @@ test_run(int optind, int argc, char **argv)
 		{"sht.c", NULL, NULL, sht_test, NULL},
 		{"util.c", NULL, NULL, util_test, NULL},
 		{"vp.c", NULL, NULL, vp_test, NULL},
+		{"msgmod.c", NULL, NULL, msgmod_test, NULL},
 		{"regdom.c", NULL, regdom_init, regdom_test, regdom_clear},
 		{"exp.c", NULL, exp_test_init, exp_test, exp_clear},
                 {"dbt.c", "memdb.c (stage 1)", dbt_test_memdb_init, dbt_test_stage1, dbt_test_clear },
