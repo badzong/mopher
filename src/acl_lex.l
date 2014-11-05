@@ -19,16 +19,12 @@ visa		visa
 delay		delay
 attempts	attempts
 add		add
-header		header
 value		value
 insert		insert
 change		change
 index		index
-from		from
 esmtp		esmtp
 jump		jump
-rcpt		rcpt
-body		body
 delete		delete
 reply		reply
 xcode		xcode
@@ -45,7 +41,7 @@ and		&&
 or		\|\|
 nr		!~
 
-op		[-+*/!()<>=,~]
+op		[-+*/!()<>=,~%]
 multiplier	[smhdwMy]
 cbr		[{}]
 
@@ -98,16 +94,12 @@ comment		#.*$
 {or}		return OR;
 {nr}		return NR;
 {add}		return ADD;
-{header}	return HEADER;
 {value}		return VALUE;
 {insert}	return INSERT;
 {change}	return CHANGE;
 {index}		return INDEX;
-{from}		return FROM;
 {esmtp}		return ESMTP;
-{rcpt}		return RCPT;
 {jump}		return JUMP;
-{body}		return BODY;
 {delete}	return DELETE;
 {reply}		return REPLY;
 {xcode}		return XCODE;

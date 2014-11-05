@@ -1,43 +1,85 @@
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 #include <mopher.h>
 
-
-static var_type_t msgmod_args_addhdr[] = { VT_STRING, VT_STRING, VT_NULL };
-static var_type_t msgmod_args_chghdr[] = { VT_STRING, VT_STRING, VT_NULL };
-static var_type_t msgmod_args_chghdr_x[] = { VT_STRING, VT_STRING, VT_INT,
-    VT_NULL };
-static var_type_t msgmod_args_delhdr[] = { VT_STRING, VT_NULL };
-static var_type_t msgmod_args_inshdr[] = { VT_STRING, VT_STRING, VT_NULL };
-static var_type_t msgmod_args_inshdr_x[] = { VT_STRING, VT_STRING, VT_INT,
-    VT_NULL };
-static var_type_t msgmod_args_chgfrom[] = { VT_STRING, VT_NULL };
-static var_type_t msgmod_args_chgfrom_x[] = { VT_STRING, VT_STRING, VT_NULL };
-static var_type_t msgmod_args_addrcpt[] = { VT_STRING, VT_NULL };
-static var_type_t msgmod_args_addrcpt_x[] = { VT_STRING, VT_STRING, VT_NULL };
-static var_type_t msgmod_args_delrcpt[] = { VT_STRING, VT_NULL };
-static var_type_t msgmod_args_chgbody[] = { VT_STRING, VT_NULL };
-
-
-static var_type_t *msgmod_args[] = {
-    	msgmod_args_addhdr,		/* MM_ADDHDR, */
-    	msgmod_args_chghdr,		/* MM_CHGHDR, */
-    	msgmod_args_chghdr_x,		/* MM_CHGHDR_X, */
-    	msgmod_args_delhdr,		/* MM_DELHDR, */
-    	msgmod_args_inshdr,		/* MM_INSHDR, */
-    	msgmod_args_inshdr_x,		/* MM_INSHDR_X, */
-    	msgmod_args_chgfrom,		/* MM_CHGFROM, */
-    	msgmod_args_chgfrom_x,		/* MM_CHGFROM_X, */
-    	msgmod_args_addrcpt,		/* MM_ADDRCPT, */
-    	msgmod_args_addrcpt_x,		/* MM_ADDRCPT_X, */
-    	msgmod_args_delrcpt,		/* MM_DELRCPT, */
-    	msgmod_args_chgbody		/* MM_CHGBODY, */
+static char *msgmod_targets[] = {
+	"from",
+	"rcpt",
+	"header",
+	"body",
+	NULL
 };
 
+msgmod_target_t
+msgmod_get_target(char *id)
+{
+	char **p;
+	int i = 0;
+
+	for (p = msgmod_targets; *p != NULL; ++p, ++i)
+	{
+		if(strcasecmp(*p, id) == 0)
+		{
+			free(id);
+			return i;
+		}
+	}
+
+	parser_error("bad keyword: %s", id);
+
+	return -1;
+}
+
+msgmod_callback_t
+msgmod_get_callback(msgmod_mod_t mod, msgmod_target_t target)
+{
+	switch(mod)
+	{
+	case MO_ADD:
+		switch(target)
+		{
+			case MT_RCPT: return msgmod_add_rcpt;
+			case MT_HEADER: return msgmod_add_header;
+			default: break;
+		}
+		break;
+	case MO_INS:
+		switch(target)
+		{
+			case MT_HEADER: return msgmod_insert_header;
+			default: break;
+		}
+		break;
+	case MO_CHG:
+		switch(target)
+		{
+			case MT_FROM: return msgmod_change_from;
+			case MT_HEADER: return msgmod_change_header;
+			case MT_BODY: return msgmod_change_body;
+			default: break;
+		}
+		break;
+	case MO_DEL:
+		switch(target)
+		{
+			case MT_RCPT: return msgmod_delete_rcpt;
+			case MT_HEADER: return msgmod_delete_header;
+			default: break;
+		}
+		break;
+	default:
+		break;
+	}
+
+	parser_error("syntax error (msgmod callback)");
+
+	return NULL;
+}
 
 msgmod_t *
-msgmod_create(msgmod_type_t type, ...)
+msgmod_create(msgmod_mod_t mod, msgmod_target_t target, ...)
 {
 	msgmod_t *mm;
 	va_list ap;
@@ -46,30 +88,271 @@ msgmod_create(msgmod_type_t type, ...)
 	mm = (msgmod_t *) malloc(sizeof (msgmod_t));
 	if (mm == NULL)
 	{
-		log_sys_die(EX_OSERR, "msgmod: malloc");
+		log_sys_die(EX_OSERR, "msgmod_create: malloc");
 	}
 
-	mm->mm_type = type;
+	mm->mm_callback = msgmod_get_callback(mod, target);
+	if (mm->mm_callback == NULL)
+	{
+		log_die(EX_SOFTWARE, "msgmod_create: msgmod_get_callback failed");
+	}
 	
 	mm->mm_args = ll_create();
 	if (mm->mm_args == NULL)
 	{
-		log_die(EX_SOFTWARE, "msgmod: ll_create failed");
+		log_die(EX_SOFTWARE, "msgmod_create: ll_create failed");
 	}
-		
-	va_start(ap, type);
 
+	va_start(ap, target);
 	while ((exp = va_arg(ap, exp_t *)))
 	{
 		if (LL_INSERT(mm->mm_args, exp) == -1)
 		{
-			log_die(EX_SOFTWARE, "msgmod: LL_INSERT failed");
+			log_die(EX_SOFTWARE, "msgmod_create: LL_INSERT failed");
 		}
 	}
 
 	return mm;
 }
 
+int
+msgmod_add_header(void *ctx, int argc, var_t *args[])
+{
+	char *headerf;
+	char *headerv;
+
+	if (argc != 2)
+	{
+		log_error("msgmod_add_header: bad argument count");
+		return -1;
+	}
+
+	headerf = args[0]->v_data;
+	headerv = args[1]->v_data;
+
+	if (smfi_addheader(ctx, headerf, headerv) != MI_SUCCESS)
+	{
+		log_error("msgmod_add_header: smfi_addheader failed");
+		return -1;
+	}
+
+	log_debug("msgmod_add_header: %s: %s", headerf, headerv);
+
+	return 0;
+}
+
+
+int
+msgmod_change_header(void *ctx, int argc, var_t *args[])
+{
+	char *headerf;
+	char *headerv;
+	long index = 1;
+
+	if (argc < 2 || argc > 3)
+	{
+		log_error("msgmod_change_header: bad argument count");
+		return -1;
+	}
+
+	headerf = args[0]->v_data;
+	headerv = args[1]->v_data;
+
+	if (argc == 3)
+	{
+		index = atol(args[2]->v_data);
+	}
+
+	if (smfi_chgheader(ctx, headerf, index, headerv) != MI_SUCCESS)
+	{
+		log_error("msgmod_change_header: smfi_chgheader failed");
+		return -1;
+	}
+
+	log_debug("msgmod_change_header: %s: %s (%d)", headerf, headerv,
+		index);
+
+	return 0;
+}
+
+
+int
+msgmod_delete_header(void *ctx, int argc, var_t *args[])
+{
+	char *headerf;
+
+	if (argc != 1)
+	{
+		log_error("msgmod_delete_header: bad argument count");
+		return -1;
+	}
+
+	headerf = args[0]->v_data;
+
+	if (smfi_chgheader(ctx, headerf, 1, NULL) != MI_SUCCESS)
+	{
+		log_error("msgmod_delete_header: smfi_chgheader failed");
+		return -1;
+	}
+
+	log_debug("msgmod_delete_header: %s (1)", headerf);
+
+	return 0;
+}
+
+
+int
+msgmod_insert_header(void *ctx, int argc, var_t *args[])
+{
+	char *headerf;
+	char *headerv;
+	long index = 0;
+
+	if (argc < 2 || argc > 3)
+	{
+		log_error("msgmod_insert_header: bad argument count");
+		return -1;
+	}
+
+	headerf = args[0]->v_data;
+	headerv = args[1]->v_data;
+
+	if (argc == 3)
+	{
+		index = atol(args[2]->v_data);
+	}
+
+	if (smfi_insheader(ctx, index, headerf, headerv) != MI_SUCCESS)
+	{
+		log_error("msgmod_insert_header: smfi_insheader failed");
+		return -1;
+	}
+
+	log_debug("msgmod_insert_header: %s: %s (%d)", headerf, headerv,
+		index);
+
+	return 0;
+}
+
+int
+msgmod_change_from(void *ctx, int argc, var_t *args[])
+{
+	char *from;
+	char *esmtp_args = NULL;
+
+	if (argc < 1 || argc > 2)
+	{
+		log_error("msgmod_change_from: bad argument count");
+		return -1;
+	}
+
+	from = args[0]->v_data;
+
+	if (argc == 2)
+	{
+		esmtp_args = args[1]->v_data;
+	}
+
+	if (smfi_chgfrom(ctx, from, esmtp_args) != MI_SUCCESS)
+	{
+		log_error("msgmod_change_from: smfi_chgfrom failed");
+		return -1;
+	}
+
+
+	log_debug("msgmod_change_from: %s %s", from,
+		esmtp_args? esmtp_args: "");
+
+	return 0;
+}
+	
+
+int
+msgmod_add_rcpt(void *ctx, int argc, var_t *args[])
+{
+	char *rcpt;
+	char *esmtp_args = NULL;
+	int r;
+
+	if (argc < 1 || argc > 2)
+	{
+		log_error("msgmod_add_rcpt: bad argument count");
+		return -1;
+	}
+
+	rcpt = args[0]->v_data;
+
+	if (argc == 2)
+	{
+		esmtp_args = args[1]->v_data;
+		r = smfi_addrcpt_par(ctx, rcpt, esmtp_args);
+	}
+	else
+	{
+		r = smfi_addrcpt(ctx, rcpt);
+	}
+
+	if (r != MI_SUCCESS)
+	{
+		log_error("msgmod_add_rcpt: smfi_addrcpt failed");
+		return -1;
+	}
+
+	log_debug("msgmod_add_rcpt: %s %s", rcpt,
+		esmtp_args? esmtp_args: "");
+
+	return 0;
+}
+
+
+int
+msgmod_delete_rcpt(void *ctx, int argc, var_t *args[])
+{
+	char *rcpt;
+
+	if (argc != 1)
+	{
+		log_error("msgmod_delete_rcpt: bad argument count");
+		return -1;
+	}
+
+	rcpt = args[0]->v_data;
+
+	if (smfi_delrcpt(ctx, rcpt) != MI_SUCCESS)
+	{
+		log_error("mmsgmod_delete_rcpt: smfi_delrcpt failed");
+		return -1;
+	}
+
+	log_debug("mmsgmod_delete_rcpt: %s", rcpt);
+
+	return 0;
+}
+
+
+int
+msgmod_change_body(void *ctx, int argc, var_t *args[])
+{
+	char *body;
+	int size;
+
+	if (argc != 1)
+	{
+		log_error("msgmod_change_nody: bad argument count");
+		return -1;
+	}
+
+	body = args[0]->v_data;
+	size = strlen(body);
+
+	if (smfi_replacebody(ctx, (void *) body, size) != MI_SUCCESS)
+	{
+		log_error("msgmod_change_body: smfi_replacebody failed");
+		return -1;
+	}
+
+	return 0;
+}
 
 void
 msgmod_delete(void *data)
@@ -94,11 +377,9 @@ msgmod(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 	int size;
 	var_t *v, *copy;
 	int i;
-	VAR_INT_T *x;
 	exp_t *exp;
 	ll_t *ll;
 	ll_entry_t *pos;
-	var_type_t type;
 
 	/*
 	 * Get milter ctx pointer
@@ -143,19 +424,10 @@ msgmod(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 			goto error;
 		}
 
-		/*
-		 * Check argument type (cast if neccessary)
-		 */
-		type = msgmod_args[mm->mm_type][i];
-		if (type == VT_NULL)
+		// Cast all aruments to VT_STRING
+		if (v->v_type != VT_STRING)
 		{
-			log_error("msgmod: bad argument count");
-			goto error;
-		}
-
-		if (type != v->v_type)
-		{
-			copy = var_cast_copy(type, v);
+			copy = var_cast_copy(VT_STRING, v);
 			if (copy == NULL)
 			{
 				log_error("msgmod: var_cast_copy failed");
@@ -176,174 +448,13 @@ msgmod(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 		args[i] = v;
 	}
 
-	switch (mm->mm_type)
+	if (mm->mm_callback(ctx, argc, args))
 	{
-	case MM_ADDHDR:
-		if (smfi_addheader(ctx, args[0]->v_data, args[1]->v_data)
-		    != MI_SUCCESS)
-		{
-			log_error("msgmod: smfi_addheader failed");
-			goto error;
-		}
-
-		log_debug("msgmod: add header: %s", args[0]->v_data);
-
-		break;
-
-	case MM_CHGHDR:
-		if (smfi_chgheader(ctx, args[0]->v_data, 1, args[1]->v_data)
-		    != MI_SUCCESS)
-		{
-			log_error("msgmod: smfi_chgheader failed");
-			goto error;
-		}
-
-		log_debug("msgmod: change header: %s (1)", args[0]->v_data);
-
-		break;
-
-
-	case MM_CHGHDR_X:
-		x = args[3]->v_data;
-
-		if (smfi_chgheader(ctx, args[0]->v_data, *x, args[1]->v_data)
-		    != MI_SUCCESS)
-		{
-			log_error("msgmod: smfi_chgheader failed");
-			goto error;
-		}
-
-		log_debug("msgmod: change header: %s (%ld)", args[0]->v_data,
-		    *x);
-
-		break;
-	
-
-	case MM_DELHDR:
-		if (smfi_chgheader(ctx, args[0]->v_data, 1, NULL) != MI_SUCCESS)
-		{
-			log_error("msgmod: smfi_chgheader failed");
-			goto error;
-		}
-
-		log_debug("msgmod: delete header: %s (1)", args[0]->v_data);
-
-		break;
-
-
-	case MM_INSHDR:
-		if (smfi_insheader(ctx, 0, args[0]->v_data, args[1]->v_data)
-		    != MI_SUCCESS)
-		{
-			log_error("msgmod: smfi_insheader failed");
-			goto error;
-		}
-
-		log_debug("msgmod: insert header: %s (0)", args[0]->v_data);
-
-		break;
-	
-
-	case MM_INSHDR_X:
-		x = args[3]->v_data;
-
-		if (smfi_insheader(ctx, *x, args[0]->v_data, args[1]->v_data)
-		    != MI_SUCCESS)
-		{
-			log_error("msgmod: smfi_insheader failed");
-			goto error;
-		}
-
-		log_debug("msgmod: insert header: %s (%ld)", args[0]->v_data,
-		    *x);
-
-		break;
-	
-
-	case MM_CHGFROM:
-		if (smfi_chgfrom(ctx, args[0]->v_data, NULL) != MI_SUCCESS)
-		{
-			log_error("msgmod: smfi_chgfrom failed");
-			goto error;
-		}
-
-		log_debug("msgmod: change from: %s", args[0]->v_data);
-
-		break;
-	
-
-	case MM_CHGFROM_X:
-		if (smfi_chgfrom(ctx, args[0]->v_data, args[1]->v_data)
-		    != MI_SUCCESS)
-		{
-			log_error("msgmod: smfi_chgfrom failed");
-			goto error;
-		}
-
-		log_debug("msgmod: change from: %s (%s)", args[0]->v_data,
-		    args[1]->v_data);
-
-		break;
-	
-
-	case MM_ADDRCPT:
-		if (smfi_addrcpt(ctx, args[0]->v_data) != MI_SUCCESS)
-		{
-			log_error("msgmod: smfi_addrcpt failed");
-			goto error;
-		}
-
-		log_debug("msgmod: add rcpt: %s", args[0]->v_data);
-
-		break;
-	
-
-	case MM_ADDRCPT_X:
-		if (smfi_addrcpt_par(ctx, args[0]->v_data, args[1]->v_data)
-		    != MI_SUCCESS)
-		{
-			log_error("msgmod: smfi_addrcpt_par failed");
-			goto error;
-		}
-
-		log_debug("msgmod: add rcpt: %s (%s)", args[0]->v_data,
-		    args[1]->v_data);
-
-		break;
-	
-
-	case MM_DELRCPT:
-		if (smfi_delrcpt(ctx, args[0]->v_data) != MI_SUCCESS)
-		{
-			log_error("msgmod: smfi_delrcpt failed");
-			goto error;
-		}
-
-		log_debug("msgmod: del rcpt: %s", args[0]->v_data);
-
-		break;
-	
-
-	case MM_CHGBODY:
-		size = strlen(args[0]->v_data);
-		if (smfi_replacebody(ctx, args[0]->v_data, size) != MI_SUCCESS)
-		{
-			log_error("msgmod: smfi_replacebody failed");
-			goto error;
-		}
-
-		log_debug("msgmod: change body: %ld bytes", size);
-
-		break;
-	
-
-	default:
-		log_error("msgmod: bad type");
+		log_error("msgmod: mm_callback failed");
 		goto error;
 	}
 
 	action = ACL_NONE;
-
 
 error:
 

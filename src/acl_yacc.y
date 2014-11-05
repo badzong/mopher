@@ -27,6 +27,8 @@ int acl_lex(void);
 	greylist_t		*gl;
 	acl_log_t		*al;
 	msgmod_t		*mm;
+	msgmod_mod_t		mm_m;
+	msgmod_target_t		mm_t;
 }
 
 %type <str>	STRING ID VARIABLE MACRO jump
@@ -38,14 +40,16 @@ int acl_lex(void);
 %type <ar>	reply
 %type <gl>	greylist
 %type <al>	log
-%type <mm>	mod
+%type <mm>	msgmod
+%type <mm_m>	mod
+%type <mm_t>	target
 
 %left ','
 %left IS_NULL
 %left AND OR
 %left EQ NE LE GE '<' '>'
 %left '+' '-'
-%left '*' '/'
+%left '*' '/' '%'
 %right '='
 %right '!'
 %right '~' NR
@@ -75,7 +79,7 @@ terminal	: CONTINUE		{ $$ = acl_action(ACL_CONTINUE, NULL); }
 		| tarpit		{ $$ = acl_action(ACL_TARPIT, $1); }
 		| log			{ $$ = acl_action(ACL_LOG, $1); }
 		| set			{ $$ = acl_action(ACL_SET, $1); }
-		| mod			{ $$ = acl_action(ACL_MOD, $1); }
+		| msgmod		{ $$ = acl_action(ACL_MOD, $1); }
 		| jump			{ $$ = acl_action(ACL_JUMP, $1); }
 		| pipe			{ $$ = acl_action(ACL_PIPE, $1); }
 		;
@@ -111,30 +115,22 @@ log		: log LEVEL exp		{ $$ = acl_log_level($1, $3); }
 pipe		: PIPE exp		{ $$ = $2; }
 		;
 
-mod		: ADD HEADER exp VALUE exp
-					{ $$ = msgmod_create(MM_ADDHDR, $3, $5, NULL); }
-		| INSERT HEADER exp VALUE exp
-					{ $$ = msgmod_create(MM_INSHDR, $3, $5, NULL); }
-		| INSERT HEADER exp VALUE exp INDEX exp
-					{ $$ = msgmod_create(MM_INSHDR_X, $3, $5, $7, NULL); }
-		| CHANGE HEADER exp VALUE exp
-					{ $$ = msgmod_create(MM_CHGHDR, $3, $5, NULL); }
-		| CHANGE HEADER exp VALUE exp INDEX exp
-					{ $$ = msgmod_create(MM_CHGHDR_X, $3, $5, $7, NULL); }
-		| DELETE HEADER exp
-					{ $$ = msgmod_create(MM_DELHDR, $3, NULL); }
-		| CHANGE FROM exp
-					{ $$ = msgmod_create(MM_CHGFROM, $3, NULL); }
-		| CHANGE FROM exp ESMTP exp
-					{ $$ = msgmod_create(MM_CHGFROM_X, $3, $5, NULL); }
-		| ADD RCPT exp
-					{ $$ = msgmod_create(MM_ADDRCPT, $3, NULL); }
-		| ADD RCPT exp ESMTP exp
-					{ $$ = msgmod_create(MM_ADDRCPT_X, $3, $5, NULL); }
-		| DELETE RCPT exp
-					{ $$ = msgmod_create(MM_DELRCPT, $3, NULL); }
-		| CHANGE BODY exp
-					{ $$ = msgmod_create(MM_CHGBODY, $3, NULL); }
+msgmod		: mod target exp
+					{ $$ = msgmod_create($1, $2, $3, NULL); }
+		| mod target exp VALUE exp
+					{ $$ = msgmod_create($1, $2, $3, $5, NULL); }
+		| mod target exp VALUE exp INDEX exp
+					{ $$ = msgmod_create($1, $2, $3, $5, $7, NULL); }
+		| mod target exp ESMTP exp
+					{ $$ = msgmod_create($1, $2, $3, $5, NULL); }
+
+mod		: ADD			{ $$ = MO_ADD; }
+		| INSERT		{ $$ = MO_INS; }
+		| CHANGE		{ $$ = MO_CHG; }
+		| DELETE		{ $$ = MO_DEL; }
+		;
+
+target		: ID			{ $$ = msgmod_get_target($1); }
 		;
 
 exp		: '(' exp ')'		{ $$ = exp_parentheses($2); }
@@ -144,6 +140,7 @@ exp		: '(' exp ')'		{ $$ = exp_parentheses($2); }
 		| exp '-' exp		{ $$ = exp_operation('-', $1, $3); }
 		| exp '*' exp		{ $$ = exp_operation('*', $1, $3); }
 		| exp '/' exp		{ $$ = exp_operation('/', $1, $3); }
+		| exp '%' exp		{ $$ = exp_operation('%', $1, $3); }
 		| exp '<' exp		{ $$ = exp_operation('<', $1, $3); }
 		| exp '>' exp		{ $$ = exp_operation('>', $1, $3); }
 		| exp '=' exp		{ $$ = exp_operation('=', $1, $3); }
