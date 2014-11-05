@@ -33,6 +33,9 @@ DISTPKG?=		$(DISTDIR).tgz
 dist: man-mdate
 dist: $(DISTPKG)
 
+distclean:
+	-rm -rf $(OUT)
+
 $(DISTPKG): $(DISTDIR)
 	tar czf $@ $> $^
 OUT+=	$(DISTPKG)
@@ -47,6 +50,9 @@ configure: configure.ac
 	DIST=$(DIST) VERSION=$(VERSION) CONTACT=$(CONTACT) autoconf
 OUT+=	configure
 
+regdom: src/regdom_test.c
+regdom: config/effective_tld_names.dat
+
 regdom_test.dat:
 	p=http://hg.mozilla.org/mozilla-central/raw-file/tip/netwerk/test/unit/data; \
 	wget -O- $$p/test_psl.txt >$@
@@ -57,13 +63,15 @@ src/regdom_test.c: regdom_test.dat
 	sed "s/checkPublicSuffix(\(.*\));/{\1, 0},/; \
 		s/null/NULL/g; s/'/\"/g;" $> $^ >>$@
 
+config/effective_tld_names.dat:
+	p=http://hg.mozilla.org/mozilla-central/raw-file/tip/netwerk/dns; \
+	wget -O- $$p/effective_tld_names.dat >$@
+.PHONY:	config/effective_tld_names.dat
+
 README: man/mopher.7.in
 	groff -mdoc -Tascii $> $^ | col -bx | \
 		sed ":a;/^FILES\$$/{:b;N;/\n[A-Z]/!bb; \
 			s/.*\n//;ba};1d;\$$d;" >$@
-
-distclean:
-	-rm -rf $(OUT)
 
 .gitignore:
 	echo "# Generated file, see make/mk.admin for details." >$@
