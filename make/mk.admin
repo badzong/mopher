@@ -30,6 +30,7 @@ DISTLIST+=		src
 DISTDIR?=		$(DIST)-$(VERSION)
 DISTPKG?=		$(DISTDIR).tgz
 
+dist: man-mdate
 dist: $(DISTPKG)
 
 $(DISTPKG): $(DISTDIR)
@@ -72,3 +73,17 @@ distclean:
 		(cd $$i && $(MAKE) ignore) | \
 			sed -n "s,^IGNORE: ,$$i/,p" >>$@; done
 .PHONY:	.gitignore
+
+man-mdate: # skip silently if git is not available
+	@git --version >/dev/null 2>&1 || exit 0; \
+	echo $@: updating modification dates; \
+	set -e; \
+	for i in man/$(DIST)*.[0-9].in; do \
+		temp=$$i-mdate; \
+		stat=$$(git log -1 -p "$$i"); \
+		case $$stat in *+.Dd*) break;; esac; \
+		date=$$(git log -1 --format="%at" "$$i"); \
+		date=$$(date -d @$$date "+%B %e, %Y"); \
+		sed "s/^\.Dd .*/.Dd $$date/" "$$i" >"$$temp"; \
+		mv "$$temp" "$$i"; \
+	done
