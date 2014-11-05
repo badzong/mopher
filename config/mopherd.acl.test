@@ -1,0 +1,124 @@
+define STR "test string"
+define STRLEN strlen(STR)
+define INTEGER 1001
+define FLOAT 10.01
+define MATH FLOAT * 100 / INTEGER
+define LIST ("foo", "bar", "foobar")
+
+# Variables
+connect set $var1 = 1.7
+connect set $list = (1, 2, 3, 4, 5)
+connect $var1 != 1.7                                  log "VAR ERROR"
+connect $var2 = $var1 * 5 / 0.5 != 17.0               log "VAR ERROR"
+
+# Operators
+connect ((10 + 10) / 20) != 1                         log "OP ERROR"
+connect ((30 * 20 / 100 + 4) / 2) != 5                log "OP ERROR"
+connect (1.5 * 10 / 5 + 1.0 * 10.0 - 13.5 + 2) != 1.5 log "OP ERROR"
+connect 1 * 0.1 * 0.001 * 1000 / 2 != 0.05            log "OP ERROR"
+connect ((MATH + 5) / 6) != 1                         log "OP ERROR"
+connect (INTEGER / FLOAT / 100) != 1                  log "OP ERROR"
+connect ((3 > 4) == 0) != 1                           log "OP ERROR"
+connect ((1 < 2) == (1 > 0)) != 1                     log "OP ERROR"
+connect (3.9 >= 4 <= 1) != 1                          log "OP ERROR"
+
+# Logic
+connect 1 && 1 != 1                                   log "LOGIC ERROR"
+connect 1 && 0 != 0                                   log "LOGIC ERROR"
+connect 0 && 1 != 0                                   log "LOGIC ERROR"
+connect 0 && 0 != 0                                   log "LOGIC ERROR"
+
+connect 1 || 1 != 1                                   log "LOGIC ERROR"
+connect 1 || 0 != 1                                   log "LOGIC ERROR"
+connect 0 || 1 != 1                                   log "LOGIC ERROR"
+connect 0 || 0 != 0                                   log "LOGIC ERROR"
+
+connect !1 != 0                                       log "LOGIC ERROR"
+connect !0 != 1                                       log "LOGIC ERROR"
+
+# Regex
+connect "FOOBAR 99" ~ "^FOO.*99$" != 1                log "REGEX ERROR"
+connect "FOOBAR 99" ~ "^foo.*99$" != 1                log "REGEX ERROR"
+connect "FOOBAR 99" ~ "^fOo.*99$" != 0                log "REGEX ERROR"
+connect "FOOBAR 99" ~ "^bar.*99$" != 0                log "REGEX ERROR"
+connect hostaddr ~ "^" + hostaddr_str + "$" == 0      log "REGEX_ERROR"
+connect hostaddr ~ "^X?" + hostaddr_str + "$" == 0    log "REGEX_ERROR"
+connect "FOOBAR 99" !~ "^FOO.*99$" != 0               log "REGEX ERROR"
+connect "FOOBAR 99" !~ "^foo.*99$" != 0               log "REGEX ERROR"
+connect "FOOBAR 99" !~ "^bar.*99$" != 1               log "REGEX ERROR"
+
+# In
+connect "foo" in ("bar", "foo", "foobar") != 1        log "IN ERROR"
+connect 127.0.0.1 in (10.0.0.1, ::1, 127.0.0.1) != 1  log "IN ERROR"
+connect 13.37 in (18, 1.1, 127, 13.37) != 1           log "IN ERROR"
+connect "barfoo" in ("foo", "bar", "foobar") != 0     log "IN ERROR"
+connect "foo" in LIST != 1                            log "IN ERROR"
+connect 3 in $list != 1                               log "IN ERROR"
+
+# Functions
+connect size("test") != 5                             log "FUNC ERROR"
+connect strlen("test") != 4                           log "FUNC ERROR"
+connect strcmp("test string", STR) != 0               log "FUNC ERROR"
+connect strlen("foo") * size("bar") != 12             log "FUNC ERROR"
+
+# Types
+connect 1.5 * 2 != 3                                  log "TYPE ERROR"
+connect 2 * 1.5 != 3                                  log "TYPE ERROR"
+connect cast(INT, 9.0) * cast(INT, 0.9) != 0	      log "TYPE ERROR"
+
+# Strings
+connect "foo" + 1 != "foo1"                           log "STRING ERROR"
+connect "foo" + 1.0 != "foo1.00"                      log "STRING ERROR"
+connect "foo" + 127.0.0.1 != "foo127.0.0.1"           log "STRING ERROR"
+
+# Symbols
+connect !isset id                                     log "SYM ERROR"
+connect !isset stage                                  log "SYM ERROR"
+connect !isset stagename                              log "SYM ERROR"
+connect !isset received                               log "SYM ERROR"
+connect !isset hostaddr                               log "SYM ERROR"
+connect !isset hostaddr_str                           log "SYM ERROR"
+connect !isset hostname                               log "SYM ERROR"
+helo    !isset helo                                   log "SYM ERROR"
+envfrom !isset envfrom                                log "SYM ERROR"
+envrcpt !isset envrcpt                                log "SYM ERROR"
+data    !isset recipients                             log "SYM ERROR"
+data    !isset recipient_list                         log "SYM ERROR"
+header  !isset header_name                            log "SYM ERROR"
+header  !isset header_value                           log "SYM ERROR"
+eoh     !isset headers                                log "SYM ERROR"
+eoh     !isset headers_size                           log "SYM ERROR"
+eom     !isset body_size                              log "SYM ERROR"
+eom     !isset message_size                           log "SYM ERROR"
+eom     !isset queue_id                               log "SYM ERROR"
+
+# Macros
+connect strlen({j}) == 0                              log "MACRO ERROR"
+connect strlen({v}) == 0                              log "MACRO ERROR"
+connect strlen({daemon_name}) == 0                    log "MACRO ERROR"
+
+# Tarpitting
+connect random() % 10 == 0                            tarpit 1s
+
+# Greylisting
+envrcpt envfrom_addr ~ "_[0-9]@debian.local"          greylist delay 1s  attempts 3 deadline 10 visa 3
+envrcpt envfrom_addr ~ "_1[0-9]@debian.local"         greylist delay 2s  attempts 3 deadline 11 visa 3
+envrcpt envfrom_addr ~ "_2[0-9]@debian.local"         greylist delay 3s  attempts 3 deadline 12 visa 3
+envrcpt envfrom_addr ~ "_3[0-9]@debian.local"         greylist delay 4s  attempts 3 deadline 13 visa 3
+envrcpt envfrom_addr ~ "_4[0-9]@debian.local"         greylist delay 5s  attempts 3 deadline 14 visa 3
+envrcpt envfrom_addr ~ "_5[0-9]@debian.local"         greylist delay 6s  attempts 3 deadline 15 visa 3
+envrcpt envfrom_addr ~ "_6[0-9]@debian.local"         greylist delay 7s  attempts 3 deadline 16 visa 3
+envrcpt envfrom_addr ~ "_7[0-9]@debian.local"         greylist delay 8s  attempts 3 deadline 17 visa 3
+envrcpt envfrom_addr ~ "_8[0-9]@debian.local"         greylist delay 9s  attempts 3 deadline 18 visa 3
+envrcpt envfrom_addr ~ "_9[0-9]@debian.local"         greylist delay 10s attempts 3 deadline 19 visa 3
+envrcpt envfrom_addr ~ "_10[0-9]@debian.local"        greylist delay 11s attempts 3 deadline 20 visa 3
+
+# Message modification
+eom random() % 10 == 0                                add header "X-Test" value "test: " + hostaddr
+eom random() % 10 == 0                                change header "Subject" value "mail from: " + hostaddr
+eom random() % 10 == 0                                insert header "X-Test" value "test: " + hostaddr
+eom random() % 10 == 0                                delete header "Subject"
+eom random() % 10 == 0                                change from "test@debian.local"
+eom random() % 10 == 0                                add rcpt "root@debian.local"
+eom random() % 10 == 0                                delete rcpt "manuel@debian.local"
+eom random() % 10 == 0                                change body "mopher"
