@@ -436,9 +436,13 @@ acl_function_argv_types(int *argc, va_list ap)
 		types[*argc] = type;
 	}
 
-	types[*argc] = 0;
+	if (*argc)
+	{
+		types[*argc] = 0;
+		return types;
+	}
 
-	return types;
+	return NULL;
 }
 
 
