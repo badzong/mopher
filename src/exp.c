@@ -820,6 +820,7 @@ exp_math_int(int op, var_t *left, var_t *right)
 	case '-':	x = *l - *r;	break;
 	case '*':	x = *l * *r;	break;
 	case '/':	x = *l / *r;	break;
+	case '%':	x = *l % *r;	break;
 
 	default:
 		log_error("exp_math_int: bad operation");

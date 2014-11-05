@@ -1,27 +1,30 @@
 #ifndef _MSGMOD_H_
 #define _MSGMOD_H_
 
-enum msgmod_type
+enum msgmod_mod
 {
-	MM_ADDHDR,
-	MM_CHGHDR,
-	MM_CHGHDR_X,
-	MM_DELHDR,
-	MM_INSHDR,
-	MM_INSHDR_X,
-	MM_CHGFROM,
-	MM_CHGFROM_X,
-	MM_ADDRCPT,
-	MM_ADDRCPT_X,
-	MM_DELRCPT,
-	MM_CHGBODY
+	MO_ADD,
+	MO_INS,
+	MO_CHG,
+	MO_DEL
 };
-typedef enum msgmod_type msgmod_type_t;
+typedef enum msgmod_mod msgmod_mod_t;
+
+enum msgmod_target
+{
+	MT_FROM,
+	MT_RCPT,
+	MT_HEADER,
+	MT_BODY
+};
+typedef enum msgmod_target msgmod_target_t;
+
+typedef int (*msgmod_callback_t)(void *ctx, int argc, var_t *args[]);
 
 struct msgmod
 {
-	msgmod_type_t	 mm_type;
-	ll_t		*mm_args;
+	ll_t			*mm_args;
+	msgmod_callback_t	 mm_callback;
 };
 typedef struct msgmod msgmod_t;
 
@@ -29,7 +32,18 @@ typedef struct msgmod msgmod_t;
  * Prototypes
  */
 
-msgmod_t * msgmod_create(msgmod_type_t type, ...);
+msgmod_target_t msgmod_get_target(char *id);
+msgmod_t * msgmod_create(msgmod_mod_t mod, msgmod_target_t target, ...);
 void msgmod_delete(void *data);
 acl_action_type_t msgmod(milter_stage_t stage, char *stagename, var_t *mailspec, void *data);
+
+int msgmod_add_header(void *ctx, int argc, var_t *args[]);
+int msgmod_change_header(void *ctx, int argc, var_t *args[]);
+int msgmod_delete_header(void *ctx, int argc, var_t *args[]);
+int msgmod_insert_header(void *ctx, int argc, var_t *args[]);
+int msgmod_change_from(void *ctx, int argc, var_t *args[]);
+int msgmod_add_rcpt(void *ctx, int argc, var_t *args[]);
+int msgmod_delete_rcpt(void *ctx, int argc, var_t *args[]);
+int msgmod_change_body(void *ctx, int argc, var_t *args[]);
+
 #endif /* _MSGMOD_H_ */
