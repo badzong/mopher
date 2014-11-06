@@ -28,7 +28,7 @@ DISTLIST+=		man
 DISTLIST+=		src
 
 DISTDIR?=		$(DIST)-$(VERSION)
-DISTPKG?=		$(DISTDIR).tgz
+DISTPKG?=		$(DISTDIR).tar.gz
 
 dist: man-mdate
 dist: $(DISTPKG)

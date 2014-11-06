@@ -1,7 +1,7 @@
 Recent changes to mopher's source.
 
 Version 0.5.0
-24.10.2014
+06.11.2014
     This release contains many new features, almost 18 months of
         successful testing in production environments and a variety of
         adjustments and bugfixes.
@@ -17,6 +17,9 @@ Version 0.5.0
     Introduction of basic unit test infrastructure.
     moco was renamed to mopherctl, see mopherctl(8).
     mail.acl was renamed to mopherd.acl, see mopherd.acl(5).
+    Pattern and list operators were added, see mopherd.acl(5).
+    Macro symbols in mopherd.acl(5) now use the same naming scheme like
+        their Sendmail counterparts, including the curly braces.
 
 Version 0.4.1
 13.04.2013

@@ -9,16 +9,16 @@ make/mk.common
 man/Makefile
 src/Makefile
 src/modules/Makefile
-mopher-0.6.0.tgz
+mopher-0.6.0.tar.gz
 mopher-0.6.0
 configure
 regdom_test.dat
 src/modules/cast.so
 src/modules/counter.so
 src/modules/dblog.so
-src/modules/list.so
-src/modules/memdb.so
 src/modules/dnsbl.so
+src/modules/memdb.so
+src/modules/random.so
 src/modules/spamd.so
 src/modules/string.so
 src/modules/bdb.so
@@ -51,7 +51,6 @@ src/msgmod.o
 src/parser.o
 src/pipe.o
 src/regdom.o
-src/rgx.o
 src/server.o
 src/sht.o
 src/sock.o
