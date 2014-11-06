@@ -10,11 +10,12 @@ LDFLAGS+=		@LDFLAGS@
 # paths
 prefix?=		@prefix@
 exec_prefix?=		@exec_prefix@
+datarootdir?=		@datarootdir@
 PROGRAM_PATH?=		@sbindir@
 MODULE_PATH?=		@libdir@/mopher
 CONFIG_PATH?=		@sysconfdir@/mopher
 CONFIG_XPATH?=		$(CONFIG_PATH)
-MAN_PATH?=		@datarootdir@/man
+MAN_PATH?=		@mandir@
 
 # files
 MOPHERD_CONF?=		$(CONFIG_PATH)/mopherd.conf
