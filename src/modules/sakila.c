@@ -3,7 +3,7 @@
  */
 
 #include <string.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <mysql/mysql.h>
 
@@ -1040,7 +1040,7 @@ sakila_open(dbt_t *dbt)
 {
 	sakila_handle_t *mh;
 	MYSQL *myp;
-	my_bool false = 0;
+	my_bool f = 0;
 	int r;
 
 	/*
@@ -1079,7 +1079,7 @@ sakila_open(dbt_t *dbt)
 	/*
 	 * Disable reporting of data truncation
 	 */
-	if (mysql_options(myp, MYSQL_REPORT_DATA_TRUNCATION, &false))
+	if (mysql_options(myp, MYSQL_REPORT_DATA_TRUNCATION, &f))
 	{
 		log_error("sakila_open: mysql_options: %s", mysql_error(myp));
 		goto error;
