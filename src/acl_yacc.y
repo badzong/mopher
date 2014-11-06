@@ -51,7 +51,7 @@ int acl_lex(void);
 %left '+' '-'
 %left '*' '/' '%'
 %right '='
-%nonassoc IS_NULL, IN, '~', NR
+%nonassoc IS_NULL IN '~' NR
 
 %%
 
