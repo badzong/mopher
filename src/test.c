@@ -1,3 +1,5 @@
+#ifdef DEBUG
+
 #include <string.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -203,3 +205,5 @@ test_run(int optind, int argc, char **argv)
 
 	return;
 }
+
+#endif
