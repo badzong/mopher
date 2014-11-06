@@ -1002,7 +1002,8 @@ exp_eval_regex(int op, var_t *left, var_t *right)
 
 	if (left->v_data == NULL || right->v_data == NULL)
 	{
-		return NULL;
+		log_debug("exp_eval_regex: empty value");
+		return EXP_EMPTY;
 	}
 
 	// Make sure left is a string
@@ -1355,7 +1356,7 @@ exp_is_true(exp_t *exp, var_t *mailspec)
 
 	if (v == NULL)
 	{
-		log_notice("exp_true: evaluation failed");
+		log_notice("exp_is_true: evaluation failed");
 		return -1;
 	}
 
