@@ -1110,7 +1110,8 @@ exp_eval_in(var_t *needle, var_t *haystack)
 
 	if (needle->v_data == NULL || haystack->v_data == NULL)
 	{
-		return NULL;
+		log_debug("exp_eval_in: empty value");
+		return EXP_EMPTY;
 	}
 
 	if (haystack->v_type != VT_LIST)
