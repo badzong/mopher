@@ -1475,11 +1475,12 @@ exp_test_const_init(void)
 	return;
 }
 
-void
+int
 exp_test_init(void)
 {
 	exp_init();
 	exp_test_const_init();
+	return 0;
 }
 
 void
