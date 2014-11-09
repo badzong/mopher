@@ -339,8 +339,8 @@ regdom_punycode (char *buffer, int size, char* name)
 	char *result;
 	int len = 0;
 
-	// Clear the buffer for safety
-	memset(buffer, 0, size);
+	// Set buffer to zero-length string for safety
+	buffer[0] = 0;
 
 	// Why does this need to work?
 	if (name == NULL)
