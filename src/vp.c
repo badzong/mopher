@@ -234,20 +234,20 @@ vp_unpack(vp_t *vp, var_t *scheme)
 	int n;
 
 	if(scheme->v_type != VT_LIST) {
-		log_error("var_unpack: bad type");
+		log_error("vp_unpack: bad type");
 		goto error;
 	}
 
 	record = vlist_create(scheme->v_name, VF_COPYNAME);
 	if(record == NULL) {
-		log_error("var_unpack: var_create failed");
+		log_error("vp_unpack: var_create failed");
 		goto error;
 	}
 
 	// Make sure vp was correctly initialized
 	if (vp->vp_null_fields == NULL || vp->vp_fields == NULL)
 	{
-		log_error("var_unpack: vp struct not initialized");
+		log_error("vp_unpack: vp struct not initialized");
 		goto error;
 	}
 
@@ -260,7 +260,7 @@ vp_unpack(vp_t *vp, var_t *scheme)
 		// This should not be possible
 		if (vp_field_is_null(vp, n) && field_is_key)
 		{
-			log_error("var_unpack: afraid to unpack null key in "
+			log_error("vp_unpack: afraid to unpack null key in "
 				"field %d", n);
 			goto error;
 		}
@@ -281,7 +281,7 @@ vp_unpack(vp_t *vp, var_t *scheme)
 		v = var_create(item->v_type, item->v_name, field, VF_COPY);
 		if(v == NULL)
 		{
-			log_error("var_unpack: var_create failed");
+			log_error("vp_unpack: var_create failed");
 			goto error;
 		}
 
@@ -302,7 +302,7 @@ vp_unpack(vp_t *vp, var_t *scheme)
 
 		// Append item to record
 		if(vlist_append(record, v) == -1) {
-			log_error("var_unpack: vlist_append failed");
+			log_error("vp_unpack: vlist_append failed");
 			goto error;
 		}
 
