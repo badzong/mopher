@@ -180,7 +180,7 @@ vp_pack(var_t *record)
 		{
 			if (field_is_key)
 			{
-				log_error("vp_pack: key without value");
+				log_error("vp_pack: key %s has no value", item->v_name);
 				goto error;
 			}
 
@@ -261,7 +261,7 @@ vp_unpack(vp_t *vp, var_t *scheme)
 		if (vp_field_is_null(vp, n) && field_is_key)
 		{
 			log_error("vp_unpack: afraid to unpack null key in "
-				"field %d", n);
+				"field %s (%d)", item->v_name, n);
 			goto error;
 		}
 
