@@ -3,27 +3,29 @@
 #include <string.h>
 #include <stdlib.h>
 #include <idna.h>
+#include <stringprep.h>
+#include <punycode.h>
 
 #include <mopher.h>
 
 #define REGDOM_BUCKETS 16384
+#define BUFLEN 1024
 
 
 static char *regdom_rules_buffer;
 static sht_t regdom_ht;
 
+
 void
 regdom_clear (void)
 {
 	sht_clear(&regdom_ht);
-	free(regdom_rules_buffer);
-
 	return;
 }
 
 
 regdom_rule_t *
-regdom_rule_create(char *name, int wildcard, int exception, int flags)
+regdom_rule_create(char *name, int wildcard, int exception)
 {
 	regdom_rule_t *rule;
 
@@ -33,10 +35,14 @@ regdom_rule_create(char *name, int wildcard, int exception, int flags)
 		log_die(EX_SOFTWARE, "regdom_rule_create: malloc failed");
 	}
 
-	rule->r_name = name;
+	rule->r_name = strdup(name);
+	if (rule->r_name == NULL)
+	{
+		log_die(EX_SOFTWARE, "regdom_rule_create: malloc failed");
+	}
+
 	rule->r_wildcard = wildcard;
 	rule->r_exception = exception;
-	rule->r_flags = flags;
 
 	return rule;
 }
@@ -44,12 +50,8 @@ regdom_rule_create(char *name, int wildcard, int exception, int flags)
 void
 regdom_rule_destroy(regdom_rule_t *rule)
 {
-	if (rule->r_flags & REGDOM_FREE_NAME)
-	{
-		free(rule->r_name);
-	}
+	free(rule->r_name);
 	free(rule);
-
 	return;
 }
 
@@ -70,44 +72,115 @@ regdom_has_nonascii(char *name)
 	return 0;
 }
 
-char *
-regdom_strdup_idna(char *name)
+int
+regdom_idna(char *buffer, int size, char *input)
 {
-	char *dup = NULL;
+	size_t items;
+	int domain_len;
+	char *saveptr;
+	char *domain;
+	size_t olen;
+	int len = 0;
+	char *name = NULL;
+	uint32_t *ucs4 = NULL;
+	int r;
 
-	// No translation required
-	if (!regdom_has_nonascii(name))
+	buffer[0] = 0;
+
+	name = strdup(input);
+	if (name == NULL)
 	{
-		dup = strdup(name);
-		if (dup == NULL)
+		log_error("regdom_idna: malloc failed");
+		return -1;
+	}
+
+	domain = strtok_r(name, ".", &saveptr);
+	for (; domain != NULL; domain = strtok_r(NULL, ".", &saveptr))
+	{
+		// Append a dot for the next domain
+		if (len)
 		{
-			log_error("regdom_strdup_idna: malloc failed");
+			if (len + 2 > size)
+			{
+				goto nospace;
+			}
+			strcat(buffer, ".");
+			++len;
 		}
-	}
-	else
-	{
-		if (idna_to_ascii_8z(name, &dup, 0) != IDNA_SUCCESS)
+
+		domain_len = strlen(domain);
+
+		// Domain is all-ASCII
+		if (!regdom_has_nonascii(domain))
 		{
-			log_error(
-				"regdom_strdup_idna: idna_to_ascii_8z failed");
+			if (len + domain_len + 1 > size)
+			{
+				goto nospace;
+			}
+			strcat(buffer, domain);
+			len += domain_len;
+			continue;
 		}
+
+		// Unicode Domain
+		if (len + 5 > size)
+		{
+			goto nospace;
+		}
+		strcat(buffer, "xn--");
+		len += 4;
+
+		// Convert domain to UCS-4
+		ucs4 = stringprep_utf8_to_ucs4(domain, domain_len, &items);
+		if (ucs4 == NULL)
+		{
+			log_error("regdom_idna: stringprep_utf8_to_ucs4 failed");
+			goto error;
+		}
+
+		// Convert domain to punycode
+		olen = size - len - 1;
+		r = punycode_encode(items, ucs4, NULL, &olen, buffer + len);
+		if (r != PUNYCODE_SUCCESS)
+		{
+			log_error("regdom_idna: punycode_encode: %s", punycode_strerror(r));
+			goto error;
+		}
+		buffer[len + olen] = 0;
+
+		free(ucs4);
+		ucs4 = NULL;
+
+		len += olen;
 	}
 
-	// Convert to lowercase
-	if (dup != NULL)
+	free(name);
+
+	return 0;
+
+nospace:
+	log_error("regdom_idna: buffer exhausted");
+
+error:
+	if (name)
 	{
-		util_tolower(dup);
+		free(name);
+	}
+	if (ucs4)
+	{
+		free(ucs4);
 	}
 
-	return dup;
+	return -1;
 }
+
 
 void
 regdom_load_rules (char *path)
 {
 	int n, wildcard, exception;
 	char *p, *name, *saveptr;
-	char *puny;
+	char puny[BUFLEN];
 	regdom_rule_t *rule;
 
 	n = util_file(path, &regdom_rules_buffer);
@@ -131,7 +204,8 @@ regdom_load_rules (char *path)
 		}
 
 		// Strip trailing spaces
-		for(p = name + strlen(name); p > name && isspace(*p); --p);
+		for(p = name + strlen(name); p > name && isspace((int) *p); --p);
+
 		if (p < name + strlen(name))
 		{
 			*(p + 1) = 0;
@@ -167,10 +241,13 @@ regdom_load_rules (char *path)
 		}
 
 		// Convert to lowercase
-		util_tolower(name);
+		if (!regdom_has_nonascii(name))
+		{
+			util_tolower(name);
+		}
 
 		// Add rule to regdom_ht
-		rule = regdom_rule_create(name, wildcard, exception, 0);
+		rule = regdom_rule_create(name, wildcard, exception);
 		if (sht_insert(&regdom_ht, rule->r_name, rule))
 		{
 			log_die(EX_SOFTWARE, "regdom_load_rules: sht_insert "
@@ -180,16 +257,10 @@ regdom_load_rules (char *path)
 		// UTF-8 rules also need punycode
 		if (regdom_has_nonascii(name))
 		{
-			puny = regdom_strdup_idna(name);
-			if (puny == NULL)
-			{
-				log_die(EX_SOFTWARE, "regdom_load_rules: "
-					"regdom_strdup_idna failed");
-			}
+			regdom_idna(puny, sizeof puny, name);
 
 			// Add punycode rule to regdom_ht
-			rule = regdom_rule_create(puny, wildcard, exception,
-				REGDOM_FREE_NAME);
+			rule = regdom_rule_create(puny, wildcard, exception);
 			if (sht_insert(&regdom_ht, rule->r_name, rule))
 			{
 				log_die(EX_SOFTWARE, "regdom_load_rules: sht_insert "
@@ -202,6 +273,7 @@ regdom_load_rules (char *path)
 	}
 
 	log_debug("regdom: loaded %d rules", n);
+	free(regdom_rules_buffer);
 }
 
 void
@@ -263,57 +335,42 @@ regdom (char* name)
 int
 regdom_punycode (char *buffer, int size, char* name)
 {
-	char *puny = NULL;
+	char puny[BUFLEN];
 	char *result;
 	int len = 0;
 
-	// Clear buffer for safety
+	// Clear the buffer for safety
 	memset(buffer, 0, size);
 
 	// Why does this need to work?
 	if (name == NULL)
 	{
-		goto exit;
+		return 0;
 	}
 
 	// Get punycode copy
-	puny = regdom_strdup_idna(name);
-	if (puny == NULL)
+	if (regdom_idna(puny, sizeof puny, name))
 	{
-		log_error("regdom: regdom_strdup_idna failed");
-		goto error;
+		log_error("regdom: regdom_idna failed");
+		return -1;
 	}
 
 	result = regdom(puny);
 	if (result == NULL)
 	{
-		goto exit;
+		return 0;
 	}
 	
 	len = strlen(result);
 	if (len >= size)
 	{
 		log_error("regdom: buffer exhausted");
-		goto error;
+		return -1;
 	}
 
 	strcpy(buffer, result);
 
-exit:
-	if (puny)
-	{
-		free(puny);
-	}
-
 	return len;
-
-error:
-	if (puny)
-	{
-		free(puny);
-	}
-
-	return -1;
 }
 
 
@@ -354,7 +411,10 @@ regdom_test(int n)
 		else
 		{
 			dup = strdup(test);
-			util_tolower(dup);
+			if (!regdom_has_nonascii(dup))
+			{
+				util_tolower(dup);
+			}
 		}
 
 		got = regdom(dup);
