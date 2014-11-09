@@ -325,6 +325,13 @@ struct regdom_test_case {
 	int   rtc_last;
 };
 
+int
+regdom_test_init(void)
+{
+	regdom_init();
+	return 0;
+}
+
 void
 regdom_test(int n)
 {

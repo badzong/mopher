@@ -9,7 +9,7 @@ struct test_handler
 {
 	char *th_name;
 	char *th_descr;
-	void (*th_init)(void);
+	int  (*th_init)(void);
 	void (*th_test)(int n);
 	void (*th_clear)(void);
 };

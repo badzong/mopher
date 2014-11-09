@@ -1194,14 +1194,14 @@ dbt_test_stage2(int n)
 	return;
 }
 
-void
+int
 dbt_test_init(char *config_key, char *driver)
 {
 	// Check if driver exists
 	if (!module_exists(driver))
 	{
 		log_crit("dbt_test_prepare: %s not installed", driver);
-		return;
+		return -1;
 	}
 
 	// Create test scheme
@@ -1245,7 +1245,7 @@ dbt_test_init(char *config_key, char *driver)
 	// Clean table
 	dbt_janitor_cleanup(time(NULL), &dbt_test_table);
 
-	return;
+	return 0;
 }
 
 void
@@ -1258,25 +1258,22 @@ dbt_test_clear(void)
 	return;
 }
 
-void
+int
 dbt_test_memdb_init(void)
 {
-	dbt_test_init("test_memdb", "memdb.so");
-	return;
+	return dbt_test_init("test_memdb", "memdb.so");
 }
 
-void
+int
 dbt_test_bdb_init(void)
 {
-	dbt_test_init("test_bdb", "bdb.so");
-	return;
+	return dbt_test_init("test_bdb", "bdb.so");
 }
 
-void
+int
 dbt_test_mysql_init(void)
 {
-	dbt_test_init("test_mysql", "sakila.so");
-	return;
+	return dbt_test_init("test_mysql", "sakila.so");
 }
 
 #endif

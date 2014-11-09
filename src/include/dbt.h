@@ -86,9 +86,9 @@ void dbt_clear();
 dbt_t * dbt_lookup(char *name);
 int dbt_dump(char **dump, char *tablename);
 
-void dbt_test_memdb_init(void);
-void dbt_test_bdb_init(void);
-void dbt_test_mysql_init(void);
+int dbt_test_memdb_init(void);
+int dbt_test_bdb_init(void);
+int dbt_test_mysql_init(void);
 void dbt_test_stage1(int n);
 void dbt_test_stage2(int n);
 void dbt_test_clear(void);
