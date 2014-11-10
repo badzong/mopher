@@ -1,5 +1,10 @@
 Recent changes to mopher's source.
 
+Version 0.5.1
+10.11.2014
+    Fix multiple problems around loading and punycode translation of
+        UTF-8 regdom rules on NetBSD systems.
+
 Version 0.5.0
 06.11.2014
     This release contains many new features, almost 18 months of
