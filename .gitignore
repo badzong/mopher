@@ -9,8 +9,8 @@ make/mk.common
 man/Makefile
 src/Makefile
 src/modules/Makefile
-mopher-0.5.0.tar.gz
-mopher-0.5.0
+mopher-0.5.1.tar.gz
+mopher-0.5.1
 configure
 regdom_test.dat
 src/modules/cast.so
