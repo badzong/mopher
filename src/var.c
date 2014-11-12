@@ -968,7 +968,7 @@ var_dump_stdout(var_t *v)
 	int r;
 
 	r = var_dump(v, buffer, sizeof buffer);
-	printf(buffer);
+	printf("%s", buffer);
 
 	// Add newline and flush stdout
 	printf("\n");
