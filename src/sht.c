@@ -22,7 +22,10 @@ sht_clear(sht_t *sht)
 		}
 	}
 
-	ht_delete(sht->sht_ht);
+	if (sht->sht_ht)
+	{
+		ht_delete(sht->sht_ht);
+	}
 
 	memset(sht, 0, sizeof (sht_t));
 

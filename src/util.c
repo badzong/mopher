@@ -707,18 +707,18 @@ util_daemonize(void)
 		 * log is probably not initialized yet.
 		 */
 		perror("util_daemonize: fork");
-		_exit(EX_OSERR);
+		exit(EX_OSERR);
 	}
 
 	if(pid)
 	{
-		_exit(EX_OK);
+		exit(EX_OK);
 	}
 
 	if(setsid() == -1)
 	{
 		perror("util_daemonize: setsid");
-		_exit(EX_OSERR);
+		exit(EX_OSERR);
 	}
 
 	/*
@@ -735,7 +735,7 @@ util_daemonize(void)
 	if (r)
 	{
 		perror("util_daemonize: open");
-		_exit(EX_OSERR);
+		exit(EX_OSERR);
 	}
 
 	return;

@@ -1224,10 +1224,20 @@ acl_clear(void)
 	 */
 	exp_clear();
 
-	sht_delete(acl_tables);
-	sht_delete(acl_symbols);
-	ll_delete(acl_update_callbacks, NULL);
+	if (acl_tables)
+	{
+		sht_delete(acl_tables);
+	}
 
+	if (acl_symbols)
+	{
+		sht_delete(acl_symbols);
+	}
+
+	if (acl_update_callbacks)
+	{
+		ll_delete(acl_update_callbacks, NULL);
+	}
 
 	return;
 }

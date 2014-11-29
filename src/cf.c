@@ -292,7 +292,10 @@ cf_load_file(char *file)
 void
 cf_clear(void)
 {
-	var_delete(cf_config);
+	if (cf_config)
+	{
+		var_delete(cf_config);
+	}
 
 	return;
 }

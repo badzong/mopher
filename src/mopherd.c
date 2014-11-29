@@ -8,6 +8,8 @@
 
 #include <mopher.h>
 
+static char *mopherd_pidfile;
+
 static int
 mopherd_test(int optind, int argc, char **argv)
 {
@@ -20,22 +22,28 @@ mopherd_test(int optind, int argc, char **argv)
 #endif
 }
 
-static void
-mopherd_unlink_pidfile(char *pidfile)
+void
+mopherd_cleanup(void)
 {
-	if (pidfile == NULL)
+	milter_clear();
+	log_close();
+
+	/*
+	 * Remove PID file
+	 */
+	if (mopherd_pidfile == NULL)
 	{
 		return;
 	}
 
-	if (!util_file_exists(pidfile))
+	if (!util_file_exists(mopherd_pidfile))
 	{
 		return;
 	}
 
-	if (unlink(pidfile))
+	if (unlink(mopherd_pidfile))
 	{
-			log_sys_error("mopherd_unlink_pidfile: unlink");
+	 	log_sys_error("mopherd_cleanup: unlink");
 	}
 
 	return;
@@ -45,7 +53,6 @@ int
 main(int argc, char **argv)
 {
 	int r, opt, foreground, loglevel, check_config, test;
-	char *pidfile = NULL;
 
 	check_config = 0;
 	foreground = 0;
@@ -75,7 +82,7 @@ main(int argc, char **argv)
 			break;
 
 		case 'p':
-			pidfile = optarg;
+			mopherd_pidfile = optarg;
 			break;
 
 		case 'T':
@@ -119,6 +126,14 @@ main(int argc, char **argv)
 	}
 
 	/*
+	 * Register mopherd_cleanup
+	 */
+	if (atexit(mopherd_cleanup))
+	{
+		log_sys_die(EX_OSERR, "mopherd: atexit failed");
+	}
+
+	/*
 	 * Open log (syslog == 1)
 	 */
 	log_init(BINNAME, loglevel, 1, foreground);
@@ -142,25 +157,14 @@ main(int argc, char **argv)
 	/*
 	 * Write PID file.
 	 */
-	if (pidfile)
+	if (mopherd_pidfile)
 	{
-		util_pidfile(pidfile);
+		util_pidfile(mopherd_pidfile);
 	}
 
 	log_error("mopherd-%s started", PACKAGE_VERSION);
 
 	r = milter();
-
-	/*
-	 * Remove PID file
-	 */
-	mopherd_unlink_pidfile(pidfile);
-
-	/*
-	 * Cleanup
-	 */
-	milter_clear();
-	log_close();
 
 	log_error("terminated");
 

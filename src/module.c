@@ -284,7 +284,10 @@ module_delete(module_t *mod)
 void
 module_clear(void)
 {
-	ll_delete(module_list, (ll_delete_t) module_delete);
+	if (module_list)
+	{
+		ll_delete(module_list, (ll_delete_t) module_delete);
+	}
 
 	return;
 }
