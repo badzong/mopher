@@ -214,7 +214,7 @@ main(int argc, char **argv)
 
 	if (dump)
 	{
-		printf(dump);
+		printf("%s", dump);
 		free(dump);
 	}
 
