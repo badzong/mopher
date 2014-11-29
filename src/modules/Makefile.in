@@ -31,9 +31,9 @@ CFLAGS.bdb.so+=		@BDB_DB185_H@
 LDFLAGS+=		-nostartfiles
 LDFLAGS+=		-shared
 LDFLAGS+=		-fPIC
-LDFLAGS.bdb.so+=	@BDB_LIBS@
-LDFLAGS.sakila.so+=	-lmysqlclient
-LDFLAGS.spf.so+=	-lspf2
+LDFLAGS.bdb.so+=	-Wl,--no-as-needed @BDB_LIBS@
+LDFLAGS.sakila.so+=	-Wl,--no-as-needed -lmysqlclient
+LDFLAGS.spf.so+=	-Wl,--no-as-needed -lspf2
 
 
 include @top_srcdir@/make/mk.common
