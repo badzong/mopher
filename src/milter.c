@@ -1194,7 +1194,10 @@ milter_clear(void)
 	/*
 	 * Free milter_state_record
 	 */
-	var_delete(milter_state_record);
+	if (milter_state_record)
+	{
+		var_delete(milter_state_record);
+	}
 
 	return;
 }

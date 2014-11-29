@@ -956,8 +956,15 @@ dbt_clear()
 		server_clear();
 	}
 
-	sht_delete(dbt_drivers);
-	sht_delete(dbt_tables);
+	if (dbt_drivers)
+	{
+		sht_delete(dbt_drivers);
+	}
+
+	if (dbt_tables)
+	{
+		sht_delete(dbt_tables);
+	}
 
 	return;
 }
