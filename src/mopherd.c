@@ -139,6 +139,14 @@ main(int argc, char **argv)
 	log_init(BINNAME, loglevel, 1, foreground);
 
 	/*
+	 * Write PID file.
+	 */
+	if (mopherd_pidfile)
+	{
+		util_pidfile(mopherd_pidfile);
+	}
+
+	/*
 	 * Initialize milter
 	 */
 	milter_init();
@@ -152,14 +160,6 @@ main(int argc, char **argv)
 		printf("%s: configuration ok.\n", BINNAME);
 
 		return 0;
-	}
-
-	/*
-	 * Write PID file.
-	 */
-	if (mopherd_pidfile)
-	{
-		util_pidfile(mopherd_pidfile);
 	}
 
 	log_error("mopherd-%s started", PACKAGE_VERSION);
