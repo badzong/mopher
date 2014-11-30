@@ -1330,17 +1330,20 @@ milter(void)
 	r = smfi_main();
 
 	/*
-	 * Wait for all threads to return and acquire milter_reload_lock.
+	 * Acquire reload lock to ensure all threads returned to libmilter
 	 */
-	log_error("milter: waiting %d seconds for libmilter threads to close",
-	    cf_milter_wait);
-
-	sleep(cf_milter_wait);
-
 	if (pthread_rwlock_wrlock(&milter_reload_lock))
 	{
 		log_sys_error("milter_common_init: pthread_rwlock_wrlock");
 	}
+
+	/*
+	 * FIXME: Is this really neccessary?
+	 */
+	log_error("milter: waiting %d second%s for libmilter threads to close",
+	    cf_milter_wait, cf_milter_wait == 1? "": "s");
+	sleep(cf_milter_wait);
+
 
 	if (r == MI_SUCCESS)
 	{
