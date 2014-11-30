@@ -11,6 +11,13 @@ connect set $list = (1, 2, 3, 4, 5)
 connect $var1 != 1.7                                  log "VAR ERROR"
 connect $var2 = $var1 * 5 / 0.5 != 17.0               log "VAR ERROR"
 
+# NULL
+connect (null() == null) != 1                         log "NULL ERROR"
+connect (0 == null) != 0                              log "NULL ERROR"
+connect (0.0 == null) != 0                            log "NULL ERROR"
+connect (0.0.0.0 == null) != 0                        log "NULL ERROR"
+connect ("" == null) != 0                             log "NULL ERROR"
+
 # Operators
 connect ((10 + 10) / 20) != 1                         log "OP ERROR"
 connect ((30 * 20 / 100 + 4) / 2) != 5                log "OP ERROR"
@@ -27,14 +34,26 @@ connect 1 && 1 != 1                                   log "LOGIC ERROR"
 connect 1 && 0 != 0                                   log "LOGIC ERROR"
 connect 0 && 1 != 0                                   log "LOGIC ERROR"
 connect 0 && 0 != 0                                   log "LOGIC ERROR"
-
+connect 0 && null() != 0                              log "LOGIC ERROR"
+connect null() && 0 != 0                              log "LOGIC ERROR"
 connect 1 || 1 != 1                                   log "LOGIC ERROR"
 connect 1 || 0 != 1                                   log "LOGIC ERROR"
 connect 0 || 1 != 1                                   log "LOGIC ERROR"
 connect 0 || 0 != 0                                   log "LOGIC ERROR"
-
+connect 1 || null() != 1                              log "LOGIC ERROR"
+connect null() || 1 != 1                              log "LOGIC ERROR"
 connect !1 != 0                                       log "LOGIC ERROR"
 connect !0 != 1                                       log "LOGIC ERROR"
+connect ((!null()) == null) != 1                      log "LOGIC ERROR"
+
+# Operator precedence
+connect (2 + 8 / 2) != 6                              log "PRECEDENCE ERROR"
+connect (2 * 2 + 8 / 2) != 8                          log "PRECEDENCE ERROR"
+connect (1 - 2 * 2 + 8 / 2 - 1) != 0                  log "PRECEDENCE ERROR"
+connect (1 * 1 < 2 + 2 && 5 / 5 <= 3 / 3) != 1        log "PRECEDENCE ERROR"
+connect (1 - 0 || 0 * 0 && 2 / 2) != 1                log "PRECEDENCE ERROR"
+connect (!0 && 1 > 0 && 1 == 1 && 0 != 1) != 1        log "PRECEDENCE ERROR"
+connect (!1 || 1 < 0 || 0 == 1 || 1 != 1) != 0        log "PRECEDENCE ERROR"
 
 # Regex
 connect "FOOBAR 99" ~ "^FOO.*99$" != 1                log "REGEX ERROR"
