@@ -113,6 +113,12 @@ error:
 	return NULL;
 }
 
+static var_t *
+null(int argc, ll_t *args)
+{
+	return EXP_EMPTY;
+}
+
 
 int
 cast_init(void)
@@ -127,6 +133,8 @@ cast_init(void)
 	    (acl_function_callback_t) size);
 	acl_function_register("cast", AF_COMPLEX,
 	    (acl_function_callback_t) cast);
+	acl_function_register("null", AF_COMPLEX,
+	    (acl_function_callback_t) null);
 
 	for (k = cast_keys, v = cast_values; *k && *v; ++k, ++v)
 	{
