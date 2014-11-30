@@ -504,15 +504,6 @@ server_main(void *arg)
 	}
 
 	/*
-	 * Create server socket
-	 */
-	server_socket = sock_listen(cf_control_socket, BACKLOG);
-	if (server_socket == -1)
-	{
-		log_die(EX_SOFTWARE, "server_init: sock_listen failed");
-	}
-
-	/*
 	 * Initialize client sockets
 	 */
 	for (i = 0; i < MAX_CLIENTS; server_clients[i++] = -1);
@@ -721,6 +712,15 @@ server_init()
 		}
 	}
 	
+	/*
+	 * Create server socket
+	 */
+	server_socket = sock_listen(cf_control_socket, BACKLOG);
+	if (server_socket == -1)
+	{
+		log_die(EX_SOFTWARE, "server_init: sock_listen failed");
+	}
+
 	/*
 	 * Start server thread
 	 */
