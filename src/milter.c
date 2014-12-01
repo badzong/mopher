@@ -1174,8 +1174,8 @@ milter_init(void)
 	milter_load_symbols();
 	milter_db_init();
 
-	dbt_open_databases();
 	acl_read();
+	dbt_open_databases();
 	milter_id_init();
 
 	return;

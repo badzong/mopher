@@ -933,6 +933,14 @@ dbt_clear()
 {
 	if (dbt_threads_running)
 	{
+		dbt_threads_running = 0;
+
+		client_clear();
+		server_clear();
+	}
+
+	if (dbt_janitor_running)
+	{
 		if (pthread_mutex_lock(&dbt_janitor_mutex))
 		{
 			log_sys_error("dbt_janitor_clear: pthread_mutex_lock");
@@ -951,9 +959,6 @@ dbt_clear()
 		}
 
 		util_thread_join(dbt_janitor_thread);
-
-		client_clear();
-		server_clear();
 	}
 
 	if (dbt_drivers)
