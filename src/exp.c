@@ -1000,6 +1000,11 @@ exp_eval_regex(int op, var_t *left, var_t *right)
 	char *pattern;
 	char *str;
 
+	if (left == NULL || right == NULL)
+	{
+		return EXP_EMPTY;
+	}
+
 	if (left->v_data == NULL || right->v_data == NULL)
 	{
 		log_debug("exp_eval_regex: empty value");
@@ -1108,6 +1113,11 @@ exp_eval_in(var_t *needle, var_t *haystack)
 	ll_entry_t *pos;
 	int cmp;
 
+	if (needle == NULL || haystack == NULL)
+	{
+		return EXP_EMPTY;
+	}
+
 	if (needle->v_data == NULL || haystack->v_data == NULL)
 	{
 		log_debug("exp_eval_in: empty value");
@@ -1164,6 +1174,10 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 	}
 
 	left = exp_eval(eo->eo_operand[0], mailspec);
+	if (eo->eo_operand[1])
+	{
+		right = exp_eval(eo->eo_operand[1], mailspec);
+	}
 
 	/*
 	 * ! operator
@@ -1182,101 +1196,83 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 		goto exit;
 	}
 
-	if (left == NULL)
+
+	switch(eo->eo_operator)
 	{
-		log_error("exp_eval_operation: exp_eval for left-hand value "
-		    "failed");
+	// Boolean operator
+	case AND:
+	case OR:
+		result = exp_bool(eo->eo_operator, left, right);
+		goto exit;
+
+	// Comparator
+	case '<':
+	case '>':
+	case LE:
+	case GE:
+	case EQ:
+	case NE:
+		result = exp_compare(eo->eo_operator, left, right);
+		goto exit;
+
+	// Regex
+	case '~':
+	case NR:
+		result = exp_eval_regex(eo->eo_operator, left, right);
+		goto exit;
+
+	// In
+	case IN:
+		result = exp_eval_in(left, right);
+		goto exit;
+
+	default:
+		break;
+	}
+
+	// Math operators need left and right to be set
+	if (left == NULL || right ==  NULL)
+	{
+		result = EXP_EMPTY;
 		goto exit;
 	}
 
-	if (eo->eo_operand[1])
+	// Make sure we work with the same types
+	if (left->v_type != right->v_type)
 	{
-		right = exp_eval(eo->eo_operand[1], mailspec);
-		if (right == NULL)
-		{
-			log_error("exp_eval_operation: exp_eval for "
-			    "right-hand value failed");
-			goto exit;
-		}
-
-		switch(eo->eo_operator)
-		{
-		// Boolean operator
-		case AND:
-		case OR:
-			result = exp_bool(eo->eo_operator, left, right);
-			goto exit;
-
-		// Comparator
-		case '<':
-		case '>':
-		case LE:
-		case GE:
-		case EQ:
-		case NE:
-			result = exp_compare(eo->eo_operator, left, right);
-			goto exit;
-
-		// Regex
-		case '~':
-		case NR:
-			result = exp_eval_regex(eo->eo_operator, left, right);
-			goto exit;
-
-		// In
-		case IN:
-			result = exp_eval_in(left, right);
-			goto exit;
-
-		default:
-			break;
-		}
-
-		if (right->v_data == NULL)
-		{
-			log_debug("exp_eval_operation: exp_eval for "
-			     "right-hand value returned no data");
-		}
-
 		/*
-		 * Check data types
+		 * The biggest type has precedence (see exp.h)
+		 * STRING > FLOAT > INT
 		 */
-		if (left->v_type != right->v_type)
+		type = VAR_MAX_TYPE(left, right);
+
+		if (type == left->v_type)
 		{
-			/*
-			 * The biggest type has precedence (see exp.h)
-			 * STRING > FLOAT > INT
-			 */
-			type = VAR_MAX_TYPE(left, right);
+			copy = var_cast_copy(type, right);
+		}
+		else
+		{
+			copy = var_cast_copy(type, left);
+		}
 
-			if (type == left->v_type)
-			{
-				copy = var_cast_copy(type, right);
-			}
-			else
-			{
-				copy = var_cast_copy(type, left);
-			}
+		if (copy == NULL)
+		{
+			log_error("exp_eval_operation: var_cast_copy "
+			    "failed");
+			goto exit;
+		}
 
-			if (copy == NULL)
-			{
-				log_error("exp_eval_operation: var_cast_copy "
-				    "failed");
-				goto exit;
-			}
-
-			if (type == left->v_type)
-			{
-				exp_free(right);
-				right = copy;
-				right->v_flags |= VF_EXP_FREE;
-			}
-			else
-			{
-				exp_free(left);
-				left = copy;
-				left->v_flags |= VF_EXP_FREE;
-			}
+		if (type == left->v_type)
+		{
+			exp_free(right);
+			right = copy;
+			right->v_flags |= VF_EXP_FREE;
+		}
+		else
+		{
+			exp_free(left);
+			left = copy;
+			left->v_flags |= VF_EXP_FREE;
 		}
 	}
 
