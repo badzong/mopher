@@ -12,7 +12,7 @@
 #include <mopher.h>
 
 #define DBT_BUCKETS 32
-#define BUFLEN 1024
+#define BUFLEN 8192
 #define KEYLEN 128
 
 static sht_t *dbt_drivers;
