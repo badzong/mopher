@@ -1047,7 +1047,7 @@ exp_eval_regex(int op, var_t *left, var_t *right)
 	flags = REG_EXTENDED | REG_NOSUB;
 	for (p = pattern; *p; ++p)
 	{
-		if (isupper(*p))
+		if (isupper((int) *p))
 		{
 			break;
 		}

@@ -871,9 +871,9 @@ util_tolower(char *p)
 	for (; *p; ++p)
 	{
 		// Convert to lowercase
-		if (isupper(*p))
+		if (isupper((int) *p))
 		{
-			*p = tolower(*p);
+			*p = (char) tolower((int) *p);
 		}
 	}
 
