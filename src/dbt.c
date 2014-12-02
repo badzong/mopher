@@ -58,7 +58,7 @@ dbt_close(dbt_t *dbt)
 	{
 		if(pthread_mutex_destroy(&dbt->dbt_driver->dd_mutex))
 		{
-			log_sys_error("dbt_register: ptrhead_mutex_destroy");
+			log_sys_error("dbt_close: ptrhead_mutex_destroy");
 		}
 	}
 
