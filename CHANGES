@@ -1,5 +1,11 @@
 Recent changes to mopher's source.
 
+Version 0.5.2
+05.12.2014
+    Fix DSO linking.
+    Fix cleanup procedure on exit/error (#23, #24).
+    Update regdom rules.
+
 Version 0.5.1
 10.11.2014
     Fix multiple problems around loading and punycode translation of
