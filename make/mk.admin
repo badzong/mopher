@@ -1,7 +1,7 @@
 # Makefile
 
 DIST?=			mopher
-VERSION?=		0.5.1
+VERSION?=		0.5.2
 CONTACT?=		mopher@googlegroups.com
 
 AUTOLIST+=		autom4te.cache
