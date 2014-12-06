@@ -70,10 +70,14 @@ tarpit(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 		log_debug("tarpit: %d seconds remaining: report progress",
 		    remaining);
 
+		/*
+		 * Happens if connection is dropped
+		 */
 		if (smfi_progress(ctx) != MI_SUCCESS)
 		{
-			log_debug("tarpit: smfi_progress failed");
-			return ACL_ERROR;
+			log_message(LOG_ERR, mailspec,
+				"tarpit: connection aborted");
+			return ACL_NONE;
 		}
 	}
 
