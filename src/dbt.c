@@ -1127,6 +1127,7 @@ dbt_test_stage1(int n)
 	var_t *record2 = NULL;
 	var_t *lookup= NULL;
 	var_t *result = NULL;
+	int i;
 
 	// Create test record data	
 	dbt_test_record(&tr1, n, 1);
@@ -1148,15 +1149,22 @@ dbt_test_stage1(int n)
 		&tr2.tr_test_updated, &tr2.tr_test_expire);
 
 	TEST_ASSERT(record1 != NULL && record2 != NULL, "vlist_record failed");
-	TEST_ASSERT(dbt_db_set(&dbt_test_table, record1) == 0, "dbt_db_set failed");
-	TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
-	TEST_ASSERT(result != NULL, "dbt_db_get returned NULL");
-	var_delete(result);
-	result = NULL;
 
-	TEST_ASSERT(dbt_db_del(&dbt_test_table, lookup) == 0, "dbt_db_del failed");
-	TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
-	TEST_ASSERT(result == NULL, "dbt_db_del returned deleted record: %s", tr1.tr_string_key);
+	// Stress test
+	for (i = 0; i < 1000; ++i)
+	{
+		TEST_ASSERT(dbt_db_set(&dbt_test_table, record1) == 0, "dbt_db_set failed");
+		TEST_ASSERT(dbt_db_sync(&dbt_test_table) == 0, "dbt_db_sync failed");
+		TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
+		TEST_ASSERT(result != NULL, "dbt_db_get returned NULL");
+		var_delete(result);
+		result = NULL;
+
+		TEST_ASSERT(dbt_db_del(&dbt_test_table, lookup) == 0, "dbt_db_del failed");
+		TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
+		TEST_ASSERT(result == NULL, "dbt_db_del returned deleted record: %s", tr1.tr_string_key);
+		TEST_ASSERT(dbt_db_sync(&dbt_test_table) == 0, "dbt_db_sync failed");
+	}
 
 	// Add records for dbt_test_stage2()
 	TEST_ASSERT(dbt_db_set(&dbt_test_table, record1) == 0, "dbt_db_set failed");

@@ -147,7 +147,7 @@ vp_pack(var_t *record)
 	int r;
 
 	if(record->v_type != VT_LIST) {
-		log_error("vp_pack: bad type");
+		log_error("vp_pack: bad v_type");
 		goto error;
 	}
 

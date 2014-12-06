@@ -45,6 +45,7 @@ OUT_C+=			var.o
 OUT_C+=			vlist.o
 OUT_C+=			vp.o
 OUT_C+=			vtable.o
+OUT_C+=			sql.o
 
 OUT_D+=			mopherctl
 OUT_D+=			mopherd

@@ -77,7 +77,11 @@ tarpit(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 		{
 			log_message(LOG_ERR, mailspec,
 				"tarpit: connection aborted");
-			return ACL_NONE;
+
+			/*
+			 * Do not continue ACL evaluation
+			 */
+			return ACL_TEMPFAIL;
 		}
 	}
 
