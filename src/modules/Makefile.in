@@ -34,6 +34,7 @@ LDFLAGS+=		-shared
 LDFLAGS+=		-fPIC
 LDFLAGS.bdb.so+=	@BDB_LIBS@
 LDFLAGS.sakila.so+=	-lmysqlclient
+LDFLAGS.pgsql.so+=	-lpq
 LDFLAGS.spf.so+=	-lspf2
 
 
