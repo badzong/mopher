@@ -121,6 +121,25 @@ then
   AC_DEFINE([WITH_MOD_BDB])
 fi
 
+# Check for PostgreSQL support
+AC_ARG_WITH([postgresql], AS_HELP_STRING([--with-postgresql], [build with PostgreSQL support]))
+AC_CHECK_LIB([pq], [PQexec], [have_pgsql="yes"], [have_pgsql="no"])
+
+AS_IF(
+  [test -z "$with_pgsql"], [with_pgsql="$have_pgsql"],
+  [test "$with_pgsql" = "yes" -a "$have_pgsql" = "no"],
+    AC_MSG_FAILURE([libpq failed (--without-postgresql to disable)])
+)
+
+if test "$with_pgsql" = "yes"
+then
+  MOD_DB_PGSQL="pgsql.so"
+  AC_SUBST([MOD_DB_PGSQL])
+  AC_DEFINE([WITH_MOD_PGSQL])
+  MOD_LIBS="$MOD_LIBS -lpq"
+fi
+
+
 # Check for MySQL support
 AC_ARG_WITH([mysql], AS_HELP_STRING([--with-mysql], [build with MySQL support]))
 AC_CHECK_LIB([mysqlclient], [mysql_real_connect], [have_mysql="yes"], [have_mysql="no"])
@@ -138,6 +157,7 @@ then
   AC_DEFINE([WITH_MOD_MYSQL])
   MOD_LIBS="$MOD_LIBS -lmysqlclient"
 fi
+
 
 
 # Check for spf2 support

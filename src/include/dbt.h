@@ -16,7 +16,6 @@ typedef int (*dbt_db_get_t)(void *dbt, var_t *record, var_t **result);
 typedef int (*dbt_db_del_t)(void *dbt, var_t *record);
 typedef int (*dbt_db_sql_cleanup_t)(void *dbt);
 typedef int (*dbt_db_sync_t)(void *dbt);
-typedef int (*dbt_db_sql_exec_t(void *handle, char *query);
 
 typedef int (*dbt_db_callback_t)(void *dbt, var_t *record);
 typedef int (*dbt_db_walk_t)(void *dbt, dbt_db_callback_t callback);
@@ -34,8 +33,9 @@ typedef struct dbt_driver {
 	int			 dd_flags;
 	pthread_mutex_t		 dd_mutex;
 	pthread_mutexattr_t	 dd_mutexattr;
+
+	int			 dd_use_sql;
 	sql_t		 	 dd_sql;
-	dbt_db_sql_exec_t	 dd_sql_exec;
 } dbt_driver_t;
 
 typedef struct dbt {

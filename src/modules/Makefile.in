@@ -16,6 +16,7 @@ OUT_A+=			string.so
 OUT_A+=			@MOD_ACL_SPF@
 OUT_A+=			@MOD_DB_BDB@
 OUT_A+=			@MOD_DB_MYSQL@
+OUT_A+=			@MOD_DB_PGSQL@
 
 # INST:
 #	installed on `install'
