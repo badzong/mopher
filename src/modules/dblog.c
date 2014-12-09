@@ -148,8 +148,6 @@ dblog_init(void)
 
 	dblog_dbt.dbt_scheme		= scheme;
 	dblog_dbt.dbt_validate		= dbt_common_validate;
-	dblog_dbt.dbt_sql_invalid_where	= DBT_COMMON_INVALID_SQL;
-
 	dbt_register("dblog", &dblog_dbt);
 
 	acl_update_callback(dblog_update);

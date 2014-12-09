@@ -7,7 +7,7 @@
 #include <mopher.h>
 
 #define BUFLEN 1024
-#define TEST_THREADS 20
+#define TEST_THREADS 1
 
 static pthread_mutex_t test_mutex = PTHREAD_MUTEX_INITIALIZER;
 int test_tests;
@@ -146,7 +146,7 @@ test_threads(int threads, test_handler_t *handler)
 			handler->th_descr);
 	}
 	
-	log_error("%-23s: %4d OK (%d/thread)",
+	log_error("%-23s: %6d OK (%d/thread)",
 		handler->th_descr? buffer: handler->th_name, tests_run,
 		tests_per_thread);
 }
@@ -169,6 +169,8 @@ test_run(int optind, int argc, char **argv)
                 {"dbt.c", "memdb.c (stage 1)", dbt_test_memdb_init, dbt_test_stage1, dbt_test_clear },
                 {"dbt.c", "bdb.c (stage 1)", dbt_test_bdb_init, dbt_test_stage1, dbt_test_clear },
                 {"dbt.c", "bdb.c (stage 2)", dbt_test_bdb_init, dbt_test_stage2, dbt_test_clear },
+                {"dbt.c", "pgsql.c (stage 1)", dbt_test_pgsql_init, dbt_test_stage1, dbt_test_clear },
+                {"dbt.c", "pgsql.c (stage 2)", dbt_test_pgsql_init, dbt_test_stage2, dbt_test_clear },
                 {"dbt.c", "mysql.c (stage 1)", dbt_test_mysql_init, dbt_test_stage1, dbt_test_clear },
                 {"dbt.c", "mysql.c (stage 2)", dbt_test_mysql_init, dbt_test_stage2, dbt_test_clear },
 		{ NULL, NULL, NULL, NULL, NULL }

@@ -69,11 +69,6 @@ dbt_close(dbt_t *dbt)
 		var_delete(dbt->dbt_scheme);
 	}
 
-	if (dbt->dbt_sql_invalid_free)
-	{
-		free(dbt->dbt_sql_invalid_where);
-	}
-
 	dbt->dbt_open = 0;
 
 	return;
@@ -127,7 +122,17 @@ dbt_db_get(dbt_t *dbt, var_t *record, var_t **result)
 		return -1;
 	}
 
-	r = dbt->dbt_driver->dd_get(dbt, record, result);
+	// SQL Driver
+	if (dbt->dbt_driver->dd_use_sql)
+	{
+		r = sql_db_get(dbt->dbt_handle, &dbt->dbt_driver->dd_sql,
+			dbt->dbt_scheme, record, result);
+	}
+	// Regular Driver
+	else
+	{
+		r = dbt->dbt_driver->dd_get(dbt, record, result);
+	}
 
 	dbt_unlock(dbt);
 
@@ -150,7 +155,16 @@ dbt_db_set(dbt_t *dbt, var_t *record)
 		client_sync(dbt, record);
 	}
 
-	r = dbt->dbt_driver->dd_set(dbt, record);
+	// SQL Driver
+	if (dbt->dbt_driver->dd_use_sql)
+	{
+		r = sql_db_set(dbt->dbt_handle, &dbt->dbt_driver->dd_sql, record);
+	}
+	// Regular Driver
+	else
+	{
+		r = dbt->dbt_driver->dd_set(dbt, record);
+	}
 
 	dbt_unlock(dbt);
 
@@ -168,7 +182,16 @@ dbt_db_del(dbt_t *dbt, var_t *record)
 		return -1;
 	}
 
-	r = dbt->dbt_driver->dd_del(dbt, record);
+	// SQL Driver
+	if (dbt->dbt_driver->dd_use_sql)
+	{
+		r = sql_db_del(dbt->dbt_handle, &dbt->dbt_driver->dd_sql, record);
+	}
+	// Regular Driver
+	else
+	{
+		r = dbt->dbt_driver->dd_del(dbt, record);
+	}
 
 	dbt_unlock(dbt);
 
@@ -187,7 +210,16 @@ dbt_db_walk(dbt_t *dbt, dbt_db_callback_t callback)
 		return -1;
 	}
 	
-	r = dbt->dbt_driver->dd_walk(dbt, callback);
+	// Currently SQL drivers do not need to be walkable
+	if (dbt->dbt_driver->dd_use_sql)
+	{
+		log_error("dbt_db_walk: refused to walk SQL driver");
+		r = -1;
+	}
+	else
+	{
+		r = dbt->dbt_driver->dd_walk(dbt, callback);
+	}
 
 	dbt_unlock(dbt);
 
@@ -226,7 +258,14 @@ dbt_db_cleanup(dbt_t *dbt)
 		return -1;
 	}
 
-	r = dbt->dbt_driver->dd_sql_cleanup(dbt);
+	if (!dbt->dbt_driver->dd_use_sql)
+	{
+		log_die(EX_SOFTWARE, "dbt_db_cleanup: can only be called for"
+			" SQL drivers");
+	}
+
+	r = sql_db_cleanup(dbt->dbt_handle, &dbt->dbt_driver->dd_sql,
+		dbt->dbt_table);
 
 	dbt_unlock(dbt);
 
@@ -465,16 +504,6 @@ dbt_register(char *name, dbt_t *dbt)
 		dbt->dbt_cleanup_interval = cf_dbt_cleanup_interval;
 	}
 
-	if (dbt->dbt_sql_invalid_where)
-	{
-		if (strcmp(dbt->dbt_sql_invalid_where, "COMMON") == 0)
-		{
-			dbt->dbt_sql_invalid_where =
-			    dbt_common_sql(dbt->dbt_name);
-			dbt->dbt_sql_invalid_free = 1;
-		}
-	}
-
 	/*
 	 * Lock janitor mutex in case the janitor is already working
 	 */
@@ -622,7 +651,7 @@ dbt_janitor_cleanup(time_t now, dbt_t *dbt)
 	/*
 	 * Check if driver supports SQL
 	 */
-	if (dbt->dbt_driver->dd_sql_cleanup && dbt->dbt_sql_invalid_where)
+	if (dbt->dbt_driver->dd_use_sql)
 	{
 		deleted = dbt_janitor_cleanup_sql(dbt);
 	}
@@ -854,6 +883,13 @@ dbt_open_database(dbt_t *dbt)
 		    dbt->dbt_name);
 	}
 
+	// Create tables in SQL databases
+	if (dbt->dbt_driver->dd_use_sql)
+	{
+		sql_open(dbt->dbt_handle, &dbt->dbt_driver->dd_sql,
+			dbt->dbt_scheme);
+	}
+
 	dbt->dbt_open = 1;
 
 	return;
@@ -1072,6 +1108,10 @@ error:
 }
 
 #ifdef DEBUG
+
+#define DBT_STRESS_ROUNDS 1
+#define DBT_TEST_EXPIRE 60
+
 static dbt_t dbt_test_table;
 static var_t *dbt_test_scheme;
 
@@ -1102,19 +1142,18 @@ dbt_test_record(dbt_test_record_t *tr, int n, int expire)
 	snprintf(tr->tr_string_key, 19, "KEY: %d", n);
 	sin = (struct sockaddr_in *) &tr->tr_sockaddr_key;
 	sin->sin_family = AF_INET;
-	sin->sin_addr.s_addr = (n * 0x10101010);
+	sin->sin_addr.s_addr = (n * 0x01010101);
 
 	tr->tr_int_value = n;
 	tr->tr_float_value = n * 0.5;
 	snprintf(tr->tr_string_value, 19, "VALUE: %d", n);
 	sin = (struct sockaddr_in *) &tr->tr_sockaddr_value;
 	sin->sin_family = AF_INET;
-	sin->sin_addr.s_addr = (n * 0x10101010);
+	sin->sin_addr.s_addr = (n * 0x01010101);
 
 	tr->tr_test_created = time(NULL);
 	tr->tr_test_updated = tr->tr_test_created;
 
-	// Record expired yesterday
 	tr->tr_test_expire = tr->tr_test_created + expire;
 }
 
@@ -1130,8 +1169,8 @@ dbt_test_stage1(int n)
 	int i;
 
 	// Create test record data	
-	dbt_test_record(&tr1, n, 1);
-	dbt_test_record(&tr2, n + 10000, 1);
+	dbt_test_record(&tr1, n, DBT_TEST_EXPIRE);
+	dbt_test_record(&tr2, n + 10000, DBT_TEST_EXPIRE);
 
 	// Create records
 	record1 = vlist_record(dbt_test_scheme, &tr1.tr_int_key, &tr1.tr_float_key,
@@ -1151,7 +1190,7 @@ dbt_test_stage1(int n)
 	TEST_ASSERT(record1 != NULL && record2 != NULL, "vlist_record failed");
 
 	// Stress test
-	for (i = 0; i < 1000; ++i)
+	for (i = 0; i < DBT_STRESS_ROUNDS; ++i)
 	{
 		TEST_ASSERT(dbt_db_set(&dbt_test_table, record1) == 0, "dbt_db_set failed");
 		TEST_ASSERT(dbt_db_sync(&dbt_test_table) == 0, "dbt_db_sync failed");
@@ -1242,7 +1281,6 @@ dbt_test_init(char *config_key, char *driver)
 	// Init dbt_test_table
 	dbt_test_table.dbt_scheme = dbt_test_scheme;
 	dbt_test_table.dbt_validate = dbt_common_validate;
-	dbt_test_table.dbt_sql_invalid_where = DBT_COMMON_INVALID_SQL;
 	dbt_test_table.dbt_config_key = config_key;
 	dbt_test_table.dbt_cleanup_schedule = time(NULL);
 
@@ -1288,6 +1326,12 @@ int
 dbt_test_bdb_init(void)
 {
 	return dbt_test_init("test_bdb", "bdb.so");
+}
+
+int
+dbt_test_pgsql_init(void)
+{
+	return dbt_test_init("test_pgsql", "pgsql.so");
 }
 
 int

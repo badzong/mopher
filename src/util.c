@@ -126,6 +126,7 @@ util_strtoaddr(const char *str)
 		ss->ss_family = AF_INET6;
 	}
 	else {
+		log_error("util_strtoaddr: bad address string: %s", str);
 		return NULL;
 	}
 

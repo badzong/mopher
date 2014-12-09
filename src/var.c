@@ -425,12 +425,13 @@ var_scan_data(var_type_t type, char *str)
 	case VT_FLOAT:
 		d = atof(str);
 		src = &d;
+		break;
 
 	case VT_ADDR:
 		ss = util_strtoaddr(str);
 		if (ss == NULL)
 		{
-			log_warning("var_scan_data: util_strtoaddr failed");
+			log_error("var_scan_data: util_strtoaddr failed");
 			return NULL;
 		}
 
@@ -439,14 +440,14 @@ var_scan_data(var_type_t type, char *str)
 	//TODO Add more types
 
 	default:
-		log_warning("var_scan_data: bad type");
+		log_error("var_scan_data: bad type");
 		return NULL;
 	}
 
 	copy = var_copy_data(type, src);
 	if (copy == NULL)
 	{
-		log_warning("var_scan_data: var_copy_data failed");
+		log_error("var_scan_data: var_copy_data failed");
 		return NULL;
 	}
 
@@ -462,14 +463,14 @@ var_scan(var_type_t type, char *name, char *str)
 	data = var_scan_data(type, str);
 	if (data == NULL)
 	{
-		log_warning("var_scan: var_scan_data failed");
+		log_error("var_scan: var_scan_data failed");
 		return NULL;
 	}
 
 	v = var_create(type, name, data, VF_COPY);
 	if (v == NULL)
 	{
-		log_warning("var_scan: var_create failed");
+		log_error("var_scan: var_create failed");
 	}
 
 	free(data);

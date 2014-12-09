@@ -371,13 +371,10 @@ counter_init(void)
 
 	counter_relay.dbt_scheme			= relay_scheme;
 	counter_relay.dbt_validate			= dbt_common_validate;
-	counter_relay.dbt_sql_invalid_where		= DBT_COMMON_INVALID_SQL;
+	dbt_register("counter_relay", &counter_relay);
 
 	counter_penpal.dbt_scheme			= penpal_scheme;
 	counter_penpal.dbt_validate			= dbt_common_validate;
-	counter_penpal.dbt_sql_invalid_where		= DBT_COMMON_INVALID_SQL;
-
-	dbt_register("counter_relay", &counter_relay);
 	dbt_register("counter_penpal", &counter_penpal);
 
 	acl_symbol_register("counter_relay", MS_ANY, counter_lookup, AS_CACHE);

@@ -29,7 +29,6 @@ typedef struct dbt_driver {
 	dbt_db_del_t		 dd_del;
 	dbt_db_walk_t		 dd_walk;
 	dbt_db_sync_t	 	 dd_sync;
-	dbt_db_sql_cleanup_t	 dd_sql_cleanup;
 	int			 dd_flags;
 	pthread_mutex_t		 dd_mutex;
 	pthread_mutexattr_t	 dd_mutexattr;
@@ -52,8 +51,6 @@ typedef struct dbt {
 	int			  dbt_cleanup_interval;
 	int			  dbt_cleanup_schedule;
 	int			  dbt_cleanup_deleted;
-	char			 *dbt_sql_invalid_where;
-	int			  dbt_sql_invalid_free;
 	int			(*dbt_validate)(struct dbt *, var_t *);
 	char			 *dbt_drivername;
 	dbt_driver_t		 *dbt_driver;
@@ -67,12 +64,9 @@ typedef int (*dbt_validate_t)(dbt_t *dbt, var_t *record);
 #define DBT_DB_CLOSE(DBT) (dbt)->dbt_driver->dd_close(dbt)
 #define DBT_VALIDATE(dbt, var) (dbt)->dbt_validate(dbt, var)
 
-#define DBT_COMMON_INVALID_SQL "COMMON"
-
 /*
  * Prototypes
  */
-
 void dbt_driver_register(dbt_driver_t *dd);
 int dbt_db_get(dbt_t *dbt, var_t *record, var_t **result);
 int dbt_db_set(dbt_t *dbt, var_t *record);
@@ -93,6 +87,7 @@ int dbt_dump(char **dump, char *tablename);
 int dbt_test_memdb_init(void);
 int dbt_test_bdb_init(void);
 int dbt_test_mysql_init(void);
+int dbt_test_pgsql_init(void);
 void dbt_test_stage1(int n);
 void dbt_test_stage2(int n);
 void dbt_test_clear(void);

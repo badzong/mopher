@@ -251,7 +251,6 @@ greylist_init(void)
 
 	greylist_dbt.dbt_scheme = scheme;
 	greylist_dbt.dbt_validate = dbt_common_validate;
-	greylist_dbt.dbt_sql_invalid_where = DBT_COMMON_INVALID_SQL;
 
 	/*
 	 * register greylist table
