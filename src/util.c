@@ -51,6 +51,44 @@ util_strdupenc(const char *src, const char *encaps)
 	return dup;
 }
 
+int
+util_quote(char *buffer, int size, char *str, char *quotes)
+{
+	int len;
+	char start = 0;
+	char end = 0;
+
+	if (strlen(quotes) == 1)
+	{
+		start = end = quotes[0];
+	}
+	else
+	{
+		start = quotes[0];
+		end = quotes[1];
+	}
+
+	if (strchr(str, start) || strchr(str, end))
+	{
+		log_error("util_quote: string contains quote character");
+		return -1;
+	}
+
+	len = strlen(str);
+	if (len + 2 >= size)
+	{
+		log_error("util_quote: buffer exhausted");
+		return -1;
+	}
+
+	buffer[0] = start;
+	strcpy(buffer + 1, str);
+	buffer[len + 1] = end;
+	buffer[len + 2] = 0;
+
+	return 0;
+}
+
 
 int
 util_strmail(char *buffer, int size, const char *src)

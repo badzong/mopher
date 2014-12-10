@@ -1348,6 +1348,12 @@ dbt_test_bdb_init(void)
 }
 
 int
+dbt_test_lite_init(void)
+{
+	return dbt_test_init("test_lite", "lite.so");
+}
+
+int
 dbt_test_pgsql_init(void)
 {
 	return dbt_test_init("test_pgsql", "pgsql.so");

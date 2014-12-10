@@ -169,6 +169,8 @@ test_run(int optind, int argc, char **argv)
                 {"dbt.c", "memdb.c (stage 1)", dbt_test_memdb_init, dbt_test_stage1, dbt_test_clear },
                 {"dbt.c", "bdb.c (stage 1)", dbt_test_bdb_init, dbt_test_stage1, dbt_test_clear },
                 {"dbt.c", "bdb.c (stage 2)", dbt_test_bdb_init, dbt_test_stage2, dbt_test_clear },
+                {"dbt.c", "lite.c (stage 1)", dbt_test_lite_init, dbt_test_stage1, dbt_test_clear },
+                {"dbt.c", "lite.c (stage 2)", dbt_test_lite_init, dbt_test_stage2, dbt_test_clear },
                 {"dbt.c", "pgsql.c (stage 1)", dbt_test_pgsql_init, dbt_test_stage1, dbt_test_clear },
                 {"dbt.c", "pgsql.c (stage 2)", dbt_test_pgsql_init, dbt_test_stage2, dbt_test_clear },
                 {"dbt.c", "mysql.c (stage 1)", dbt_test_mysql_init, dbt_test_stage1, dbt_test_clear },

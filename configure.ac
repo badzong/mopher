@@ -121,6 +121,26 @@ then
   AC_DEFINE([WITH_MOD_BDB])
 fi
 
+
+# Check for SQLite3 support
+AC_ARG_WITH([sqlite3], AS_HELP_STRING([--with-sqlite3], [build with SQLite3 support]))
+AC_CHECK_LIB([sqlite3], [sqlite3_open], [have_sqlite3="yes"], [have_sqlite3="no"])
+
+AS_IF(
+  [test -z "$with_sqlite3"], [with_sqlite3="$have_sqlite3"],
+  [test "$with_sqlite3" = "yes" -a "$have_sqlite3" = "no"],
+    AC_MSG_FAILURE([libsqlite3 failed (--without-sqlite3 to disable)])
+)
+
+if test "$with_sqlite3" = "yes"
+then
+  MOD_DB_SQLITE3="lite.so"
+  AC_SUBST([MOD_DB_SQLITE3])
+  AC_DEFINE([WITH_MOD_SQLITE3])
+  MOD_LIBS="$MOD_LIBS -lsqlite3"
+fi
+
+
 # Check for PostgreSQL support
 AC_ARG_WITH([postgresql], AS_HELP_STRING([--with-postgresql], [build with PostgreSQL support]))
 AC_CHECK_LIB([pq], [PQexec], [have_pgsql="yes"], [have_pgsql="no"])
@@ -157,7 +177,6 @@ then
   AC_DEFINE([WITH_MOD_MYSQL])
   MOD_LIBS="$MOD_LIBS -lmysqlclient"
 fi
-
 
 
 # Check for spf2 support
