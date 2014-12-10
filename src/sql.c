@@ -38,6 +38,12 @@ sql_columns(void *handle, sql_t *sql, char *buffer, int size, int types, char *j
 		{
 			continue;
 		}
+
+		if (v->v_name == NULL)
+		{
+			log_error("sql_columns: v_name cannot be NULL");
+			return -1;
+		}
 		
 		// Escape column name
 		if (sql->sql_esc_column(handle, column, sizeof column,
@@ -70,6 +76,7 @@ sql_values(void *conn, sql_t *sql, char *buffer, int size, char *join,
 	var_t *v;
 	char *vp;
 	int n = 0;
+	int isnull;
 
 	if(record->v_type != VT_LIST) {
 		log_error("sql_values: bad v_type");
@@ -81,8 +88,14 @@ sql_values(void *conn, sql_t *sql, char *buffer, int size, char *join,
 	pos = LL_START(ll);
 	while ((v = ll_next(ll, &pos)) != NULL)
 	{
+		isnull = 0;
 		// Cast value to string
-		if (v->v_type == VT_STRING)
+		if (v->v_data == NULL)
+		{
+			strcpy(value, "NULL");
+			isnull = 1;
+		}
+		else if (v->v_type == VT_STRING)
 		{
 			vp = v->v_data;
 		}
@@ -90,24 +103,27 @@ sql_values(void *conn, sql_t *sql, char *buffer, int size, char *join,
 		{
 			if (var_dump_data(v, value_raw, sizeof value_raw) == -1)
 			{
-				log_error("sql_key_value: var_dump_data failed");
+				log_error("sql_values: var_dump_data failed");
 				return -1;
 			}
 			vp = value_raw;
 		}
 
-		// Escape value
-		if (sql->sql_esc_value(conn, value, sizeof value, vp))
+		if (!isnull)
 		{
-			log_error("sql_key_value: escape value failed");
-			return -1;
+			// Escape value
+			if (sql->sql_esc_value(conn, value, sizeof value, vp))
+			{
+				log_error("sql_values: escape value failed");
+				return -1;
+			}
 		}
 
 		n += snprintf(buffer + n, size - n, "%s%s", n? join: "",
 			value);
 		if (n >= size)
 		{
-			log_error("sql_columns: buffer exhausted");
+			log_error("sql_values: buffer exhausted");
 			return -1;
 		}
 	}
@@ -127,6 +143,7 @@ sql_key_value(void *conn, sql_t *sql, char *buffer, int size, int types, char *j
 	char value_raw[BUFLEN];
 	char value[BUFLEN];
 	char *vp = NULL;
+	int isnull;
 
 	if(record->v_type != VT_LIST) {
 		log_error("sql_key_value: bad v_type");
@@ -151,9 +168,9 @@ sql_key_value(void *conn, sql_t *sql, char *buffer, int size, int types, char *j
 		}
 		
 		// Name and value cannot be NULL
-		if (v->v_name == NULL || v->v_data == NULL)
+		if (v->v_name == NULL)
 		{
-			log_error("sql_key_value: key cannot be NULL");
+			log_error("sql_key_value: v_name cannot be NULL");
 			return -1;
 		}
 
@@ -165,8 +182,14 @@ sql_key_value(void *conn, sql_t *sql, char *buffer, int size, int types, char *j
 			return -1;
 		}
 
+		isnull = 0;
 		// Cast value to string
-		if (v->v_type == VT_STRING)
+		if (v->v_data == NULL)
+		{
+			strcpy(value, "NULL");
+			isnull = 1;
+		}
+		else if (v->v_type == VT_STRING)
 		{
 			vp = v->v_data;
 		}
@@ -181,10 +204,13 @@ sql_key_value(void *conn, sql_t *sql, char *buffer, int size, int types, char *j
 		}
 
 		// Escape value
-		if (sql->sql_esc_value(conn, value, sizeof value, vp))
+		if (!isnull)
 		{
-			log_error("sql_key_value: escape value failed");
-			return -1;
+			if (sql->sql_esc_value(conn, value, sizeof value, vp))
+			{
+				log_error("sql_key_value: escape value for '%s' failed", vp);
+				return -1;
+			}
 		}
 
 		n += snprintf(buffer + n, size - n, "%s%s=%s",
@@ -554,11 +580,11 @@ sql_db_set(void *conn, sql_t *sql, var_t *record)
 		log_error("sql_db_set: dd_sql_exec failed");
 		return -1;
 	}
+	sql->sql_free_result(conn, result);
 
 	// Update successful
 	if (affected == 1)
 	{
-		sql->sql_free_result(conn, result);
 		return 0;
 	}
 
@@ -576,6 +602,7 @@ sql_db_set(void *conn, sql_t *sql, var_t *record)
 		log_error("sql_db_set: dd_sql_exec failed");
 		return -1;
 	}
+	sql->sql_free_result(conn, result);
 
 	return 0;
 }

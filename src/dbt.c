@@ -1109,7 +1109,7 @@ error:
 
 #ifdef DEBUG
 
-#define DBT_STRESS_ROUNDS 1
+#define DBT_STRESS_ROUNDS 200
 #define DBT_TEST_EXPIRE 60
 
 static dbt_t dbt_test_table;
@@ -1124,6 +1124,8 @@ typedef struct dbt_test_record {
 	VAR_FLOAT_T     tr_float_value;
 	char            tr_string_value[20];
 	var_sockaddr_t  tr_sockaddr_value;
+	char           *tr_chars;
+	char           *tr_null;
 	VAR_INT_T       tr_test_created;
 	VAR_INT_T       tr_test_updated;
 	VAR_INT_T       tr_test_expire;
@@ -1151,6 +1153,9 @@ dbt_test_record(dbt_test_record_t *tr, int n, int expire)
 	sin->sin_family = AF_INET;
 	sin->sin_addr.s_addr = (n * 0x01010101);
 
+	tr->tr_chars = "'\"~!@#$%^&*()_";
+	tr->tr_null = NULL;
+
 	tr->tr_test_created = time(NULL);
 	tr->tr_test_updated = tr->tr_test_created;
 
@@ -1176,22 +1181,33 @@ dbt_test_stage1(int n)
 	record1 = vlist_record(dbt_test_scheme, &tr1.tr_int_key, &tr1.tr_float_key,
 		tr1.tr_string_key, &tr1.tr_sockaddr_key, &tr1.tr_int_value,
 		&tr1.tr_float_value, tr1.tr_string_value,
-		&tr1.tr_sockaddr_value, &tr1.tr_test_created,
-		&tr1.tr_test_updated, &tr1.tr_test_expire);
+		&tr1.tr_sockaddr_value, tr1.tr_chars, tr1.tr_null,
+		&tr1.tr_test_created, &tr1.tr_test_updated, &tr1.tr_test_expire);
 	lookup = vlist_record(dbt_test_scheme, &tr1.tr_int_key, &tr1.tr_float_key,
 		tr1.tr_string_key, &tr1.tr_sockaddr_key, NULL, NULL, NULL,
-		NULL, NULL, NULL, NULL);
+		NULL, NULL, NULL, NULL, NULL, NULL);
 	record2 = vlist_record(dbt_test_scheme, &tr2.tr_int_key, &tr2.tr_float_key,
 		tr2.tr_string_key, &tr2.tr_sockaddr_key, &tr2.tr_int_value,
 		&tr2.tr_float_value, tr2.tr_string_value,
-		&tr2.tr_sockaddr_value, &tr2.tr_test_created,
-		&tr2.tr_test_updated, &tr2.tr_test_expire);
+		&tr2.tr_sockaddr_value, tr2.tr_chars, tr2.tr_null,
+		&tr2.tr_test_created, &tr2.tr_test_updated, &tr2.tr_test_expire);
 
 	TEST_ASSERT(record1 != NULL && record2 != NULL, "vlist_record failed");
 
 	// Stress test
 	for (i = 0; i < DBT_STRESS_ROUNDS; ++i)
 	{
+		// Insert
+		TEST_ASSERT(dbt_db_set(&dbt_test_table, record1) == 0, "dbt_db_set failed");
+		TEST_ASSERT(dbt_db_sync(&dbt_test_table) == 0, "dbt_db_sync failed");
+
+		// Select
+		TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
+		TEST_ASSERT(result != NULL, "dbt_db_get returned NULL");
+		var_delete(result);
+		result = NULL;
+
+		// Update
 		TEST_ASSERT(dbt_db_set(&dbt_test_table, record1) == 0, "dbt_db_set failed");
 		TEST_ASSERT(dbt_db_sync(&dbt_test_table) == 0, "dbt_db_sync failed");
 		TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
@@ -1199,6 +1215,7 @@ dbt_test_stage1(int n)
 		var_delete(result);
 		result = NULL;
 
+		// Delete
 		TEST_ASSERT(dbt_db_del(&dbt_test_table, lookup) == 0, "dbt_db_del failed");
 		TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
 		TEST_ASSERT(result == NULL, "dbt_db_del returned deleted record: %s", tr1.tr_string_key);
@@ -1233,7 +1250,7 @@ dbt_test_stage2(int n)
 	// Lookup record 1
 	lookup = vlist_record(dbt_test_scheme, &tr1.tr_int_key, &tr1.tr_float_key,
 		tr1.tr_string_key, &tr1.tr_sockaddr_key, NULL, NULL, NULL,
-		NULL, NULL, NULL, NULL);
+		NULL, NULL, NULL, NULL, NULL,NULL);
 	TEST_ASSERT(lookup != NULL, "vlist_record failed");
 	TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
 	TEST_ASSERT(result != NULL, "returned result is NULL");
@@ -1243,7 +1260,7 @@ dbt_test_stage2(int n)
 	// Lookup record 2
 	lookup = vlist_record(dbt_test_scheme, &tr2.tr_int_key, &tr2.tr_float_key,
 		tr2.tr_string_key, &tr2.tr_sockaddr_key, NULL, NULL, NULL,
-		NULL, NULL, NULL, NULL);
+		NULL, NULL, NULL, NULL, NULL, NULL);
 	TEST_ASSERT(lookup != NULL, "vlist_record failed");
 	TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
 	TEST_ASSERT(result != NULL, "returned result is NULL");
@@ -1273,6 +1290,8 @@ dbt_test_init(char *config_key, char *driver)
 		"test_float",		VT_FLOAT,	VF_KEEPNAME,
 		"test_string",		VT_STRING,	VF_KEEPNAME,
 		"test_addr",		VT_ADDR,	VF_KEEPNAME,
+		"test_chars",		VT_STRING,	VF_KEEPNAME,
+		"test_null",		VT_STRING,	VF_KEEPNAME,
 		"test_created",		VT_INT,		VF_KEEPNAME,
 		"test_updated",		VT_INT,		VF_KEEPNAME,
 		"test_expire",		VT_INT,		VF_KEEPNAME,

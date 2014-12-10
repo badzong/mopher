@@ -19,8 +19,6 @@ pgsql_exec(PGconn *conn, char *cmd, int *tuples, int *affected)
 	*tuples = 0;
 	*affected = 0;
 
-	printf("QUERY: %s\n", cmd);
-
 	res = PQexec(conn, cmd);
 	switch (PQresultStatus(res))
 	{
@@ -93,8 +91,6 @@ pgsql_open(dbt_t *dbt)
 	n += snprintf(conninfo + n, sizeof conninfo - n,
 		"user='%s' password='%s' dbname='%s'", dbt->dbt_user,
 		dbt->dbt_pass, dbt->dbt_database);
-
-	printf("%s\n", conninfo);
 
 	if (n >= sizeof conninfo)
 	{
@@ -193,14 +189,7 @@ pgsql_esc_value(PGconn *conn, char *buffer, int size, char *str)
 	}
 
 	strcpy(buffer, literal);
-	return 0;
-
-	PQescapeStringConn(conn, buffer, str, size, &error);
-	if (error)
-	{
-		log_error("pgsql_escape_value: PQescapeStringConn failed");
-		return -1;
-	}
+	PQfreemem(literal);
 
 	return 0;
 }

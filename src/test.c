@@ -7,7 +7,7 @@
 #include <mopher.h>
 
 #define BUFLEN 1024
-#define TEST_THREADS 1
+#define TEST_THREADS 50
 
 static pthread_mutex_t test_mutex = PTHREAD_MUTEX_INITIALIZER;
 int test_tests;
