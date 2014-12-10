@@ -460,20 +460,27 @@ var_scan(var_type_t type, char *name, char *str)
 	var_t *v = NULL;
 	void *data;
 
-	data = var_scan_data(type, str);
-	if (data == NULL)
+	if (str == NULL)
 	{
-		log_error("var_scan: var_scan_data failed");
-		return NULL;
+		v = var_create(type, name, NULL, VF_COPYNAME);
+	}
+	else
+	{
+		data = var_scan_data(type, str);
+		if (data == NULL)
+		{
+			log_error("var_scan: var_scan_data failed");
+			return NULL;
+		}
+
+		v = var_create(type, name, data, VF_COPY);
+		free(data);
 	}
 
-	v = var_create(type, name, data, VF_COPY);
 	if (v == NULL)
 	{
 		log_error("var_scan: var_create failed");
 	}
-
-	free(data);
 
 	return v;
 }

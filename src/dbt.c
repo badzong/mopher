@@ -15,6 +15,9 @@
 #define BUFLEN 8192
 #define KEYLEN 128
 
+#define DBT_STRESS_ROUNDS 200
+#define DBT_TEST_EXPIRE 60
+
 static sht_t *dbt_drivers;
 static sht_t *dbt_tables;
 static int dbt_threads_running;
@@ -1108,9 +1111,6 @@ error:
 }
 
 #ifdef DEBUG
-
-#define DBT_STRESS_ROUNDS 200
-#define DBT_TEST_EXPIRE 60
 
 static dbt_t dbt_test_table;
 static var_t *dbt_test_scheme;

@@ -34,6 +34,11 @@ pgsql_exec(PGconn *conn, char *cmd, int *tuples, int *affected)
 		goto error;
 	}
 
+	if (*tuples > 1)
+	{
+		log_error("pgsql_exec: %d rows returned", *tuples);
+	}
+
 	log_debug("pgsql_exec: %s: OK", cmd);
 
 	return res;
@@ -74,7 +79,8 @@ pgsql_open(dbt_t *dbt)
 			dbt->dbt_host);
 		if (n >= sizeof conninfo)
 		{
-			log_die(EX_SOFTWARE, "pgsql_open: buffer exhausted");
+			log_error("pgsql_open: buffer exhausted");
+			goto error;
 		}
 	}
 
@@ -84,7 +90,8 @@ pgsql_open(dbt_t *dbt)
 			dbt->dbt_port);
 		if (n >= sizeof conninfo)
 		{
-			log_die(EX_SOFTWARE, "pgsql_open: buffer exhausted");
+			log_error("pgsql_open: buffer exhausted");
+			goto error;
 		}
 	}
 
