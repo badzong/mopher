@@ -239,14 +239,14 @@ sql_create(void *conn, sql_t *sql, char *buffer, int size, char *tablename, var_
 	int n = 0;
 
 	if(scheme->v_type != VT_LIST) {
-		log_error("sql_key_value: bad v_type");
+		log_error("sql_create: bad v_type");
 		return -1;
 	}
 
 	// Escape table
 	if (sql->sql_esc_identifier(conn, table, sizeof table, tablename))
 	{
-		log_error("sql_key_value: escape table failed");
+		log_error("sql_create: escape table failed");
 		return -1;
 	}
 
@@ -309,7 +309,7 @@ sql_select(char *conn, sql_t *sql, char *buffer, int size, char *tablename, var_
 
 	if (sql->sql_esc_identifier(conn, table, sizeof table, tablename))
 	{
-		log_error("sql_key_value: escape table failed");
+		log_error("sql_select: escape table failed");
 		return -1;
 	}
 
@@ -346,19 +346,19 @@ sql_insert(void *conn, sql_t *sql, char *buffer, int size, char *tablename, var_
 
 	if (sql->sql_esc_identifier(conn, table, sizeof table, tablename))
 	{
-		log_error("sql_key_value: escape table failed");
+		log_error("sql_insert: escape table failed");
 		return -1;
 	}
 
 	if (sql_columns(conn, sql, columns, sizeof columns, SQL_ALL, ",", record))
 	{
-		log_error("sql_select: sql_columns failed");
+		log_error("sql_insert: sql_columns failed");
 		return -1;
 	}
 
 	if (sql_values(conn, sql, values, sizeof values, ",", record))
 	{
-		log_error("sql_select: sql_columns failed");
+		log_error("sql_insert: sql_columns failed");
 		return -1;
 	}
 
@@ -366,7 +366,7 @@ sql_insert(void *conn, sql_t *sql, char *buffer, int size, char *tablename, var_
 		columns, values);
 	if (n >= size)
 	{
-		log_error("sql_update: buffer exhausted");
+		log_error("sql_insert: buffer exhausted");
 		return -1;
 	}
 
@@ -383,7 +383,7 @@ sql_update(void *conn, sql_t *sql, char *buffer, int size, char *tablename, var_
 
 	if (sql->sql_esc_identifier(conn, table, sizeof table, tablename))
 	{
-		log_error("sql_key_value: escape table failed");
+		log_error("sql_update: escape table failed");
 		return -1;
 	}
 
@@ -419,7 +419,7 @@ sql_delete(void *conn, sql_t *sql, char *buffer, int size, char *tablename, var_
 
 	if (sql->sql_esc_identifier(conn, table, sizeof table, tablename))
 	{
-		log_error("sql_key_value: escape table failed");
+		log_error("sql_delete: escape table failed");
 		return -1;
 	}
 
@@ -450,7 +450,7 @@ sql_cleanup(void *conn, sql_t *sql, char *buffer, int size, char *tablename)
 
 	if (sql->sql_esc_identifier(conn, table, sizeof table, tablename))
 	{
-		log_error("sql_key_value: escape table failed");
+		log_error("sql_cleanup: escape table failed");
 		return -1;
 	}
 
@@ -464,7 +464,7 @@ sql_cleanup(void *conn, sql_t *sql, char *buffer, int size, char *tablename)
 
 	if (sql->sql_esc_identifier(conn, expire, sizeof expire, expire_raw))
 	{
-		log_error("sql_key_value: escape table failed");
+		log_error("sql_cleanup: escape table failed");
 		return -1;
 	}
 	
@@ -748,21 +748,21 @@ sql_db_del(void *conn, sql_t *sql, var_t *record)
 	// Begin
 	if (sql_db_exec_only(conn, sql, "BEGIN") == -1)
 	{
-		log_error("sql_db_set: sql_db_exec_only failed");
+		log_error("sql_db_del: sql_db_exec_only failed");
 		return -1;
 	}
 
 	// Execute query
 	if (sql_db_exec_only(conn, sql, query) == -1)
 	{
-		log_error("sql_db_set: sql_db_exec_only failed");
+		log_error("sql_db_del: sql_db_exec_only failed");
 		return -1;
 	}
 
 	// Commit
 	if (sql_db_exec_only(conn, sql, "COMMIT") == -1)
 	{
-		log_error("sql_db_set: sql_db_exec_only failed");
+		log_error("sql_db_del: sql_db_exec_only failed");
 		return -1;
 	}
 
