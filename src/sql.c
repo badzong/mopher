@@ -917,6 +917,9 @@ sql_test(int n)
 	//printf("%s\n%s\n\n", query, pattern);
 	TEST_ASSERT(strcmp(pattern, query) == 0, "sql_update returned wrong query");
 
+	var_delete(scheme);
+	var_delete(record);
+
 	return;
 }
 
