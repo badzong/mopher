@@ -251,9 +251,9 @@ pgsql_init(void)
 
 	// SQL driver
 	dbt_driver.dd_use_sql                = 1;
-	dbt_driver.dd_sql.sql_t_int          = "INTEGER";
-	dbt_driver.dd_sql.sql_t_float        = "FLOAT";
-	dbt_driver.dd_sql.sql_t_string       = "VARCHAR(255)";
+	dbt_driver.dd_sql.sql_t_int          = "BIGINT";
+	dbt_driver.dd_sql.sql_t_float        = "NUMERIC(12,2)";
+	dbt_driver.dd_sql.sql_t_string       = "TEXT";
 	dbt_driver.dd_sql.sql_t_addr         = "INET";
 	dbt_driver.dd_sql.sql_esc_identifier = (sql_escape_t) pgsql_esc_identifier;
 	dbt_driver.dd_sql.sql_esc_value      = (sql_escape_t) pgsql_esc_value;
