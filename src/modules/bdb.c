@@ -14,8 +14,6 @@
 
 #include <mopher.h>
 
-#define HOME_LEN 1024
-
 
 static dbt_driver_t dbt_driver;
 

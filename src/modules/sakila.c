@@ -241,18 +241,17 @@ sakila_init(void)
 	dbt_driver.dd_flags   = DBT_LOCK;
 
 	// SQL driver
-	dbt_driver.dd_use_sql              = 1;
-	dbt_driver.dd_sql.sql_t_int        = "INTEGER";
-	dbt_driver.dd_sql.sql_t_float      = "FLOAT";
-	dbt_driver.dd_sql.sql_t_string     = "VARCHAR(255)";
-	dbt_driver.dd_sql.sql_t_addr       = "VARCHAR(39)";
-	dbt_driver.dd_sql.sql_esc_table    = (sql_escape_t) sakila_esc_identifier;
-	dbt_driver.dd_sql.sql_esc_column   = (sql_escape_t) sakila_esc_identifier;
-	dbt_driver.dd_sql.sql_esc_value    = (sql_escape_t) sakila_esc_value;
-	dbt_driver.dd_sql.sql_exec         = (sql_exec_t) sakila_exec;
-	dbt_driver.dd_sql.sql_table_exists = (sql_table_exists_t) sakila_table_exists;
-	dbt_driver.dd_sql.sql_get_value    = (sql_get_value_t) sakila_get_value;
-	dbt_driver.dd_sql.sql_free_result  = (sql_free_result_t) sakila_free_result;
+	dbt_driver.dd_use_sql                = 1;
+	dbt_driver.dd_sql.sql_t_int          = "INTEGER";
+	dbt_driver.dd_sql.sql_t_float        = "FLOAT";
+	dbt_driver.dd_sql.sql_t_string       = "VARCHAR(255)";
+	dbt_driver.dd_sql.sql_t_addr         = "VARCHAR(39)";
+	dbt_driver.dd_sql.sql_esc_identifier = (sql_escape_t) sakila_esc_identifier;
+	dbt_driver.dd_sql.sql_esc_value      = (sql_escape_t) sakila_esc_value;
+	dbt_driver.dd_sql.sql_exec           = (sql_exec_t) sakila_exec;
+	dbt_driver.dd_sql.sql_table_exists   = (sql_table_exists_t) sakila_table_exists;
+	dbt_driver.dd_sql.sql_get_value      = (sql_get_value_t) sakila_get_value;
+	dbt_driver.dd_sql.sql_free_result    = (sql_free_result_t) sakila_free_result;
 
 	dbt_driver_register(&dbt_driver);
 

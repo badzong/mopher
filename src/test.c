@@ -103,7 +103,6 @@ test_threads(int threads, test_handler_t *handler)
 	pthread_t *thread;
 	ll_t thread_list;
 	test_data_t *data;
-	char buffer[BUFLEN];
 
 	stat = test_tests;
 	ll_init(&thread_list);
@@ -139,15 +138,7 @@ test_threads(int threads, test_handler_t *handler)
 	tests_run = test_tests - stat;
 	tests_per_thread = tests_run / threads;
 
-
-	if (handler->th_descr)
-	{
-		snprintf(buffer, sizeof buffer, "%s/%s", handler->th_name,
-			handler->th_descr);
-	}
-	
-	log_error("%-23s: %6d OK (%d/thread)",
-		handler->th_descr? buffer: handler->th_name, tests_run,
+	log_error("%-8s: %5d OK (%d/thread)", handler->th_name, tests_run,
 		tests_per_thread);
 }
 
@@ -158,23 +149,25 @@ test_run(int optind, int argc, char **argv)
 	test_handler_t *handler;
 
 	test_handler_t multi_threaded_tests[] = {
-		{"ll.c", NULL, NULL, ll_test, NULL},
-		{"sht.c", NULL, NULL, sht_test, NULL},
-		{"util.c", NULL, NULL, util_test, NULL},
-		{"vp.c", NULL, NULL, vp_test, NULL},
-		{"msgmod.c", NULL, NULL, msgmod_test, NULL},
-		{"regdom.c", NULL, regdom_test_init, regdom_test, regdom_clear},
-		{"exp.c", NULL, exp_test_init, exp_test, exp_clear},
-		{"sql.c", NULL, NULL, sql_test, NULL},
-                {"dbt.c", "memdb.c (stage 1)", dbt_test_memdb_init, dbt_test_stage1, dbt_test_clear },
-                {"dbt.c", "bdb.c (stage 1)", dbt_test_bdb_init, dbt_test_stage1, dbt_test_clear },
-                {"dbt.c", "bdb.c (stage 2)", dbt_test_bdb_init, dbt_test_stage2, dbt_test_clear },
-                {"dbt.c", "lite.c (stage 1)", dbt_test_lite_init, dbt_test_stage1, dbt_test_clear },
-                {"dbt.c", "lite.c (stage 2)", dbt_test_lite_init, dbt_test_stage2, dbt_test_clear },
-                {"dbt.c", "pgsql.c (stage 1)", dbt_test_pgsql_init, dbt_test_stage1, dbt_test_clear },
-                {"dbt.c", "pgsql.c (stage 2)", dbt_test_pgsql_init, dbt_test_stage2, dbt_test_clear },
-                {"dbt.c", "mysql.c (stage 1)", dbt_test_mysql_init, dbt_test_stage1, dbt_test_clear },
-                {"dbt.c", "mysql.c (stage 2)", dbt_test_mysql_init, dbt_test_stage2, dbt_test_clear },
+		{"ll.c", NULL, ll_test, NULL},
+		{"sht.c", NULL, sht_test, NULL},
+		{"util.c", NULL, util_test, NULL},
+		{"vp.c", NULL, vp_test, NULL},
+		{"msgmod.c", NULL, msgmod_test, NULL},
+		{"regdom.c", regdom_test_init, regdom_test, regdom_clear},
+		{"exp.c", exp_test_init, exp_test, exp_clear},
+		{"sql.c", NULL, sql_test, NULL},
+
+		// Database drivers are tested through dbt.c
+                {"memdb.c", dbt_test_memdb_init, dbt_test_stage1, dbt_test_clear },
+                {"bdb.c", dbt_test_bdb_init, dbt_test_stage1, dbt_test_clear },
+                {"bdb.c", dbt_test_bdb_init, dbt_test_stage2, dbt_test_clear },
+                {"lite.c", dbt_test_lite_init, dbt_test_stage1, dbt_test_clear },
+                {"lite.c", dbt_test_lite_init, dbt_test_stage2, dbt_test_clear },
+                {"pgsql.c", dbt_test_pgsql_init, dbt_test_stage1, dbt_test_clear },
+                {"pgsql.c", dbt_test_pgsql_init, dbt_test_stage2, dbt_test_clear },
+                {"sakila.c", dbt_test_mysql_init, dbt_test_stage1, dbt_test_clear },
+                {"sakila.c", dbt_test_mysql_init, dbt_test_stage2, dbt_test_clear },
 		{ NULL, NULL, NULL, NULL, NULL }
 	};
 

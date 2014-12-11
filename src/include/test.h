@@ -8,7 +8,6 @@ extern int test_tests;
 struct test_handler
 {
 	char *th_name;
-	char *th_descr;
 	int  (*th_init)(void);
 	void (*th_test)(int n);
 	void (*th_clear)(void);
