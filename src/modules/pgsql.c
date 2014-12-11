@@ -244,7 +244,7 @@ pgsql_close(dbt_t *dbt)
 int
 pgsql_init(void)
 {
-	dbt_driver.dd_name    = "posgresql";
+	dbt_driver.dd_name    = "postgresql";
 	dbt_driver.dd_open    = (dbt_db_open_t) pgsql_open;
 	dbt_driver.dd_close   = (dbt_db_close_t) pgsql_close;
 	dbt_driver.dd_flags	= DBT_LOCK;
