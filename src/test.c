@@ -168,7 +168,7 @@ test_run(int optind, int argc, char **argv)
                 {"pgsql.c", dbt_test_pgsql_init, dbt_test_stage2, dbt_test_clear },
                 {"sakila.c", dbt_test_mysql_init, dbt_test_stage1, dbt_test_clear },
                 {"sakila.c", dbt_test_mysql_init, dbt_test_stage2, dbt_test_clear },
-		{ NULL, NULL, NULL, NULL, NULL }
+		{ NULL, NULL, NULL, NULL }
 	};
 
 	log_init("mopher test", LOG_ERR, 0, 1);

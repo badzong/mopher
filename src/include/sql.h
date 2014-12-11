@@ -7,6 +7,7 @@
 
 #define SQL_EXPIRE "_expire"
 
+
 /*
  * Types
  */
@@ -38,10 +39,6 @@ typedef struct sql {
  * Prototypes
  */
 void sql_open(void *conn, sql_t *sql, var_t *scheme);
-int sql_db_get(void *conn, sql_t *sql, var_t *scheme, var_t *record, var_t **result);
-int sql_db_set(void *conn, sql_t *sql, var_t *v);
-int sql_db_del(void *conn, sql_t *sql, var_t *v);
-int sql_db_cleanup(void *conn, sql_t *sql, char *table);
 void sql_test(int n);
 
 #endif /* _SQL_H_ */

@@ -588,13 +588,17 @@ exit:
 }
 
 int
-sql_db_get(void *conn, sql_t *sql, var_t *scheme, var_t *record, var_t **result)
+sql_db_get(dbt_t *dbt, var_t *record, var_t **result)
 {
 	char query[BUFLEN];
 	void *db_result = NULL;
-	char *tablename = record->v_name;
 	int tuples, affected;
 	int r = -1;
+
+	char *tablename = record->v_name;
+	void *conn = dbt->dbt_handle;
+	sql_t *sql = &dbt->dbt_driver->dd_sql;
+	var_t *scheme = dbt->dbt_scheme;
 
 	*result = NULL;
 
@@ -643,12 +647,14 @@ exit:
 }
 
 int
-sql_db_set(void *conn, sql_t *sql, var_t *record)
+sql_db_set(dbt_t *dbt, var_t *record)
 {
 	char query[BUFLEN];
-	void *result = NULL;
+	int affected;
+
 	char *tablename = record->v_name;
-	int tuples, affected;
+	void *conn = dbt->dbt_handle;
+	sql_t *sql = &dbt->dbt_driver->dd_sql;
 
 	if (tablename == NULL)
 	{
@@ -725,12 +731,13 @@ rollback:
 }
 
 int
-sql_db_del(void *conn, sql_t *sql, var_t *record)
+sql_db_del(dbt_t *dbt, var_t *record)
 {
 	char query[BUFLEN];
-	void *result = NULL;
+
 	char *tablename = record->v_name;
-	int tuples, affected;
+	void *conn = dbt->dbt_handle;
+	sql_t *sql = &dbt->dbt_driver->dd_sql;
 
 	if (tablename == NULL)
 	{
@@ -770,20 +777,17 @@ sql_db_del(void *conn, sql_t *sql, var_t *record)
 }
 
 int
-sql_db_cleanup(void *conn, sql_t *sql, char *tablename)
+sql_db_cleanup(dbt_t *dbt)
 {
 	char query[BUFLEN];
 	void *result = NULL;
 	int tuples, affected;
 
-	if (tablename == NULL)
-	{
-		log_error("sql_db_cleanup: tablename is NULL");
-		return -1;
-	}
+	void *conn = dbt->dbt_handle;
+	sql_t *sql = &dbt->dbt_driver->dd_sql;
 
 	// Prepare query string
-	if (sql_cleanup(conn, sql, query, sizeof query, tablename))
+	if (sql_cleanup(conn, sql, query, sizeof query, dbt->dbt_table))
 	{
 		log_error("sql_db_cleanup: sql_cleanup failed");
 		return -1;

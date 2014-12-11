@@ -175,7 +175,6 @@ exit:
 static int
 pgsql_esc_value(PGconn *conn, char *buffer, int size, char *str)
 {
-	int error;
 	char *literal;
 
 	if (str == NULL)

@@ -159,7 +159,7 @@ lite_exec(sqlite3 *db, char *cmd, int *tuples, int *affected)
 
 	for (i = 0; i < columns; ++i)
 	{
-		if (lite_set(l, i, sqlite3_column_text(stmt, i)))
+		if (lite_set(l, i, (char *) sqlite3_column_text(stmt, i)))
 		{
 			log_error("lite_exec: lite_set failed");
 			goto error;

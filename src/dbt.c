@@ -20,7 +20,7 @@
 /*
  * dbt_test_stage1 time limit
  */
-#define DBT_TEST_EXPIRE 90
+#define DBT_TEST_EXPIRE 300
 
 static sht_t *dbt_drivers;
 static sht_t *dbt_tables;
@@ -37,9 +37,24 @@ static pthread_mutex_t  dbt_dump_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static int dbt_sync = 1;
 
+/*
+ * Used to avoid circular include
+ */
+int sql_db_get(void *dbt, var_t *record, var_t **result);
+int sql_db_set(void *dbt, var_t *record);
+int sql_db_del(void *dbt, var_t *record);
+int sql_db_cleanup(void *dbt);
+
 void
 dbt_driver_register(dbt_driver_t *dd)
 {
+	if (dd->dd_use_sql)
+	{
+		dd->dd_get = sql_db_get;
+		dd->dd_set = sql_db_set;
+		dd->dd_del = sql_db_del;
+	}
+
 	if((sht_insert(dbt_drivers, dd->dd_name, dd)) == -1)
 	{
 		log_die(EX_SOFTWARE, "dbt_driver_register: sht_insert for "
@@ -129,17 +144,7 @@ dbt_db_get(dbt_t *dbt, var_t *record, var_t **result)
 		return -1;
 	}
 
-	// SQL Driver
-	if (dbt->dbt_driver->dd_use_sql)
-	{
-		r = sql_db_get(dbt->dbt_handle, &dbt->dbt_driver->dd_sql,
-			dbt->dbt_scheme, record, result);
-	}
-	// Regular Driver
-	else
-	{
-		r = dbt->dbt_driver->dd_get(dbt, record, result);
-	}
+	r = dbt->dbt_driver->dd_get(dbt, record, result);
 
 	dbt_unlock(dbt);
 
@@ -162,16 +167,7 @@ dbt_db_set(dbt_t *dbt, var_t *record)
 		client_sync(dbt, record);
 	}
 
-	// SQL Driver
-	if (dbt->dbt_driver->dd_use_sql)
-	{
-		r = sql_db_set(dbt->dbt_handle, &dbt->dbt_driver->dd_sql, record);
-	}
-	// Regular Driver
-	else
-	{
-		r = dbt->dbt_driver->dd_set(dbt, record);
-	}
+	r = dbt->dbt_driver->dd_set(dbt, record);
 
 	dbt_unlock(dbt);
 
@@ -189,16 +185,7 @@ dbt_db_del(dbt_t *dbt, var_t *record)
 		return -1;
 	}
 
-	// SQL Driver
-	if (dbt->dbt_driver->dd_use_sql)
-	{
-		r = sql_db_del(dbt->dbt_handle, &dbt->dbt_driver->dd_sql, record);
-	}
-	// Regular Driver
-	else
-	{
-		r = dbt->dbt_driver->dd_del(dbt, record);
-	}
+	r = dbt->dbt_driver->dd_del(dbt, record);
 
 	dbt_unlock(dbt);
 
@@ -271,8 +258,7 @@ dbt_db_cleanup(dbt_t *dbt)
 			" SQL drivers");
 	}
 
-	r = sql_db_cleanup(dbt->dbt_handle, &dbt->dbt_driver->dd_sql,
-		dbt->dbt_table);
+	r = sql_db_cleanup(dbt);
 
 	dbt_unlock(dbt);
 
@@ -430,29 +416,6 @@ dbt_db_load_into_table(dbt_t *dbt, var_t *table)
 	return 0;
 }
 
-
-static char *
-dbt_common_sql(char *name)
-{
-	char buffer[BUFLEN], *p;
-	int len;
-
-	len = snprintf(buffer, sizeof buffer,
-	    "`%s_expire` < unix_timestamp()", name);
-
-	if (len >= sizeof buffer)
-	{
-		log_die(EX_SOFTWARE, "dbt_common_sql: buffer exhausted");
-	}
-
-	p = strdup(buffer);
-	if (p == NULL)
-	{
-		log_sys_die(EX_OSERR, "dbt_common_sql: strdup");
-	}
-
-	return p;
-}
 
 void
 dbt_register(char *name, dbt_t *dbt)

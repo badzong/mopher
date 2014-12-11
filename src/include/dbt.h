@@ -11,14 +11,13 @@
 
 typedef int (*dbt_db_open_t)(void *dbt);
 typedef void (*dbt_db_close_t)(void *dbt);
-typedef int (*dbt_db_set_t)(void *dbt, var_t *record);
-typedef int (*dbt_db_get_t)(void *dbt, var_t *record, var_t **result);
-typedef int (*dbt_db_del_t)(void *dbt, var_t *record);
-typedef int (*dbt_db_sql_cleanup_t)(void *dbt);
 typedef int (*dbt_db_sync_t)(void *dbt);
-
 typedef int (*dbt_db_callback_t)(void *dbt, var_t *record);
 typedef int (*dbt_db_walk_t)(void *dbt, dbt_db_callback_t callback);
+typedef int (*dbt_db_get_t)(void *dbt, var_t *record, var_t **result);
+typedef int (*dbt_db_set_t)(void *dbt, var_t *record);
+typedef int (*dbt_db_del_t)(void *dbt, var_t *record);
+typedef int (*dbt_db_sql_cleanup_t)(void *dbt);
 
 typedef struct dbt_driver {
 	char			*dd_name;
