@@ -204,16 +204,11 @@ server_data_cmd(int sock, char *cmd, char **buffer)
 
 	for (completed = 0; size > completed; completed += n)
 	{
-		n = read(sock, *buffer + completed, n);
+		n = read(sock, *buffer + completed, size - completed);
 		if (n == -1)
 		{
 			log_sys_error("server_data_cmd: read");
 			return -1;
-		}
-
-		if (n == 0)
-		{
-			break;
 		}
 	}
 
