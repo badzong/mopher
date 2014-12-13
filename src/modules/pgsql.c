@@ -12,56 +12,61 @@
 static dbt_driver_t dbt_driver;
 
 
-static PGresult *
-pgsql_exec(PGconn *conn, char *cmd, int *tuples, int *affected)
+static int
+pgsql_exec(PGconn *conn, PGresult **result, char *cmd, int *tuples, int *affected)
 {
-	PGresult *res = NULL;
-
+	*result = NULL;
 	*tuples = 0;
 	*affected = 0;
 
-	res = PQexec(conn, cmd);
-	switch (PQresultStatus(res))
+	*result = PQexec(conn, cmd);
+	switch (PQresultStatus(*result))
 	{
 	case PGRES_COMMAND_OK:
-		*affected = atoi(PQcmdTuples(res));
+		*affected = atoi(PQcmdTuples(*result));
 		break;
 
 	case PGRES_TUPLES_OK:
-		*tuples = PQntuples(res);
+		*tuples = PQntuples(*result);
 		break;
 	default:
 		log_error("pgsql_exec: %s", PQerrorMessage(conn));
 		goto error;
 	}
 
-	if (*tuples > 1)
-	{
-		log_error("pgsql_exec: %d rows returned", *tuples);
-	}
-
 	log_debug("pgsql_exec: %s: OK", cmd);
 
-	return res;
+	return 0;
 
 error:
-	if (res != NULL)
+	if (*result != NULL)
 	{
-		PQclear(res);
+		PQclear(*result);
 	}
 
-	return NULL;
+	return -1;
 }
 
-static void
-pgsql_free_result(PGconn *conn, PGresult *result)
+static PGresult *
+pgsql_get_row(PGconn *conn, PGresult *result, int row)
 {
-	if (result != NULL)
+	if (PQntuples(result) <= row)
 	{
-		PQclear(result);
+		return NULL;
 	}
 
-	return;
+	return result;
+}
+
+static char *
+pgsql_get_value(PGconn *conn, PGresult *result, int row, int field)
+{
+	if (PQgetisnull(result, row, field))
+	{
+		return NULL;
+	}
+
+	return PQgetvalue(result, row, field);
 }
 
 static int
@@ -204,28 +209,26 @@ pgsql_esc_value(PGconn *conn, char *buffer, int size, char *str)
 static int
 pgsql_table_exists(PGconn *conn, char *table)
 {
+	PGresult *res;
 	char query[BUFLEN];
-	PGresult *res = NULL;
 	int tuples, affected;
 	int n;
 
-	n = snprintf(query, sizeof query, "SELECT 'public.%s'::regclass", table);
+	n = snprintf(query, sizeof query, "SELECT c.relname FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname=\'public\' AND c.relname=\'%s\'", table);
 	if (n >= sizeof query)
 	{
 		log_die(EX_SOFTWARE, "pgsql_table_exists: buffer exhausted");
 	}
 
-	res = pgsql_exec(conn, query, &tuples, &affected);
-	n = res == NULL? 0: 1;
+	// Execute query and clear result. If we have a tuple, the table
+	// exists.
+	if (pgsql_exec(conn, &res, query, &tuples, &affected))
+	{
+		log_die(EX_SOFTWARE, "pgsql_table_exists: pgsql_exec failed");
+	}
 	PQclear(res);
 
-	return n;
-}
-
-static char *
-pgsql_get_value(PGconn *conn, PGresult *result, int field)
-{
-	return PQgetvalue(result, 0, field);
+	return tuples;
 }
 
 static void
@@ -259,8 +262,9 @@ pgsql_init(void)
 	dbt_driver.dd_sql.sql_esc_value      = (sql_escape_t) pgsql_esc_value;
 	dbt_driver.dd_sql.sql_exec           = (sql_exec_t) pgsql_exec;
 	dbt_driver.dd_sql.sql_table_exists   = (sql_table_exists_t) pgsql_table_exists;
+	dbt_driver.dd_sql.sql_free_result    = (sql_free_result_t) PQclear;
+	dbt_driver.dd_sql.sql_get_row        = (sql_get_row_t) pgsql_get_row;
 	dbt_driver.dd_sql.sql_get_value      = (sql_get_value_t) pgsql_get_value;
-	dbt_driver.dd_sql.sql_free_result    = (sql_free_result_t) pgsql_free_result;
 
 	dbt_driver_register(&dbt_driver);
 

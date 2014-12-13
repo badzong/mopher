@@ -8,139 +8,31 @@
 
 #define BUFLEN 4096
 
-typedef struct lite {
-	int    lite_row;
-	int    lite_columns;
-	char **lite_result;
-} lite_t;
-
 static dbt_driver_t dbt_driver;
 
-static lite_t *
-lite_create(int columns)
-{
-	lite_t *l = NULL;
-	int size;
-
-	l = (lite_t *) malloc(sizeof (lite_t));
-	if (l == NULL)
-	{
-		goto error;
-	}
-	memset(l, 0, sizeof(lite_t));
-
-	size = sizeof(char *) * columns;
-
-	l->lite_result = (char **) malloc(size);
-	if (l->lite_result == NULL)
-	{
-		goto error;
-	}
-
-	memset(l->lite_result, 0, size);
-	l->lite_columns = columns;
-
-	return l;
-
-error:
-	if (l != NULL)
-	{
-		if (l->lite_result != NULL)
-		{
-			free(l->lite_result);
-		}
-		free(l);
-	}
-
-	log_error("lite_create: malloc failed");
-	return NULL;
-}
-
-static void
-lite_delete(lite_t *l)
-{
-	int i;
-
-	if (l == NULL)
-	{
-		return;
-	}
-
-	if (l->lite_result == NULL)
-	{
-		free(l);
-		return;
-	}
-
-	for (i = 0; i < l->lite_columns; ++i)
-	{
-		if(l->lite_result[i] != NULL)
-		{
-			free(l->lite_result[i]);
-		}
-	}
-
-	free(l->lite_result);
-	free(l);
-
-	return;
-}
 
 static int
-lite_set(lite_t *l, int column, char *str)
+lite_exec(sqlite3 *db, sqlite3_stmt **stmt, char *cmd, int *tuples, int *affected)
 {
-	if (column >= l->lite_columns)
-	{
-		log_error("lite_set: value for column to big");
-		return -1;
-	}
-	
-	if (str == NULL)
-	{
-		l->lite_result[column] = NULL;
-	}
-	else
-	{
-		l->lite_result[column] = strdup(str);	
-		if (l->lite_result[column] == NULL)
-		{
-			log_error("lite_set: strdup failed");
-			return -1;
-		}
-	}
-
-	return 0;
-}
-
-static lite_t *
-lite_exec(sqlite3 *db, char *cmd, int *tuples, int *affected)
-{
-	sqlite3_stmt *stmt = NULL;
-	lite_t *l = NULL;
-	int row;
-	int columns;
-	int i;
-
+	*stmt = NULL;
 	*tuples = 0;
 	*affected = 0;
 
-	if (sqlite3_prepare_v2(db, cmd, -1, &stmt, NULL) != SQLITE_OK)
+	if (sqlite3_prepare_v2(db, cmd, -1, stmt, NULL) != SQLITE_OK)
 	{
 		log_error("lite_exec: %s", sqlite3_errmsg(db));
 		goto error;
 	}
 
-	row = sqlite3_step(stmt);
-	switch(row)
+	switch(sqlite3_step(*stmt))
 	{
 	case SQLITE_DONE:
 		*tuples = 0;
-		columns = 0;
 		break;
 
 	case SQLITE_ROW:
+		// Value unknown but needs to be true for sql.c
 		*tuples = 1;
-		columns = sqlite3_column_count(stmt);
 		break;
 
 	default:
@@ -150,51 +42,46 @@ lite_exec(sqlite3 *db, char *cmd, int *tuples, int *affected)
 
 	*affected = sqlite3_changes(db);
 
-	l = lite_create(columns);
-	if (l == NULL)
-	{
-		log_error("lite_exec: lite_create failed");
-		goto error;
-	}
-
-	for (i = 0; i < columns; ++i)
-	{
-		if (lite_set(l, i, (char *) sqlite3_column_text(stmt, i)))
-		{
-			log_error("lite_exec: lite_set failed");
-			goto error;
-		}
-	}
-
-	log_debug("lite_exec: %s: OK", cmd);
-
-	sqlite3_finalize(stmt);
-
-	return l;
+	return 0;
 
 error:
-	if (stmt != NULL)
+	if (*stmt != NULL)
 	{
-		sqlite3_finalize(stmt);
+		sqlite3_finalize(*stmt);
 	}
 
-	if (l != NULL)
+	return -1;
+}
+
+static sqlite3_stmt *
+lite_get_row(sqlite3 *db, sqlite3_stmt *stmt, int nrow)
+{
+	// The first row has been stepped in lite_exec!!
+	if (nrow == 0)
 	{
-		lite_delete(l);
+		return stmt;
 	}
 
+	switch(sqlite3_step(stmt))
+	{
+	case SQLITE_DONE:
+		return NULL;
+
+	case SQLITE_ROW:
+		return stmt;
+
+	default:
+		break;
+	}
+
+	log_error("lite_get_row: %s", sqlite3_errmsg(db));
 	return NULL;
 }
 
-static void
-lite_free_result(sqlite3 *conn, lite_t *result)
+static char *
+lite_get_value(sqlite3 *conn, sqlite3_stmt *stmt, int nrow, int field)
 {
-	if (result != NULL)
-	{
-		lite_delete(result);
-	}
-
-	return;
+	return (char *) sqlite3_column_text(stmt, field);
 }
 
 static int
@@ -265,8 +152,8 @@ lite_esc_value(sqlite3 *conn, char *buffer, int size, char *str)
 static int
 lite_table_exists(sqlite3 *conn, char *table)
 {
+	sqlite3_stmt *res;
 	char query[BUFLEN];
-	lite_t *res = NULL;
 	int tuples, affected;
 	int n;
 
@@ -278,23 +165,15 @@ lite_table_exists(sqlite3 *conn, char *table)
 		log_die(EX_SOFTWARE, "lite_table_exists: buffer exhausted");
 	}
 
-	res = lite_exec(conn, query, &tuples, &affected);
-	n = tuples == 1? 1: 0;
-	lite_delete(res);
-
-	return n;
-}
-
-static char *
-lite_get_value(sqlite3 *conn, lite_t *result, int field)
-{
-	if (field >= result->lite_columns)
+	// Execute query and clear result. If we have a tuple, the table
+	// exists.
+	if (lite_exec(conn, &res, query, &tuples, &affected))
 	{
-		log_error("lite_get_value: filed index %d too big", field);
-		return NULL;
+		log_die(EX_SOFTWARE, "lite_table_exists: lite_exec failed");
 	}
+	sqlite3_finalize(res);
 
-	return result->lite_result[field];
+	return tuples;
 }
 
 static void
@@ -332,8 +211,9 @@ lite_init(void)
 	dbt_driver.dd_sql.sql_esc_value      = (sql_escape_t) lite_esc_value;
 	dbt_driver.dd_sql.sql_exec           = (sql_exec_t) lite_exec;
 	dbt_driver.dd_sql.sql_table_exists   = (sql_table_exists_t) lite_table_exists;
+	dbt_driver.dd_sql.sql_free_result    = (sql_free_result_t) sqlite3_finalize;
+	dbt_driver.dd_sql.sql_get_row        = (sql_get_row_t) lite_get_row;
 	dbt_driver.dd_sql.sql_get_value      = (sql_get_value_t) lite_get_value;
-	dbt_driver.dd_sql.sql_free_result    = (sql_free_result_t) lite_free_result;
 
 	dbt_driver_register(&dbt_driver);
 

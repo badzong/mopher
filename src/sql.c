@@ -7,8 +7,8 @@
 
 #define BUFLEN 8192
 
-int
-sql_columns(void *handle, sql_t *sql, char *buffer, int size, int types, char *join,
+static int
+sql_columns(sql_t *sql, void *handle, char *buffer, int size, int types, char *join,
     var_t *scheme)
 {
 	ll_t *ll;
@@ -65,8 +65,8 @@ sql_columns(void *handle, sql_t *sql, char *buffer, int size, int types, char *j
 	return 0;
 }
 
-int
-sql_values(void *conn, sql_t *sql, char *buffer, int size, char *join,
+static int
+sql_values(sql_t *sql, void *conn, char *buffer, int size, char *join,
     var_t *record)
 {
 	ll_t *ll;
@@ -131,8 +131,8 @@ sql_values(void *conn, sql_t *sql, char *buffer, int size, char *join,
 	return 0;
 }
 
-int
-sql_key_value(void *conn, sql_t *sql, char *buffer, int size, int types, char *join,
+static int
+sql_key_value(sql_t *sql, void *conn, char *buffer, int size, int types, char *join,
     var_t *record)
 {
 	ll_t *ll;
@@ -225,8 +225,8 @@ sql_key_value(void *conn, sql_t *sql, char *buffer, int size, int types, char *j
 	return 0;
 }
 
-int
-sql_create(void *conn, sql_t *sql, char *buffer, int size, char *tablename, var_t *scheme)
+static int
+sql_create(sql_t *sql, void *conn, char *buffer, int size, char *tablename, var_t *scheme)
 {
 	ll_t *ll;
 	ll_entry_t *pos;
@@ -282,7 +282,7 @@ sql_create(void *conn, sql_t *sql, char *buffer, int size, char *tablename, var_
 		}
 	}
 
-	if (sql_columns(conn, sql, keys, sizeof keys, SQL_KEYS, ",", scheme))
+	if (sql_columns(sql, conn, keys, sizeof keys, SQL_KEYS, ",", scheme))
 	{
 		log_error("sql_create: sql_columns failed");
 		return -1;
@@ -299,34 +299,56 @@ sql_create(void *conn, sql_t *sql, char *buffer, int size, char *tablename, var_
 	return 0;
 }
 	
-int
-sql_select(char *conn, sql_t *sql, char *buffer, int size, char *tablename, var_t *record)
+static int
+sql_select_all(sql_t *sql, void *conn, char *buffer, int size, char *tablename,
+    var_t *scheme)
 {
 	char table[BUFLEN];
 	char columns[BUFLEN];
-	char where[BUFLEN];
 	int n = 0;
 
 	if (sql->sql_esc_identifier(conn, table, sizeof table, tablename))
 	{
-		log_error("sql_select: escape table failed");
+		log_error("sql_select_all: escape table failed");
 		return -1;
 	}
 
-	if (sql_columns(conn, sql, columns, sizeof columns, SQL_ALL, ",", record))
+	if (sql_columns(sql, conn, columns, sizeof columns, SQL_ALL, ",", scheme))
 	{
-		log_error("sql_select: sql_columns failed");
+		log_error("sql_select_all: sql_columns failed");
 		return -1;
 	}
 
-	if (sql_key_value(conn, sql, where, sizeof where, SQL_KEYS, " AND ", record))
+	n = snprintf(buffer, size, "SELECT %s FROM %s", columns, table);
+	if (n >= size)
+	{
+		log_error("sql_select_all: buffer exhausted");
+		return -1;
+	}
+
+	return 0;
+}
+
+static int
+sql_select(sql_t *sql, void *conn, char *buffer, int size, char *tablename, var_t *record)
+{
+	char all[BUFLEN];
+	char where[BUFLEN];
+	int n = 0;
+
+	if (sql_select_all(sql, conn, all, sizeof all, tablename, record))
+	{
+		log_error("sql_select: sql_select_all failed");
+		return -1;
+	}
+
+	if (sql_key_value(sql, conn, where, sizeof where, SQL_KEYS, " AND ", record))
 	{
 		log_error("sql_select: sql_key_value failed");
 		return -1;
 	}
 
-	n = snprintf(buffer, size, "SELECT %s FROM %s WHERE %s",
-		columns, table, where);
+	n = snprintf(buffer, size, "%s WHERE %s", all, where);
 	if (n >= size)
 	{
 		log_error("sql_select: buffer exhausted");
@@ -336,8 +358,8 @@ sql_select(char *conn, sql_t *sql, char *buffer, int size, char *tablename, var_
 	return 0;
 }
 
-int
-sql_insert(void *conn, sql_t *sql, char *buffer, int size, char *tablename, var_t *record)
+static int
+sql_insert(sql_t *sql, void *conn, char *buffer, int size, char *tablename, var_t *record)
 {
 	char table[BUFLEN];
 	char columns[BUFLEN];
@@ -350,13 +372,13 @@ sql_insert(void *conn, sql_t *sql, char *buffer, int size, char *tablename, var_
 		return -1;
 	}
 
-	if (sql_columns(conn, sql, columns, sizeof columns, SQL_ALL, ",", record))
+	if (sql_columns(sql, conn, columns, sizeof columns, SQL_ALL, ",", record))
 	{
 		log_error("sql_insert: sql_columns failed");
 		return -1;
 	}
 
-	if (sql_values(conn, sql, values, sizeof values, ",", record))
+	if (sql_values(sql, conn, values, sizeof values, ",", record))
 	{
 		log_error("sql_insert: sql_columns failed");
 		return -1;
@@ -373,8 +395,8 @@ sql_insert(void *conn, sql_t *sql, char *buffer, int size, char *tablename, var_
 	return 0;
 }
 
-int
-sql_update(void *conn, sql_t *sql, char *buffer, int size, char *tablename, var_t *record)
+static int
+sql_update(sql_t *sql, void *conn, char *buffer, int size, char *tablename, var_t *record)
 {
 	char table[BUFLEN];
 	char set[BUFLEN];
@@ -387,13 +409,13 @@ sql_update(void *conn, sql_t *sql, char *buffer, int size, char *tablename, var_
 		return -1;
 	}
 
-	if (sql_key_value(conn, sql, set, sizeof set, SQL_VALUES, ",", record) == -1)
+	if (sql_key_value(sql, conn, set, sizeof set, SQL_VALUES, ",", record) == -1)
 	{
 		log_error("sql_update: sql_key_value failed");
 		return -1;
 	}
 
-	if (sql_key_value(conn, sql, where, sizeof where, 1, " AND ", record) == -1)
+	if (sql_key_value(sql, conn, where, sizeof where, 1, " AND ", record) == -1)
 	{
 		log_error("sql_update: sql_key_value failed");
 		return -1;
@@ -410,8 +432,8 @@ sql_update(void *conn, sql_t *sql, char *buffer, int size, char *tablename, var_
 	return 0;
 }
 
-int
-sql_delete(void *conn, sql_t *sql, char *buffer, int size, char *tablename, var_t *record)
+static int
+sql_delete(sql_t *sql, void *conn, char *buffer, int size, char *tablename, var_t *record)
 {
 	char table[BUFLEN];
 	char where[BUFLEN];
@@ -423,7 +445,7 @@ sql_delete(void *conn, sql_t *sql, char *buffer, int size, char *tablename, var_
 		return -1;
 	}
 
-	if (sql_key_value(conn, sql, where, sizeof where, 1, " AND ", record) == -1)
+	if (sql_key_value(sql, conn, where, sizeof where, 1, " AND ", record) == -1)
 	{
 		log_error("sql_delete: sql_key_value failed");
 		return -1;
@@ -439,8 +461,8 @@ sql_delete(void *conn, sql_t *sql, char *buffer, int size, char *tablename, var_
 	return 0;
 }
 
-int
-sql_cleanup(void *conn, sql_t *sql, char *buffer, int size, char *tablename)
+static int
+sql_cleanup(sql_t *sql, void *conn, char *buffer, int size, char *tablename)
 {
 	char table[BUFLEN];
 	char expire_raw[BUFLEN];
@@ -479,8 +501,8 @@ sql_cleanup(void *conn, sql_t *sql, char *buffer, int size, char *tablename)
 	return 0;
 }
 
-var_t *
-sql_unpack(void *conn, void *res, sql_t *sql, var_t *scheme)
+static var_t *
+sql_unpack(sql_t *sql, void *conn, void *row, int nrow, var_t *scheme)
 {
 	var_t *v = NULL;
 	var_t *item = NULL;
@@ -508,7 +530,7 @@ sql_unpack(void *conn, void *res, sql_t *sql, var_t *scheme)
 	for (n = 0; (item = ll_next(ll, &pos)); ++n) {
 		field_is_key = item->v_flags & VF_KEY;
 
-		value = sql->sql_get_value(conn, res, n);
+		value = sql->sql_get_value(conn, row, nrow, n);
 		if (value == NULL && field_is_key)
 		{
 			log_error("sql_unpack: refuse to unpack NULL key");
@@ -556,14 +578,13 @@ error:
 }
 
 static int
-sql_db_exec_only(void *conn, sql_t *sql, char *stmt)
+sql_db_exec_only(sql_t *sql, void *conn, char *stmt)
 {
 	int tuples, affected;
 	void *result;
 	int r = -1;
 
-	result = sql->sql_exec(conn, stmt, &tuples, &affected);
-	if (result == NULL)
+	if (sql->sql_exec(conn, &result, stmt, &tuples, &affected))
 	{
 		log_error("sql_db_exec_only: sql_exec failed");
 		goto exit;
@@ -581,41 +602,41 @@ sql_db_exec_only(void *conn, sql_t *sql, char *stmt)
 exit:
 	if (result)
 	{
-		sql->sql_free_result(conn, result);
+		sql->sql_free_result(result);
 	}
 
 	return r;
 }
 
 int
-sql_db_get(dbt_t *dbt, var_t *record, var_t **result)
+sql_db_get(dbt_t *dbt, var_t *lookup, var_t **record)
 {
 	char query[BUFLEN];
-	void *db_result = NULL;
+	void *result = NULL;
+	void *row = NULL;
 	int tuples, affected;
 	int r = -1;
 
-	char *tablename = record->v_name;
+	char *tablename = lookup->v_name;
 	void *conn = dbt->dbt_handle;
 	sql_t *sql = &dbt->dbt_driver->dd_sql;
 	var_t *scheme = dbt->dbt_scheme;
 
-	*result = NULL;
+	*record = NULL;
 
 	if (tablename == NULL)
 	{
-		log_error("sql_db_get: record name unset");
+		log_error("sql_db_get: lookup name unset");
 		return -1;
 	}
 
-	if (sql_select(conn, sql, query, sizeof query, tablename, record))
+	if (sql_select(sql, conn, query, sizeof query, tablename, lookup))
 	{
 		log_error("sql_db_get: sql_select failed");
 		goto exit;
 	}
 
-	db_result = sql->sql_exec(conn, query, &tuples, &affected);
-	if (db_result == NULL)
+	if (sql->sql_exec(conn, &result, query, &tuples, &affected))
 	{
 		log_error("sql_db_get: dd_sql_exec failed");
 		goto exit;
@@ -627,8 +648,21 @@ sql_db_get(dbt_t *dbt, var_t *record, var_t **result)
 		goto exit;
 	}
 
-	*result = sql_unpack(conn, db_result, sql, scheme);
-	if (*result == NULL)
+	if (tuples != 1)
+	{
+		log_error("sql_db_get: expected 1 tuple, got %d", tuples);
+		goto exit;
+	}
+
+	row = sql->sql_get_row(conn, result, 0);
+	if (row == NULL)
+	{
+		log_error("sql_db_get: sql_get_row failed");
+		goto exit;
+	}
+
+	*record = sql_unpack(sql, conn, row, 0, scheme);
+	if (*record == NULL)
 	{
 		log_error("sql_db_get: sql_unpack failed");
 		goto exit;
@@ -638,9 +672,9 @@ sql_db_get(dbt_t *dbt, var_t *record, var_t **result)
 	r = 0;
 
 exit:
-	if (db_result)
+	if (result)
 	{
-		sql->sql_free_result(conn, db_result);
+		sql->sql_free_result(result);
 	}
 
 	return r;
@@ -663,14 +697,14 @@ sql_db_set(dbt_t *dbt, var_t *record)
 	}
 
 	// Begin
-	if (sql_db_exec_only(conn, sql, "BEGIN") == -1)
+	if (sql_db_exec_only(sql, conn, "BEGIN") == -1)
 	{
 		log_error("sql_db_set: sql_db_exec_only failed");
 		return -1;
 	}
 
 	// Prepare query string
-	if (sql_update(conn, sql, query, sizeof query, tablename, record))
+	if (sql_update(sql, conn, query, sizeof query, tablename, record))
 	{
 		log_error("sql_db_set: sql_update failed");
 		goto rollback;
@@ -678,7 +712,7 @@ sql_db_set(dbt_t *dbt, var_t *record)
 
 
 	// Execute query
-	affected = sql_db_exec_only(conn, sql, query);
+	affected = sql_db_exec_only(sql, conn, query);
 	if (affected == -1)
 	{
 		log_error("sql_db_set: sql_db_exec_only failed");
@@ -692,14 +726,14 @@ sql_db_set(dbt_t *dbt, var_t *record)
 	}
 
 	// Record needs to be inserted
-	if (sql_insert(conn, sql, query, sizeof query, tablename, record))
+	if (sql_insert(sql, conn, query, sizeof query, tablename, record))
 	{
 		log_error("sql_db_set: sql_insert failed");
 		goto rollback;
 	}
 
 	// Execute query
-	affected = sql_db_exec_only(conn, sql, query);
+	affected = sql_db_exec_only(sql, conn, query);
 	if (affected == -1)
 	{
 		log_error("sql_db_set: sql_db_exec_only failed");
@@ -713,7 +747,7 @@ sql_db_set(dbt_t *dbt, var_t *record)
 	}
 
 commit:
-	if (sql_db_exec_only(conn, sql, "COMMIT") == -1)
+	if (sql_db_exec_only(sql, conn, "COMMIT") == -1)
 	{
 		log_error("sql_db_set: sql_db_exec_only failed");
 		return -1;
@@ -722,7 +756,7 @@ commit:
 	return 0;
 
 rollback:
-	if (sql_db_exec_only(conn, sql, "ROLLBACK") == -1)
+	if (sql_db_exec_only(sql, conn, "ROLLBACK") == -1)
 	{
 		log_error("sql_db_set: sql_db_exec_only failed");
 	}
@@ -746,34 +780,91 @@ sql_db_del(dbt_t *dbt, var_t *record)
 	}
 
 	// Prepare query string
-	if (sql_delete(conn, sql, query, sizeof query, tablename, record))
+	if (sql_delete(sql, conn, query, sizeof query, tablename, record))
 	{
 		log_error("sql_db_del: sql_delete failed");
 		return -1;
 	}
 
 	// Begin
-	if (sql_db_exec_only(conn, sql, "BEGIN") == -1)
+	if (sql_db_exec_only(sql, conn, "BEGIN") == -1)
 	{
 		log_error("sql_db_del: sql_db_exec_only failed");
 		return -1;
 	}
 
 	// Execute query
-	if (sql_db_exec_only(conn, sql, query) == -1)
+	if (sql_db_exec_only(sql, conn, query) == -1)
 	{
 		log_error("sql_db_del: sql_db_exec_only failed");
 		return -1;
 	}
 
 	// Commit
-	if (sql_db_exec_only(conn, sql, "COMMIT") == -1)
+	if (sql_db_exec_only(sql, conn, "COMMIT") == -1)
 	{
 		log_error("sql_db_del: sql_db_exec_only failed");
 		return -1;
 	}
 
 	return 0;
+}
+
+int
+sql_db_walk(dbt_t *dbt, dbt_db_callback_t callback)
+{
+	char query[BUFLEN];
+	void *result = NULL;
+	int tuples, affected;
+	void *row;
+	var_t *record;
+	int i;
+
+	void *conn = dbt->dbt_handle;
+	sql_t *sql = &dbt->dbt_driver->dd_sql;
+	var_t *scheme = dbt->dbt_scheme;
+
+	if (sql_select_all(sql, conn, query, sizeof query, dbt->dbt_table, scheme))
+	{
+		log_error("sql_db_walk: sql_cleanup failed");
+		goto error;
+	}
+
+	// Execute query
+	if (sql->sql_exec(conn, &result, query, &tuples, &affected))
+	{
+		log_error("sql_db_cleanup: sql_exec failed");
+		goto error;
+	}
+
+	for (i = 0; (row = sql->sql_get_row(conn, result, i)) != NULL; ++i)
+	{
+		record = sql_unpack(sql, conn, row, i, scheme);
+		if (record == NULL)
+		{
+			log_error("sql_db_walk: sql_unpack failed");
+			goto error;
+		}
+
+		if (callback(dbt, record))
+		{
+			log_error("sql_db_walk: callback failed");
+			goto error;
+		}
+
+		var_delete(record);
+	}
+
+	sql->sql_free_result(result);
+	return 0;
+	
+error:
+	if (result)
+	{
+		sql->sql_free_result(result);
+	}
+
+	return -1;
 }
 
 int
@@ -787,27 +878,26 @@ sql_db_cleanup(dbt_t *dbt)
 	sql_t *sql = &dbt->dbt_driver->dd_sql;
 
 	// Prepare query string
-	if (sql_cleanup(conn, sql, query, sizeof query, dbt->dbt_table))
+	if (sql_cleanup(sql, conn, query, sizeof query, dbt->dbt_table))
 	{
 		log_error("sql_db_cleanup: sql_cleanup failed");
 		return -1;
 	}
 
 	// Execute query
-	result = sql->sql_exec(conn, query, &tuples, &affected);
-	if (result == NULL)
+	if (sql->sql_exec(conn, &result, query, &tuples, &affected))
 	{
 		log_error("sql_db_cleanup: sql_exec failed");
 		return -1;
 	}
 
-	sql->sql_free_result(conn, result);
+	sql->sql_free_result(result);
 
 	return affected;
 }
 
 void
-sql_open(void *conn, sql_t *sql, var_t *scheme)
+sql_open(sql_t *sql, void *conn, var_t *scheme)
 {
 	char query[BUFLEN];
 	char *tablename = scheme->v_name;
@@ -825,25 +915,24 @@ sql_open(void *conn, sql_t *sql, var_t *scheme)
 		return;
 	}
 
-	if (sql_create(conn, sql, query, sizeof query, tablename, scheme))
+	if (sql_create(sql, conn, query, sizeof query, tablename, scheme))
 	{
 		log_die(EX_SOFTWARE, "sql_open: sql_create failed");
 	}
 
-	res = sql->sql_exec(conn, query, &tuples, &affected);
-	if (res == NULL)
+	if (sql->sql_exec(conn, &res, query, &tuples, &affected))
 	{
 		log_die(EX_SOFTWARE, "sql_open: sql_exec failed");
 	}
 	
-	sql->sql_free_result(conn, res);
+	sql->sql_free_result(res);
 
 	return;
 }
 
 #ifdef DEBUG
 
-int
+static int
 sql_test_esc(void *conn, char *buffer, int size, char *src)
 {
 	return util_quote(buffer, size, src, "'");
@@ -894,28 +983,28 @@ sql_test(int n)
 	TEST_ASSERT(record != NULL, "vlist_record failed");
 
 	// Create Query
-	r = sql_create(NULL, &sql, query, sizeof query, "test_table", scheme);
+	r = sql_create(&sql, NULL, query, sizeof query, "test_table", scheme);
 	TEST_ASSERT(r == 0, "sql_select failed");
 	strcpy(pattern, "CREATE TABLE 'test_table' ('int_key' INT,'float_key' FLOAT,'string_key' VARCHAR(255),'addr_key' INET,'int' INT,'float' FLOAT,'string' VARCHAR(255),'addr' INET, PRIMARY KEY('int_key','float_key','string_key','addr_key'))");
 	//printf("%s\n%s\n\n", query, pattern);
 	TEST_ASSERT(strcmp(pattern, query) == 0, "sql_select returned wrong query");
 
 	// Select Query
-	r = sql_select(NULL, &sql, query, sizeof query, "test_table", record);
+	r = sql_select(&sql, NULL, query, sizeof query, "test_table", record);
 	TEST_ASSERT(r == 0, "sql_select failed");
 	snprintf(pattern, sizeof pattern, "SELECT 'int_key','float_key','string_key','addr_key','int','float','string','addr' FROM 'test_table' WHERE 'int_key'='%d' AND 'float_key'='%.2f' AND 'string_key'='foobar' AND 'addr_key'='%d.%d.%d.%d'", n, n*0.7,n,n,n,n);
 	//printf("%s\n%s\n\n", query, pattern);
 	TEST_ASSERT(strcmp(pattern, query) == 0, "sql_select returned wrong query");
 
 	// Update Query
-	r = sql_update(NULL, &sql, query, sizeof query, "test_table", record);
+	r = sql_update(&sql, NULL, query, sizeof query, "test_table", record);
 	TEST_ASSERT(r == 0, "sql_update failed");
 	snprintf(pattern, sizeof pattern, "UPDATE 'test_table' SET 'int'='%d','float'='%.2f','string'='foobar','addr'='%d.%d.%d.%d' WHERE 'int_key'='%d' AND 'float_key'='%.2f' AND 'string_key'='foobar' AND 'addr_key'='%d.%d.%d.%d'", n,n*0.7,n,n,n,n,n,n*0.7,n,n,n,n);
 	//printf("%s\n%s\n\n", query, pattern);
 	TEST_ASSERT(strcmp(pattern, query) == 0, "sql_update returned wrong query");
 
 	// Delete Query
-	r = sql_delete(NULL, &sql, query, sizeof query, "test_table", record);
+	r = sql_delete(&sql, NULL, query, sizeof query, "test_table", record);
 	TEST_ASSERT(r == 0, "sql_delete failed");
 	snprintf(pattern, sizeof pattern, "DELETE FROM 'test_table' WHERE 'int_key'='%d' AND 'float_key'='%.2f' AND 'string_key'='foobar' AND 'addr_key'='%d.%d.%d.%d'", n,n*0.7,n,n,n,n);
 	//printf("%s\n%s\n\n", query, pattern);

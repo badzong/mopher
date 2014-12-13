@@ -43,6 +43,7 @@ static int dbt_sync = 1;
 int sql_db_get(void *dbt, var_t *record, var_t **result);
 int sql_db_set(void *dbt, var_t *record);
 int sql_db_del(void *dbt, var_t *record);
+int sql_db_walk(void *dbt, dbt_db_callback_t callback);
 int sql_db_cleanup(void *dbt);
 
 void
@@ -53,6 +54,7 @@ dbt_driver_register(dbt_driver_t *dd)
 		dd->dd_get = sql_db_get;
 		dd->dd_set = sql_db_set;
 		dd->dd_del = sql_db_del;
+		dd->dd_walk = sql_db_walk;
 	}
 
 	if((sht_insert(dbt_drivers, dd->dd_name, dd)) == -1)
@@ -204,16 +206,7 @@ dbt_db_walk(dbt_t *dbt, dbt_db_callback_t callback)
 		return -1;
 	}
 	
-	// Currently SQL drivers do not need to be walkable
-	if (dbt->dbt_driver->dd_use_sql)
-	{
-		log_error("dbt_db_walk: refused to walk SQL driver");
-		r = -1;
-	}
-	else
-	{
-		r = dbt->dbt_driver->dd_walk(dbt, callback);
-	}
+	r = dbt->dbt_driver->dd_walk(dbt, callback);
 
 	dbt_unlock(dbt);
 
@@ -856,7 +849,7 @@ dbt_open_database(dbt_t *dbt)
 	// Create tables in SQL databases
 	if (dbt->dbt_driver->dd_use_sql)
 	{
-		sql_open(dbt->dbt_handle, &dbt->dbt_driver->dd_sql,
+		sql_open(&dbt->dbt_driver->dd_sql, dbt->dbt_handle,
 			dbt->dbt_scheme);
 	}
 
@@ -1079,8 +1072,14 @@ error:
 
 #ifdef DEBUG
 
+static int dbt_test_stage;
+static int dbt_test_run_stage2;
+
 static dbt_t dbt_test_table;
 static var_t *dbt_test_scheme;
+static time_t dbt_test_time;
+static sht_t dbt_test_ht;
+static pthread_mutex_t dbt_test_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct dbt_test_record {
 	VAR_INT_T       tr_int_key;
@@ -1098,8 +1097,8 @@ typedef struct dbt_test_record {
 	VAR_INT_T       tr_test_expire;
 } dbt_test_record_t;
 
-void
-dbt_test_record(dbt_test_record_t *tr, int n, int expire)
+var_t *
+dbt_test_record(dbt_test_record_t *tr, var_t *scheme, int n, int expire)
 {
 	struct sockaddr_in *sin;
 
@@ -1123,10 +1122,16 @@ dbt_test_record(dbt_test_record_t *tr, int n, int expire)
 	tr->tr_chars = "'\"~!@#$%^&*()_";
 	tr->tr_null = NULL;
 
-	tr->tr_test_created = time(NULL);
-	tr->tr_test_updated = tr->tr_test_created;
+	tr->tr_test_created = dbt_test_time;
+	tr->tr_test_updated = dbt_test_time;
 
-	tr->tr_test_expire = tr->tr_test_created + expire;
+	tr->tr_test_expire = dbt_test_time + expire;
+
+	return vlist_record(scheme, &tr->tr_int_key, &tr->tr_float_key,
+		tr->tr_string_key, &tr->tr_sockaddr_key, &tr->tr_int_value,
+		&tr->tr_float_value, tr->tr_string_value,
+		&tr->tr_sockaddr_value, tr->tr_chars, tr->tr_null,
+		&tr->tr_test_created, &tr->tr_test_updated, &tr->tr_test_expire);
 }
 
 void
@@ -1138,28 +1143,29 @@ dbt_test_stage1(int n)
 	var_t *record2 = NULL;
 	var_t *lookup= NULL;
 	var_t *result = NULL;
+	char rec1_str[BUFLEN];
+	char rec2_str[BUFLEN];
+	char rec_match[BUFLEN];
 	int i;
 
 	// Create test record data	
-	dbt_test_record(&tr1, n, DBT_TEST_EXPIRE);
-	dbt_test_record(&tr2, n + 10000, DBT_TEST_EXPIRE);
+	record1 = dbt_test_record(&tr1, dbt_test_scheme, n, DBT_TEST_EXPIRE);
+	record2 = dbt_test_record(&tr2, dbt_test_scheme, n + 10000, DBT_TEST_EXPIRE);
+	TEST_ASSERT(record1 != NULL && record2 != NULL, "vlist_record failed");
+	TEST_ASSERT(var_dump(record1, rec1_str, sizeof rec1_str) > 0, "var_dump failed");
+	TEST_ASSERT(var_dump(record2, rec2_str, sizeof rec2_str) > 0, "var_dump failed");
 
-	// Create records
-	record1 = vlist_record(dbt_test_scheme, &tr1.tr_int_key, &tr1.tr_float_key,
-		tr1.tr_string_key, &tr1.tr_sockaddr_key, &tr1.tr_int_value,
-		&tr1.tr_float_value, tr1.tr_string_value,
-		&tr1.tr_sockaddr_value, tr1.tr_chars, tr1.tr_null,
-		&tr1.tr_test_created, &tr1.tr_test_updated, &tr1.tr_test_expire);
+	// Add record strings to test hash table (used in stage 2).
+	pthread_mutex_lock(&dbt_test_mutex);
+	TEST_ASSERT(sht_insert(&dbt_test_ht, rec1_str, rec1_str) == 0, "sht_insert failed");
+	TEST_ASSERT(sht_insert(&dbt_test_ht, rec2_str, rec2_str) == 0, "sht_insert failed");
+	//printf("RE1: %s\nRE2: %s\n", rec1_str, rec2_str);
+	pthread_mutex_unlock(&dbt_test_mutex);
+
+	// Lookup record
 	lookup = vlist_record(dbt_test_scheme, &tr1.tr_int_key, &tr1.tr_float_key,
 		tr1.tr_string_key, &tr1.tr_sockaddr_key, NULL, NULL, NULL,
 		NULL, NULL, NULL, NULL, NULL, NULL);
-	record2 = vlist_record(dbt_test_scheme, &tr2.tr_int_key, &tr2.tr_float_key,
-		tr2.tr_string_key, &tr2.tr_sockaddr_key, &tr2.tr_int_value,
-		&tr2.tr_float_value, tr2.tr_string_value,
-		&tr2.tr_sockaddr_value, tr2.tr_chars, tr2.tr_null,
-		&tr2.tr_test_created, &tr2.tr_test_updated, &tr2.tr_test_expire);
-
-	TEST_ASSERT(record1 != NULL && record2 != NULL, "vlist_record failed");
 
 	// Stress test
 	for (i = 0; i < DBT_STRESS_ROUNDS; ++i)
@@ -1171,6 +1177,8 @@ dbt_test_stage1(int n)
 		// Select
 		TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
 		TEST_ASSERT(result != NULL, "dbt_db_get returned NULL");
+		TEST_ASSERT(var_dump(result, rec_match, sizeof rec_match) > 0, "var_dump failed");
+		TEST_ASSERT(strcmp(rec1_str, rec_match) == 0, "Record contents changed\n%s\n%s\n", rec1_str, rec_match);
 		var_delete(result);
 		result = NULL;
 
@@ -1179,6 +1187,8 @@ dbt_test_stage1(int n)
 		TEST_ASSERT(dbt_db_sync(&dbt_test_table) == 0, "dbt_db_sync failed");
 		TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
 		TEST_ASSERT(result != NULL, "dbt_db_get returned NULL");
+		TEST_ASSERT(var_dump(result, rec_match, sizeof rec_match) > 0, "var_dump failed");
+		TEST_ASSERT(strcmp(rec1_str, rec_match) == 0, "Record contents changed");
 		var_delete(result);
 		result = NULL;
 
@@ -1202,43 +1212,60 @@ dbt_test_stage1(int n)
 	return;
 }
 
+int
+dbt_test_walk(dbt_t *dbt, var_t *record)
+{
+	char rec_match[BUFLEN];
+
+	TEST_ASSERT(var_dump(record, rec_match, sizeof rec_match) > 0, "var_dump failed");
+	TEST_ASSERT(sht_lookup(&dbt_test_ht, rec_match) != NULL, "Could not find record: %s", rec_match);
+
+	return 0;
+}
+
 void
 dbt_test_stage2(int n)
 {
 	dbt_test_record_t tr1;
 	dbt_test_record_t tr2;
-	var_t *lookup= NULL;
+	var_t *record1= NULL;
+	var_t *record2= NULL;
 	var_t *result = NULL;
+	char rec1_str[BUFLEN];
+	char rec2_str[BUFLEN];
+	char rec_match[BUFLEN];
 
-	// Create record data	
-	dbt_test_record(&tr1, n, 1);
-	dbt_test_record(&tr2, n + 10000, 1);
+	// Create records
+	record1 = dbt_test_record(&tr1, dbt_test_scheme, n, DBT_TEST_EXPIRE);
+	record2 = dbt_test_record(&tr2, dbt_test_scheme, n + 10000, DBT_TEST_EXPIRE);
+	TEST_ASSERT(record1 != NULL && record2 != NULL, "vlist_record failed");
+	TEST_ASSERT(var_dump(record1, rec1_str, sizeof rec1_str) > 0, "var_dump failed");
+	TEST_ASSERT(var_dump(record2, rec2_str, sizeof rec2_str) > 0, "var_dump failed");
+
+	// Walk table
+	TEST_ASSERT(dbt_db_walk(&dbt_test_table, (void *) dbt_test_walk) == 0, "dbt_test_walk failed");
 
 	// Lookup record 1
-	lookup = vlist_record(dbt_test_scheme, &tr1.tr_int_key, &tr1.tr_float_key,
-		tr1.tr_string_key, &tr1.tr_sockaddr_key, NULL, NULL, NULL,
-		NULL, NULL, NULL, NULL, NULL,NULL);
-	TEST_ASSERT(lookup != NULL, "vlist_record failed");
-	TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
+	TEST_ASSERT(dbt_db_get(&dbt_test_table, record1, &result) == 0, "dbt_db_get failed");
 	TEST_ASSERT(result != NULL, "returned result is NULL");
-	var_delete(lookup);
+	TEST_ASSERT(var_dump(result, rec_match, sizeof rec_match) > 0, "var_dump failed");
+	TEST_ASSERT(strcmp(rec1_str, rec_match) == 0, "Record contents changed");
+	var_delete(record1);
 	var_delete(result);
 
 	// Lookup record 2
-	lookup = vlist_record(dbt_test_scheme, &tr2.tr_int_key, &tr2.tr_float_key,
-		tr2.tr_string_key, &tr2.tr_sockaddr_key, NULL, NULL, NULL,
-		NULL, NULL, NULL, NULL, NULL, NULL);
-	TEST_ASSERT(lookup != NULL, "vlist_record failed");
-	TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
+	TEST_ASSERT(dbt_db_get(&dbt_test_table, record2, &result) == 0, "dbt_db_get failed");
 	TEST_ASSERT(result != NULL, "returned result is NULL");
-	var_delete(lookup);
+	TEST_ASSERT(var_dump(result, rec_match, sizeof rec_match) > 0, "var_dump failed");
+	TEST_ASSERT(strcmp(rec2_str, rec_match) == 0, "Record contents changed");
+	var_delete(record2);
 	var_delete(result);
 
 	return;
 }
 
 int
-dbt_test_init(char *config_key, char *driver)
+dbt_test_init(char *config_key, char *driver, int run_stage2)
 {
 	// Check if driver exists
 	if (!module_exists(driver))
@@ -1263,12 +1290,27 @@ dbt_test_init(char *config_key, char *driver)
 		"test_updated",		VT_INT,		VF_KEEPNAME,
 		"test_expire",		VT_INT,		VF_KEEPNAME,
 		NULL);
+
+	dbt_test_run_stage2 = run_stage2;
 	
+	// Runs only once before stage 1
+	if (dbt_test_stage == 0)
+	{
+		// Make sure stage1 and stage2 use the same value for test_time
+		dbt_test_time = time(NULL);
+
+		// Recordlist for db_walk testing
+		sht_init(&dbt_test_ht, 1024, NULL);
+	}
+
+	++dbt_test_stage;
+
 	// Init dbt_test_table
 	dbt_test_table.dbt_scheme = dbt_test_scheme;
 	dbt_test_table.dbt_validate = dbt_common_validate;
 	dbt_test_table.dbt_config_key = config_key;
-	dbt_test_table.dbt_cleanup_schedule = time(NULL);
+	dbt_test_table.dbt_cleanup_schedule = dbt_test_time;
+
 
 	// Init prerequisites
 	cf_init();
@@ -1295,6 +1337,13 @@ dbt_test_init(char *config_key, char *driver)
 void
 dbt_test_clear(void)
 {
+	// Both stages finished
+	if (dbt_test_stage == 2 || dbt_test_run_stage2 == 0)
+	{
+		sht_clear(&dbt_test_ht);
+		dbt_test_stage = 0;
+	}
+
 	dbt_clear();
 	module_clear();
 	cf_clear();
@@ -1305,31 +1354,31 @@ dbt_test_clear(void)
 int
 dbt_test_memdb_init(void)
 {
-	return dbt_test_init("test_memdb", "memdb.so");
+	return dbt_test_init("test_memdb", "memdb.so", 0);
 }
 
 int
 dbt_test_bdb_init(void)
 {
-	return dbt_test_init("test_bdb", "bdb.so");
+	return dbt_test_init("test_bdb", "bdb.so", 1);
 }
 
 int
 dbt_test_lite_init(void)
 {
-	return dbt_test_init("test_lite", "lite.so");
+	return dbt_test_init("test_lite", "lite.so", 1);
 }
 
 int
 dbt_test_pgsql_init(void)
 {
-	return dbt_test_init("test_pgsql", "pgsql.so");
+	return dbt_test_init("test_pgsql", "pgsql.so", 1);
 }
 
 int
 dbt_test_mysql_init(void)
 {
-	return dbt_test_init("test_mysql", "sakila.so");
+	return dbt_test_init("test_mysql", "sakila.so", 1);
 }
 
 #endif
