@@ -421,8 +421,7 @@ regdom_test(int n)
 		exp = exp ? exp: "NULL";
 		got = got ? got: "NULL";
 
-		TEST_ASSERT(strcmp(got, exp) == 0, "\"%s\" expected \"%s\" "
-			"got \"%s\"", test, exp, got);
+		TEST_ASSERT(strcmp(got, exp) == 0);
 
 		if (dup != NULL)
 		{

@@ -22,11 +22,12 @@ struct test_data
 };
 typedef struct test_data test_data_t;
 
-void test_assert(char *file, int line, int cond, char *m, ...);
+void test_assert(char *file, int line, int cond, char *str);
 int test_in_argv(test_handler_t *handler, int optind, int argc, char *argv[]);
 void test_threads(int threads, test_handler_t *handler);
 void test_run(int optind, int argc, char **argv);
 
-#define TEST_ASSERT(...) test_assert(__FILE__, __LINE__, __VA_ARGS__)
+#define STRINGIFY(x) #x
+#define TEST_ASSERT(c) test_assert(__FILE__, __LINE__, c, STRINGIFY(c))
 
 #endif /* _TEST_H_ */

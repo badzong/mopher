@@ -358,52 +358,51 @@ vp_test(int n)
 		"data_string",		VT_STRING,	VF_KEEPNAME,
 		"data_string_null",	VT_STRING,	VF_KEEPNAME,
 		NULL);
-	TEST_ASSERT(scheme != NULL, "vlist_scheme failed");
+	TEST_ASSERT(scheme != NULL);
 
-	record = vlist_record(scheme, &key_int, &key_float, key_string,
-		&data_int, NULL, &data_float, NULL, data_string, NULL);
-	TEST_ASSERT(record != NULL, "vlist_record failed");
+	TEST_ASSERT((record = vlist_record(scheme, &key_int, &key_float,
+		key_string, &data_int, NULL, &data_float, NULL, data_string,
+		NULL)) != NULL);
 
-	vp = vp_pack(record);
-	TEST_ASSERT(vp != NULL, "vp_pack failed");
+	TEST_ASSERT((vp = vp_pack(record)) != NULL);
 
 	var_delete(record);
 	record = vp_unpack(vp, scheme);
 	vp_delete(vp);
-	TEST_ASSERT(record != NULL, "vp_unpack failed");
+	TEST_ASSERT(record != NULL);
 
 	v = vlist_record_lookup(record, "key_int");
 	pi = (VAR_INT_T *) v->v_data;
-	TEST_ASSERT((v->v_type | VF_KEY) != 0, "Key got lost");
-	TEST_ASSERT(pi != NULL, "vlist_record_get key not found");
-	TEST_ASSERT(*pi == key_int, "vp_unpack returnd bad value");
+	TEST_ASSERT((v->v_type | VF_KEY) != 0);
+	TEST_ASSERT(pi != NULL);
+	TEST_ASSERT(*pi == key_int);
 	pi = (VAR_INT_T *) vlist_record_get(record, "data_int");
-	TEST_ASSERT(pi != NULL, "vlist_record_get key not found");
-	TEST_ASSERT(*pi == data_int, "vp_unpack returnd bad value");
+	TEST_ASSERT(pi != NULL);
+	TEST_ASSERT(*pi == data_int);
 	pi = (VAR_INT_T *) vlist_record_get(record, "data_int_null");
-	TEST_ASSERT(pi == NULL, "vp_unpack returnd bad value");
+	TEST_ASSERT(pi == NULL);
 
 	v = vlist_record_lookup(record, "key_float");
 	pf = (VAR_FLOAT_T *) v->v_data;
-	TEST_ASSERT((v->v_type | VF_KEY) != 0, "Key got lost");
-	TEST_ASSERT(pf != NULL, "vlist_record_get key not found");
-	TEST_ASSERT(*pf == key_float, "vp_unpack returnd bad value");
+	TEST_ASSERT((v->v_type | VF_KEY) != 0);
+	TEST_ASSERT(pf != NULL);
+	TEST_ASSERT(*pf == key_float);
 	pf = (VAR_FLOAT_T *) vlist_record_get(record, "data_float");
-	TEST_ASSERT(pf != NULL, "vlist_record_get key not found");
-	TEST_ASSERT(*pf == data_float, "vp_unpack returnd bad value");
+	TEST_ASSERT(pf != NULL);
+	TEST_ASSERT(*pf == data_float);
 	pf = (VAR_FLOAT_T *) vlist_record_get(record, "data_float_null");
-	TEST_ASSERT(pf == NULL, "vp_unpack returnd bad value");
+	TEST_ASSERT(pf == NULL);
 
 	v = vlist_record_lookup(record, "key_string");
 	ps = (char *) v->v_data;
-	TEST_ASSERT((v->v_type | VF_KEY) != 0, "Key got lost");
-	TEST_ASSERT(ps != NULL, "vlist_record_get key not found");
-	TEST_ASSERT(strcmp(ps, "foo") == 0, "vp_unpack returnd bad value");
+	TEST_ASSERT((v->v_type | VF_KEY) != 0);
+	TEST_ASSERT(ps != NULL);
+	TEST_ASSERT(strcmp(ps, "foo") == 0);
 	ps = (char *) vlist_record_get(record, "data_string");
-	TEST_ASSERT(ps != NULL, "vlist_record_get key not found");
-	TEST_ASSERT(strcmp(ps, "bar") == 0, "vp_unpack returnd bad value");
+	TEST_ASSERT(ps != NULL);
+	TEST_ASSERT(strcmp(ps, "bar") == 0);
 	ps = (char *) vlist_record_get(record, "data_string_null");
-	TEST_ASSERT(ps == NULL, "vp_unpack returnd bad value");
+	TEST_ASSERT(ps == NULL);
 
 	var_delete(record);
 	var_delete(scheme);

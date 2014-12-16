@@ -941,7 +941,6 @@ sql_test_esc(void *conn, char *buffer, int size, char *src)
 void
 sql_test(int n)
 {
-	int r;
 	sql_t sql;
 	var_t *scheme, *record;
 	char query[BUFLEN];
@@ -976,39 +975,34 @@ sql_test(int n)
 		"string",	VT_STRING,	VF_KEEPNAME,
 		"addr",		VT_ADDR,	VF_KEEPNAME,
 		NULL);
-	TEST_ASSERT(scheme != NULL, "vlist_scheme failed");
+	TEST_ASSERT(scheme != NULL);
 
 	// Create test record
-	record = vlist_record(scheme, &i, &f, str, sin, &i, &f, str, sin);
-	TEST_ASSERT(record != NULL, "vlist_record failed");
+	TEST_ASSERT((record = vlist_record(scheme, &i, &f, str, sin, &i, &f, str, sin)) != NULL);
 
 	// Create Query
-	r = sql_create(&sql, NULL, query, sizeof query, "test_table", scheme);
-	TEST_ASSERT(r == 0, "sql_select failed");
+	TEST_ASSERT(sql_create(&sql, NULL, query, sizeof query, "test_table", scheme) == 0);
 	strcpy(pattern, "CREATE TABLE 'test_table' ('int_key' INT,'float_key' FLOAT,'string_key' VARCHAR(255),'addr_key' INET,'int' INT,'float' FLOAT,'string' VARCHAR(255),'addr' INET, PRIMARY KEY('int_key','float_key','string_key','addr_key'))");
 	//printf("%s\n%s\n\n", query, pattern);
-	TEST_ASSERT(strcmp(pattern, query) == 0, "sql_select returned wrong query");
+	TEST_ASSERT(strcmp(pattern, query) == 0);
 
 	// Select Query
-	r = sql_select(&sql, NULL, query, sizeof query, "test_table", record);
-	TEST_ASSERT(r == 0, "sql_select failed");
+	TEST_ASSERT(sql_select(&sql, NULL, query, sizeof query, "test_table", record) == 0);
 	snprintf(pattern, sizeof pattern, "SELECT 'int_key','float_key','string_key','addr_key','int','float','string','addr' FROM 'test_table' WHERE 'int_key'='%d' AND 'float_key'='%.2f' AND 'string_key'='foobar' AND 'addr_key'='%d.%d.%d.%d'", n, n*0.7,n,n,n,n);
 	//printf("%s\n%s\n\n", query, pattern);
-	TEST_ASSERT(strcmp(pattern, query) == 0, "sql_select returned wrong query");
+	TEST_ASSERT(strcmp(pattern, query) == 0);
 
 	// Update Query
-	r = sql_update(&sql, NULL, query, sizeof query, "test_table", record);
-	TEST_ASSERT(r == 0, "sql_update failed");
+	TEST_ASSERT(sql_update(&sql, NULL, query, sizeof query, "test_table", record) == 0);
 	snprintf(pattern, sizeof pattern, "UPDATE 'test_table' SET 'int'='%d','float'='%.2f','string'='foobar','addr'='%d.%d.%d.%d' WHERE 'int_key'='%d' AND 'float_key'='%.2f' AND 'string_key'='foobar' AND 'addr_key'='%d.%d.%d.%d'", n,n*0.7,n,n,n,n,n,n*0.7,n,n,n,n);
 	//printf("%s\n%s\n\n", query, pattern);
-	TEST_ASSERT(strcmp(pattern, query) == 0, "sql_update returned wrong query");
+	TEST_ASSERT(strcmp(pattern, query) == 0);
 
 	// Delete Query
-	r = sql_delete(&sql, NULL, query, sizeof query, "test_table", record);
-	TEST_ASSERT(r == 0, "sql_delete failed");
+	TEST_ASSERT(sql_delete(&sql, NULL, query, sizeof query, "test_table", record) == 0);
 	snprintf(pattern, sizeof pattern, "DELETE FROM 'test_table' WHERE 'int_key'='%d' AND 'float_key'='%.2f' AND 'string_key'='foobar' AND 'addr_key'='%d.%d.%d.%d'", n,n*0.7,n,n,n,n);
 	//printf("%s\n%s\n\n", query, pattern);
-	TEST_ASSERT(strcmp(pattern, query) == 0, "sql_update returned wrong query");
+	TEST_ASSERT(strcmp(pattern, query) == 0);
 
 	var_delete(scheme);
 	var_delete(record);

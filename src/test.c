@@ -22,18 +22,12 @@ test_count(void)
 
 	++test_tests;
 
-	if (pthread_mutex_unlock(&test_mutex))
-	{
-		log_die(EX_SOFTWARE, "test_count: pthread_mutex_unlock");
-	}
+	pthread_mutex_unlock(&test_mutex);
 }
 
 void
-test_assert(char *file, int line, int cond, char *m, ...)
+test_assert(char *file, int line, int cond, char *str)
 {
-	va_list ap;
-	char f[BUFLEN];
-
 	test_count();
 
 	if (cond)
@@ -41,16 +35,16 @@ test_assert(char *file, int line, int cond, char *m, ...)
 		return;
 	}
 
-	if (snprintf(f, sizeof f, "%s:%d *** %s", file, line, m) >= sizeof f)
+	// Make sure multpile test threads don't obfuscate output
+	if (pthread_mutex_lock(&test_mutex))
 	{
-		log_die(EX_SOFTWARE, "test_assert: buffer exhausted");
+		log_error("test_count: pthread_mutex_lock");
 	}
 
-	va_start(ap, m);
-	log_logv(LOG_ERR, 0, f, ap);
-	va_end(ap);
+	log_die(EX_SOFTWARE, "\n *** TEST FAILED ***\n\n %s line %d:\n\n %s\n", file,
+		line, str);
 
-	log_die(EX_SOFTWARE, "\nTEST FAILED!");
+	pthread_mutex_unlock(&test_mutex);
 
 	return;
 }

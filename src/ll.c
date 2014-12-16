@@ -172,7 +172,7 @@ static void
 ll_test_callback(int *p, int *index)
 {
 	++(*index);
-	TEST_ASSERT(*p == *index, "Wrong value: expect %d, got %d", *index, *p);
+	TEST_ASSERT(*p == *index);
 	return;
 }
 
@@ -189,30 +189,29 @@ ll_test(int n)
 	ll_init(pll);
 	for (p = test_array; *p; ++p, ++i)
 	{
-		TEST_ASSERT(ll_insert_tail(pll, p) > 0, "LL_INSERT failed");
+		TEST_ASSERT(ll_insert_tail(pll, p) > 0);
 	}
 	ll_walk(pll, (void *) ll_test_callback, &index);
 
 	while(i--)
 	{
-		TEST_ASSERT(ll_remove_head(pll) != NULL, "LL_REMOVE failed");
+		TEST_ASSERT(ll_remove_head(pll) != NULL);
 	}
-	TEST_ASSERT(pll->ll_size == 0, "list has size %d. should be empty", pll->ll_size);
+	TEST_ASSERT(pll->ll_size == 0);
 
 	i = index = 0;
-	pll = ll_create();
-	TEST_ASSERT(pll != NULL, "ll_create failed");
+	TEST_ASSERT((pll = ll_create()) != NULL);
 	for (p = test_array; *p; ++p, ++i)
 	{
-		TEST_ASSERT(ll_insert_tail(pll, p) > 0, "LL_INSERT failed");
+		TEST_ASSERT(ll_insert_tail(pll, p) > 0);
 	}
 	ll_walk(pll, (void *) ll_test_callback, &index);
 
 	while(i--)
 	{
-		TEST_ASSERT(ll_remove_head(pll) != NULL, "LL_REMOVE failed");
+		TEST_ASSERT(ll_remove_head(pll) != NULL);
 	}
-	TEST_ASSERT(pll->ll_size == 0, "list has size %d. should be empty", pll->ll_size);
+	TEST_ASSERT(pll->ll_size == 0);
 	ll_delete(pll, NULL);
 }
 

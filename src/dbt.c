@@ -1151,14 +1151,14 @@ dbt_test_stage1(int n)
 	// Create test record data	
 	record1 = dbt_test_record(&tr1, dbt_test_scheme, n, DBT_TEST_EXPIRE);
 	record2 = dbt_test_record(&tr2, dbt_test_scheme, n + 10000, DBT_TEST_EXPIRE);
-	TEST_ASSERT(record1 != NULL && record2 != NULL, "vlist_record failed");
-	TEST_ASSERT(var_dump(record1, rec1_str, sizeof rec1_str) > 0, "var_dump failed");
-	TEST_ASSERT(var_dump(record2, rec2_str, sizeof rec2_str) > 0, "var_dump failed");
+	TEST_ASSERT(record1 != NULL && record2 != NULL);
+	TEST_ASSERT(var_dump(record1, rec1_str, sizeof rec1_str) > 0);
+	TEST_ASSERT(var_dump(record2, rec2_str, sizeof rec2_str) > 0);
 
 	// Add record strings to test hash table (used in stage 2).
 	pthread_mutex_lock(&dbt_test_mutex);
-	TEST_ASSERT(sht_insert(&dbt_test_ht, rec1_str, rec1_str) == 0, "sht_insert failed");
-	TEST_ASSERT(sht_insert(&dbt_test_ht, rec2_str, rec2_str) == 0, "sht_insert failed");
+	TEST_ASSERT(sht_insert(&dbt_test_ht, rec1_str, rec1_str) == 0);
+	TEST_ASSERT(sht_insert(&dbt_test_ht, rec2_str, rec2_str) == 0);
 	//printf("RE1: %s\nRE2: %s\n", rec1_str, rec2_str);
 	pthread_mutex_unlock(&dbt_test_mutex);
 
@@ -1171,39 +1171,39 @@ dbt_test_stage1(int n)
 	for (i = 0; i < DBT_STRESS_ROUNDS; ++i)
 	{
 		// Insert
-		TEST_ASSERT(dbt_db_set(&dbt_test_table, record1) == 0, "dbt_db_set failed");
-		TEST_ASSERT(dbt_db_sync(&dbt_test_table) == 0, "dbt_db_sync failed");
+		TEST_ASSERT(dbt_db_set(&dbt_test_table, record1) == 0);
+		TEST_ASSERT(dbt_db_sync(&dbt_test_table) == 0);
 
 		// Select
-		TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
-		TEST_ASSERT(result != NULL, "dbt_db_get returned NULL");
-		TEST_ASSERT(var_dump(result, rec_match, sizeof rec_match) > 0, "var_dump failed");
-		TEST_ASSERT(strcmp(rec1_str, rec_match) == 0, "Record contents changed\n%s\n%s\n", rec1_str, rec_match);
+		TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0);
+		TEST_ASSERT(result != NULL);
+		TEST_ASSERT(var_dump(result, rec_match, sizeof rec_match) > 0);
+		TEST_ASSERT(strcmp(rec1_str, rec_match) == 0);
 		var_delete(result);
 		result = NULL;
 
 		// Update
-		TEST_ASSERT(dbt_db_set(&dbt_test_table, record1) == 0, "dbt_db_set failed");
-		TEST_ASSERT(dbt_db_sync(&dbt_test_table) == 0, "dbt_db_sync failed");
-		TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
-		TEST_ASSERT(result != NULL, "dbt_db_get returned NULL");
-		TEST_ASSERT(var_dump(result, rec_match, sizeof rec_match) > 0, "var_dump failed");
-		TEST_ASSERT(strcmp(rec1_str, rec_match) == 0, "Record contents changed");
+		TEST_ASSERT(dbt_db_set(&dbt_test_table, record1) == 0);
+		TEST_ASSERT(dbt_db_sync(&dbt_test_table) == 0);
+		TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0);
+		TEST_ASSERT(result != NULL);
+		TEST_ASSERT(var_dump(result, rec_match, sizeof rec_match) > 0);
+		TEST_ASSERT(strcmp(rec1_str, rec_match) == 0);
 		var_delete(result);
 		result = NULL;
 
 		// Delete
-		TEST_ASSERT(dbt_db_del(&dbt_test_table, lookup) == 0, "dbt_db_del failed");
-		TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0, "dbt_db_get failed");
-		TEST_ASSERT(result == NULL, "dbt_db_del returned deleted record: %s", tr1.tr_string_key);
-		TEST_ASSERT(dbt_db_sync(&dbt_test_table) == 0, "dbt_db_sync failed");
+		TEST_ASSERT(dbt_db_del(&dbt_test_table, lookup) == 0);
+		TEST_ASSERT(dbt_db_get(&dbt_test_table, lookup, &result) == 0);
+		TEST_ASSERT(result == NULL);
+		TEST_ASSERT(dbt_db_sync(&dbt_test_table) == 0);
 	}
 
 	// Add records for dbt_test_stage2()
-	TEST_ASSERT(dbt_db_set(&dbt_test_table, record1) == 0, "dbt_db_set failed");
-	TEST_ASSERT(dbt_db_sync(&dbt_test_table) == 0, "dbt_db_sync failed");
-	TEST_ASSERT(dbt_db_set(&dbt_test_table, record2) == 0, "dbt_db_set failed");
-	TEST_ASSERT(dbt_db_sync(&dbt_test_table) == 0, "dbt_db_sync failed");
+	TEST_ASSERT(dbt_db_set(&dbt_test_table, record1) == 0);
+	TEST_ASSERT(dbt_db_sync(&dbt_test_table) == 0);
+	TEST_ASSERT(dbt_db_set(&dbt_test_table, record2) == 0);
+	TEST_ASSERT(dbt_db_sync(&dbt_test_table) == 0);
 
 	var_delete(record1);
 	var_delete(record2);
@@ -1217,8 +1217,8 @@ dbt_test_walk(dbt_t *dbt, var_t *record)
 {
 	char rec_match[BUFLEN];
 
-	TEST_ASSERT(var_dump(record, rec_match, sizeof rec_match) > 0, "var_dump failed");
-	TEST_ASSERT(sht_lookup(&dbt_test_ht, rec_match) != NULL, "Could not find record: %s", rec_match);
+	TEST_ASSERT(var_dump(record, rec_match, sizeof rec_match) > 0);
+	TEST_ASSERT(sht_lookup(&dbt_test_ht, rec_match) != NULL);
 
 	return 0;
 }
@@ -1238,26 +1238,26 @@ dbt_test_stage2(int n)
 	// Create records
 	record1 = dbt_test_record(&tr1, dbt_test_scheme, n, DBT_TEST_EXPIRE);
 	record2 = dbt_test_record(&tr2, dbt_test_scheme, n + 10000, DBT_TEST_EXPIRE);
-	TEST_ASSERT(record1 != NULL && record2 != NULL, "vlist_record failed");
-	TEST_ASSERT(var_dump(record1, rec1_str, sizeof rec1_str) > 0, "var_dump failed");
-	TEST_ASSERT(var_dump(record2, rec2_str, sizeof rec2_str) > 0, "var_dump failed");
+	TEST_ASSERT(record1 != NULL && record2 != NULL);
+	TEST_ASSERT(var_dump(record1, rec1_str, sizeof rec1_str) > 0);
+	TEST_ASSERT(var_dump(record2, rec2_str, sizeof rec2_str) > 0);
 
 	// Walk table
-	TEST_ASSERT(dbt_db_walk(&dbt_test_table, (void *) dbt_test_walk) == 0, "dbt_test_walk failed");
+	TEST_ASSERT(dbt_db_walk(&dbt_test_table, (void *) dbt_test_walk) == 0);
 
 	// Lookup record 1
-	TEST_ASSERT(dbt_db_get(&dbt_test_table, record1, &result) == 0, "dbt_db_get failed");
-	TEST_ASSERT(result != NULL, "returned result is NULL");
-	TEST_ASSERT(var_dump(result, rec_match, sizeof rec_match) > 0, "var_dump failed");
-	TEST_ASSERT(strcmp(rec1_str, rec_match) == 0, "Record contents changed");
+	TEST_ASSERT(dbt_db_get(&dbt_test_table, record1, &result) == 0);
+	TEST_ASSERT(result != NULL);
+	TEST_ASSERT(var_dump(result, rec_match, sizeof rec_match) > 0);
+	TEST_ASSERT(strcmp(rec1_str, rec_match) == 0);
 	var_delete(record1);
 	var_delete(result);
 
 	// Lookup record 2
-	TEST_ASSERT(dbt_db_get(&dbt_test_table, record2, &result) == 0, "dbt_db_get failed");
-	TEST_ASSERT(result != NULL, "returned result is NULL");
-	TEST_ASSERT(var_dump(result, rec_match, sizeof rec_match) > 0, "var_dump failed");
-	TEST_ASSERT(strcmp(rec2_str, rec_match) == 0, "Record contents changed");
+	TEST_ASSERT(dbt_db_get(&dbt_test_table, record2, &result) == 0);
+	TEST_ASSERT(result != NULL);
+	TEST_ASSERT(var_dump(result, rec_match, sizeof rec_match) > 0);
+	TEST_ASSERT(strcmp(rec2_str, rec_match) == 0);
 	var_delete(record2);
 	var_delete(result);
 

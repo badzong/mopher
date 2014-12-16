@@ -308,16 +308,14 @@ sht_test(int n)
 		p->st_key = record->st_key;
 		p->st_value = record->st_value;
 		
-		TEST_ASSERT(sht_insert(ht, p->st_key, p) == 0, "sht_insert failed");
+		TEST_ASSERT(sht_insert(ht, p->st_key, p) == 0);
 	}
 
 	// Test lookups
 	for (record = sht_tests; record->st_key != NULL; ++record)
 	{
-		p = sht_lookup(ht, record->st_key);
-		TEST_ASSERT(p != NULL, "sht_lookup failed");
-		TEST_ASSERT(p->st_value == record->st_value,
-			"sht_lookup didn't return the right data");
+		TEST_ASSERT((p = sht_lookup(ht, record->st_key)) != NULL);
+		TEST_ASSERT(p->st_value == record->st_value);
 	}
 
 	// Test replace
@@ -331,17 +329,14 @@ sht_test(int n)
 
 		p->st_key = "foobar";
 		p->st_value = i;
-		TEST_ASSERT(sht_replace(ht, "foobar", p) == 0, "sht_replace failed");
-
-		p = sht_lookup(ht, "foobar");
-		TEST_ASSERT(p != NULL, "sht_get key not found");
-		TEST_ASSERT(p->st_value == i, "sht_get value mismatch");
+		TEST_ASSERT(sht_replace(ht, "foobar", p) == 0);
+		TEST_ASSERT((p = sht_lookup(ht, "foobar")) != NULL);
+		TEST_ASSERT(p->st_value == i);
 	}
 
 	// Test remove
 	sht_remove(ht, "foobar");
-	p = sht_lookup(ht, "foobar");
-	TEST_ASSERT(p == NULL, "sht_remove not successful");
+	TEST_ASSERT(sht_lookup(ht, "foobar") == NULL);
 
 	sht_delete(ht);
 

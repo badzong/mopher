@@ -935,145 +935,150 @@ util_test(int n)
 	/*
 	 * util_strdupenc
 	 */
-	p = util_strdupenc("<test>", "<>");
-	TEST_ASSERT(p != NULL, "util_strdupenc failed");
-	TEST_ASSERT(strcmp(p, "test") == 0, "util_strdupenc returned wrong value");
+	TEST_ASSERT((p = util_strdupenc("<test>", "<>")) != NULL);
+	TEST_ASSERT(strcmp(p, "test") == 0);
 	free(p);
 
-	p = util_strdupenc("-test-", "--");
-	TEST_ASSERT(p != NULL, "util_strdupenc failed");
-	TEST_ASSERT(strcmp(p, "test") == 0, "util_strdupenc returned wrong value");
+	TEST_ASSERT((p = util_strdupenc("-test-", "--")) != NULL);
+	TEST_ASSERT(strcmp(p, "test") == 0);
 	free(p);
 
-	p = util_strdupenc("test", "<>");
-	TEST_ASSERT(p != NULL, "util_strdupenc failed");
-	TEST_ASSERT(strcmp(p, "test") == 0, "util_strdupenc returned wrong value");
+	TEST_ASSERT((p = util_strdupenc("test", "<>")) != NULL);
+	TEST_ASSERT(strcmp(p, "test") == 0);
 	free(p);
 
 	/*
 	 * util_strmail
 	 */
-	TEST_ASSERT(util_strmail(buffer, sizeof buffer, "Test <test@test.com>") > 0, "util_strmail failed");
-	TEST_ASSERT(strcmp(buffer, "test@test.com") == 0, "util_strmail returnd wrong result: %s", buffer);
-	TEST_ASSERT(util_strmail(buffer, sizeof buffer, "Test >test@test.com<") == -1, "util_strmail should fail here");
-	TEST_ASSERT(util_strmail(buffer, sizeof buffer, NULL) == -1, "util_strmail should fail here");
+	TEST_ASSERT(util_strmail(buffer, sizeof buffer, "Test <test@test.com>") > 0);
+	TEST_ASSERT(strcmp(buffer, "test@test.com") == 0);
+
+	// Must fail
+	TEST_ASSERT(util_strmail(buffer, sizeof buffer, "Test >test@test.com<") == -1);
+	TEST_ASSERT(util_strmail(buffer, sizeof buffer, NULL) == -1);
 
 	/*
          * util_strtoaddr, util_addrtostr
 	 */
-	ss = util_strtoaddr("127.0.0.1");
-	TEST_ASSERT(ss != NULL, "util_strtoaddr failed");
-
-	p = util_addrtostr(ss);
-	TEST_ASSERT(p != NULL, "util_addrtostr failed");
-	TEST_ASSERT(strcmp(p, "127.0.0.1") == 0, "util_addrtostr or util_strtoaddr failed");
+	TEST_ASSERT((ss = util_strtoaddr("127.0.0.1")) != NULL);
+	TEST_ASSERT((p = util_addrtostr(ss)) != NULL);
+	TEST_ASSERT(strcmp(p, "127.0.0.1") == 0);
 	free(p);
 	free(ss);
 
-	ss = util_strtoaddr("1234::5678");
-	TEST_ASSERT(ss != NULL, "util_strtoaddr failed");
-
-	p = util_addrtostr(ss);
-	TEST_ASSERT(p != NULL, "util_addrtostr failed");
-	TEST_ASSERT(strcmp(p, "1234::5678") == 0, "util_addrtostr or util_strtoaddr failed");
+	TEST_ASSERT((ss = util_strtoaddr("1234::5678")) != NULL);
+	TEST_ASSERT((p = util_addrtostr(ss)) != NULL);
+	TEST_ASSERT(strcmp(p, "1234::5678") == 0);
 	free(p);
 	free(ss);
 
-	TEST_ASSERT(util_strtoaddr(NULL) == NULL, "util_strtoaddr should return NULL");
+	TEST_ASSERT(util_strtoaddr(NULL) == NULL);
 
 	/*
 	 * util_addrtoint
 	 */
-	ss = util_strtoaddr("1.1.1.1");
-	TEST_ASSERT(ss != NULL, "util_strtoaddr failed");
-	ul = util_addrtoint(ss);
-	TEST_ASSERT(ul == 0x01010101, "util_addrtoint failed. Expected %lx got %lx", 0x01010101, ul);
+	TEST_ASSERT((ss = util_strtoaddr("1.1.1.1")) != NULL);
+	TEST_ASSERT((ul = util_addrtoint(ss)) == 0x01010101);
 	free(ss);
 
-	TEST_ASSERT(util_addrtoint(NULL) == -1, "util_addrtoint should fail here");
+	// Must fail
+	TEST_ASSERT(util_addrtoint(NULL) == -1);
 
 	/*
 	 * util_file_exists
 	 */
-	TEST_ASSERT(util_file_exists("/") == 1, "Root should exist");
-	TEST_ASSERT(util_file_exists("/nonexistent") == 0, "/nonexistent should not exist");
-	TEST_ASSERT(util_file_exists(NULL) == -1, "This should fail");
+	TEST_ASSERT(util_file_exists("/") == 1);
+	TEST_ASSERT(util_file_exists("/nonexistent") == 0);
+
+	// Must fail
+	TEST_ASSERT(util_file_exists(NULL) == -1);
 
 	/*
  	 * util_file
  	 */
-	TEST_ASSERT((i = util_file("/etc/fstab", &p)) > 0, "util_file failed");
-	TEST_ASSERT(strlen(p) == i, "util_file should return string of %d bytes. Got %d", i, strlen(p));
+	TEST_ASSERT((i = util_file("/etc/fstab", &p)) > 0);
+	// Strlen should match file size
+	TEST_ASSERT(strlen(p) == i);
 	free(p);
 
-	TEST_ASSERT((i = util_file("/etc/hosts", &p)) > 0, "util_file failed");
-	TEST_ASSERT(strlen(p) == i, "util_file should return string of %d bytes. Got %d", i, strlen(p));
+	TEST_ASSERT((i = util_file("/etc/hosts", &p)) > 0);
+	// Strlen should match file size
+	TEST_ASSERT(strlen(p) == i);
 	free(p);
 
-	TEST_ASSERT(util_file("/nonexisten", &p) == -1, "util_file should fail here");
+	// MUst fail
+	TEST_ASSERT(util_file("/nonexisten", &p) == -1);
 
 	/*
 	 * util_addrcmp
 	 */
-	addr1 = util_strtoaddr("192.168.1.1");
-	addr2 = util_strtoaddr("192.168.1.1");
-
-	TEST_ASSERT(util_addrcmp(addr1, addr2) == 0, "util_addrcmp failed");
+	TEST_ASSERT((addr1 = util_strtoaddr("192.168.1.1")) != NULL);
+	TEST_ASSERT((addr2 = util_strtoaddr("192.168.1.1")) != NULL);
+	TEST_ASSERT(util_addrcmp(addr1, addr2) == 0);
 	free(addr2);
 
-	addr2 = util_strtoaddr("192.168.1.2");
-	TEST_ASSERT(util_addrcmp(addr1, addr2) == -1, "util_addrcmp failed");
+	// Address is greater
+	TEST_ASSERT((addr2 = util_strtoaddr("192.168.1.2")) != NULL);
+	TEST_ASSERT(util_addrcmp(addr1, addr2) == -1);
 	free(addr2);
 
-	addr2 = util_strtoaddr("192.168.1.0");
-	TEST_ASSERT(util_addrcmp(addr1, addr2) == 1, "util_addrcmp failed");
+	// Address is smaller
+	TEST_ASSERT((addr2 = util_strtoaddr("192.168.1.0")) != NULL);
+	TEST_ASSERT(util_addrcmp(addr1, addr2) == 1);
 	free(addr2);
 
-	addr2 = util_strtoaddr("::1");
-	TEST_ASSERT(util_addrcmp(addr1, addr2) == -1, "util_addrcmp failed");
+	// IPv6 is greater than IPv4
+	TEST_ASSERT((addr2 = util_strtoaddr("::2")) != NULL);
+	TEST_ASSERT(util_addrcmp(addr1, addr2) == -1);
 	free(addr1);
 
-	addr1 = util_strtoaddr("::1");
-	TEST_ASSERT(util_addrcmp(addr1, addr2) == 0, "util_addrcmp failed");
+	TEST_ASSERT((addr1 = util_strtoaddr("::2")) != NULL);
+	TEST_ASSERT(util_addrcmp(addr1, addr2) == 0);
 	free(addr2);
 
-	addr2 = util_strtoaddr("::2");
-	TEST_ASSERT(util_addrcmp(addr1, addr2) == -1, "util_addrcmp failed");
-	free(addr1);
+	// Address is greater
+	TEST_ASSERT((addr2 = util_strtoaddr("::3")) != NULL);
+	TEST_ASSERT(util_addrcmp(addr1, addr2) == -1);
 	free(addr2);
+
+	// Address is smaller
+	TEST_ASSERT((addr2 = util_strtoaddr("::1")) != NULL);
+	TEST_ASSERT(util_addrcmp(addr1, addr2) == 1);
+	free(addr2);
+	free(addr1);
 
 	/*
 	 * util_now
 	 */
-	TEST_ASSERT(util_now(&ts) == 0, "util_now failed");
+	TEST_ASSERT(util_now(&ts) == 0);
 
 	/*
 	 * util_concat
 	 */
-	TEST_ASSERT(util_concat(buffer, sizeof buffer, "foo", "bar", "99", NULL) == 8, "util_concat failed");
-	TEST_ASSERT(strcmp(buffer, "foobar99") == 0, "util_concat produced bad string");
+	TEST_ASSERT(util_concat(buffer, sizeof buffer, "foo", "bar", "99", NULL) == 8);
+	TEST_ASSERT(strcmp(buffer, "foobar99") == 0);
 
 	/*
 	 * util_dirname
 	 */
-	TEST_ASSERT(util_dirname(buffer, sizeof buffer, "/etc/fstab") == 0, "util_dirname failed");
-	TEST_ASSERT(strcmp(buffer, "/etc") == 0, "util_dirname returned bad value: %s", buffer);
+	TEST_ASSERT(util_dirname(buffer, sizeof buffer, "/etc/fstab") == 0);
+	TEST_ASSERT(strcmp(buffer, "/etc") == 0);
 
-	TEST_ASSERT(util_dirname(buffer, sizeof buffer, "/tmp") == 0, "util_dirname failed");
-	TEST_ASSERT(strcmp(buffer, "/tmp") == 0, "util_dirname returned bad value: %s", buffer);
+	TEST_ASSERT(util_dirname(buffer, sizeof buffer, "/tmp") == 0);
+	TEST_ASSERT(strcmp(buffer, "/tmp") == 0);
 
-	TEST_ASSERT(util_dirname(buffer, sizeof buffer, "/tmp/") == 0, "util_dirname failed");
-	TEST_ASSERT(strcmp(buffer, "/tmp") == 0, "util_dirname returned bad value: %s", buffer);
+	TEST_ASSERT(util_dirname(buffer, sizeof buffer, "/tmp/") == 0);
+	TEST_ASSERT(strcmp(buffer, "/tmp") == 0);
 
-	TEST_ASSERT(util_dirname(buffer, sizeof buffer, "/") == 0, "util_dirname failed");
-	TEST_ASSERT(strcmp(buffer, "/") == 0, "util_dirname returned bad value: %s", buffer);
+	TEST_ASSERT(util_dirname(buffer, sizeof buffer, "/") == 0);
+	TEST_ASSERT(strcmp(buffer, "/") == 0);
 
 	/*
          * util_tolower
          */
 	strncpy(buffer, "FOOBAR", sizeof buffer);
 	util_tolower(buffer);
-	TEST_ASSERT(strcmp(buffer, "foobar") == 0, "util_tolower failed");
+	TEST_ASSERT(strcmp(buffer, "foobar") == 0);
 	
 	return;
 }
