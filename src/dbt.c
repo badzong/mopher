@@ -659,9 +659,8 @@ dbt_janitor_cleanup(time_t now, dbt_t *dbt)
 
 	if (deleted)
 	{
-		log_error("Database cleaning: disposed %d stale record%s from "
-			"%s table", deleted, deleted > 1 ? "s" : "",
-			dbt->dbt_name);
+		log_debug("dbt_janitor_cleanup: disposed %d stale record%s "
+			"from %s", deleted, deleted > 1 ? "s" : "", dbt->dbt_name);
 	}
 
 	return deleted;
@@ -678,6 +677,8 @@ dbt_janitor(void *arg)
 	struct timespec	ts;
 	int r;
 	ht_pos_t pos;
+	char log_message[BUFLEN];
+	int log_len;
 
 	log_debug("dbt_janitor: janitor thread running");
 
@@ -698,6 +699,10 @@ dbt_janitor(void *arg)
 		}
 
 		now = ts.tv_sec;
+
+		// Clear log message
+		log_message[0] = 0;
+		log_len = 0;
 
 		sht_start(dbt_tables, &pos);
 		while ((dbt = sht_next(dbt_tables, &pos)))
@@ -727,11 +732,30 @@ dbt_janitor(void *arg)
 				    "failed");
 			}
 
+			if (deleted > 0)
+			{
+				log_len += snprintf(log_message + log_len,
+					sizeof log_message - log_len, " %s=%d",
+					dbt->dbt_name, deleted);
+				if (log_len >= sizeof log_message)
+				{
+					log_error("dbt_janitor: log buffer exhausted");
+					log_len = 0;
+					log_message[0] = 0;
+				}
+			}
+
 			/*
 			 * Schedule next cleanup cycle
 			 */
 			dbt->dbt_cleanup_schedule =
 				now + dbt->dbt_cleanup_interval;
+		}
+
+		if (log_len)
+		{
+			log_error("database cleanup: deleted:%s",
+				log_message);
 		}
 
 		/*
@@ -1310,7 +1334,6 @@ dbt_test_init(char *config_key, char *driver, int run_stage2)
 	dbt_test_table.dbt_validate = dbt_common_validate;
 	dbt_test_table.dbt_config_key = config_key;
 	dbt_test_table.dbt_cleanup_schedule = dbt_test_time;
-
 
 	// Init prerequisites
 	cf_init();
