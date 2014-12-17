@@ -119,14 +119,108 @@ null(int argc, ll_t *args)
 	return EXP_EMPTY;
 }
 
+static int
+mopher_header(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
+{
+	void *ctx;
+	int count;
+	VAR_INT_T *action;
+	var_t *v;
+	char **p;
+	char buffer[8192];
+	int n;
+	int len = 0;
+	
+	static const char *symbols[] = {
+		"id",
+		"acl_response",
+		"acl_rule",
+		"acl_line",
+		"counter_relay",
+		"counter_penpal",
+		"greylist_delayed",
+		"greylist_passed",
+		"tarpit_delayed",
+		"dnsbl_str",
+		"spf",
+		"spamd_score",
+		"spamd_spam",
+		NULL
+	};
+
+	if (stage != MS_EOM)
+	{
+		return 0;
+	}
+
+	if (vtable_dereference(mailspec, "milter_ctx", &ctx, "action", &action,
+		NULL) != 2)
+	{
+		log_error("mopher_header: vtable_dereference failed");
+		return -1;
+	}
+
+	/*
+	 * Action needs to be ACCEPT or CONTINUE
+	 */
+	if (*action != ACL_ACCEPT && *action != ACL_CONTINUE)
+	{
+		return 0;
+	}
+
+	for (p = symbols; *p != NULL; ++p)
+	{
+		if (vtable_is_null(mailspec, *p))
+		{
+			continue;
+		}
+
+		v = vtable_lookup(mailspec, *p);
+		if (v == NULL)
+		{
+			continue;
+		}
+
+		if (len && len + 2 < sizeof buffer)
+		{
+			buffer[len] = ' ';
+			++len;
+			buffer[len] = 0;
+		}
+
+		n = var_dump(v, buffer + len, sizeof buffer - len);
+		if (n == -1)
+		{
+			log_error("mopher_header: var_dump failed");
+			return -1;
+		}
+
+		len += n;
+	}
+
+	if (len)
+	{
+		if (smfi_chgheader(ctx, cf_mopher_header_name, 1, buffer) != MI_SUCCESS)
+        	{
+                	log_error("mopher_header: smfi_chgheader failed");
+                	return -1;
+        	}
+	}
+
+	return 0;
+}
+
 
 int
-cast_init(void)
+base_init(void)
 {
 	char **k;
 	var_type_t *v;
 	VAR_INT_T i;
 
+	/*
+	 * Functions
+	 */
 	acl_function_register("type", AF_COMPLEX,
 	    (acl_function_callback_t) type);
 	acl_function_register("size", AF_COMPLEX,
@@ -136,11 +230,22 @@ cast_init(void)
 	acl_function_register("null", AF_COMPLEX,
 	    (acl_function_callback_t) null);
 
+	/*
+	 * Constants
+	 */
 	for (k = cast_keys, v = cast_values; *k && *v; ++k, ++v)
 	{
 		i = *v;
 		acl_constant_register(VT_INT, *k, &i,
 		    VF_KEEPNAME | VF_COPYDATA);
+	}
+
+	/*
+	 * ACL update callback
+	 */
+	if (cf_mopher_header)
+	{
+		acl_update_callback(mopher_header);
 	}
 
 	return 0;

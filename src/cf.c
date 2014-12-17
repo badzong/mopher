@@ -72,6 +72,8 @@ VAR_INT_T	 cf_counter_expire_high;
 VAR_INT_T	 cf_counter_threshold;
 VAR_INT_T	 cf_dblog;
 VAR_INT_T	 cf_dblog_expire;
+VAR_INT_T	 cf_mopher_header;
+char		*cf_mopher_header_name;
 
 /*
  * Symbol table
@@ -101,6 +103,8 @@ static cf_symbol_t cf_symbols[] = {
 	{ "counter_threshold", &cf_counter_threshold },
 	{ "dblog", &cf_dblog },
 	{ "dblog_expire", &cf_dblog_expire },
+	{ "mopher_header", &cf_mopher_header },
+	{ "mopher_header_name", &cf_mopher_header_name },
 	{ NULL, NULL }
 };
 

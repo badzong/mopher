@@ -5,7 +5,7 @@
 #	built on `all'
 #	removed on `clean'
 #
-OUT_A+=			cast.so
+OUT_A+=			base.so
 OUT_A+=			counter.so
 OUT_A+=			dblog.so
 OUT_A+=			dnsbl.so
