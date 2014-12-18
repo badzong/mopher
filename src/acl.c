@@ -248,7 +248,8 @@ acl_append(char *table, exp_t *exp, acl_action_t *aa)
 
 		if (sht_insert(acl_tables, table, rules))
 		{
-			log_die(EX_SOFTWARE, "acl_append: sht_insert failed");
+			log_die(EX_SOFTWARE, "acl_append: %s: sht_insert "
+				"failed", table);
 		}
 	}
 
@@ -326,7 +327,8 @@ acl_symbol_insert(char *symbol, acl_symbol_t *as)
 {
 	if (sht_insert(acl_symbols, symbol, as))
 	{
-		log_die(EX_SOFTWARE, "acl_symbol_insert: sht_insert failed");
+		log_die(EX_SOFTWARE, "acl_symbol_insert: %s: sht_insert "
+			"failed", symbol);
 	}
 	
 	return;
