@@ -123,30 +123,36 @@ static int
 mopher_header(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 {
 	void *ctx;
-	int count;
 	VAR_INT_T *action;
-	var_t *v;
-	char **p;
 	char buffer[8192];
 	int n;
 	int len = 0;
+
+	static var_t *config;
+	static ll_t *ll;
+	ll_entry_t *pos;
+	var_t *item;
+	var_t *symbol;
 	
-	static const char *symbols[] = {
-		"id",
-		"acl_response",
-		"acl_rule",
-		"acl_line",
-		"counter_relay",
-		"counter_penpal",
-		"greylist_delayed",
-		"greylist_passed",
-		"tarpit_delayed",
-		"dnsbl_str",
-		"spf",
-		"spamd_score",
-		"spamd_spam",
-		NULL
-	};
+
+	// Get header symbols from config
+	if (config == NULL)
+	{
+		config = cf_get(VT_LIST, "mopher_header_symbols", NULL);
+		if (config == NULL)
+		{
+			log_error("mopher_header: cf_get failed");
+			return -1;
+		}
+		ll = config->v_data;
+	}
+
+	// Sanity check
+	if (ll == NULL)
+	{
+		log_error("mopher_header: config list is empty");
+		return -1;
+	}
 
 	if (stage != MS_EOM)
 	{
@@ -168,15 +174,28 @@ mopher_header(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 		return 0;
 	}
 
-	for (p = symbols; *p != NULL; ++p)
+	pos = LL_START(ll);
+	while ((item = ll_next(ll, &pos)))
 	{
-		if (vtable_is_null(mailspec, *p))
+		if (item->v_type != VT_STRING)
+		{
+			log_error("Bad key");
+			continue;
+		}
+
+		// Should not be possible
+		if (item->v_data == NULL)
 		{
 			continue;
 		}
 
-		v = vtable_lookup(mailspec, *p);
-		if (v == NULL)
+		symbol = vtable_lookup(mailspec, item->v_data);
+		if (symbol == NULL)
+		{
+			continue;
+		}
+
+		if (symbol->v_data == NULL)
 		{
 			continue;
 		}
@@ -188,7 +207,7 @@ mopher_header(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 			buffer[len] = 0;
 		}
 
-		n = var_dump(v, buffer + len, sizeof buffer - len);
+		n = var_dump(symbol, buffer + len, sizeof buffer - len);
 		if (n == -1)
 		{
 			log_error("mopher_header: var_dump failed");
