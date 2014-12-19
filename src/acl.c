@@ -585,18 +585,26 @@ acl_symbol_get(var_t *mailspec, char *name)
 	callback = as->as_data;
 	if (callback == NULL)
 	{
-		log_error("acl_symbol_get: \"%s\" is not set and has no "
+		log_debug("acl_symbol_get: \"%s\" is not set and has no "
 		    "callback", name);
-		return NULL;
-	}
 
-	if (callback(*stage, name, mailspec))
+		if (vtable_set_null(mailspec, name, VF_COPYNAME))
+		{
+			log_error("acl_symbol_get: vtable_set_null failed");
+			return NULL;
+		}
+	}
+	else
 	{
-		log_error("acl_symbol_get: callback for \"%s\" failed",
-		    name);
-		return NULL;
+		if (callback(*stage, name, mailspec))
+		{
+			log_error("acl_symbol_get: callback for \"%s\" failed",
+			    name);
+			return NULL;
+		}
 	}
 
+	// Check if the callback has set the required symbol
 	v = vtable_lookup(mailspec, name);
 	if (v == NULL)
 	{
