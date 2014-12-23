@@ -7,7 +7,7 @@
 
 #include <mopher.h>
 
-#define BUFLEN 1024
+#define BUFLEN 4096
 
 #define SPAMD_SPAMD "SPAMD/"
 #define SPAMD_SPAMDLEN 6
