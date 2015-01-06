@@ -162,7 +162,7 @@ main(int argc, char **argv)
 		return 0;
 	}
 
-	log_error("mopherd-%s started", PACKAGE_VERSION);
+	log_error("%s-%s started", BINNAME, PACKAGE_VERSION);
 
 	r = milter();
 

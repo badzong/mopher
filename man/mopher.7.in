@@ -1,6 +1,6 @@
 .Dd October 30, 2014
 .Dt MOPHER 7
-.Os
+.Os @PACKAGE_STRING@
 .Sh NAME
 .Nm mopher
 .Nd versatile mail filter

@@ -1,6 +1,14 @@
 # mk.common
 
 
+# id
+PACKAGE_NAME?=		@PACKAGE_NAME@
+PACKAGE_TARNAME?=	@PACKAGE_TARNAME@
+PACKAGE_VERSION?=	@PACKAGE_VERSION@
+PACKAGE_STRING?=	@PACKAGE_STRING@
+PACKAGE_BUGREPORT?=	@PACKAGE_BUGREPORT@
+PACKAGE_URL?=		@PACKAGE_URL@
+
 # flags
 YFLAGS+=		@YFLAGS@
 CFLAGS+=		@CFLAGS@
@@ -21,6 +29,37 @@ MAN_PATH?=		@mandir@
 MOPHERD_CONF?=		$(CONFIG_PATH)/mopherd.conf
 MOPHERD_ACL?=		$(CONFIG_PATH)/mopherd.acl
 REGDOM_RULES?=		$(CONFIG_PATH)/effective_tld_names.dat
+
+
+# SH_SUBST: Substitute occurrences of global variables.  When necessary,
+# regenerate SH_SUBST with the following vim command:
+#
+# /^SH_SUBST=/+1,/" # SH_SUBST$/-1!sed -nr 's,^([a-zA-Z_]+)[?+]=.*,\t\ts|@\1[@]|$(\1)|g; \\,p' %
+#
+#
+SH_SUBST=	@SED@ " \
+		s|@PACKAGE_NAME[@]|$(PACKAGE_NAME)|g; \
+		s|@PACKAGE_TARNAME[@]|$(PACKAGE_TARNAME)|g; \
+		s|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g; \
+		s|@PACKAGE_STRING[@]|$(PACKAGE_STRING)|g; \
+		s|@PACKAGE_BUGREPORT[@]|$(PACKAGE_BUGREPORT)|g; \
+		s|@PACKAGE_URL[@]|$(PACKAGE_URL)|g; \
+		s|@YFLAGS[@]|$(YFLAGS)|g; \
+		s|@CFLAGS[@]|$(CFLAGS)|g; \
+		s|@CFLAGS[@]|$(CFLAGS)|g; \
+		s|@LDFLAGS[@]|$(LDFLAGS)|g; \
+		s|@prefix[@]|$(prefix)|g; \
+		s|@exec_prefix[@]|$(exec_prefix)|g; \
+		s|@datarootdir[@]|$(datarootdir)|g; \
+		s|@PROGRAM_PATH[@]|$(PROGRAM_PATH)|g; \
+		s|@MODULE_PATH[@]|$(MODULE_PATH)|g; \
+		s|@CONFIG_PATH[@]|$(CONFIG_PATH)|g; \
+		s|@CONFIG_XPATH[@]|$(CONFIG_XPATH)|g; \
+		s|@MAN_PATH[@]|$(MAN_PATH)|g; \
+		s|@MOPHERD_CONF[@]|$(MOPHERD_CONF)|g; \
+		s|@MOPHERD_ACL[@]|$(MOPHERD_ACL)|g; \
+		s|@REGDOM_RULES[@]|$(REGDOM_RULES)|g; \
+		" # SH_SUBST
 
 
 # build/clean

@@ -1,6 +1,6 @@
 .Dd October 30, 2014
 .Dt MOPHERD.CONF 5
-.Os
+.Os @PACKAGE_STRING@
 .Sh NAME
 .Nm mopherd.conf
 .Nd the mopher daemon configuration file
