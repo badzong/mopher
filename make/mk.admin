@@ -2,7 +2,6 @@
 
 DIST?=			mopher
 VERSION?=		0.5.2
-CONTACT?=		mopher@googlegroups.com
 
 AUTOLIST+=		autom4te.cache
 AUTOLIST+=		config.h
@@ -46,8 +45,8 @@ $(DISTDIR): $(DISTLIST)
 OUT+=	$(DISTDIR)
 
 configure: configure.ac
-	DIST=$(DIST) VERSION=$(VERSION) CONTACT=$(CONTACT) aclocal
-	DIST=$(DIST) VERSION=$(VERSION) CONTACT=$(CONTACT) autoconf
+	DIST=$(DIST) VERSION=$(VERSION) aclocal
+	DIST=$(DIST) VERSION=$(VERSION) autoconf
 OUT+=	configure
 
 regdom: src/regdom_test.c

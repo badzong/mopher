@@ -1,6 +1,6 @@
 .Dd November  5, 2014
 .Dt MOPHERD.ACL 5
-.Os
+.Os @PACKAGE_STRING@
 .Sh NAME
 .Nm mopherd.acl
 .Nd the mopher daemon access control list

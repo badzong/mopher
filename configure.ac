@@ -1,10 +1,6 @@
 AC_PREREQ([2.64])
 AC_INIT(m4_esyscmd([printf %s ${DIST:-unnamed}]),
-  m4_esyscmd([printf %s ${VERSION:-0.0.0}]),
-  m4_esyscmd([printf %s ${CONTACT:-nonexistent}]))
-
-AC_SUBST([PACKAGE], [$PACKAGE_NAME])
-AC_SUBST([VERSION], [$PACKAGE_VERSION])
+  m4_esyscmd([printf %s ${VERSION:-0.0.0}]))
 
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_HEADERS([config.h])

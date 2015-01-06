@@ -1,6 +1,6 @@
 .Dd October 30, 2014
 .Dt MOPHERCTL 8
-.Os
+.Os @PACKAGE_STRING@
 .Sh NAME
 .Nm mopherctl
 .Nd the mopher daemon control utility

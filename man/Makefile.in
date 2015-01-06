@@ -24,7 +24,4 @@ include @top_srcdir@/make/mk.common
 .SUFFIXES:
 .SUFFIXES:		.in
 .in:
-	@SED@ " \
-		s,@PROGRAM_PATH[@],$(PROGRAM_PATH),g; \
-		s,@MODULE_PATH[@],$(MODULE_PATH),g; \
-		s,@CONFIG_PATH[@],$(CONFIG_PATH),g;" $< >$@
+	$(SH_SUBST) $< >$@
