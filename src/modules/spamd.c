@@ -65,7 +65,7 @@ spamd_rdns_none(char *hostname, char *hostaddr)
 	if (clean_hostname == NULL)
 	{
 		/*
-                 * If we just ran out of memory. I don't care.
+                 * If we just ran out of memory. Don't care.
                  */
 		return 0;
 	}
@@ -259,11 +259,20 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 	buffer[n] = 0;
 
 	/*
+	 * No answer. Seen when spamd ran out of mem.
+         */
+	if (n == 0)
+	{
+		log_error("spamd_query: no data received");
+		goto error;
+	}
+
+	/*
 	 * Parse response
 	 */
 	p = buffer;
 	if (strncmp(p, SPAMD_SPAMD, SPAMD_SPAMDLEN)) {
-		spamd_printable_buffer(p, SPAMD_SPAMDLEN + 1);
+		spamd_printable_buffer(p, n + 1);
 		log_error("spamd_query: protocol error: expected='%s' "
 			"received='%s'", SPAMD_SPAMD, p);
 		goto error;
