@@ -272,7 +272,7 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 	 */
 	p = buffer;
 	if (strncmp(p, SPAMD_SPAMD, SPAMD_SPAMDLEN)) {
-		spamd_printable_buffer(p, n + 1);
+		spamd_printable_buffer(p, SPAMD_SPAMDLEN + 1);
 		log_error("spamd_query: protocol error: expected='%s' "
 			"received='%s'", SPAMD_SPAMD, p);
 		goto error;
