@@ -66,11 +66,6 @@ static milter_symbol_t milter_symbols[] = {
 
 
 /*
- * Rwlock for reloading
- */
-static pthread_rwlock_t milter_reload_lock = PTHREAD_RWLOCK_INITIALIZER;
-
-/*
  * Milter state database
  */
 static dbt_t milter_state_dbt;
@@ -343,12 +338,6 @@ milter_common_init(SMFICTX *ctx, VAR_INT_T stage, char *stagename)
 	milter_priv_t *mp = NULL;
 	char *queue_id;
 
-	if (pthread_rwlock_rdlock(&milter_reload_lock))
-	{
-		log_sys_error("milter_common_init: pthread_rwlock_rdlock");
-		return NULL;
-	}
-
 	if (stage == MS_CONNECT)
 	{
 		mp = milter_priv_create();
@@ -422,15 +411,6 @@ milter_common_init(SMFICTX *ctx, VAR_INT_T stage, char *stagename)
 
 
 error:
-
-	/*
-	 * Make sure reload_lock is released
-	 */
-	if (pthread_rwlock_unlock(&milter_reload_lock))
-	{
-		log_sys_error("milter_common_init: pthread_rwlock_unlock");
-	}
-
 	/*
 	 * Free milter_priv if an error occures. The calling routine should
 	 * return SMFIS_TEMPFAIL!
@@ -464,11 +444,6 @@ milter_common_fini(SMFICTX *ctx, milter_priv_t *mp, milter_stage_t stage)
 	{
 		milter_priv_delete(mp);
 		smfi_setpriv(ctx, NULL);
-	}
-
-	if (pthread_rwlock_unlock(&milter_reload_lock))
-	{
-		log_sys_error("milter_common_clear: pthread_rwlock_unlock");
 	}
 
 	return;
@@ -1204,32 +1179,6 @@ milter_clear(void)
 
 
 static void
-milter_reload(int signal)
-{
-	log_error("received SIGUSR1: reload");
-
-	if (pthread_rwlock_wrlock(&milter_reload_lock))
-	{
-		log_sys_die(EX_SOFTWARE, "milter_reload: pthread_rwlock_wrlock");
-	}
-
-	util_block_signals(SIGUSR1, 0);
-
-	milter_clear();
-	milter_init();
-
-	util_unblock_signals(SIGUSR1, 0);
-
-	if (pthread_rwlock_unlock(&milter_reload_lock))
-	{
-		log_sys_die(EX_SOFTWARE, "milter_reload: pthread_rwlock_unlock");
-	}
-
-	return;
-}
-
-
-static void
 milter_unlink_socket(void)
 {
 	char *path;
@@ -1319,31 +1268,10 @@ milter(void)
 		}
 	}
 
-	/*
-	 * Reload on SIGUSR1
-	 */
-	if (util_signal(SIGUSR1, milter_reload))
-	{
-		log_die(EX_SOFTWARE, "milter: util_signal failed");
-	}
 
 	r = smfi_main();
 
-	/*
-	 * Acquire reload lock to ensure all threads returned to libmilter
-	 */
-	if (pthread_rwlock_wrlock(&milter_reload_lock))
-	{
-		log_sys_error("milter_common_init: pthread_rwlock_wrlock");
-	}
-
-	/*
-	 * FIXME: Is this really neccessary?
-	 */
-	log_error("milter: waiting %d second%s for libmilter threads to close",
-	    cf_milter_wait, cf_milter_wait == 1? "": "s");
-	sleep(cf_milter_wait);
-
+	milter_running = 0;
 
 	if (r == MI_SUCCESS)
 	{
@@ -1354,8 +1282,6 @@ milter(void)
 	{
 		log_error("milter: smfi_main returned with errors");
 	}
-
-	milter_running = 0;
 
 	return r;
 }
