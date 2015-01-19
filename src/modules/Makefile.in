@@ -9,6 +9,7 @@ OUT_A+=			base.so
 OUT_A+=			counter.so
 OUT_A+=			dblog.so
 OUT_A+=			dnsbl.so
+OUT_A+=			hitlist.so
 OUT_A+=			memdb.so
 OUT_A+=			random.so
 OUT_A+=			spamd.so

@@ -822,7 +822,7 @@ dbt_janitor(void *arg)
 }
 
 
-static void
+void
 dbt_open_database(dbt_t *dbt)
 {
 	dbt_driver_t *dd;

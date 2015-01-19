@@ -3,6 +3,7 @@
 
 #include <mopher.h>
 
+#define BUFLEN 1024
 
 var_t *
 vlist_create(char *name, int flags)
@@ -274,6 +275,26 @@ vlist_record_get(var_t *record, char *key)
 	}	
 
 	return NULL;
+}
+
+void *
+vlist_record_get_combine_key(var_t *record, ...)
+{
+	va_list ap;
+	char *p;
+	char key[BUFLEN];
+
+	key[0] = 0;
+
+	va_start(ap, record);
+	while((p = va_arg(ap, char *)) != NULL)
+	{
+		strncat(key, p, sizeof key - 1);
+	}
+	va_end(ap);
+
+	return vlist_record_get(record, key);
+
 }
 
 

@@ -242,14 +242,6 @@ dnsbl_init(void)
 	ht_pos_t pos;
 	var_t *v;
 
-	dnsbl_table = sht_create(DNSBL_BUCKETS, NULL);
-
-	if (dnsbl_table == NULL)
-	{
-		log_error("dnsbl: init: sht_create failed");
-		return 0;
-	}
-		
 	dnsbl = cf_get(VT_TABLE, DNSBL_NAME, NULL);
 	if (dnsbl == NULL)
 	{
@@ -257,6 +249,12 @@ dnsbl_init(void)
 		return 0;
 	}
 
+	dnsbl_table = sht_create(DNSBL_BUCKETS, NULL);
+	if (dnsbl_table == NULL)
+	{
+		log_die(EX_SOFTWARE, "dnsbl: init: sht_create failed");
+	}
+		
 	config = dnsbl->v_data;
 	ht_start(config, &pos);
 	while ((v = ht_next(config, &pos)))
@@ -280,7 +278,7 @@ dnsbl_init(void)
 void
 dnsbl_fini(void)
 {
-	if (dnsbl_table)
+	if (dnsbl_table != NULL)
 	{
 		sht_delete(dnsbl_table);
 	}
