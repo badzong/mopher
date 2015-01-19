@@ -57,7 +57,7 @@ tarpit(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 		/*
 		 * Make sure we sleep at least nap seconds
 		 */
-		while ((nap = sleep(nap)));
+		while ((nap = sleep(nap)) && milter_running);
 
 		if (remaining <= 0)
 		{
@@ -65,10 +65,16 @@ tarpit(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 		}
 
 		/*
-		 * Notify MTA
+		 * Milter was stopped during tarpit
 		 */
-		log_debug("tarpit: %d seconds remaining: report progress",
-		    remaining);
+		if (!milter_running)
+		{
+			log_error("tarpit: mopher is shutting down");
+			return ACL_ERROR;
+		}
+
+		log_message(LOG_DEBUG, mailspec, "tarpit: remaining=%d",
+			remaining);
 
 		/*
 		 * Happens if connection is dropped
