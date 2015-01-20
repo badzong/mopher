@@ -47,6 +47,21 @@ connect ((3 > 4) == 0) != 1                           log "OP ERROR 7"
 connect ((1 < 2) == (1 > 0)) != 1                     log "OP ERROR 8"
 connect (3.9 >= 4 <= 1) != 1                          log "OP ERROR 9"
 
+# Address prefix calculation
+connect 127.0.0.1/31 != 127.0.0.0                     log "ADDR PREFIX ERROR 1"
+connect 192.168.1.100/24 != 192.168.1.0               log "ADDR PREFIX ERROR 2"
+connect 10.0.155.114/29 != 10.0.155.112               log "ADDR PREFIX ERROR 3"
+connect 75.10.20.30/4 != 64.0.0.0                     log "ADDR PREFIX ERROR 4"
+connect 2001:1234::ab:cd:ef/64 != 2001:1234::         log "ADDR PREFIX ERROR 5"
+connect 2001:1:2:ffff::1/63 != 2001:1:2:fffe::        log "ADDR PREFIX ERROR 6"
+connect 2001:1:2:ffff::1/62 != 2001:1:2:fffc::        log "ADDR PREFIX ERROR 7"
+connect 2001:1:2:ffff::1/61 != 2001:1:2:fff8::        log "ADDR PREFIX ERROR 8"
+connect 2001:1:2:ffff::1/60 != 2001:1:2:fff0::        log "ADDR PREFIX ERROR 9"
+connect 2001:1:2:ffff::1/59 != 2001:1:2:ffe0::        log "ADDR PREFIX ERROR 10"
+connect 2001:1:2:ffff::1/58 != 2001:1:2:ffc0::        log "ADDR PREFIX ERROR 11"
+connect 2001:1:2:ffff::1/57 != 2001:1:2:ff80::        log "ADDR PREFIX ERROR 12"
+connect 2001:1:2:ffff::1/56 != 2001:1:2:ff00::        log "ADDR PREFIX ERROR 13"
+
 # Logic
 connect (1 && 1) != 1                                 log "LOGIC ERROR 1"
 connect (1 && 0) != 0                                 log "LOGIC ERROR 2"
@@ -149,3 +164,6 @@ eom random() % 10 == 0                                change from "test@debian.l
 eom random() % 10 == 0                                add rcpt "root@debian.local"
 eom random() % 10 == 0                                delete rcpt "manuel@debian.local"
 eom random() % 10 == 0                                change body "mopher"
+
+# Call spamd
+eom spamd_score == null                               log "SPAMD ERROR"

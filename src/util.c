@@ -244,6 +244,36 @@ util_addrtoint(struct sockaddr_storage *ss)
 	return ntohl(sin->sin_addr.s_addr);
 }
 
+void
+util_addr_prefix(struct sockaddr_storage *ss, int prefix)
+{
+	int bits;
+	unsigned long hostaddr;
+	unsigned long mask;
+	unsigned char *byte;
+
+	struct sockaddr_in *sin = (struct sockaddr_in *) ss;
+	struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *) ss;
+
+	if (ss->ss_family == AF_INET)
+	{
+		bits = 32 - prefix;
+		mask = ~((1 << bits) - 1) & 0xffffffff;
+		hostaddr = ntohl(sin->sin_addr.s_addr);
+		sin->sin_addr.s_addr = htonl(hostaddr & mask);
+
+		return;
+	}
+
+	// AF_INET6
+	byte = sin6->sin6_addr.s6_addr + sizeof sin6->sin6_addr.s6_addr - 1;
+	for (bits = 128 - prefix; bits > 0; --byte, bits -= 8)
+	{
+		*byte = bits > 8? 0: *byte & ~((1 << bits) - 1) & 0xff;
+	}
+
+	return;
+}
 
 int
 util_file_exists(char *path)

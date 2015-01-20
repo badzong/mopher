@@ -1149,6 +1149,32 @@ exp_eval_in(var_t *needle, var_t *haystack)
 }
 
 var_t *
+exp_addr_prefix(var_t *addr, var_t *prefix)
+{
+	if (addr == NULL || prefix == NULL)
+	{
+		log_error("exp_addr_prefix: operator is null");
+		return NULL;
+	}
+
+	if (addr->v_type != VT_ADDR)
+	{
+		log_error("exp_addr_prefix: left operator must be address");
+		return NULL;
+	}
+
+	if (prefix->v_type != VT_INT)
+	{
+		log_error("exp_addr_prefix: prefix length must be int");
+		return NULL;
+	}
+
+	util_addr_prefix(addr->v_data, * (VAR_INT_T *) prefix->v_data);
+
+	return addr;
+}
+
+var_t *
 exp_eval_operation(exp_t *exp, var_t *mailspec)
 {
 	var_t *left = NULL, *right = NULL, *copy;
@@ -1224,6 +1250,22 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 	// In
 	case IN:
 		result = exp_eval_in(left, right);
+		goto exit;
+
+
+
+	// Address prefix operator
+	case '/':
+		if (left == NULL || right == NULL)
+		{
+			break;
+		}
+		if (!(left->v_type == VT_ADDR && right->v_type == VT_INT))
+		{
+			break;
+		}
+
+		result = exp_addr_prefix(left, right);
 		goto exit;
 
 	default:
@@ -1308,7 +1350,6 @@ exit:
 
 	return result;
 }
-
 
 var_t *
 exp_eval(exp_t *exp, var_t *mailspec)
