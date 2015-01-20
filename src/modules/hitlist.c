@@ -164,13 +164,19 @@ hitlist_db_open(hitlist_t *hl, var_t *attrs)
 		hl->hl_dbt.dbt_validate = dbt_common_validate;
 	}
 
+        if (dbt_register(hl->hl_name, &hl->hl_dbt))
+	{
+		log_error("hitlist_db_open: %s: dbt_register failed",
+			hl->hl_name);
+		return -1;
+	}
 
-	/*
-	 * FIXME: dbt_register and dbt_open_database die on error. This may
-	 * kill a running mopherd anytime.
-	 */
-        dbt_register(hl->hl_name, &hl->hl_dbt);
-	dbt_open_database(&hl->hl_dbt);
+	if (dbt_open_database(&hl->hl_dbt))
+	{
+		log_error("hitlist_db_open: %s: dbt_open_database failed",
+			hl->hl_name);
+		return -1;
+	}
 
 	hl->hl_connected = 1;
 

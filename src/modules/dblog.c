@@ -148,7 +148,10 @@ dblog_init(void)
 
 	dblog_dbt.dbt_scheme		= scheme;
 	dblog_dbt.dbt_validate		= dbt_common_validate;
-	dbt_register("dblog", &dblog_dbt);
+	if (dbt_register("dblog", &dblog_dbt))
+	{
+		log_die(EX_SOFTWARE, "counter_init: dbt_register failed");
+	}
 
 	acl_update_callback(dblog_update);
 

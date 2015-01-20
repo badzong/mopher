@@ -410,7 +410,7 @@ dbt_db_load_into_table(dbt_t *dbt, var_t *table)
 }
 
 
-void
+int
 dbt_register(char *name, dbt_t *dbt)
 {
 	var_t *config;
@@ -423,8 +423,9 @@ dbt_register(char *name, dbt_t *dbt)
 	 */
 	config = cf_get(VT_TABLE, "table", config_key, NULL);
 	if (config == NULL) {
-		log_die(EX_CONFIG, "dbt_register: missing database "
-			"configuration for \"%s\"", name);
+		log_error("dbt_register: missing database configuration for"
+			" \"%s\"", name);
+		return -1;
 	}
 
 	/*
@@ -438,8 +439,8 @@ dbt_register(char *name, dbt_t *dbt)
 	    "pass", &dbt->dbt_pass, "database", &dbt->dbt_database,
 	    "table", &dbt->dbt_table, NULL) == -1)
 	{
-		log_die(EX_CONFIG,
-		    "dbt_register: vtable_dereference failed");
+		log_error("dbt_register: vtable_dereference failed");
+		return -1;
 	}
 
 	/*
@@ -472,22 +473,25 @@ dbt_register(char *name, dbt_t *dbt)
 	 */
 	if (pthread_mutex_lock(&dbt_janitor_mutex))
 	{
-		log_sys_die(EX_SOFTWARE, "dbt_register: pthread_mutex_lock");
+		log_sys_error("dbt_register: pthread_mutex_lock");
+		return -1;
 	}
 
 	/*
 	 * Store dbt in dbt_tables
 	 */
 	if (sht_insert(dbt_tables, name, dbt)) {
-		log_die(EX_SOFTWARE, "dbt_register: ht_insert failed");
+		log_error("dbt_register: ht_insert failed");
+		return -1;
 	}
 
 	if (pthread_mutex_unlock(&dbt_janitor_mutex))
 	{
-		log_sys_die(EX_SOFTWARE, "dbt_register: pthread_mutex_unlock");
+		log_sys_error("dbt_register: pthread_mutex_unlock");
+		return -1;
 	}
 
-	return;
+	return 0;
 }
 
 
@@ -822,7 +826,7 @@ dbt_janitor(void *arg)
 }
 
 
-void
+int
 dbt_open_database(dbt_t *dbt)
 {
 	dbt_driver_t *dd;
@@ -833,8 +837,9 @@ dbt_open_database(dbt_t *dbt)
 	dd = sht_lookup(dbt_drivers, dbt->dbt_drivername);
 	if (dd == NULL)
 	{
-		log_die(EX_CONFIG, "dbt_open_database: unknown database "
-		    "driver \"%s\"", dbt->dbt_drivername);
+		log_error("dbt_open_database: unknown database driver \"%s\"",
+			dbt->dbt_drivername);
+		return -1;
 	}
 
 	dbt->dbt_driver = dd;
@@ -846,15 +851,18 @@ dbt_open_database(dbt_t *dbt)
 	{
 		if(pthread_mutexattr_init(&dd->dd_mutexattr))
 		{
-			log_die(EX_SOFTWARE, "dbt_open_database: ptrhead_mutexattr_init failed");
+			log_error("dbt_open_database: ptrhead_mutexattr_init failed");
+			return -1;
 		}
 		if(pthread_mutexattr_settype(&dd->dd_mutexattr, PTHREAD_MUTEX_RECURSIVE))
 		{
-			log_die(EX_SOFTWARE, "dbt_open_database: ptrhead_mutexattr_settype failed");
+			log_error("dbt_open_database: ptrhead_mutexattr_settype failed");
+			return -1;
 		}
 		if(pthread_mutex_init(&dd->dd_mutex, &dd->dd_mutexattr))
 		{
-			log_die(EX_SOFTWARE, "dbt_open_database: ptrhead_mutex_init failed");
+			log_error("dbt_open_database: ptrhead_mutex_init failed");
+			return -1;
 		}
 	}
 
@@ -866,8 +874,9 @@ dbt_open_database(dbt_t *dbt)
 
 	if (dbt->dbt_driver->dd_open(dbt))
 	{
-		log_die(EX_CONFIG, "dbt_open_database: can't open \"%s\"",
-		    dbt->dbt_name);
+		log_error("dbt_open_database: can't open \"%s\"",
+			dbt->dbt_name);
+		return -1;
 	}
 
 	// Create tables in SQL databases
@@ -879,7 +888,7 @@ dbt_open_database(dbt_t *dbt)
 
 	dbt->dbt_open = 1;
 
-	return;
+	return 0;
 }
 
 
@@ -895,7 +904,11 @@ dbt_open_databases(void)
 	sht_start(dbt_tables, &pos);
 	while ((dbt = sht_next(dbt_tables, &pos)))
 	{
-		dbt_open_database(dbt);
+		if (dbt_open_database(dbt))
+		{
+			log_die(EX_SOFTWARE, "dbt_init: cannot open database "
+				"%s", dbt->dbt_name);
+		}
 	}
 
 	/*

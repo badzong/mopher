@@ -255,7 +255,10 @@ greylist_init(void)
 	/*
 	 * register greylist table
 	 */
-	dbt_register("greylist", &greylist_dbt);
+	if (dbt_register("greylist", &greylist_dbt))
+	{
+		log_die(EX_SOFTWARE, "greylist_init: dbt_register failed");
+	}
 
 	/*
 	 * Register symbols. Symbols are not cached due to abiguity.

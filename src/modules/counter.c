@@ -371,11 +371,17 @@ counter_init(void)
 
 	counter_relay.dbt_scheme			= relay_scheme;
 	counter_relay.dbt_validate			= dbt_common_validate;
-	dbt_register("counter_relay", &counter_relay);
+	if (dbt_register("counter_relay", &counter_relay))
+	{
+		log_die(EX_SOFTWARE, "counter_init: dbt_register failed");
+	}
 
 	counter_penpal.dbt_scheme			= penpal_scheme;
 	counter_penpal.dbt_validate			= dbt_common_validate;
-	dbt_register("counter_penpal", &counter_penpal);
+	if(dbt_register("counter_penpal", &counter_penpal))
+	{
+		log_die(EX_SOFTWARE, "counter_init: dbt_register failed");
+	}
 
 	acl_symbol_register("counter_relay", MS_ANY, counter_lookup, AS_CACHE);
 
