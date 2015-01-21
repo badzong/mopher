@@ -249,21 +249,6 @@ exp_function(char *id, exp_t *args)
 }
 
 void
-exp_free_list(ll_t *list)
-{
-	var_t *item;
-	ll_entry_t *pos;
-
-	pos = LL_START(list);
-	while ((item = ll_next(list, &pos)))
-	{
-		exp_free(item);
-	}
-
-	return;
-}
-
-void
 exp_free(var_t *v)
 {
 	if (v == NULL)
@@ -276,10 +261,9 @@ exp_free(var_t *v)
 		return;
 	}
 
-	if (v->v_type == VT_LIST && v->v_data)
+	if (v->v_type == VT_LIST && v->v_data != NULL)
 	{
-		exp_free_list(v->v_data);
-		ll_delete(v->v_data, NULL);
+		ll_delete(v->v_data, (void *) exp_free);
 		v->v_data = NULL;
 	}
 
@@ -655,8 +639,6 @@ exp_assign(exp_t *left, exp_t *right, var_t *mailspec)
 		log_error("exp_eval_variable: vtable_set failed");
 		return NULL;
 	}
-
-	exp_free(value);
 
 	return value;
 }
