@@ -781,6 +781,8 @@ acl_set(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 		return ACL_ERROR;
 	}
 
+	exp_free(v);
+
 	return ACL_NONE;
 }
 
