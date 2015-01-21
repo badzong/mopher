@@ -8,6 +8,7 @@ define LIST ("foo", "bar", "foobar")
 # Variables
 connect set $var1 = 1.7
 connect set $list = (1, 2, 3, 4, 5)
+
 connect $var1 != 1.7                                  log "VAR ERROR 1"
 connect $var2 = $var1 * 5 / 0.5 != 17.0               log "VAR ERROR 2"
 connect $var2 != 17.0                                 log "VAR ERROR 3"
@@ -167,3 +168,6 @@ eom random() % 10 == 0                                change body "mopher"
 
 # Call spamd
 eom spamd_score == null                               log "SPAMD ERROR"
+
+# Call CLAMAV
+eom clamav_clean == null                              log "CLAMAV ERROR"
