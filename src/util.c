@@ -258,6 +258,15 @@ util_addr_prefix(struct sockaddr_storage *ss, int prefix)
 	if (ss->ss_family == AF_INET)
 	{
 		bits = 32 - prefix;
+		if (bits <= 0)
+		{
+			return;
+		}
+		if (bits > 32)
+		{
+			bits = 32;
+		}
+
 		mask = ~((1 << bits) - 1) & 0xffffffff;
 		hostaddr = ntohl(sin->sin_addr.s_addr);
 		sin->sin_addr.s_addr = htonl(hostaddr & mask);
@@ -265,11 +274,23 @@ util_addr_prefix(struct sockaddr_storage *ss, int prefix)
 		return;
 	}
 
-	// AF_INET6
-	byte = sin6->sin6_addr.s6_addr + sizeof sin6->sin6_addr.s6_addr - 1;
-	for (bits = 128 - prefix; bits > 0; --byte, bits -= 8)
+	if (ss->ss_family == AF_INET6)
 	{
-		*byte = bits > 8? 0: *byte & ~((1 << bits) - 1) & 0xff;
+		bits = 128 - prefix;
+		if (bits <= 0)
+		{
+			return;
+		}
+		if (bits > 128)
+		{
+			bits = 128;
+		}
+
+		byte = sin6->sin6_addr.s6_addr + sizeof sin6->sin6_addr.s6_addr - 1;
+		for (; bits > 0; --byte, bits -= 8)
+		{
+			*byte = bits > 8? 0: *byte & ~((1 << bits) - 1) & 0xff;
+		}
 	}
 
 	return;
