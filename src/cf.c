@@ -63,6 +63,7 @@ VAR_INT_T	 cf_foreground;
 VAR_INT_T	 cf_dbt_cleanup_interval;
 char		*cf_hostname;
 char		*cf_spamd_socket;
+char		*cf_clamav_socket;
 VAR_INT_T	 cf_client_retry_interval;
 char		*cf_control_socket;
 VAR_INT_T	 cf_control_socket_permissions;
@@ -94,6 +95,7 @@ static cf_symbol_t cf_symbols[] = {
 	{ "cleanup_interval", &cf_dbt_cleanup_interval },
 	{ "hostname", &cf_hostname },
 	{ "spamd_socket", &cf_spamd_socket },
+	{ "clamav_socket", &cf_clamav_socket },
 	{ "client_retry_interval", &cf_client_retry_interval },
 	{ "control_socket", &cf_control_socket },
 	{ "control_socket_permissions", &cf_control_socket_permissions },

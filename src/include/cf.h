@@ -38,6 +38,7 @@ extern VAR_INT_T	 cf_foreground;
 extern VAR_INT_T	 cf_dbt_cleanup_interval;
 extern char		*cf_hostname;
 extern char		*cf_spamd_socket;
+extern char		*cf_clamav_socket;
 extern VAR_INT_T	 cf_client_retry_interval;
 extern char		*cf_control_socket;
 extern VAR_INT_T	 cf_control_socket_permissions;

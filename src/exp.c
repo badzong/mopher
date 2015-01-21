@@ -266,6 +266,11 @@ exp_free_list(ll_t *list)
 void
 exp_free(var_t *v)
 {
+	if (v == NULL)
+	{
+		return;
+	}
+
 	if ((v->v_flags & VF_EXP_FREE) == 0)
 	{
 		return;
