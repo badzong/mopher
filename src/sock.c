@@ -143,7 +143,7 @@ sock_connect_timeout(int fd, struct sockaddr *sa, socklen_t len, int timeout)
 	optlen = sizeof opt;
 	if (getsockopt(fd, SOL_SOCKET, SO_ERROR, (void *) &opt, &optlen) == -1)
 	{ 
-		log_sys_error("sock_connect_timeout: getsockopt");
+	 	log_sys_error("sock_connect_timeout: getsockopt");
 		return -1;
 	} 
 	if (opt)
@@ -192,6 +192,7 @@ sock_unix_connect(char *path, int timeout)
 	{
 		log_error("sock_connect_unix: %s: sock_connect_timeout failed",
 			path);
+		close(fd);
 		return -1;
 	}
 
@@ -369,4 +370,80 @@ sock_connect(char *uri)
 	free(port);
 
 	return r;
+}
+
+int
+sock_rr_init(sock_rr_t *sr, char *confkey)
+{
+	memset(sr, 0, sizeof (sock_rr_t));
+	ll_init(&sr->sr_list);
+
+	if (pthread_mutex_init(&sr->sr_mutex, NULL))
+	{
+		log_error("sock_rr_init: pthread_mutex_init failed");
+		return -1;
+	}
+
+	if (cf_load_list(&sr->sr_list, confkey, VT_STRING))
+	{
+		log_error("sock_rr_init: cf_load_list for %s failed", confkey);
+		return -1;
+	}
+
+	sr->sr_pos = LL_START(&sr->sr_list);
+
+	return 0;
+}
+
+void
+sock_rr_clear(sock_rr_t *sr)
+{
+	if (pthread_mutex_destroy(&sr->sr_mutex))
+	{
+		log_error("sock_rr_init: pthread_mutex_destroy failed");
+	}
+
+	return;
+}
+
+int
+sock_connect_rr(sock_rr_t *sr)
+{
+	int i;
+	int fd = -1;
+	char *uri;
+
+	for (i = 0; i < cf_connect_retries; ++i)
+	{
+		if (pthread_mutex_lock(&sr->sr_mutex))
+		{
+			log_sys_error("sock_connect_rr: pthread_mutex_lock");
+			return -1;
+		}
+
+		uri = ll_next(&sr->sr_list, &sr->sr_pos);
+
+		if (pthread_mutex_unlock(&sr->sr_mutex))
+		{
+			log_sys_error("sock_connect_rr: pthread_mutex_unlock");
+		}
+
+		// Wrap around
+		if (uri == NULL)
+		{
+			sr->sr_pos = LL_START(&sr->sr_list);
+			--i;
+			continue;
+		}
+
+		fd = sock_connect(uri);
+		if (fd > 0)
+		{
+			break;
+		}
+
+		log_error("sock_connect_rr: %s: connection failed", uri);
+	}
+
+	return fd;
 }

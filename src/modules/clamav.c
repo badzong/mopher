@@ -21,6 +21,8 @@
 
 #define BUFLEN 4096
 
+static sock_rr_t clamav_srr;
+
 int
 clamav_query(milter_stage_t stage, char *name, var_t *attrs)
 {
@@ -57,9 +59,7 @@ clamav_query(milter_stage_t stage, char *name, var_t *attrs)
 		goto error;
 	}
 
-	log_debug("clamav_query: connect %s", cf_clamav_socket);
-
-	sock = sock_connect(cf_clamav_socket);
+	sock = sock_connect_rr(&clamav_srr);
 	if (sock == -1)
 	{
 		log_error("clamav_query: sock_connect failed");
@@ -179,8 +179,21 @@ error:
 int
 clamav_init(void)
 {
+	if (sock_rr_init(&clamav_srr, "clamav_socket"))
+	{
+		log_die(EX_SOFTWARE, "clamav_init: sock_rr_init failed");
+	}
+
 	acl_symbol_register(CLAMAV_CLEAN, MS_EOM, clamav_query, AS_CACHE);
 	acl_symbol_register(CLAMAV_VIRUS, MS_EOM, clamav_query, AS_CACHE);
 
 	return 0;
+}
+
+void
+clamav_clear(void)
+{
+	sock_rr_clear(&clamav_srr);
+
+	return;
 }

@@ -62,8 +62,6 @@ VAR_INT_T	 cf_acl_log_level;
 VAR_INT_T	 cf_foreground;
 VAR_INT_T	 cf_dbt_cleanup_interval;
 char		*cf_hostname;
-char		*cf_spamd_socket;
-char		*cf_clamav_socket;
 VAR_INT_T	 cf_client_retry_interval;
 char		*cf_control_socket;
 VAR_INT_T	 cf_control_socket_permissions;
@@ -76,6 +74,7 @@ VAR_INT_T	 cf_dblog_expire;
 VAR_INT_T	 cf_mopher_header;
 char		*cf_mopher_header_name;
 VAR_INT_T	 cf_connect_timeout;
+VAR_INT_T	 cf_connect_retries;
 
 /*
  * Symbol table
@@ -95,8 +94,6 @@ static cf_symbol_t cf_symbols[] = {
 	{ "milter_wait", &cf_milter_wait },
 	{ "cleanup_interval", &cf_dbt_cleanup_interval },
 	{ "hostname", &cf_hostname },
-	{ "spamd_socket", &cf_spamd_socket },
-	{ "clamav_socket", &cf_clamav_socket },
 	{ "client_retry_interval", &cf_client_retry_interval },
 	{ "control_socket", &cf_control_socket },
 	{ "control_socket_permissions", &cf_control_socket_permissions },
@@ -109,6 +106,7 @@ static cf_symbol_t cf_symbols[] = {
 	{ "mopher_header", &cf_mopher_header },
 	{ "mopher_header_name", &cf_mopher_header_name },
 	{ "connect_timeout", &cf_connect_timeout },
+	{ "connect_retries", &cf_connect_retries },
 	{ NULL, NULL }
 };
 
@@ -431,4 +429,54 @@ cf_get(var_type_t type, ...)
 	va_end(ap);
 
 	return v;
+}
+
+int
+cf_load_list(ll_t *list, char *key, var_type_t type)
+{
+	var_t *v, *item;
+	ll_entry_t *pos;
+
+	v = vtable_lookup(cf_config, key);
+	if (v == NULL)
+	{
+		log_error("cf_load_list: %s not found", key);
+		return -1;
+	}
+
+	// Scalar
+	if (v->v_type == type)
+	{
+		if (LL_INSERT(list, v->v_data) == -1)
+		{
+			log_error("cf_load_list: LL_INSERT failed");
+			return -1;
+		}
+		return 0;
+	}
+
+	// Unexpected type
+	if (v->v_type != VT_LIST)
+	{
+		log_error("config error: unexpected value for %s", key);
+		return -1;
+	}
+
+	pos = LL_START((ll_t *) v->v_data);
+	while ((item = ll_next(v->v_data, &pos)))
+	{
+		if (item->v_type != type)
+		{
+			log_error("config error: unexpected value in %s", key);
+			return -1;
+		}
+
+		if (LL_INSERT(list, item->v_data) == -1)
+		{
+			log_error("cf_load_list: LL_INSERT failed");
+			return -1;
+		}
+	}
+
+	return 0;
 }

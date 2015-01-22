@@ -32,6 +32,8 @@ static const char spamd_multi[] = "Received: from %s (%s)\r\n\tby %s "
 static char *spamd_symbols[] = { "spamd_spam", "spamd_score",
 	"spamd_symbols", NULL};
 
+static sock_rr_t spamd_srr;
+
 static void
 spamd_printable_buffer(char *buffer, int len)
 {
@@ -225,7 +227,7 @@ spamd_query(milter_stage_t stage, char *name, var_t *attrs)
 	snprintf(buffer, sizeof(buffer), "SYMBOLS SPAMC/1.2\r\n"
 	    "Content-length: %ld\r\n\r\n", size);
 
-	sock = sock_connect(cf_spamd_socket);
+	sock = sock_connect_rr(&spamd_srr);
 	if (sock == -1)
 	{
 		log_error("spamd_query: sock_connect failed");
@@ -436,10 +438,23 @@ int
 spamd_init(void)
 {
 	char **p;
+	
+	if (sock_rr_init(&spamd_srr, "spamd_socket"))
+	{
+		log_die(EX_SOFTWARE, "spamd_init: sock_rr_init failed");
+	}
 
 	for (p = spamd_symbols; *p; ++p) {
 		acl_symbol_register(*p, MS_EOM, spamd_query, AS_CACHE);
 	}
 
 	return 0;
+}
+
+void
+spamd_clear(void)
+{
+	sock_rr_clear(&spamd_srr);
+
+	return;
 }
