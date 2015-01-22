@@ -9,6 +9,8 @@
 #include <sys/un.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <fcntl.h>
+#include <errno.h>
 
 #include <log.h>
 
@@ -74,9 +76,103 @@ sock_unix_unlink(char *uri)
 	return;
 }
 
+int
+sock_connect_timeout(int fd, struct sockaddr *sa, socklen_t len, int timeout)
+{
+	int arg, opt;
+	socklen_t optlen;
+	fd_set fdset; 
+	struct timeval tv; 
+	int success = -1;
+	int deadline = time(NULL) + timeout;
+	
+	// Get Flags
+	arg = fcntl(fd, F_GETFL, NULL);
+	if (arg == -1)
+	{
+		log_sys_error("sock_connect_timeout: fcntl");
+		return -1;
+	}
+
+	// Add O_NONBLOCK
+	if (fcntl(fd, F_SETFL, arg | O_NONBLOCK) == -1)
+	{ 
+		log_sys_error("sock_connect_timeout: fcntl");
+		return -1;
+	}
+
+	success = connect(fd, sa, len);
+	if (success == -1)
+	{
+		if (errno != EINPROGRESS)
+		{
+			log_sys_error("sock_connect_timeout: connect");
+			return -1;
+		}
+	}
+
+	while (success == -1)
+	{ 
+		// Recalculate temiout in case of EINTR
+		tv.tv_sec = deadline - time(NULL); 
+		tv.tv_usec = 0; 
+
+		FD_ZERO(&fdset); 
+		FD_SET(fd, &fdset); 
+
+		switch(select(fd + 1, NULL, &fdset, NULL, &tv))
+		{
+		case -1:
+			if (errno == EINTR)
+			{
+				continue;
+			}
+			log_sys_error("sock_connect_timeout: select");
+			return -1;
+
+		// Time exceeded
+		case 0:
+			return -1;
+
+		default:
+			success = 0;
+		}
+	}
+
+	// Socket connected
+	optlen = sizeof opt;
+	if (getsockopt(fd, SOL_SOCKET, SO_ERROR, (void *) &opt, &optlen) == -1)
+	{ 
+		log_sys_error("sock_connect_timeout: getsockopt");
+		return -1;
+	} 
+	if (opt)
+	{
+		log_sys_error("sock_connect_timeout: pending error");
+		return -1;
+	}
+
+	// Get Flags 
+	arg = fcntl(fd, F_GETFL, NULL);
+	if (arg == -1)
+	{
+		log_sys_error("sock_connect_timeout: fcntl");
+		return -1;
+	}
+
+	// Remove O_NONBLOCK
+	if (fcntl(fd, F_SETFL, arg & (~O_NONBLOCK)) == -1)
+	{ 
+		log_sys_error("sock_connect_timeout: fcntl");
+		return -1;
+	}
+
+	return 0;
+}
+
 
 static int
-sock_unix_connect(char *path)
+sock_unix_connect(char *path, int timeout)
 {
 	int fd;
 	struct sockaddr_un sa;
@@ -92,14 +188,15 @@ sock_unix_connect(char *path)
 	sa.sun_family = AF_LOCAL;
 	strcpy(sa.sun_path, path);
 
-	if(connect(fd, (struct sockaddr *) &sa, sizeof sa) == -1) {
-		log_sys_error("sock_connect_unix: connect: \"%s\"", path);
+	if(sock_connect_timeout(fd, (struct sockaddr *) &sa, sizeof sa, timeout))
+	{
+		log_error("sock_connect_unix: %s: sock_connect_timeout failed",
+			path);
 		return -1;
 	}
 
 	return fd;
 }
-
 
 static int
 sock_inet_listen(char *bindaddr, char *port, int backlog)
@@ -161,7 +258,7 @@ sock_inet_listen(char *bindaddr, char *port, int backlog)
 
 
 static int
-sock_inet_connect(char *host, char *port)
+sock_inet_connect(char *host, char *port, int timeout)
 {
 	struct addrinfo *res, *ai;
 	struct addrinfo hints;
@@ -186,7 +283,7 @@ sock_inet_connect(char *host, char *port)
 			continue;
 		}
 
-		if(connect(fd, res->ai_addr, res->ai_addrlen) == 0) {
+		if(sock_connect_timeout(fd, res->ai_addr, res->ai_addrlen, timeout) == 0) {
 			break;
 		}
 
@@ -245,7 +342,7 @@ sock_connect(char *uri)
 	 * UNIX domain sockets
 	 */
 	if(strncmp(uri, "unix:", 5) == 0) {
-		return sock_unix_connect(uri + 5);
+		return sock_unix_connect(uri + 5, cf_connect_timeout);
 	}
 	
 	if(strncmp(uri, "inet:", 5) != 0) {
@@ -267,7 +364,7 @@ sock_connect(char *uri)
 	}
 	*host++ = 0;
 
-	r = sock_inet_connect(host, port);
+	r = sock_inet_connect(host, port, cf_connect_timeout);
 
 	free(port);
 

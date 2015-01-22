@@ -50,6 +50,7 @@ extern VAR_INT_T	 cf_dblog;
 extern VAR_INT_T	 cf_dblog_expire;
 extern VAR_INT_T	 cf_mopher_header;
 extern char		*cf_mopher_header_name;
+extern VAR_INT_T	 cf_connect_timeout;
 
 /*
  * Prototypes
