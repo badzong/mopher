@@ -44,7 +44,7 @@ hitlist_record(hitlist_t *hl, var_t *attrs, int load_data)
 	ll_entry_t *pos;
 	var_t *key;
 	char *keystr;
-	var_t *symbol;
+	var_t *v;
 	char buffer[BUFLEN];
 	var_t *schema = NULL;
 
@@ -75,16 +75,27 @@ hitlist_record(hitlist_t *hl, var_t *attrs, int load_data)
 
 		keystr = key->v_data;
 
-		symbol = acl_symbol_get(attrs, keystr);
-		if (symbol == NULL)
+		// Variables
+		if (keystr[0] == '$')
+		{
+			v = acl_variable_get(attrs, keystr);
+		}
+
+		// Regular symbol
+		else
+		{
+			v = acl_symbol_get(attrs, keystr);
+		}
+
+		if (v == NULL)
 		{
 			log_error("hitlist_scheme: %s: lookup %s failed",
 				hl->hl_name, keystr);
 			goto error;
 		}
 
-		if (vlist_append_new(schema, symbol->v_type, keystr,
-			load_data? symbol->v_data: NULL, VF_COPY | VF_KEY))
+		if (vlist_append_new(schema, v->v_type, keystr,
+			load_data? v->v_data: NULL, VF_COPY | VF_KEY))
 		{
 			log_error("hitlist_schema: %s: vlist_append_new"
 				" failed", hl->hl_name);

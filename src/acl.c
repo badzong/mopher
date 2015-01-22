@@ -514,6 +514,106 @@ acl_symbol_lookup(char *name)
 	return as;
 }
 
+static var_t *
+acl_variables(var_t * mailspec)
+{
+	var_t *variables = NULL;
+
+	variables = vtable_lookup(mailspec, ACL_VARIABLES);
+	if (variables != NULL)
+	{
+		return variables;
+	}
+
+	/*
+	 * No variables yet. Create variable space
+	 */
+	variables = vtable_create(ACL_VARIABLES, VF_KEEPNAME);
+	if (variables == NULL)
+	{
+		log_error("acl_variables: vtable_create failed");
+		goto error;
+	}
+
+	/*
+	 * Save variables to mailspec
+	 */
+	if (vtable_set(mailspec, variables))
+	{
+		log_error("acl_variables: vtable_set failed");
+		goto error;
+	}
+
+	return variables;
+
+error:
+	if (variables != NULL)
+	{
+		var_delete(variables);
+	}
+
+	return NULL;
+}
+
+int
+acl_variable_assign(var_t *mailspec, char *name, var_t *value)
+{
+	var_t *variables, *copy = NULL;
+
+	variables = acl_variables(mailspec);
+	if (variables == NULL)
+	{
+		log_error("acl_avriable_assign: acl_variables failed");
+		return -1;
+	}
+
+	// Remove $ from variable name
+	for (;*name == '$'; ++name);
+
+	/*
+	 * Sava a copy
+	 */
+	copy = var_create(value->v_type, name, value->v_data, VF_COPY);
+	if (copy == NULL)
+	{
+		log_error("acl_variable_assign: VAR_COPY failed");
+		return -1;
+	}
+
+	if (vtable_set(variables, copy))
+	{
+		log_error("exp_eval_variable: vtable_set failed");
+		var_delete(copy);
+		return -1;
+	}
+
+	return 0;
+}
+
+var_t *
+acl_variable_get(var_t *mailspec, char *name)
+{
+	var_t *variables, *value;
+
+	variables = acl_variables(mailspec);
+	if (variables == NULL)
+	{
+		log_debug("acl_variable_get: acl_variables failed");
+		return NULL;
+	}
+
+	// Remove $ from variable name
+	for (;*name == '$'; ++name);
+
+	value = vtable_lookup(variables, name);
+	if (value == NULL)
+	{
+		log_debug("acl_variable_get: unknown variable \"%s\"", name);
+		return NULL;
+	}
+
+	return value;
+}
 
 var_t *
 acl_symbol_get(var_t *mailspec, char *name)

@@ -5,6 +5,8 @@
 #include <ll.h>
 #include <milter.h>
 
+#define ACL_VARIABLES "VARIABLES"
+
 enum acl_action_type
 {
 	ACL_ERROR	= -1,
@@ -153,6 +155,8 @@ void acl_function_register(char *name, acl_function_type_t type,acl_function_cal
 acl_function_t * acl_function_lookup(char *name);
 acl_symbol_t * acl_symbol_lookup(char *name);
 var_t * acl_symbol_get(var_t *mailspec, char *name);
+int acl_variable_assign(var_t *mailspec, char *name, var_t *value);
+var_t * acl_variable_get(var_t *mailspec, char *name);
 int acl_symbol_dereference(var_t *mailspec, ...);
 void acl_log_delete(acl_log_t *al);
 acl_log_t * acl_log_create(exp_t *message);

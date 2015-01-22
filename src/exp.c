@@ -9,7 +9,6 @@
 #define EXP_BUCKETS 128
 #define EXP_STRLEN 1024
 
-#define EXP_VAR "VARIABLES"
 #define EXP_GARBAGE "GARBAGE"
 
 
@@ -516,7 +515,8 @@ error:
 static var_t *
 exp_eval_variable(exp_t *exp, var_t *mailspec)
 {
-	var_t *variables, *value;
+	var_t *value;
+	char *name;
 
 	if (exp->ex_type != EX_VARIABLE)
 	{
@@ -524,18 +524,12 @@ exp_eval_variable(exp_t *exp, var_t *mailspec)
 		return NULL;
 	}
 
-	variables = vtable_lookup(mailspec, EXP_VAR);
-	if (variables == NULL)
-	{
-		log_debug("exp_eval_variable: no variables set");
-		return EXP_EMPTY;
-	}
+	name = exp->ex_data;
 
-	value = vtable_lookup(variables, exp->ex_data);
+	value = acl_variable_get(mailspec, name);
 	if (value == NULL)
 	{
-		log_debug("exp_eval_variable: unknown variable \"%s\"",
-		    exp->ex_data);
+		log_debug("exp_eval_variable: %s not set", name);
 		return EXP_EMPTY;
 	}
 
@@ -585,32 +579,16 @@ exp_eval_macro(exp_t *exp, var_t *mailspec)
 static var_t *
 exp_assign(exp_t *left, exp_t *right, var_t *mailspec)
 {
-	var_t *variables, *value, *copy;
+	var_t *value;
+	char *name;
 
-	/*
-	 * Get variable space
-	 */
-	variables = vtable_lookup(mailspec, EXP_VAR);
-
-	/*
-	 * No variables yet. Create variable space
-	 */
-	if (variables == NULL)
+	if (left->ex_type != EX_VARIABLE)
 	{
-		variables = vtable_create(EXP_VAR, VF_KEEPNAME);
-		if (variables == NULL)
-		{
-			log_error("exp_eval_variable: vtable_create failed");
-			return NULL;
-		}
-
-		if (vtable_set(mailspec, variables))
-		{
-			log_error("exp_eval_variable: vtable_set failed");
-			var_delete(variables);
-			return NULL;
-		}
+		log_error("exp_assign: left expression is faulty");
+		return NULL;
 	}
+
+	name = left->ex_data;
 
 	/*
 	 * Evaluate expression
@@ -622,21 +600,9 @@ exp_assign(exp_t *left, exp_t *right, var_t *mailspec)
 		return NULL;
 	}
 
-	/*
-	 * Sava a copy
-	 */
-	copy = VAR_COPY(value);
-	if (copy == NULL)
+	if (acl_variable_assign(mailspec, name, value))
 	{
-		log_error("exp_assign: VAR_COPY failed");
-		return NULL;
-	}
-
-	var_rename(copy, left->ex_data, VF_KEEPNAME);
-
-	if (vtable_set(variables, copy))
-	{
-		log_error("exp_eval_variable: vtable_set failed");
+		log_error("exp_eval_variable: acl_variable_assign failed");
 		return NULL;
 	}
 
