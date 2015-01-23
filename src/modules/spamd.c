@@ -452,7 +452,7 @@ spamd_init(void)
 }
 
 void
-spamd_clear(void)
+spamd_fini(void)
 {
 	sock_rr_clear(&spamd_srr);
 

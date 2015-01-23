@@ -404,6 +404,8 @@ sock_rr_clear(sock_rr_t *sr)
 		log_error("sock_rr_init: pthread_mutex_destroy failed");
 	}
 
+	ll_clear(&sr->sr_list, NULL);
+
 	return;
 }
 

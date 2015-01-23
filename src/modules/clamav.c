@@ -191,7 +191,7 @@ clamav_init(void)
 }
 
 void
-clamav_clear(void)
+clamav_fini(void)
 {
 	sock_rr_clear(&clamav_srr);
 
