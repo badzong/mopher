@@ -8,6 +8,8 @@
 #define HITLIST_NAME "hitlist"
 #define BUFLEN 1024
 
+static pthread_mutex_t hitlist_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 static sht_t *hitlists;
 
 typedef struct hitlist {
@@ -160,6 +162,20 @@ static int
 hitlist_db_open(hitlist_t *hl, var_t *attrs)
 {
 	var_t *schema = NULL;
+	int success = -1;
+
+	// If the DB is not open yet, there's a race on hl->hl_connected.
+	if (pthread_mutex_lock(&hitlist_mutex))
+	{
+		log_sys_error("hitlist_db_open: pthread_mutex_lock");
+		goto error;
+	}
+
+	if (hl->hl_connected)
+	{
+		log_debug("hitlist_db_open: database already open");
+		return 0;
+	}
 
 	// Need schema
 	if (hl->hl_dbt.dbt_scheme == NULL)
@@ -168,7 +184,7 @@ hitlist_db_open(hitlist_t *hl, var_t *attrs)
 		if (schema == NULL)
 		{
 			log_error("hitlist_lookup: hitlist_record failed");
-			return -1;
+			goto error;
 		}
 
 		hl->hl_dbt.dbt_scheme = schema;
@@ -179,19 +195,26 @@ hitlist_db_open(hitlist_t *hl, var_t *attrs)
 	{
 		log_error("hitlist_db_open: %s: dbt_register failed",
 			hl->hl_name);
-		return -1;
+		goto error;
 	}
 
 	if (dbt_open_database(&hl->hl_dbt))
 	{
 		log_error("hitlist_db_open: %s: dbt_open_database failed",
 			hl->hl_name);
-		return -1;
+		goto error;
 	}
 
 	hl->hl_connected = 1;
+	success = 0;
 
-	return 0;
+error:
+	if (pthread_mutex_unlock(&hitlist_mutex))
+	{
+		log_sys_error("hitlist_db_open: pthread_mutex_unlock");
+	}
+
+	return success;
 }
 
 static int
