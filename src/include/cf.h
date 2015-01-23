@@ -65,6 +65,7 @@ void cf_init(void);
 void cf_set_new(var_type_t type, char *name, void *data, int flags);
 void cf_set_keylist(var_t *table, ll_t *keys, var_t *v);
 var_t * cf_get(var_type_t type, ...);
+void * cf_get_value(var_type_t type, ...);
 int cf_load_list(ll_t *list, char *key, var_type_t type);
 
 #endif /* _CF_H_ */

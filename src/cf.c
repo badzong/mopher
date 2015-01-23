@@ -431,6 +431,26 @@ cf_get(var_type_t type, ...)
 	return v;
 }
 
+void *
+cf_get_value(var_type_t type, ...)
+{
+	va_list ap;
+	var_t *v;
+
+	va_start(ap, type);
+
+	v = vtable_getva(type, cf_config, ap);
+
+	va_end(ap);
+
+	if (v == NULL)
+	{
+		return NULL;
+	}
+
+	return v->v_data;
+}
+
 int
 cf_load_list(ll_t *list, char *key, var_type_t type)
 {
