@@ -29,9 +29,6 @@ typedef struct dbt_driver {
 	dbt_db_walk_t		 dd_walk;
 	dbt_db_sync_t	 	 dd_sync;
 	int			 dd_flags;
-	pthread_mutex_t		 dd_mutex;
-	pthread_mutexattr_t	 dd_mutexattr;
-
 	int			 dd_use_sql;
 	sql_t		 	 dd_sql;
 } dbt_driver_t;
@@ -55,6 +52,9 @@ typedef struct dbt {
 	dbt_driver_t		 *dbt_driver;
 	void			 *dbt_handle;
 	int			  dbt_open;
+
+	pthread_mutex_t		  dbt_mutex;
+	pthread_mutexattr_t	  dbt_mutexattr;
 } dbt_t;
 
 typedef int (*dbt_validate_t)(dbt_t *dbt, var_t *record);

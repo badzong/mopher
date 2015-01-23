@@ -80,7 +80,7 @@ dbt_close(dbt_t *dbt)
 
 	if ((dbt->dbt_driver->dd_flags & DBT_LOCK))
 	{
-		if(pthread_mutex_destroy(&dbt->dbt_driver->dd_mutex))
+		if(pthread_mutex_destroy(&dbt->dbt_mutex))
 		{
 			log_sys_error("dbt_close: ptrhead_mutex_destroy");
 		}
@@ -109,7 +109,7 @@ dbt_lock(dbt_t *dbt)
 		return 0;
 	}
 
-	if (pthread_mutex_lock(&dbt->dbt_driver->dd_mutex))
+	if (pthread_mutex_lock(&dbt->dbt_mutex))
 	{
 		log_sys_error("dbt_lock: pthread_mutex_lock");
 		return -1;
@@ -126,7 +126,7 @@ dbt_unlock(dbt_t *dbt)
 		return;
 	}
 
-	if (pthread_mutex_unlock(&dbt->dbt_driver->dd_mutex))
+	if (pthread_mutex_unlock(&dbt->dbt_mutex))
 	{
 		log_sys_error("dbt_unlock: pthread_mutex_unlock");
 	}
@@ -849,17 +849,17 @@ dbt_open_database(dbt_t *dbt)
 	 */
 	if ((dd->dd_flags & DBT_LOCK))
 	{
-		if(pthread_mutexattr_init(&dd->dd_mutexattr))
+		if(pthread_mutexattr_init(&dbt->dbt_mutexattr))
 		{
 			log_error("dbt_open_database: ptrhead_mutexattr_init failed");
 			return -1;
 		}
-		if(pthread_mutexattr_settype(&dd->dd_mutexattr, PTHREAD_MUTEX_RECURSIVE))
+		if(pthread_mutexattr_settype(&dbt->dbt_mutexattr, PTHREAD_MUTEX_RECURSIVE))
 		{
 			log_error("dbt_open_database: ptrhead_mutexattr_settype failed");
 			return -1;
 		}
-		if(pthread_mutex_init(&dd->dd_mutex, &dd->dd_mutexattr))
+		if(pthread_mutex_init(&dbt->dbt_mutex, &dbt->dbt_mutexattr))
 		{
 			log_error("dbt_open_database: ptrhead_mutex_init failed");
 			return -1;
