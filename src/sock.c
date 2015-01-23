@@ -80,8 +80,8 @@ int
 sock_connect_timeout(int fd, struct sockaddr *sa, socklen_t len, int timeout)
 {
 	int arg, opt;
-	socklen_t optlen;
-	fd_set fdset; 
+	socklen_t optlen = sizeof opt;
+	fd_set fdset;
 	struct timeval tv; 
 	int success = -1;
 	int deadline = time(NULL) + timeout;
@@ -113,7 +113,7 @@ sock_connect_timeout(int fd, struct sockaddr *sa, socklen_t len, int timeout)
 
 	while (success == -1)
 	{ 
-		// Recalculate temiout in case of EINTR
+		// Recalculate timeout in case of EINTR
 		tv.tv_sec = deadline - time(NULL); 
 		tv.tv_usec = 0; 
 
@@ -127,11 +127,13 @@ sock_connect_timeout(int fd, struct sockaddr *sa, socklen_t len, int timeout)
 			{
 				continue;
 			}
+
 			log_sys_error("sock_connect_timeout: select");
 			return -1;
 
 		// Time exceeded
 		case 0:
+			log_error("sock_connect_timeout: time exceeded");
 			return -1;
 
 		default:
@@ -140,7 +142,6 @@ sock_connect_timeout(int fd, struct sockaddr *sa, socklen_t len, int timeout)
 	}
 
 	// Socket connected
-	optlen = sizeof opt;
 	if (getsockopt(fd, SOL_SOCKET, SO_ERROR, (void *) &opt, &optlen) == -1)
 	{ 
 	 	log_sys_error("sock_connect_timeout: getsockopt");
@@ -148,7 +149,7 @@ sock_connect_timeout(int fd, struct sockaddr *sa, socklen_t len, int timeout)
 	} 
 	if (opt)
 	{
-		log_sys_error("sock_connect_timeout: pending error");
+		log_notice("sock_connect_timeout: connection failed");
 		return -1;
 	}
 
@@ -190,7 +191,7 @@ sock_unix_connect(char *path, int timeout)
 
 	if(sock_connect_timeout(fd, (struct sockaddr *) &sa, sizeof sa, timeout))
 	{
-		log_error("sock_connect_unix: %s: sock_connect_timeout failed",
+		log_error("sock_connect_unix: %s: connection failed",
 			path);
 		close(fd);
 		return -1;
@@ -294,8 +295,8 @@ sock_inet_connect(char *host, char *port, int timeout)
 
 	freeaddrinfo(ai);
 	if (fd == -1) {
-		log_error("sock_inet_connect: connection to %s:%s failed", host,
-			port);
+		log_error("sock_inet_connect: %s@%s: connection failed", port,
+			host);
 		return -1;
 	}
 
@@ -442,7 +443,7 @@ sock_connect_rr(sock_rr_t *sr)
 			break;
 		}
 
-		log_error("sock_connect_rr: %s: connection failed", uri);
+		log_notice("sock_connect_rr: %s: connection failed", uri);
 	}
 
 	return fd;
