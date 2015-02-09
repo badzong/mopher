@@ -28,6 +28,7 @@
 #define MSN_CLOSE	"close"
 
 #define BUCKETS 127
+#define MAILADDRLEN 512
 
 /*
  * Symbols without callback
@@ -47,8 +48,10 @@ static milter_symbol_t milter_symbols[] = {
 	{ "helo", MS_OFF_HELO },
 	{ "envfrom", MS_OFF_ENVFROM },
 	{ "envfrom_addr", MS_OFF_ENVFROM },
+	{ "envfrom_domain", MS_OFF_ENVFROM },
 	{ "envrcpt", MS_OFF_ENVRCPT },
 	{ "envrcpt_addr", MS_OFF_ENVRCPT },
+	{ "envrcpt_domain", MS_OFF_ENVRCPT },
 	{ "recipients", MS_OFF_ENVRCPT },
 	{ "recipient_list", MS_OFF_DATA },
 	{ "header_name", MS_HEADER },
@@ -600,7 +603,8 @@ milter_envfrom(SMFICTX * ctx, char **argv)
 {
 	milter_priv_t *mp;
 	sfsistat stat = SMFIS_TEMPFAIL;
-	char from[321];
+	char from[MAILADDRLEN];
+	char domain[MAILADDRLEN];
 
 	mp = milter_common_init(ctx, MS_ENVFROM, MSN_ENVFROM);
 	if (mp == NULL)
@@ -615,9 +619,16 @@ milter_envfrom(SMFICTX * ctx, char **argv)
 		goto exit;
 	}
 
+	if (util_strdomain(domain, sizeof domain, from) == -1)
+	{
+		log_error("milter_envfrom: util_strdomain failed");
+		goto exit;
+	}
+
 	if (vtable_setv(mp->mp_table,
 	    VT_STRING, "envfrom", argv[0], VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "envfrom_addr", from, VF_KEEPNAME | VF_COPYDATA,
+	    VT_STRING, "envfrom_domain", domain, VF_KEEPNAME | VF_COPYDATA,
 	    VT_NULL))
 	{
 		log_error("milter_envfrom: vtable_setv failed");
@@ -639,7 +650,8 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 {
 	milter_priv_t *mp;
 	sfsistat stat = SMFIS_TEMPFAIL;
-	char rcpt[321];
+	char rcpt[MAILADDRLEN];
+	char domain[MAILADDRLEN];
 
 	mp = milter_common_init(ctx, MS_ENVRCPT, MSN_ENVRCPT);
 	if (mp == NULL)
@@ -656,9 +668,16 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 		goto exit;
 	}
 
+	if (util_strdomain(domain, sizeof domain, rcpt) == -1)
+	{
+		log_error("milter_envfrom: util_strdomain failed");
+		goto exit;
+	}
+
 	if (vtable_setv(mp->mp_table,
 	    VT_STRING, "envrcpt", argv[0], VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "envrcpt_addr", rcpt, VF_KEEPNAME | VF_COPYDATA,
+	    VT_STRING, "envrcpt_domain", domain, VF_KEEPNAME | VF_COPYDATA,
 	    VT_INT, "recipients", &mp->mp_recipients,
 		VF_KEEPNAME | VF_COPYDATA,
 	    VT_NULL))

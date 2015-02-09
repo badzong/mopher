@@ -20,6 +20,7 @@ typedef struct util_thread util_thread_t;
 char * util_strdupenc(const char *src, const char *encaps);
 int util_quote(char *buffer, int size, char *str, char *quotes);
 int util_strmail(char *buffer, int size, const char *src);
+int util_strdomain(char *buffer, int size, const char *src);
 struct sockaddr_storage* util_strtoaddr(const char *str);
 char * util_addrtostr(struct sockaddr_storage *ss);
 int util_addrtoint(struct sockaddr_storage *ss);

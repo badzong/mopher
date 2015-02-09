@@ -137,6 +137,37 @@ util_strmail(char *buffer, int size, const char *src)
 }
 
 
+int
+util_strdomain(char *buffer, int size, const char *src)
+{
+	char *start;
+	int len;
+
+	if (src == NULL)
+	{
+		return -1;
+	}
+
+	start = strrchr(src, '@');
+	if (start == NULL)
+	{
+		return -1;
+	}
+
+	start += 1;
+
+	len = strlen(start);
+	if (len > size + 1)
+	{
+		return -1;
+	}
+
+	strncpy(buffer, start, len + 1);
+
+	return len; 
+}
+
+
 struct sockaddr_storage*
 util_strtoaddr(const char *str)
 {
