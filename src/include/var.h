@@ -40,7 +40,7 @@ typedef struct sockaddr_storage var_sockaddr_t;
  * selection in database drivers.
  */
 typedef enum var_type { VT_NULL = 0, VT_TABLE, VT_LIST, VT_ADDR, VT_INT,
-    VT_FLOAT, VT_POINTER, VT_STRING, VT_MAX = VT_STRING } var_type_t;
+    VT_FLOAT, VT_POINTER, VT_STRING, VT_TEXT, VT_MAX = VT_STRING } var_type_t;
 
 typedef struct var {
     var_type_t   v_type;

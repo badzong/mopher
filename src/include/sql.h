@@ -23,6 +23,7 @@ typedef struct sql {
 	char			*sql_t_int;
 	char			*sql_t_float;
 	char			*sql_t_string;
+	char			*sql_t_text;
 	char			*sql_t_addr;
 
 	sql_escape_t		 sql_esc_identifier;

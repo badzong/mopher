@@ -194,6 +194,7 @@ var_copy_data(var_type_t type, void *data)
 		size = sizeof(VAR_FLOAT_T);
 		break;
 	case VT_STRING:
+	case VT_TEXT:
 		size = strlen((char *) data) + 1;
 		break;
 	case VT_ADDR:
@@ -238,6 +239,7 @@ var_data_create(var_type_t type)
 		break;
 
 	case VT_STRING:
+	case VT_TEXT:
 		p = malloc(VAR_STRING_BUFFER_LEN);
 		break;
 
@@ -414,6 +416,7 @@ var_scan_data(var_type_t type, char *str)
 	switch (type)
 	{
 	case VT_STRING:
+	case VT_TEXT:
 		src = str;
 		break;
 
@@ -657,6 +660,7 @@ var_compare(int *cmp, var_t * v1, var_t * v2)
 		break;
 
 	case VT_STRING:
+	case VT_TEXT:
 		*cmp = strcmp(left->v_data, right->v_data);
 
 		// Strcmp may return any integer.
@@ -723,6 +727,7 @@ var_true(const var_t * v)
 		return 1;
 
 	case VT_STRING:
+	case VT_TEXT:
 		if (strcmp(v->v_data, "0") == 0)
 		{
 			return 0;
@@ -790,6 +795,8 @@ var_type_string(var_t *v)
                 return "FLOAT";
         case VT_STRING:
                 return "STRING";
+        case VT_TEXT:
+                return "TEXT";
         case VT_ADDR:
                 return "ADDR";
         case VT_LIST:
@@ -890,6 +897,7 @@ var_dump_data(var_t * v, char *buffer, int size)
 		break;
 
 	case VT_STRING:
+	case VT_TEXT:
 		len = strlen(v->v_data);
 		if (len < size)
 		{
@@ -996,6 +1004,7 @@ var_data_size(var_t *v)
 	switch (v->v_type)
 	{
 	case VT_STRING:
+	case VT_TEXT:
 		return strlen((char *) v->v_data) + 1;
 
 	case VT_INT:
@@ -1034,6 +1043,7 @@ var_as_int(var_t *v)
 		break;
 
 	case VT_STRING:
+	case VT_TEXT:
 		errno = 0;
 
 		i = strtol(v->v_data, NULL, 10);
@@ -1099,6 +1109,7 @@ var_as_float(var_t *v)
 		break;
 
 	case VT_STRING:
+	case VT_TEXT:
 		f = strtof(v->v_data, NULL);
 		break;
 
@@ -1139,6 +1150,24 @@ var_as_string(var_t *v)
 }
 
 
+static var_t *
+var_as_text(var_t *v)
+{
+	var_t *copy;
+
+	copy = var_as_string(v);
+	if (copy == NULL)
+	{
+		log_error("var_as_text: var_as_string failed");
+		return NULL;
+	}
+
+	copy->v_type = VT_TEXT;
+
+	return copy;
+}
+
+
 var_t *
 var_cast_copy(var_type_t type, var_t *v)
 {
@@ -1147,6 +1176,7 @@ var_cast_copy(var_type_t type, var_t *v)
 	case VT_INT:	return var_as_int(v);
 	case VT_FLOAT:	return var_as_float(v);
 	case VT_STRING:	return var_as_string(v);
+	case VT_TEXT:	return var_as_text(v);
 
 	default:
 		log_error("var_cast_copy: bad type");

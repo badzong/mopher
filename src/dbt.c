@@ -1126,6 +1126,7 @@ typedef struct dbt_test_record {
 	VAR_INT_T       tr_int_value;
 	VAR_FLOAT_T     tr_float_value;
 	char            tr_string_value[20];
+	char           *tr_text_value;
 	var_sockaddr_t  tr_sockaddr_value;
 	char           *tr_chars;
 	char           *tr_null;
@@ -1156,6 +1157,7 @@ dbt_test_record(dbt_test_record_t *tr, var_t *scheme, int n, int expire)
 	sin->sin_family = AF_INET;
 	sin->sin_addr.s_addr = (n * 0x01010101);
 
+	tr->tr_text_value = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 	tr->tr_chars = "'\"~!@#$%^&*()_";
 	tr->tr_null = NULL;
 
@@ -1166,7 +1168,7 @@ dbt_test_record(dbt_test_record_t *tr, var_t *scheme, int n, int expire)
 
 	return vlist_record(scheme, &tr->tr_int_key, &tr->tr_float_key,
 		tr->tr_string_key, &tr->tr_sockaddr_key, &tr->tr_int_value,
-		&tr->tr_float_value, tr->tr_string_value,
+		&tr->tr_float_value, tr->tr_string_value, tr->tr_text_value,
 		&tr->tr_sockaddr_value, tr->tr_chars, tr->tr_null,
 		&tr->tr_test_created, &tr->tr_test_updated, &tr->tr_test_expire);
 }
@@ -1202,7 +1204,7 @@ dbt_test_stage1(int n)
 	// Lookup record
 	lookup = vlist_record(dbt_test_scheme, &tr1.tr_int_key, &tr1.tr_float_key,
 		tr1.tr_string_key, &tr1.tr_sockaddr_key, NULL, NULL, NULL,
-		NULL, NULL, NULL, NULL, NULL, NULL);
+		NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 	// Stress test
 	for (i = 0; i < DBT_STRESS_ROUNDS; ++i)
@@ -1320,6 +1322,7 @@ dbt_test_init(char *config_key, char *driver, int run_stage2)
 		"test_int",		VT_INT,		VF_KEEPNAME,
 		"test_float",		VT_FLOAT,	VF_KEEPNAME,
 		"test_string",		VT_STRING,	VF_KEEPNAME,
+		"test_text",		VT_TEXT,	VF_KEEPNAME,
 		"test_addr",		VT_ADDR,	VF_KEEPNAME,
 		"test_chars",		VT_STRING,	VF_KEEPNAME,
 		"test_null",		VT_STRING,	VF_KEEPNAME,
