@@ -140,6 +140,14 @@ connect strlen({j}) == 0                              log "MACRO ERROR 1"
 connect strlen({v}) == 0                              log "MACRO ERROR 2"
 connect strlen({daemon_name}) == 0                    log "MACRO ERROR 3"
 
+# Base64
+connect base64("foobar") != "Zm9vYmFy"                log "BASE64 ERROR 1"
+connect base64(127.0.0.1) != "MTI3LjAuMC4x"           log "BASE64 ERROR 2"
+connect base64(5) != "NQ=="                           log "BASE64 ERROR 3"
+connect base64_decode("Zm9vYmFy") != "foobar"         log "BASE64 ERROR 4"
+connect base64_decode("MTI3LjAuMC4x") != "127.0.0.1"  log "BASE64 ERROR 5"
+connect base64_decode("NQ==") != "5"                  log "BASE64 ERROR 6"
+
 # Tarpitting
 connect random() % 10 == 0                            tarpit 1s
 

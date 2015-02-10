@@ -965,7 +965,7 @@ exp_eval_regex(int op, var_t *left, var_t *right)
 	}
 
 	// Make sure left is a string
-	if (left->v_type != VT_STRING)
+	if (left->v_type != VT_STRING && left->v_type != VT_TEXT)
 	{
 		str_copy = var_cast_copy(VT_STRING, left);
 		if (str_copy == NULL)
@@ -981,7 +981,7 @@ exp_eval_regex(int op, var_t *left, var_t *right)
 	}
 
 	// Make sure right is a string
-	if (right->v_type != VT_STRING)
+	if (right->v_type != VT_STRING && left->v_type != VT_TEXT)
 	{
 		pattern_copy = var_cast_copy(VT_STRING, right);
 		if (pattern_copy == NULL)
@@ -1282,6 +1282,7 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 		break;
 
 	case VT_STRING:
+	case VT_TEXT:
 		result = exp_math_string(eo->eo_operator, left, right);
 		break;
 
