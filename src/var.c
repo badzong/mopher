@@ -178,6 +178,7 @@ var_copy_data(var_type_t type, void *data)
 {
 	int size = 0;
 	void *copy;
+	blob_t *b;
 
 	switch (type) {
 	/*
@@ -194,12 +195,16 @@ var_copy_data(var_type_t type, void *data)
 		size = sizeof(VAR_FLOAT_T);
 		break;
 	case VT_STRING:
-	case VT_TEXT:
 		size = strlen((char *) data) + 1;
 		break;
 	case VT_ADDR:
 		size = sizeof(var_sockaddr_t);
 		break;
+	case VT_BLOB:
+		b = data;
+		size = b->b_size;
+		break;
+
 	default:
 		log_warning("var_copy: bad type");
 		return NULL;
@@ -214,6 +219,7 @@ var_copy_data(var_type_t type, void *data)
 
 	return copy;
 }
+
 
 static void *
 var_data_create(var_type_t type)
@@ -239,7 +245,6 @@ var_data_create(var_type_t type)
 		break;
 
 	case VT_STRING:
-	case VT_TEXT:
 		p = malloc(VAR_STRING_BUFFER_LEN);
 		break;
 
@@ -412,11 +417,11 @@ var_scan_data(var_type_t type, char *str)
 	VAR_INT_T i;
 	VAR_FLOAT_T d;
 	struct sockaddr_storage *ss;
+	blob_t *b;
 
 	switch (type)
 	{
 	case VT_STRING:
-	case VT_TEXT:
 		src = str;
 		break;
 
@@ -440,7 +445,15 @@ var_scan_data(var_type_t type, char *str)
 
 		return ss;
 
-	//TODO Add more types
+	case VT_BLOB:
+		b = blob_scan(str);
+		if (b == NULL)
+		{
+			log_error("var_scan_data: blob_scan failed");
+			return NULL;
+		}
+	
+		return b;
 
 	default:
 		log_error("var_scan_data: bad type");
@@ -476,8 +489,7 @@ var_scan(var_type_t type, char *name, char *str)
 			return NULL;
 		}
 
-		v = var_create(type, name, data, VF_COPY);
-		free(data);
+		v = var_create(type, name, data, VF_COPYNAME);
 	}
 
 	if (v == NULL)
@@ -660,7 +672,6 @@ var_compare(int *cmp, var_t * v1, var_t * v2)
 		break;
 
 	case VT_STRING:
-	case VT_TEXT:
 		*cmp = strcmp(left->v_data, right->v_data);
 
 		// Strcmp may return any integer.
@@ -676,6 +687,10 @@ var_compare(int *cmp, var_t * v1, var_t * v2)
 
 	case VT_ADDR:
 		*cmp = util_addrcmp(left->v_data, right->v_data);
+		break;
+
+	case VT_BLOB:
+		*cmp = blob_compare(left->v_data, right->v_data);
 		break;
 
 	default:
@@ -706,6 +721,7 @@ var_true(const var_t * v)
 	ll_t *ll;
 	ht_t *ht;
 	struct sockaddr_storage ss, *pss;
+	blob_t *b;
 
 	if (v->v_data == NULL)
 	{
@@ -727,7 +743,6 @@ var_true(const var_t * v)
 		return 1;
 
 	case VT_STRING:
-	case VT_TEXT:
 		if (strcmp(v->v_data, "0") == 0)
 		{
 			return 0;
@@ -769,6 +784,14 @@ var_true(const var_t * v)
 
 		return 0;
 
+	case VT_BLOB:
+		b = v->v_data;
+		if(b->b_size) {
+			return 1;
+		}
+
+		return 0;
+
 	case VT_POINTER:
 		if(v->v_data) {
 			return 1;
@@ -795,8 +818,6 @@ var_type_string(var_t *v)
                 return "FLOAT";
         case VT_STRING:
                 return "STRING";
-        case VT_TEXT:
-                return "TEXT";
         case VT_ADDR:
                 return "ADDR";
         case VT_LIST:
@@ -805,6 +826,8 @@ var_type_string(var_t *v)
                 return "TABLE";
         case VT_POINTER:
                 return "POINTER";
+        case VT_BLOB:
+                return "BLOB";
         default:
                 break;
         }
@@ -897,7 +920,6 @@ var_dump_data(var_t * v, char *buffer, int size)
 		break;
 
 	case VT_STRING:
-	case VT_TEXT:
 		len = strlen(v->v_data);
 		if (len < size)
 		{
@@ -928,6 +950,14 @@ var_dump_data(var_t * v, char *buffer, int size)
 			strcpy(buffer, addrstr);
 		}
 
+		break;
+
+	case VT_BLOB:
+		if ((len = blob_dump(buffer, size, (blob_t *) v->v_data)) == -1)
+		{
+			log_error("var_dump_data: blob_dump failed");
+			return -1;
+		}
 		break;
 
 	case VT_LIST:
@@ -996,6 +1026,8 @@ var_dump_stdout(var_t *v)
 VAR_INT_T
 var_data_size(var_t *v)
 {
+	blob_t *b;
+
 	if (v->v_data == NULL)
 	{
 		return 0;
@@ -1004,7 +1036,6 @@ var_data_size(var_t *v)
 	switch (v->v_type)
 	{
 	case VT_STRING:
-	case VT_TEXT:
 		return strlen((char *) v->v_data) + 1;
 
 	case VT_INT:
@@ -1018,6 +1049,10 @@ var_data_size(var_t *v)
 
 	case VT_NULL:
 		return 0;
+
+	case VT_BLOB:
+		b = v->v_data;
+		return b->b_size;
 
 	default:
 		break;
@@ -1043,7 +1078,6 @@ var_as_int(var_t *v)
 		break;
 
 	case VT_STRING:
-	case VT_TEXT:
 		errno = 0;
 
 		i = strtol(v->v_data, NULL, 10);
@@ -1109,7 +1143,6 @@ var_as_float(var_t *v)
 		break;
 
 	case VT_STRING:
-	case VT_TEXT:
 		f = strtof(v->v_data, NULL);
 		break;
 
@@ -1151,32 +1184,69 @@ var_as_string(var_t *v)
 
 
 static var_t *
-var_as_text(var_t *v)
+var_as_blob(var_t *v)
 {
+	void *data;
+	int size;
+	blob_t *b = NULL;
 	var_t *copy;
 
-	copy = var_as_string(v);
-	if (copy == NULL)
+	switch(v->v_type)
 	{
-		log_error("var_as_text: var_as_string failed");
-		return NULL;
+	case VT_INT:
+	case VT_FLOAT:
+	case VT_STRING:
+	case VT_ADDR:
+		size = var_data_size(v);
+		data = v->v_data;
+		break;
+
+	default:
+		log_error("var_as_blob: bad type");
+		goto error;
 	}
 
-	copy->v_type = VT_TEXT;
+	b = blob_create(data, size);
+	if (b == NULL)
+	{
+		log_error("var_as_blob: blob_create failed");
+		goto error;
+	}
+
+	copy = var_create(VT_BLOB, v->v_name, b, VF_COPYNAME);
+	if (copy == NULL)
+	{
+		log_error("var_as_blob: var_create failed");
+		goto error;
+	}
 
 	return copy;
+
+error:
+	if (b)
+	{
+		free(b);
+	}
+
+	return NULL;
 }
 
 
 var_t *
 var_cast_copy(var_type_t type, var_t *v)
 {
+	// If destination type and source type are the same return a copy.
+	if (type == v->v_type)
+	{
+		return VAR_COPY(v);
+	}
+
 	switch (type)
 	{
 	case VT_INT:	return var_as_int(v);
 	case VT_FLOAT:	return var_as_float(v);
 	case VT_STRING:	return var_as_string(v);
-	case VT_TEXT:	return var_as_text(v);
+	case VT_BLOB:	return var_as_blob(v);
 
 	default:
 		log_error("var_cast_copy: bad type");

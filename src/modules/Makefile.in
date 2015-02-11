@@ -6,7 +6,6 @@
 #	removed on `clean'
 #
 OUT_A+=			base.so
-OUT_A+=			base64.so
 OUT_A+=			clamav.so
 OUT_A+=			counter.so
 OUT_A+=			dblog.so

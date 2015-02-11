@@ -181,20 +181,24 @@ util_strtoaddr(const char *str)
 	}
 
 	if((ss = (struct sockaddr_storage *)
-		malloc(sizeof(struct sockaddr_storage))) == NULL) {
+		malloc(sizeof(struct sockaddr_storage))) == NULL)
+	{
 		return NULL;
 	}
 
 	sin = (struct sockaddr_in *) ss;
 	sin6 = (struct sockaddr_in6 *) ss;
 
-	if (inet_pton(AF_INET, str, &sin->sin_addr) == 1) {
+	if (inet_pton(AF_INET, str, &sin->sin_addr) == 1)
+	{
 		ss->ss_family = AF_INET;
 	}
-	else if (inet_pton(AF_INET6, str, &sin6->sin6_addr) == 1) {
+	else if (inet_pton(AF_INET6, str, &sin6->sin6_addr) == 1)
+	{
 		ss->ss_family = AF_INET6;
 	}
-	else {
+	else
+	{
 		log_error("util_strtoaddr: bad address string: %s", str);
 		return NULL;
 	}

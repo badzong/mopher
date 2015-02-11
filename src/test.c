@@ -151,11 +151,13 @@ test_run(int optind, int argc, char **argv)
 		{"regdom.c", regdom_test_init, regdom_test, regdom_clear},
 		{"exp.c", exp_test_init, exp_test, exp_clear},
 		{"sql.c", NULL, sql_test, NULL},
+		{"base64.c", NULL, base64_test, NULL},
+		{"blob.c", NULL, blob_test, NULL},
 
 		// Database drivers are tested through dbt.c
                 {"memdb.c", dbt_test_memdb_init, dbt_test_stage1, dbt_test_clear },
-                {"bdb.c", dbt_test_bdb_init, dbt_test_stage1, dbt_test_clear },
-                {"bdb.c", dbt_test_bdb_init, dbt_test_stage2, dbt_test_clear },
+                //{"bdb.c", dbt_test_bdb_init, dbt_test_stage1, dbt_test_clear },
+                //{"bdb.c", dbt_test_bdb_init, dbt_test_stage2, dbt_test_clear },
                 {"lite.c", dbt_test_lite_init, dbt_test_stage1, dbt_test_clear },
                 {"lite.c", dbt_test_lite_init, dbt_test_stage2, dbt_test_clear },
                 {"pgsql.c", dbt_test_pgsql_init, dbt_test_stage1, dbt_test_clear },

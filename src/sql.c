@@ -95,7 +95,7 @@ sql_values(sql_t *sql, void *conn, char *buffer, int size, char *join,
 			strcpy(value, "NULL");
 			isnull = 1;
 		}
-		else if (v->v_type == VT_STRING || v->v_type == VT_TEXT)
+		else if (v->v_type == VT_STRING)
 		{
 			vp = v->v_data;
 		}
@@ -189,7 +189,7 @@ sql_key_value(sql_t *sql, void *conn, char *buffer, int size, int types, char *j
 			strcpy(value, "NULL");
 			isnull = 1;
 		}
-		else if (v->v_type == VT_STRING || v->v_type == VT_TEXT)
+		else if (v->v_type == VT_STRING)
 		{
 			vp = v->v_data;
 		}
@@ -260,7 +260,7 @@ sql_create(sql_t *sql, void *conn, char *buffer, int size, char *tablename, var_
 		case VT_INT:	type = sql->sql_t_int; break;
 		case VT_FLOAT:	type = sql->sql_t_float; break;
 		case VT_STRING:	type = sql->sql_t_string; break;
-		case VT_TEXT:	type = sql->sql_t_text; break;
+		case VT_BLOB:	type = sql->sql_t_text; break;
 		case VT_ADDR:	type = sql->sql_t_addr; break;
 		default:
 			log_error("sql_create: bad type");
@@ -950,7 +950,19 @@ sql_test(int n)
 	VAR_INT_T i = n;
 	VAR_FLOAT_T f = n * 0.7;
 	char *str = "foobar";
+
 	char *txt = "barfoo";
+	char b1_64[128];
+	char *b2_64 = "YmFyZm9vAA==";
+	char b1_buf[128];
+	char b2_buf[128];
+	blob_t *b1 = b1_buf;
+	blob_t *b2 = b2_buf;
+	blob_init(b1_buf, sizeof b1_buf, &n, sizeof n);
+	blob_init(b2_buf, sizeof b2_buf, txt, strlen(txt) + 1);
+
+	TEST_ASSERT(b1 != NULL && b2 != NULL);
+	TEST_ASSERT(base64_encode(b1_64, sizeof b1_64, (void*) &n, sizeof n) > 0);
 
 	var_sockaddr_t sa;
 	struct sockaddr_in *sin = (struct sockaddr_in *) &sa;
@@ -976,29 +988,30 @@ sql_test(int n)
 		"int",		VT_INT,		VF_KEEPNAME,
 		"float",	VT_FLOAT,	VF_KEEPNAME,
 		"string",	VT_STRING,	VF_KEEPNAME,
-		"text",		VT_TEXT,	VF_KEEPNAME,
+		"blob1",	VT_BLOB,	VF_KEEPNAME,
+		"blob2",	VT_BLOB,	VF_KEEPNAME,
 		"addr",		VT_ADDR,	VF_KEEPNAME,
 		NULL);
 	TEST_ASSERT(scheme != NULL);
 
 	// Create test record
-	TEST_ASSERT((record = vlist_record(scheme, &i, &f, str, sin, &i, &f, str, txt, sin)) != NULL);
+	TEST_ASSERT((record = vlist_record(scheme, &i, &f, str, sin, &i, &f, str, b1, b2, sin)) != NULL);
 
 	// Create Query
 	TEST_ASSERT(sql_create(&sql, NULL, query, sizeof query, "test_table", scheme) == 0);
-	strcpy(pattern, "CREATE TABLE 'test_table' ('int_key' INT,'float_key' FLOAT,'string_key' VARCHAR(255),'addr_key' INET,'int' INT,'float' FLOAT,'string' VARCHAR(255),'text' TEXT,'addr' INET, PRIMARY KEY('int_key','float_key','string_key','addr_key'))");
+	strcpy(pattern, "CREATE TABLE 'test_table' ('int_key' INT,'float_key' FLOAT,'string_key' VARCHAR(255),'addr_key' INET,'int' INT,'float' FLOAT,'string' VARCHAR(255),'blob1' TEXT,'blob2' TEXT,'addr' INET, PRIMARY KEY('int_key','float_key','string_key','addr_key'))");
 	//printf("%s\n%s\n\n", query, pattern);
 	TEST_ASSERT(strcmp(pattern, query) == 0);
 
 	// Select Query
 	TEST_ASSERT(sql_select(&sql, NULL, query, sizeof query, "test_table", record) == 0);
-	snprintf(pattern, sizeof pattern, "SELECT 'int_key','float_key','string_key','addr_key','int','float','string','text','addr' FROM 'test_table' WHERE 'int_key'='%d' AND 'float_key'='%.2f' AND 'string_key'='foobar' AND 'addr_key'='%d.%d.%d.%d'", n, n*0.7,n,n,n,n);
+	snprintf(pattern, sizeof pattern, "SELECT 'int_key','float_key','string_key','addr_key','int','float','string','blob1','blob2','addr' FROM 'test_table' WHERE 'int_key'='%d' AND 'float_key'='%.2f' AND 'string_key'='foobar' AND 'addr_key'='%d.%d.%d.%d'", n, n*0.7,n,n,n,n);
 	//printf("%s\n%s\n\n", query, pattern);
 	TEST_ASSERT(strcmp(pattern, query) == 0);
 
 	// Update Query
 	TEST_ASSERT(sql_update(&sql, NULL, query, sizeof query, "test_table", record) == 0);
-	snprintf(pattern, sizeof pattern, "UPDATE 'test_table' SET 'int'='%d','float'='%.2f','string'='foobar','text'='barfoo','addr'='%d.%d.%d.%d' WHERE 'int_key'='%d' AND 'float_key'='%.2f' AND 'string_key'='foobar' AND 'addr_key'='%d.%d.%d.%d'", n,n*0.7,n,n,n,n,n,n*0.7,n,n,n,n);
+	snprintf(pattern, sizeof pattern, "UPDATE 'test_table' SET 'int'='%d','float'='%.2f','string'='foobar','blob1'='%s','blob2'='%s','addr'='%d.%d.%d.%d' WHERE 'int_key'='%d' AND 'float_key'='%.2f' AND 'string_key'='foobar' AND 'addr_key'='%d.%d.%d.%d'", n,n*0.7,b1_64,b2_64,n,n,n,n,n,n*0.7,n,n,n,n);
 	//printf("%s\n%s\n\n", query, pattern);
 	TEST_ASSERT(strcmp(pattern, query) == 0);
 

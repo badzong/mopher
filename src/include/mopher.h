@@ -20,6 +20,8 @@
 #include <parser.h>
 #include <sock.h>
 #include <util.h>
+#include <base64.h>
+#include <blob.h>
 #include <var.h>
 #include <vp.h>
 #include <vlist.h>

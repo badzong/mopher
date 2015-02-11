@@ -1126,7 +1126,10 @@ typedef struct dbt_test_record {
 	VAR_INT_T       tr_int_value;
 	VAR_FLOAT_T     tr_float_value;
 	char            tr_string_value[20];
-	char           *tr_text_value;
+	char            tr_blob1_raw[256];
+	char            tr_blob2_raw[256];
+	blob_t         *tr_blob1;
+	blob_t         *tr_blob2;
 	var_sockaddr_t  tr_sockaddr_value;
 	char           *tr_chars;
 	char           *tr_null;
@@ -1139,6 +1142,7 @@ var_t *
 dbt_test_record(dbt_test_record_t *tr, var_t *scheme, int n, int expire)
 {
 	struct sockaddr_in *sin;
+	blob_t *b1, *b2;
 
 	memset(tr, 0, sizeof (dbt_test_record_t));
 
@@ -1157,7 +1161,12 @@ dbt_test_record(dbt_test_record_t *tr, var_t *scheme, int n, int expire)
 	sin->sin_family = AF_INET;
 	sin->sin_addr.s_addr = (n * 0x01010101);
 
-	tr->tr_text_value = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+	char *text = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+	blob_init(tr->tr_blob1_raw, sizeof tr->tr_blob1_raw, (void *) &n, sizeof n);
+	blob_init(tr->tr_blob2_raw, sizeof tr->tr_blob2_raw, (void *) text, strlen(text) + 1);
+	tr->tr_blob1 = tr->tr_blob1_raw;
+	tr->tr_blob2 = tr->tr_blob2_raw;
+
 	tr->tr_chars = "'\"~!@#$%^&*()_";
 	tr->tr_null = NULL;
 
@@ -1168,9 +1177,11 @@ dbt_test_record(dbt_test_record_t *tr, var_t *scheme, int n, int expire)
 
 	return vlist_record(scheme, &tr->tr_int_key, &tr->tr_float_key,
 		tr->tr_string_key, &tr->tr_sockaddr_key, &tr->tr_int_value,
-		&tr->tr_float_value, tr->tr_string_value, tr->tr_text_value,
-		&tr->tr_sockaddr_value, tr->tr_chars, tr->tr_null,
-		&tr->tr_test_created, &tr->tr_test_updated, &tr->tr_test_expire);
+		&tr->tr_float_value, tr->tr_string_value,
+		tr->tr_blob1, tr->tr_blob2,
+		&tr->tr_sockaddr_value, tr->tr_chars,
+		tr->tr_null, &tr->tr_test_created, &tr->tr_test_updated,
+		&tr->tr_test_expire);
 }
 
 void
@@ -1198,13 +1209,13 @@ dbt_test_stage1(int n)
 	pthread_mutex_lock(&dbt_test_mutex);
 	TEST_ASSERT(sht_insert(&dbt_test_ht, rec1_str, rec1_str) == 0);
 	TEST_ASSERT(sht_insert(&dbt_test_ht, rec2_str, rec2_str) == 0);
-	//printf("RE1: %s\nRE2: %s\n", rec1_str, rec2_str);
+	//printf("1: %s\n2: %s\n\n", rec1_str, rec2_str);
 	pthread_mutex_unlock(&dbt_test_mutex);
 
 	// Lookup record
 	lookup = vlist_record(dbt_test_scheme, &tr1.tr_int_key, &tr1.tr_float_key,
 		tr1.tr_string_key, &tr1.tr_sockaddr_key, NULL, NULL, NULL,
-		NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+		NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 	// Stress test
 	for (i = 0; i < DBT_STRESS_ROUNDS; ++i)
@@ -1322,7 +1333,8 @@ dbt_test_init(char *config_key, char *driver, int run_stage2)
 		"test_int",		VT_INT,		VF_KEEPNAME,
 		"test_float",		VT_FLOAT,	VF_KEEPNAME,
 		"test_string",		VT_STRING,	VF_KEEPNAME,
-		"test_text",		VT_TEXT,	VF_KEEPNAME,
+		"test_blob1",		VT_BLOB,	VF_KEEPNAME,
+		"test_blob2",		VT_BLOB,	VF_KEEPNAME,
 		"test_addr",		VT_ADDR,	VF_KEEPNAME,
 		"test_chars",		VT_STRING,	VF_KEEPNAME,
 		"test_null",		VT_STRING,	VF_KEEPNAME,

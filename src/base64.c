@@ -177,7 +177,7 @@ base64_decode(unsigned char *dest, int size, char *src)
 	dlen = base64_decsize(src);
 
 	// Check buffer size
-	if (dlen + 1 > size)
+	if (dlen > size)
 	{
 		return -1;
 	}
@@ -210,33 +210,33 @@ base64_decode(unsigned char *dest, int size, char *src)
 
 		triple = (a << 18) + (b << 12) + (c << 6) + d;
 
-		dest[j++] = (triple >> 16) & 0xFF;
-		dest[j++] = (triple >> 8) & 0xFF;
-		dest[j++] = triple & 0xFF;
+		if (j < size) dest[j++] = (triple >> 16) & 0xFF;
+		if (j < size) dest[j++] = (triple >> 8) & 0xFF;
+		if (j < size) dest[j++] = triple & 0xFF;
 	}
-
-	// Always add \0
-	dest[j] = 0;
 
 	return dlen;
 }
 
 unsigned char *
-base64_dec_malloc(char *src)
+base64_dec_malloc(char *src, int *size)
 {
-	int size;
 	unsigned char *buffer;
 
-	size = base64_decsize(src) + 1;
+	*size = base64_decsize(src) + 1;
+	if (*size < 0)
+	{
+		return NULL;
+	}
 
-	buffer = (unsigned char *) malloc(size);
+	buffer = (unsigned char *) malloc(*size);
 	if (buffer == NULL)
 	{
 		return NULL;
 	}
 
-	size = base64_decode(buffer, size, src);
-	if (size == -1)
+	*size = base64_decode(buffer, *size, src);
+	if (*size == -1)
 	{
 		free(buffer);
 		return NULL;
@@ -257,29 +257,38 @@ base64_enc_symbol(int argc, void **argv)
 
 	buffer = base64_enc_malloc((unsigned char *) argv[0], strlen(argv[0]));
 
-	return var_create(VT_TEXT, NULL, buffer, VF_EXP_FREE);
+	return var_create(VT_STRING, NULL, buffer, VF_EXP_FREE);
 }
 
 
 static var_t *
 base64_dec_symbol(int argc, void **argv)
 {
-	char *buffer;
+	var_t *v;
 
 	if (argv[0] == NULL)
 	{
 		return EXP_EMPTY;
 	}
 
-	buffer = (char *) base64_dec_malloc(argv[0]);
+	v = var_scan(VT_BLOB, NULL, argv[0]);
+	if (v == NULL)
+	{
+		log_error("base64_dec_symbol: var_scan failed");
+		return NULL;
+	}
 
-	return var_create(VT_TEXT, NULL, buffer, VF_EXP_FREE);
+	v->v_flags |= VF_EXP_FREE;
+
+	return v;
 }
 
 
 int
 base64_init(void)
 {
+	base64_init_decoder();
+
 	acl_function_register("base64", AF_SIMPLE,
 	    (acl_function_callback_t) base64_enc_symbol, VT_STRING, 0);
 	acl_function_register("base64_decode", AF_SIMPLE,
@@ -287,3 +296,80 @@ base64_init(void)
 
 	return 0;
 }
+
+#ifdef DEBUG
+
+struct base64_testcase {
+	char *dec;
+	char *enc;
+	int fail;
+	int reverse;
+};
+
+struct base64_testcase cases[] = {
+	{"MQ==", "1", 0, 1},
+	{"MTI=", "12", 0, 1},
+	{"MTIz", "123", 0, 1},
+	{"MTIzNA==", "1234", 0, 1},
+	{"SGVsbG8gV29ybGQ=", "Hello World", 0, 1},
+	{"aGVsbG8gd29ybGQ=", "hello world", 0, 1},
+	{"Zm9vYmFy", "foobar", 0, 1},
+	{"YmFyZm9v", "barfoo", 0, 1},
+	{"dGVzdA==", "test", 0, 1},
+
+	// Edge cases
+	{"", "", 0, 1},
+	{"dGVzdA===", "test", 0, 0},
+	{"dGVzdA====", "test", 0, 0},
+	{"=", NULL, 1, 0},
+	{"==", NULL, 1, 0},
+	{"-", NULL, 1, 0},
+	{"dGVzd=A==", NULL, 1, 0},
+	{"dGVzd=A=", NULL, 1, 0},
+	{"d-GVzdA==", NULL, 1, 0},
+	{"dGVzdA.=", NULL, 1, 0},
+	{"GVzdA==", NULL, 1, 0},
+	{NULL, NULL, 0, 0}
+};
+
+void
+base64_test(int n)
+{
+	int i;
+	char buffer[1024];
+	struct base64_testcase *tc;
+	char *p;
+
+	// Encode and decode n
+	TEST_ASSERT(base64_encode(buffer, sizeof buffer, (void *) &n, sizeof n) > 0);
+	TEST_ASSERT(base64_decode((void *) &i, sizeof i, buffer) > 0);
+	TEST_ASSERT(i == n);
+
+	for (tc = cases; tc->dec; ++tc)
+	{
+		// Decode
+		p = (char *) base64_dec_malloc(tc->dec, &i);
+		if (tc->fail)
+		{
+			TEST_ASSERT(p == NULL);
+			continue;
+		}
+
+		TEST_ASSERT(p != NULL);
+		TEST_ASSERT(strncmp(p, tc->enc, strlen(tc->enc)) == 0);
+		free(p);
+
+		// Encode
+		if (tc->reverse)
+		{
+			p = base64_enc_malloc((unsigned char *) tc->enc, strlen(tc->enc));
+			TEST_ASSERT(p != NULL);
+			TEST_ASSERT(strcmp(p, tc->dec) == 0);
+			free(p);
+		}
+	}
+
+	return;
+}
+
+#endif

@@ -100,9 +100,11 @@ vp_pack_data(void **buffer, int *len, var_t *v)
 	int size;
 	char dump[BUFLEN];
 
-	// CAVEAT: Lists and table are packed as strings
-	if (v->v_type == VT_LIST || v->v_type == VT_TABLE)
+	// CAVEAT: Lists and tables are packed as strings
+	switch (v->v_type)
 	{
+	case VT_LIST:
+	case VT_TABLE:
 		size = var_dump_data(v, dump, sizeof dump);
 		if (size == -1)
 		{
@@ -113,11 +115,12 @@ vp_pack_data(void **buffer, int *len, var_t *v)
 		// Add \0 to size
 		++size;
 		data = dump;
-	}
-	else
-	{
+		break;
+
+	default:
 		size = var_data_size(v);
 		data = v->v_data;
+		break;
 	}
 
 	p = realloc(*buffer, *len + size);
