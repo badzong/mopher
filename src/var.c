@@ -202,7 +202,7 @@ var_copy_data(var_type_t type, void *data)
 		break;
 	case VT_BLOB:
 		b = data;
-		size = blob_size(b);
+		size = *b;
 		break;
 
 	default:
@@ -1052,7 +1052,7 @@ var_data_size(var_t *v)
 
 	case VT_BLOB:
 		b = v->v_data;
-		return blob_size(b);
+		return *b;
 
 	default:
 		break;
