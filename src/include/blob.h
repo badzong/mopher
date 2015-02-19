@@ -1,16 +1,16 @@
 #ifndef _BLOB_H_
 #define _BLOB_H_
 
-typedef struct blob {
-	int            b_size;
-	int            b_offset;
-	unsigned char *b_data;
-} blob_t;
+typedef long blob_t;
 
-int blob_init(void *buffer, int buflen, void *data, int datlen);
-blob_t *blob_create(void *data, int size);
-blob_t *blob_copy(blob_t *b);
-blob_t *blob_scan(char *str);
+blob_t blob_calc_size(blob_t datlen);
+blob_t blob_size(blob_t *b);
+void * blob_data(blob_t *b);
+int blob_init(void *buffer, blob_t buflen, void *data, blob_t datlen);
+blob_t * blob_create(void *data, blob_t size);
+int blob_copy(void *buffer, blob_t size, blob_t *b);
+blob_t * blob_get_copy(blob_t *b);
+blob_t * blob_scan(char *str);
 int blob_dump(char *buffer, int size, blob_t *b);
 int blob_compare(blob_t *left, blob_t *right);
 void blob_test(int n);

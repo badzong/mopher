@@ -336,6 +336,11 @@ vp_test(int n)
 {
 	var_t *scheme;
 	vp_t *vp;
+	static char bkey_str[] = "foobar";
+	static char bdata_str[] = "hello world";
+	blob_t *bkey;
+	blob_t *bdata;
+	blob_t *b;
 
 	VAR_INT_T key_int = 1;
 	VAR_INT_T data_int = 2;
@@ -350,62 +355,143 @@ vp_test(int n)
 	VAR_FLOAT_T *pf;
 	char *ps;
 
+	bkey = blob_create(bkey_str, strlen(bkey_str) + 1);
+	bdata = blob_create(bdata_str, strlen(bdata_str) + 1);
+	TEST_ASSERT(bkey != NULL || bdata != NULL);
+
 	scheme = vlist_scheme("test",
 		"key_int",		VT_INT,		VF_KEEPNAME | VF_KEY,
 		"key_float",		VT_FLOAT,	VF_KEEPNAME | VF_KEY,
 		"key_string",		VT_STRING,	VF_KEEPNAME | VF_KEY,
+		"key_blob",		VT_BLOB,	VF_KEEPNAME | VF_KEY,
 		"data_int",		VT_INT,		VF_KEEPNAME,
 		"data_int_null",	VT_INT,		VF_KEEPNAME,
 		"data_float",		VT_FLOAT,	VF_KEEPNAME,
 		"data_float_null",	VT_FLOAT,	VF_KEEPNAME,
 		"data_string",		VT_STRING,	VF_KEEPNAME,
 		"data_string_null",	VT_STRING,	VF_KEEPNAME,
+		"data_blob",		VT_BLOB,	VF_KEEPNAME,
+		"data_blob_null",	VT_BLOB,	VF_KEEPNAME,
 		NULL);
 	TEST_ASSERT(scheme != NULL);
 
 	TEST_ASSERT((record = vlist_record(scheme, &key_int, &key_float,
-		key_string, &data_int, NULL, &data_float, NULL, data_string,
-		NULL)) != NULL);
+		key_string, bkey, &data_int, NULL, &data_float, NULL, data_string,
+		NULL, bdata, NULL)) != NULL);
 
 	TEST_ASSERT((vp = vp_pack(record)) != NULL);
+
+	free(bkey);
+	free(bdata);
 
 	var_delete(record);
 	record = vp_unpack(vp, scheme);
 	vp_delete(vp);
 	TEST_ASSERT(record != NULL);
 
+	// Int key
 	v = vlist_record_lookup(record, "key_int");
+	TEST_ASSERT(v != NULL);
 	pi = (VAR_INT_T *) v->v_data;
-	TEST_ASSERT((v->v_type | VF_KEY) != 0);
+	TEST_ASSERT(v->v_type == VT_INT);
+	TEST_ASSERT(v->v_flags & VF_KEY);
 	TEST_ASSERT(pi != NULL);
 	TEST_ASSERT(*pi == key_int);
-	pi = (VAR_INT_T *) vlist_record_get(record, "data_int");
+
+	// Int data
+	v = vlist_record_lookup(record, "data_int");
+	TEST_ASSERT(v != NULL);
+	pi = (VAR_INT_T *) v->v_data;
+	TEST_ASSERT(v->v_type == VT_INT);
+	TEST_ASSERT((v->v_flags & VF_KEY) == 0);
 	TEST_ASSERT(pi != NULL);
 	TEST_ASSERT(*pi == data_int);
-	pi = (VAR_INT_T *) vlist_record_get(record, "data_int_null");
+
+	// Int NULL
+	v = vlist_record_lookup(record, "data_int_null");
+	TEST_ASSERT(v != NULL);
+	pi = (VAR_INT_T *) v->v_data;
+	TEST_ASSERT(v->v_type == VT_INT);
+	TEST_ASSERT((v->v_flags & VF_KEY) == 0);
 	TEST_ASSERT(pi == NULL);
 
+	// Float key
 	v = vlist_record_lookup(record, "key_float");
+	TEST_ASSERT(v != NULL);
 	pf = (VAR_FLOAT_T *) v->v_data;
-	TEST_ASSERT((v->v_type | VF_KEY) != 0);
+	TEST_ASSERT(v->v_type == VT_FLOAT);
+	TEST_ASSERT(v->v_flags & VF_KEY);
 	TEST_ASSERT(pf != NULL);
 	TEST_ASSERT(*pf == key_float);
-	pf = (VAR_FLOAT_T *) vlist_record_get(record, "data_float");
+
+	// Float data
+	v = vlist_record_lookup(record, "data_float");
+	TEST_ASSERT(v != NULL);
+	pf = (VAR_FLOAT_T *) v->v_data;
+	TEST_ASSERT(v->v_type == VT_FLOAT);
+	TEST_ASSERT((v->v_flags & VF_KEY) == 0);
 	TEST_ASSERT(pf != NULL);
 	TEST_ASSERT(*pf == data_float);
-	pf = (VAR_FLOAT_T *) vlist_record_get(record, "data_float_null");
+
+	// Float NULL
+	v = vlist_record_lookup(record, "data_float_null");
+	TEST_ASSERT(v != NULL);
+	pf = (VAR_FLOAT_T *) v->v_data;
+	TEST_ASSERT(v->v_type == VT_FLOAT);
+	TEST_ASSERT((v->v_flags & VF_KEY) == 0);
 	TEST_ASSERT(pf == NULL);
 
+	// String key
 	v = vlist_record_lookup(record, "key_string");
+	TEST_ASSERT(v != NULL);
 	ps = (char *) v->v_data;
-	TEST_ASSERT((v->v_type | VF_KEY) != 0);
+	TEST_ASSERT(v->v_type == VT_STRING);
+	TEST_ASSERT(v->v_flags & VF_KEY);
 	TEST_ASSERT(ps != NULL);
-	TEST_ASSERT(strcmp(ps, "foo") == 0);
-	ps = (char *) vlist_record_get(record, "data_string");
+	TEST_ASSERT(strcmp(ps, key_string) == 0);
+
+	// String data
+	v = vlist_record_lookup(record, "data_string");
+	TEST_ASSERT(v != NULL);
+	ps = (char *) v->v_data;
+	TEST_ASSERT(v->v_type == VT_STRING);
+	TEST_ASSERT((v->v_flags & VF_KEY) == 0);
 	TEST_ASSERT(ps != NULL);
-	TEST_ASSERT(strcmp(ps, "bar") == 0);
-	ps = (char *) vlist_record_get(record, "data_string_null");
+	TEST_ASSERT(strcmp(ps, data_string) == 0);
+
+	// String data
+	v = vlist_record_lookup(record, "data_string_null");
+	TEST_ASSERT(v != NULL);
+	ps = (char *) v->v_data;
+	TEST_ASSERT(v->v_type == VT_STRING);
+	TEST_ASSERT((v->v_flags & VF_KEY) == 0);
 	TEST_ASSERT(ps == NULL);
+
+	// Blob key
+	v = vlist_record_lookup(record, "key_blob");
+	TEST_ASSERT(v != NULL);
+	b = v->v_data;
+	TEST_ASSERT(v->v_type == VT_BLOB);
+	TEST_ASSERT(v->v_flags & VF_KEY);
+	TEST_ASSERT(b != NULL);
+	TEST_ASSERT(strcmp((char *) blob_data(b), bkey_str) == 0);
+
+	// Blob data
+	v = vlist_record_lookup(record, "data_blob");
+	TEST_ASSERT(v != NULL);
+	b = v->v_data;
+	TEST_ASSERT(v->v_type == VT_BLOB);
+	TEST_ASSERT((v->v_flags & VF_KEY) == 0);
+	TEST_ASSERT(b != NULL);
+	TEST_ASSERT(strcmp((char *) blob_data(b), bdata_str) == 0);
+
+	// Blob null
+	v = vlist_record_lookup(record, "data_blob_null");
+	TEST_ASSERT(v != NULL);
+	b = v->v_data;
+	TEST_ASSERT(v->v_type == VT_BLOB);
+	TEST_ASSERT((v->v_flags & VF_KEY) == 0);
+	TEST_ASSERT(b == NULL);
 
 	var_delete(record);
 	var_delete(scheme);
