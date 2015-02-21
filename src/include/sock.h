@@ -14,6 +14,7 @@ typedef struct sock_rr {
 void sock_unix_unlink(char *uri);
 int sock_listen(char *uri, int backlog);
 int sock_connect(char *uri);
+int sock_connect_config(char *confkey);
 int sock_connect_rr(sock_rr_t *sr);
 void sock_rr_clear(sock_rr_t *sr);
 int sock_rr_init(sock_rr_t *sr, char *confkey);

@@ -374,6 +374,21 @@ sock_connect(char *uri)
 }
 
 int
+sock_connect_config(char *confkey)
+{
+	char *uri;
+
+	uri = cf_get_value(VT_STRING, confkey, NULL);
+	if (uri == NULL)
+	{
+		log_error("sock_connect_config: unkown config key %s", confkey);
+		return -1;
+	}
+
+	return sock_connect(uri);
+}
+
+int
 sock_rr_init(sock_rr_t *sr, char *confkey)
 {
 	memset(sr, 0, sizeof (sock_rr_t));
