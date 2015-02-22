@@ -1223,8 +1223,8 @@ acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 
 		if (response == ACL_ERROR)
 		{
-			log_error("acl: rule number %d in table \"%s\" failed",
-			    i, stagename);
+			log_error("acl: rule number %d in table \"%s\" on "
+				"line %d failed", i, stagename, aa->aa_line);
 			return ACL_ERROR;
 		}
 
