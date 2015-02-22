@@ -20,6 +20,7 @@ src/modules/dblog.so
 src/modules/dnsbl.so
 src/modules/hitlist.so
 src/modules/memdb.so
+src/modules/p0f.so
 src/modules/random.so
 src/modules/spamd.so
 src/modules/string.so

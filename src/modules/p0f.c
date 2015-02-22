@@ -229,6 +229,9 @@ p0f_query(milter_stage_t stage, char *name, var_t *attrs)
 
          	os_fuzzy = r.os_match_q & P0F_MATCH_FUZZY;
 		os_fuzzyp = &os_fuzzy;
+
+		log_message(LOG_ERR, attrs, "p0f: %s %s generic=%d fuzzy=%d",
+			os_namep, os_flavorp, os_generic, os_fuzzy);
 	}
 
 	if (r.http_name[0])
