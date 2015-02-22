@@ -156,8 +156,8 @@ test_run(int optind, int argc, char **argv)
 
 		// Database drivers are tested through dbt.c
                 {"memdb.c", dbt_test_memdb_init, dbt_test_stage1, dbt_test_clear },
-                //{"bdb.c", dbt_test_bdb_init, dbt_test_stage1, dbt_test_clear },
-                //{"bdb.c", dbt_test_bdb_init, dbt_test_stage2, dbt_test_clear },
+                {"bdb.c", dbt_test_bdb_init, dbt_test_stage1, dbt_test_clear },
+                {"bdb.c", dbt_test_bdb_init, dbt_test_stage2, dbt_test_clear },
                 {"lite.c", dbt_test_lite_init, dbt_test_stage1, dbt_test_clear },
                 {"lite.c", dbt_test_lite_init, dbt_test_stage2, dbt_test_clear },
                 {"pgsql.c", dbt_test_pgsql_init, dbt_test_stage1, dbt_test_clear },
