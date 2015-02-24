@@ -3,6 +3,11 @@
 DIST?=			mopher
 VERSION?=		0.5.2
 
+
+# autolist
+#
+#	track output by autotools and configure
+#
 AUTOLIST+=		autom4te.cache
 AUTOLIST+=		config.h
 AUTOLIST+=		config.log
@@ -15,6 +20,12 @@ AUTOLIST+=		src/Makefile
 AUTOLIST+=		src/modules/Makefile
 OUT+=			$(AUTOLIST)
 
+
+# distribution
+#
+#	create distribution tarball
+#	generate configure script
+#
 DISTLIST+=		CHANGES
 DISTLIST+=		LICENSE
 DISTLIST+=		Makefile
@@ -32,9 +43,6 @@ DISTPKG?=		$(DISTDIR).tar.gz
 dist: man-mdate
 dist: $(DISTPKG)
 
-distclean:
-	-rm -rf $(OUT)
-
 $(DISTPKG): $(DISTDIR)
 	tar czf $@ $> $^
 OUT+=	$(DISTPKG)
@@ -49,6 +57,12 @@ configure: configure.ac
 	DIST=$(DIST) VERSION=$(VERSION) autoconf
 OUT+=	configure
 
+
+# regdom
+#
+#	download and generate regdom tests
+#	download and generate regdom rules
+#
 regdom: src/regdom_test.c
 regdom: config/effective_tld_names.dat
 
@@ -67,19 +81,16 @@ config/effective_tld_names.dat:
 	wget -O- $$p/effective_tld_names.dat >$@
 .PHONY:	config/effective_tld_names.dat
 
+
+# manuals
+#
+#	generate README from mopher(7)
+#	update modification dates in man pages
+#
 README: man/mopher.7.in
 	groff -mdoc -Tascii $> $^ | col -bx | \
 		sed ":a;/^FILES\$$/{:b;N;/\n[A-Z]/!bb; \
 			s/.*\n//;ba};1d;\$$d;" >$@
-
-.gitignore:
-	echo "# Generated file, see make/mk.admin for details." >$@
-	for i in $(OUT); do \
-		echo "$$i"; done >>$@
-	for i in $(SUBDIR); do \
-		(cd $$i && $(MAKE) ignore) | \
-			sed -n "s,^IGNORE: ,$$i/,p" >>$@; done
-.PHONY:	.gitignore
 
 man-mdate: # skip silently if git is not available
 	@git --version >/dev/null 2>&1 || exit 0; \
@@ -94,3 +105,25 @@ man-mdate: # skip silently if git is not available
 		sed "s/^\.Dd .*/.Dd $$date/" "$$i" >"$$temp"; \
 		mv "$$temp" "$$i"; \
 	done
+
+
+# gitignore
+#
+#	generate .gitignore from all OUT content
+#
+.gitignore:
+	echo "# Generated file, see make/mk.admin for details." >$@
+	for i in $(OUT); do \
+		echo "$$i"; done >>$@
+	for i in $(SUBDIR); do \
+		(cd $$i && $(MAKE) ignore) | \
+			sed -n "s,^IGNORE: ,$$i/,p" >>$@; done
+.PHONY:	.gitignore
+
+
+# distclean
+#
+#	remove OUT content
+#
+distclean:
+	-rm -rf $(OUT)
