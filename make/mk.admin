@@ -84,9 +84,54 @@ config/effective_tld_names.dat:
 
 # manuals
 #
+#	download and build mandoc
+#	generate html pages from man pages
 #	generate README from mopher(7)
 #	update modification dates in man pages
 #
+MANDOC?=	mdocml-1.13.2
+MANDOC_SHA1?=	0d3c4e72214f73ee81c02e9b8863db0bc8f85aaf
+
+$(MANDOC).tar.gz:
+	wget -O- http://mdocml.bsd.lv/snapshots/$@ >$@
+	@case $$(sha1sum $@) in $(MANDOC_SHA1)*) :;; \
+		*) echo $@: checksum mismatch; rm $@; exit 1;; esac
+OUT+=	$(MANDOC).tar.gz
+
+$(MANDOC): $(MANDOC).tar.gz
+	tar xzf $> $^
+OUT+=	$(MANDOC)
+
+$(MANDOC)/.done: $(MANDOC)
+	(cd $> $^ && ./configure && $(MAKE)) || exit 1; \
+	: >$@ # success
+
+man-html: $(MANDOC)/.done
+	@echo $@: generating html pages; \
+	set -e; \
+	mkdir -p $@; \
+	cp $(MANDOC)/example.style.css $@/style.css; \
+	echo '/* mopher style */'		>>$@/style.css; \
+	echo 'div.mandoc { width: 77ex; }'	>>$@/style.css; \
+	echo 'div.mandoc { min-width: 77ex; }'	>>$@/style.css; \
+	echo 'div.mandoc h1 {'			>>$@/style.css; \
+	echo 'font-size: 150%;'			>>$@/style.css; \
+	echo 'padding-left: 0.5ex; }'		>>$@/style.css; \
+	echo 'table.list {'			>>$@/style.css; \
+	echo 'padding-top: 1.5ex; }'		>>$@/style.css; \
+	for i in man/$(DIST)*.[0-9].in; do \
+		out=$@/$${i##*/}; \
+		out=$${out%.in}.html; \
+		sed -e 's|@PROGRAM_PATH@|/usr/sbin|g' \
+		    -e 's|@CONFIG_PATH@|/etc/${DIST}|g' \
+		    -e 's|@MODULE_PATH@|/usr/lib/${DIST}|g' \
+		    -e 's|@PACKAGE_STRING@|${DIST} ${VERSION}|g' $$i | \
+			$(MANDOC)/mandoc -mdoc -Thtml \
+				-Oman=%N.%S.html,style=style.css >$$out; \
+	done
+OUT+=	man-html
+.PHONY:	man-html
+
 README: man/mopher.7.in
 	groff -mdoc -Tascii $> $^ | col -bx | \
 		sed ":a;/^FILES\$$/{:b;N;/\n[A-Z]/!bb; \
