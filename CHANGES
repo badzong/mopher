@@ -1,5 +1,10 @@
 Recent changes to mopher's source.
 
+Version 0.5.3
+25.02.2015
+    Fix several minor issues (i.a. #25).
+    Update regdom rules.
+
 Version 0.5.2
 05.12.2014
     Fix DSO linking.
