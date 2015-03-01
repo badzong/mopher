@@ -16,11 +16,12 @@ OUT_A+=			p0f.so
 OUT_A+=			random.so
 OUT_A+=			spamd.so
 OUT_A+=			string.so
-OUT_A+=			@MOD_ACL_SPF@
+OUT_A+=			@MOD_SPF@
 OUT_A+=			@MOD_DB_BDB@
 OUT_A+=			@MOD_DB_MYSQL@
 OUT_A+=			@MOD_DB_PGSQL@
 OUT_A+=			@MOD_DB_SQLITE3@
+OUT_A+=			@MOD_GEOIP@
 
 # INST:
 #	installed on `install'
@@ -41,6 +42,7 @@ LDFLAGS.sakila.so+=	-lmysqlclient
 LDFLAGS.pgsql.so+=	-lpq
 LDFLAGS.lite.so+=	-lsqlite3
 LDFLAGS.spf.so+=	-lspf2
+LDFLAGS.geoip.so+=	-lGeoIP
 
 
 include @top_srcdir@/make/mk.common

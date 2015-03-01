@@ -187,10 +187,29 @@ AS_IF(
 
 if test "$with_spf2" = "yes"
 then
-  MOD_ACL_SPF="spf.so"
-  AC_SUBST([MOD_ACL_SPF])
+  MOD_SPF="spf.so"
+  AC_SUBST([MOD_SPF])
   AC_DEFINE([WITH_MOD_SPF])
   AS_IF([test "$enable_dynamic" = "no"], [MOD_LIBS="$MOD_LIBS -lspf2"])
+fi
+
+
+# Check for GeoIP support
+AC_ARG_WITH([geoip], AS_HELP_STRING([--with-geoip], [build with GeoIP support (libgeoip)]))
+AC_CHECK_LIB([GeoIP], [GeoIP_open], [have_geoip="yes"], [have_geoip="no"])
+
+AS_IF(
+  [test -z "$with_geoip"], [with_geoip="$have_geoip"],
+  [test "$with_geoip" = "yes" -a "$have_geoip" = "no"],
+    AC_MSG_FAILURE([libgeoip failed (--without-geoip to disable)])
+)
+
+if test "$with_geoip" = "yes"
+then
+  MOD_GEOIP="geoip.so"
+  AC_SUBST([MOD_GEOIP])
+  AC_DEFINE([WITH_MOD_GEOIP])
+  AS_IF([test "$enable_dynamic" = "no"], [MOD_LIBS="$MOD_LIBS -lGeoIP"])
 fi
 
 
