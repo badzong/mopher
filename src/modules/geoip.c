@@ -14,13 +14,6 @@ geoip_query(milter_stage_t stage, char *name, var_t *attrs)
 	char *hostaddr;
 	const char *country_code;
 
-	if(!geoip_license)
-	{
-		log_error("This product includes GeoLite data created by "
-			"MaxMind, available from http://www.maxmind.com.");
-		geoip_license = 1;
-	}
-
 	hostaddr = vtable_get(attrs, "hostaddr_str");
 	if (hostaddr == NULL)
 	{
@@ -32,6 +25,13 @@ geoip_query(milter_stage_t stage, char *name, var_t *attrs)
 	{
 		log_error("geoip_query: pthread_mutex_lock failed");
 		return -1;
+	}
+
+	if(!geoip_license)
+	{
+		log_error("This product includes GeoLite data created by "
+			"MaxMind, available from http://www.maxmind.com.");
+		geoip_license = 1;
 	}
 
 	country_code = GeoIP_country_code_by_addr(geoip_handle, hostaddr);
