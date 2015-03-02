@@ -34,7 +34,6 @@ extern char		*cf_milter_socket;
 extern VAR_INT_T	 cf_milter_socket_timeout;
 extern VAR_INT_T	 cf_milter_socket_permissions;
 extern VAR_INT_T	 cf_milter_wait;
-extern VAR_INT_T	 cf_foreground;
 extern VAR_INT_T	 cf_dbt_cleanup_interval;
 extern char		*cf_hostname;
 extern char		*cf_spamd_socket;

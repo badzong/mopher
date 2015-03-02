@@ -1142,7 +1142,6 @@ var_t *
 dbt_test_record(dbt_test_record_t *tr, var_t *scheme, int n, int expire)
 {
 	struct sockaddr_in *sin;
-	blob_t *b1, *b2;
 
 	memset(tr, 0, sizeof (dbt_test_record_t));
 
@@ -1164,8 +1163,8 @@ dbt_test_record(dbt_test_record_t *tr, var_t *scheme, int n, int expire)
 	char *text = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 	blob_init(tr->tr_blob1_raw, sizeof tr->tr_blob1_raw, (void *) &n, sizeof n);
 	blob_init(tr->tr_blob2_raw, sizeof tr->tr_blob2_raw, (void *) text, strlen(text) + 1);
-	tr->tr_blob1 = tr->tr_blob1_raw;
-	tr->tr_blob2 = tr->tr_blob2_raw;
+	tr->tr_blob1 = (blob_t *) tr->tr_blob1_raw;
+	tr->tr_blob2 = (blob_t *) tr->tr_blob2_raw;
 
 	tr->tr_chars = "'\"~!@#$%^&*()_";
 	tr->tr_null = NULL;

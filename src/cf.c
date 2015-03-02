@@ -59,7 +59,6 @@ VAR_INT_T	 cf_milter_socket_timeout;
 VAR_INT_T	 cf_milter_socket_permissions;
 VAR_INT_T	 cf_milter_wait;
 VAR_INT_T	 cf_acl_log_level;
-VAR_INT_T	 cf_foreground;
 VAR_INT_T	 cf_dbt_cleanup_interval;
 char		*cf_hostname;
 VAR_INT_T	 cf_client_retry_interval;

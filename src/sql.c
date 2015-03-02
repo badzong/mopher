@@ -956,8 +956,8 @@ sql_test(int n)
 	char *b2_64 = "YmFyZm9vAA==";
 	char b1_buf[128];
 	char b2_buf[128];
-	blob_t *b1 = b1_buf;
-	blob_t *b2 = b2_buf;
+	blob_t *b1 = (blob_t *) b1_buf;
+	blob_t *b2 = (blob_t *) b2_buf;
 	blob_init(b1_buf, sizeof b1_buf, &n, sizeof n);
 	blob_init(b2_buf, sizeof b2_buf, txt, strlen(txt) + 1);
 
