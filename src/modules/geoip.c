@@ -4,7 +4,6 @@
 #define GEOIP_DATABASE "geoip_database"
 #define GEOIP_SYMBOL "geoip_country_code"
 
-static int geoip_license;
 static GeoIP *geoip_handle;
 static pthread_mutex_t geoip_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -25,13 +24,6 @@ geoip_query(milter_stage_t stage, char *name, var_t *attrs)
 	{
 		log_error("geoip_query: pthread_mutex_lock failed");
 		return -1;
-	}
-
-	if(!geoip_license)
-	{
-		log_error("This product includes GeoLite data created by "
-			"MaxMind, available from http://www.maxmind.com.");
-		geoip_license = 1;
 	}
 
 	country_code = GeoIP_country_code_by_addr(geoip_handle, hostaddr);
@@ -70,6 +62,9 @@ geoip_init(void)
 
 	acl_symbol_register(GEOIP_SYMBOL, MS_CONNECT, geoip_query,
 		AS_CACHE);
+
+	log_error("This product includes GeoLite data created by MaxMind, available "
+		"from http://www.maxmind.com.");
 
 	return 0;
 }
