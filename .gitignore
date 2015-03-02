@@ -13,6 +13,9 @@ mopher-0.6.0.tar.gz
 mopher-0.6.0
 configure
 regdom_test.dat
+mdocml-1.13.2.tar.gz
+mdocml-1.13.2
+man-html
 src/modules/base.so
 src/modules/clamav.so
 src/modules/counter.so
@@ -25,10 +28,8 @@ src/modules/random.so
 src/modules/spamd.so
 src/modules/string.so
 src/modules/spf.so
-src/modules/bdb.so
-src/modules/sakila.so
 src/modules/pgsql.so
-src/modules/lite.so
+src/modules/geoip.so
 src/acl_lex.c
 src/acl_yacc.c
 src/cf_lex.c

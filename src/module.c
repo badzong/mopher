@@ -106,8 +106,25 @@ void
 module_load(char *file)
 {
 	module_t *mod;
+	VAR_INT_T *load;
+	char key[256];
 
-	log_debug("module_glob: load \"%s\"", file);
+	if (util_stripped_filename(key, sizeof key, file))
+	{
+		log_die(EX_SOFTWARE, "module_load: util_stripped_filename failed");
+	}
+
+	load = (VAR_INT_T *) cf_get_value(VT_INT, "modules", key, NULL);
+	if (load != NULL)
+	{
+		if (!*load)
+		{
+			log_debug("module_glob: %s disabled in config", file);
+			return;
+		}
+	}
+
+	log_debug("module_glob: load %s", file);
 
 	mod = (module_t *) malloc(sizeof (module_t));
 	if (mod == NULL)

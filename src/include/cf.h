@@ -45,7 +45,6 @@ extern VAR_INT_T	 cf_tarpit_progress_interval;
 extern VAR_INT_T	 cf_counter_expire_low;
 extern VAR_INT_T	 cf_counter_expire_high;
 extern VAR_INT_T	 cf_counter_threshold;
-extern VAR_INT_T	 cf_dblog;
 extern VAR_INT_T	 cf_dblog_expire;
 extern VAR_INT_T	 cf_mopher_header;
 extern char		*cf_mopher_header_name;

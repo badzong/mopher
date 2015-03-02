@@ -990,6 +990,48 @@ util_dirname(char *buffer, int size, char *path)
 	return 0;
 }
 
+int
+util_stripped_filename(char *buffer, int size, char *path)
+{
+	char *filename;
+	char *ending;
+
+	filename = strrchr(path, '/');
+	if (filename == NULL)
+	{
+		filename = path;
+	}
+	else
+	{
+		// Skip slash
+		filename++;
+
+		// Trailing slash
+		if (strlen(filename) == 0)
+		{
+			buffer[0] = 0;
+			return 0;
+		}
+	}
+	
+
+	if (size <= strlen(filename))
+	{
+		log_error("util_stripped_filename: buffer exhausted");
+		return -1;
+	}
+
+	strcpy(buffer, filename);
+
+	ending = strchr(buffer, '.');
+	if (ending != NULL)
+	{
+		*ending = 0;
+	}
+
+	return 0;
+}
+
 void
 util_tolower(char *p)
 {
@@ -1158,6 +1200,24 @@ util_test(int n)
 
 	TEST_ASSERT(util_dirname(buffer, sizeof buffer, "/") == 0);
 	TEST_ASSERT(strcmp(buffer, "/") == 0);
+
+	/*
+	 * util_stripped_filename
+	 */
+	TEST_ASSERT(util_stripped_filename(buffer, sizeof buffer, "foobar") == 0);
+	TEST_ASSERT(strcmp(buffer, "foobar") == 0);
+	TEST_ASSERT(util_stripped_filename(buffer, sizeof buffer, "foobar.txt") == 0);
+	TEST_ASSERT(strcmp(buffer, "foobar") == 0);
+	TEST_ASSERT(util_stripped_filename(buffer, sizeof buffer, "/foobar.txt") == 0);
+	TEST_ASSERT(strcmp(buffer, "foobar") == 0);
+	TEST_ASSERT(util_stripped_filename(buffer, sizeof buffer, "/tmp/foobar.txt") == 0);
+	TEST_ASSERT(strcmp(buffer, "foobar") == 0);
+	TEST_ASSERT(util_stripped_filename(buffer, sizeof buffer, "/usr/local/lib/foobar.txt.0") == 0);
+	TEST_ASSERT(strcmp(buffer, "foobar") == 0);
+	TEST_ASSERT(util_stripped_filename(buffer, sizeof buffer, "/") == 0);
+	TEST_ASSERT(strlen(buffer) == 0);
+	TEST_ASSERT(util_stripped_filename(buffer, sizeof buffer, "/foldername/") == 0);
+	TEST_ASSERT(strlen(buffer) == 0);
 
 	/*
          * util_tolower

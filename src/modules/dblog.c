@@ -95,11 +95,6 @@ dblog_init(void)
 {
 	var_t *scheme;
 
-	if (!cf_dblog)
-	{
-		return 0;
-	}
-
 	scheme = vlist_scheme("dblog",
 		"id",			VT_INT,		VF_KEEPNAME | VF_KEY,
 		"received",		VT_INT,		VF_KEEPNAME,
