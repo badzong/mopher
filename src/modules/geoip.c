@@ -37,7 +37,14 @@ geoip_query(milter_stage_t stage, char *name, var_t *attrs)
 		return -1;
 	}
 
-	log_message(LOG_ERR, attrs, "geoip: country_code=%s", country_code);
+	if (country_code == NULL)
+	{
+		log_message(LOG_DEBUG, attrs, "geoip: no record found");
+	}
+	else
+	{
+		log_message(LOG_ERR, attrs, "geoip: country_code=%s", country_code);
+	}
 
 	return 0;
 }
