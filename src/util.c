@@ -151,6 +151,12 @@ util_strdomain(char *buffer, int size, const char *src)
 	start = strrchr(src, '@');
 	if (start == NULL)
 	{
+		if (size)
+		{
+			buffer[0] = 0;
+			return 0;
+		}
+
 		return -1;
 	}
 
