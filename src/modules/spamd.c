@@ -445,7 +445,7 @@ spamd_init(void)
 	}
 
 	for (p = spamd_symbols; *p; ++p) {
-		acl_symbol_register(*p, MS_EOM, spamd_query, AS_CACHE);
+		acl_symbol_register(*p, MS_OFF_EOM, spamd_query, AS_CACHE);
 	}
 
 	return 0;

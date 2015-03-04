@@ -114,8 +114,8 @@ geoip_init(void)
 		log_error("geoip_init: %s: GeoIP_open failed", GEOIPV6_DATABASE);
 	}
 
-	acl_symbol_register(GEOIP_CC, MS_CONNECT, geoip_query, AS_CACHE);
-	acl_symbol_register(GEOIP_CN, MS_CONNECT, geoip_query, AS_CACHE);
+	acl_symbol_register(GEOIP_CC, MS_OFF_CONNECT, geoip_query, AS_CACHE);
+	acl_symbol_register(GEOIP_CN, MS_OFF_CONNECT, geoip_query, AS_CACHE);
 
 	log_error("This product includes GeoLite data created by MaxMind, available "
 		"from http://www.maxmind.com.");

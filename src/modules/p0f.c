@@ -344,7 +344,7 @@ p0f_init(void)
 	// Symbols
 	for (p = p0f_symbols; *p; ++p)
 	{
-		acl_symbol_register(*p, MS_CONNECT, p0f_query, AS_CACHE);
+		acl_symbol_register(*p, MS_OFF_CONNECT, p0f_query, AS_CACHE);
 	}
 
 	// Constants
