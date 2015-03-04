@@ -44,22 +44,123 @@ dnsbl_list(milter_stage_t stage, char *name, var_t *attrs)
 	return 0;
 }
 
+static int
+dnsbl_ipv6_query(char *buffer, int size, char *addr, char *domain)
+{
+	static const char zeroes[] = "0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.";
+	int len;
+	char *p, *end;
+	int byte = 0;
+	int blocks;
+
+	len = strlen(zeroes) + strlen(domain) + 1;
+	if (size < len)
+	{
+		log_error("dnsbl_ipv6_query: buffer exhausted");
+		return -1;
+	}
+
+	end = addr + strlen(addr) - 1;
+
+	// Count colons to calculate missing blocks
+	for (blocks = 0, p = addr; (p = strchr(p, ':')); ++blocks, ++p);
+
+	if (addr[0] == ':')
+	{
+		--blocks;
+	}
+	if (*end == ':')
+	{
+		--blocks;
+	}
+
+	// All missing bytes are zero
+	strcpy(buffer, zeroes);
+	strcat(buffer, domain);
+
+	for (p = end; p >= addr; --p)
+	{
+		// Transcribe regular byte
+		if (*p != ':')
+		{
+			*(buffer + (byte * 2)) = *p;
+			++byte;
+
+			continue;
+		}
+
+		// Colon found. Calculate missing bytes
+		if (byte % 4)
+		{
+			byte += 4 - (byte % 4);
+		}
+
+		// Double colon. Calculate missing blocks
+		if (*(p - 1) == ':')
+		{
+			byte += (8 - blocks) * 4;
+			--p;
+		}
+	}
+
+	util_tolower(buffer);
+
+	return 0;
+}
+
+static int
+dnsbl_ipv4_query(char *buffer, int size, char *addr, char *domain)
+{
+	char addrbytes[16];
+	char *b[4];
+	char *p;
+	int i, n;
+
+	if (strlen(addr) + 1 > sizeof addrbytes)
+	{
+		log_error("dbsbl_ipv4_query: buffer exhausted");
+		return -1;
+	}
+	strcpy(addrbytes, addr);
+		
+	/*
+	 * Split the address bytes
+	 */
+	for(i = 0, p = addrbytes; i < 4 && p != NULL; p = strchr(p, '.'), ++i)
+	{
+		if(*p == '.')
+		{
+			*p++ = 0;
+		}
+
+		b[i] = p;
+	}
+
+	/*
+	 * Build query string
+	 */
+	n = snprintf(buffer, size, "%s.%s.%s.%s.%s", b[3], b[2], b[1], b[0], domain);
+	if (n >= size)
+	{
+		log_error("dbsbl_ipv4_query: buffer exhausted");
+		return -1;
+	}
+
+	return 0;
+}
+
 int
 dnsbl_query(milter_stage_t stage, char *name, var_t *attrs)
 {
 	char *domain;
 	struct sockaddr_storage *addr;
 	char *hostaddr_str = NULL;
-	char addrbytes[16];
 	char query[BUFLEN];
 	struct addrinfo *ai = NULL;
 	struct addrinfo hints;
 	void *data = NULL;
 	char *resultstr = NULL;
 	int e;
-	char *b[4];
-	char *p;
-	int i;
 
 	// Make sure dnsbl list exists
 	dnsbl_list(stage, name, attrs);
@@ -94,42 +195,22 @@ dnsbl_query(milter_stage_t stage, char *name, var_t *attrs)
 		return 0;
 	}
 
-	/*
-	 * No IPv6 support yet.
-	 */
-	if (addr->ss_family != AF_INET)
+	if (addr->ss_family == AF_INET6)
 	{
-		log_message(LOG_ERR, attrs, "dnsbl_query: %s: address family not"
-			" supported", name);
-
-		if (vtable_set_new(attrs, VT_ADDR, name, NULL, VF_COPYNAME))
+		if (dnsbl_ipv6_query(query, sizeof query, hostaddr_str, domain))
 		{
-			log_error("dnsbl_query: vtable_setv failed");
+			log_error("dnsbl_query: dnsbl_ipv6_query failed");
 			goto error;
 		}
-
-		return 0;
 	}
-
-	strncpy(addrbytes, hostaddr_str, sizeof addrbytes);
-	addrbytes[sizeof addrbytes - 1] = 0;
-		
-	/*
-	 * Split the address bytes
-	 */
-	for(i = 0, p = addrbytes; i < 4 && p != NULL; p = strchr(p, '.'), ++i) {
-		if(*p == '.') {
-			*p++ = 0;
+	else
+	{
+		if (dnsbl_ipv4_query(query, sizeof query, hostaddr_str, domain))
+		{
+			log_error("dnsbl_query: dnsbl_ipv4_query failed");
+			goto error;
 		}
-
-		b[i] = p;
 	}
-
-	/*
-	 * Build query string
-	 */
-	snprintf(query, sizeof query, "%s.%s.%s.%s.%s", b[3], b[2], b[1], b[0],
-	    domain);
 
 	bzero(&hints, sizeof(hints));
 	hints.ai_family = AF_INET;
