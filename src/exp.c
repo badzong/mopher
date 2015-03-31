@@ -560,8 +560,7 @@ exp_eval_macro(exp_t *exp, var_t *mailspec)
 	value = milter_macro_lookup(*stage, exp->ex_data, mailspec);
 	if (value == NULL)
 	{
-		log_error("exp_eval_macro: milter_macro_lookup failed");
-		return NULL;
+		return EXP_EMPTY;
 	}
 
 	v = var_create(VT_STRING, exp->ex_data, value, VF_KEEPNAME |

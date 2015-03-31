@@ -173,8 +173,7 @@ milter_macro_lookup(milter_stage_t stage, char *macro, var_t *attrs)
 	value = smfi_getsymval(ctx, macro);
 	if (value == NULL)
 	{
-		log_error("milter_macro_lookup: smfi_getsymval failed for "
-			"macro %s in %s stage", macro, stagename);
+		log_debug("milter_macro_lookup: undefined macro %s", macro);
 		return NULL;
 	}
 
