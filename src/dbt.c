@@ -11,7 +11,7 @@
 
 #include <mopher.h>
 
-#define DBT_BUCKETS 32
+#define DBT_BUCKETS 64
 #define BUFLEN 8192
 #define KEYLEN 128
 

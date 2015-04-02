@@ -27,7 +27,6 @@
 #define MSN_ABORT	"abort"
 #define MSN_CLOSE	"close"
 
-#define BUCKETS 127
 #define MAILADDRLEN 512
 
 /*

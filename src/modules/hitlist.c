@@ -5,7 +5,7 @@
 #include <config.h>
 #include <mopher.h>
 
-#define BUCKETS 32
+#define BUCKETS 64
 #define HITLIST_NAME "hitlist"
 #define BUFLEN 1024
 
