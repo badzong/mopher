@@ -209,6 +209,11 @@ table[greylist] = {
 .Pp
 Currently available backend drivers are:
 .Bl -tag -width 4n
+.It Sy bdb Pq Berkeley DB
+Embedded database for key/value data.
+Uses the legacy format/API (1.85) that in most distributions is either
+part of the standard C library or offered separately by one of the more
+recent db software-packages.
 .It Sy memdb Pq Memory DB
 A simple hash table stored in main memory.
 Not persistent.
@@ -217,13 +222,12 @@ If no backend driver was configured for a table, that table will use the
 driver and therefore lose all its content as soon as
 .Xr mopherd 8
 shuts down.
-.It Sy bdb Pq Berkeley DB
-Embedded database for key/value data.
-Uses the legacy format/API (1.85) that in most distributions is either
-part of the standard C library or offered separately by one of the more
-recent db software-packages.
-.It Sy sakila Pq MySQL
-SQL database management system.
+.It Sy mysql Pq MySQL
+MySQL database management system.
+.It Sy pgsql Pq PostgreSQL
+PostgreSQL database management system.
+.It Sy sqlite3 Pq SQLite3
+SQLite version 3 database management system.
 .El
 .Pp
 .Em Note :
@@ -242,6 +246,21 @@ that require some configuration.
 See
 .Xr mopherd.acl 5
 for additional information on usage and behaviour.
+(default values are enclosed in parentheses)
+.Ss ClamAV Virus Scanner
+.Em clamav
+submits messages to clamd and maps the evaluation results to
+.Xr mopherd.acl 5
+symbols.
+.Pp
+The following directives control the general behaviour of
+.Em clamav
+.Bl -tag -width 4n
+.It Sy clamav_socket Pq Qq unix:/var/run/clamav/clamd.ctl
+Socket used by
+.Xr mopherd 8
+to scan incoming messages for viruses.
+.El
 .Ss Relay and Penpal Counter
 .Em counter
 counts the amount of successfully delivered messages by an origin
@@ -294,6 +313,41 @@ dnsbl[list_bar] = whitelist.bar.net
 .Pp
 where the name of the index is the name of the symbol exported to
 .Xr mopherd.acl 5 .
+.Ed
+.Pp
+.Ss GeoIP geolocation database
+.Em geoip
+can lookup IPv4 and IPv6 addresses in MaxMinds geoiplite database and return the Country Code as
+.Xr mopherd.acl 5
+symbol.
+.Pp
+The following directives control the general behaviour of
+.Em geoip
+.Bl -tag -width 4n
+.It Sy geoip_database Pq Qq /var/local/lib/geoip/GeoIP.dat
+Path to GeoIPLite IPv4 database file.
+.It Sy geoipv6_database Pq Qq /var/local/lib/geoip/GeoIPv6.dat
+Path to GeoIPLite IPv6 database file.
+.El
+.Pp
+The geoip module is disabled by default. Enable with:
+.Bd -literal -offset indent
+modules[geoip] = 1
+.Ed
+.Ss P0f passive OS fingerprinting
+.Em p0f
+submits messages to a p0f version 3 server process and maps the evaluation results to
+.Xr mopherd.acl 5
+symbols.
+.Pp
+The following directives control the general behaviour of
+.Em p0f
+.Bl -tag -width 4n
+.It Sy p0f_socket Pq Qq unix:/var/run/p0f/p0f.sock
+Socket used by
+.Xr mopherd 8
+to request OS fingerprint.
+.El
 .Ss SpamAssassin Resolver
 .Em spamd
 submits messages to SpamAssassin and maps the evaluation results to
@@ -302,7 +356,6 @@ symbols.
 .Pp
 The following directives control the general behaviour of
 .Em spamd
-(default values are enclosed in parentheses):
 .Bl -tag -width 4n
 .It Sy spamd_socket Pq Qq inet:783@127.0.0.1
 Socket used by

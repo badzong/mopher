@@ -617,6 +617,12 @@ String containing the whole message body.
 .It Sy body_size Pq int, eom
 Size of message body in bytes.
 .\"
+.It Sy clamav_clean Pq int, any
+If true no virus was found.
+.\"
+.It Sy clamav_virus Pq string, any
+Name of the virus found.
+.\"
 .It Sy counter_penpal Pq int, envrcpt
 Number of previously delivered messages by origin for penpal.
 .\"
@@ -637,6 +643,12 @@ Raw envelope recipient address.
 .\"
 .It Sy envrcpt_addr Pq string, envrcpt*
 Envelope recipient address.
+.\"
+.It Sy geoip_country_code Pq string, any
+GeoIP country code.
+.\"
+.It Sy geoip_country_name Pq string, any
+GeoIP country name.
 .\"
 .It Sy greylist_attempts Pq int, envfrom*
 Number of delivery attempts required for origin to whitelist \%penpal.
@@ -718,6 +730,12 @@ Size of entire message in bytes.
 .It Sy origin Pq string, any
 Origin identifier used for greylisting
 .Pq address or domain .
+.\"
+.It Sy p0f_os_name Pq string, any
+P0f OS name.
+.\"
+.It Sy p0f_os_flavor Pq string, any
+P0f OS flavor.
 .\"
 .It Sy received Pq string, any
 Begin of connection timestamp.
