@@ -1,7 +1,7 @@
 #include <config.h>
 
 #include <stdlib.h>
-#include <sys/types.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -141,7 +141,7 @@ ht_resize(ht_t *ht)
 {
 	ht_t new;
 	ht_record_t *record;
-	u_int32_t i, buckets;
+	uint32_t i, buckets;
 	
 	buckets = ht->ht_buckets * 2;
 

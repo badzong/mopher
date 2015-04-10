@@ -1,14 +1,14 @@
 #ifndef _HASH_H_
 #define _HASH_H_
 
-#include <sys/types.h>
+#include <stdint.h>
 
 typedef unsigned long hash_t;
 
-hash_t hash_one_at_a_time(char *key, u_int32_t len);
-hash_t hash_djb(void *key, u_int32_t len);
-hash_t hash_test(void *key, u_int32_t len);
-hash_t hash_chain(void *key, u_int32_t len);
+hash_t hash_one_at_a_time(char *key, uint32_t len);
+hash_t hash_djb(void *key, uint32_t len);
+hash_t hash_test(void *key, uint32_t len);
+hash_t hash_chain(void *key, uint32_t len);
 
 #define HASH hash_one_at_a_time
 //#define HASH hash_djb

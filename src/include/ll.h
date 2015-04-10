@@ -5,7 +5,7 @@
  * Includes
  */
 
-#include <sys/types.h>
+#include <stdint.h>
 
 /*
  * Types
@@ -17,7 +17,7 @@ typedef struct ll_entry {
 } ll_entry_t;
 
 typedef struct ll {
-	u_int32_t	ll_size;
+	uint32_t	ll_size;
 	ll_entry_t	*ll_head;
 	ll_entry_t	*ll_tail;
 } ll_t;

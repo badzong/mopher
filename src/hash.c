@@ -1,14 +1,14 @@
 #include <config.h>
 
-#include <sys/types.h>
+#include <stdint.h>
 
 #include <hash.h>
 
 hash_t
-hash_one_at_a_time(char *key, u_int32_t len)
+hash_one_at_a_time(char *key, uint32_t len)
 {
-	u_int32_t hash;
-	u_int32_t i;
+	uint32_t hash;
+	uint32_t i;
 
 	for (hash = 0, i = 0; i < len; ++i) {
 		hash += key[i];
@@ -24,7 +24,7 @@ hash_one_at_a_time(char *key, u_int32_t len)
 }
 
 hash_t
-hash_djb(void *key, u_int32_t len)
+hash_djb(void *key, uint32_t len)
 {
 	unsigned char *p = key;
 	unsigned long h = 0;
@@ -37,7 +37,7 @@ hash_djb(void *key, u_int32_t len)
 }
 
 hash_t
-hash_test(void *key, u_int32_t len)
+hash_test(void *key, uint32_t len)
 {
 	unsigned char *p = key;
 	unsigned long h = 0;
@@ -50,7 +50,7 @@ hash_test(void *key, u_int32_t len)
 }
 
 hash_t
-hash_chain(void *key, u_int32_t len)
+hash_chain(void *key, uint32_t len)
 {
 	return hash_test(key, len) % 5;
 }
