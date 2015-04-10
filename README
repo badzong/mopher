@@ -63,6 +63,16 @@ DESCRIPTION
 
      The following list describes mopher's module features:
 
+     Local: ClamAV
+             Support for ClamAV virus scanning through clamd.
+
+     Local: GeoIP
+             Support for source address country detection and filtering using
+             MaxMinds GeoIPLite database.
+
+     Local: P0f
+             Support for passive OS fingerprinting through p0f.
+
      Local: SpamAssassin
              Support for spamd-queries.
 
@@ -77,6 +87,12 @@ DESCRIPTION
 
      Backend: MySQL
              Support for MySQL storage.
+
+     Backend: PostgreSQL
+             Support for PostgreSQL storage.
+
+     Backend: SQLite3
+             Support for SQLite3 storage.
 
      Note: Third party distributors of binary packages may split a full mopher
      build into several complementary packages in order to make some dependen-
