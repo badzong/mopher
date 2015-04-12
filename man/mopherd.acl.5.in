@@ -1,4 +1,4 @@
-.Dd November  5, 2014
+.Dd April 10, 2015
 .Dt MOPHERD.ACL 5
 .Os @PACKAGE_STRING@
 .Sh NAME
@@ -618,10 +618,15 @@ String containing the whole message body.
 Size of message body in bytes.
 .\"
 .It Sy clamav_clean Pq int, any
-If true no virus was found.
+True
+.Pq 1 ,
+if no malware was detected.
+False
+.Pq 0
+otherwise.
 .\"
 .It Sy clamav_virus Pq string, any
-Name of the virus found.
+Name of detected malware.
 .\"
 .It Sy counter_penpal Pq int, envrcpt
 Number of previously delivered messages by origin for penpal.
@@ -645,10 +650,10 @@ Raw envelope recipient address.
 Envelope recipient address.
 .\"
 .It Sy geoip_country_code Pq string, any
-GeoIP country code.
+Country code of origin.
 .\"
 .It Sy geoip_country_name Pq string, any
-GeoIP country name.
+Country name of origin.
 .\"
 .It Sy greylist_attempts Pq int, envfrom*
 Number of delivery attempts required for origin to whitelist \%penpal.
@@ -732,10 +737,10 @@ Origin identifier used for greylisting
 .Pq address or domain .
 .\"
 .It Sy p0f_os_name Pq string, any
-P0f OS name.
+Name of OS used by origin.
 .\"
 .It Sy p0f_os_flavor Pq string, any
-P0f OS flavor.
+Flavor of OS used by origin.
 .\"
 .It Sy received Pq string, any
 Begin of connection timestamp.
