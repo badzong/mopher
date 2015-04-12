@@ -8,7 +8,9 @@
 OUT_A+=			base.so
 OUT_A+=			clamav.so
 OUT_A+=			counter.so
+OUT_A+=			dblog.so
 OUT_A+=			dnsbl.so
+OUT_A+=			hitlist.so
 OUT_A+=			memdb.so
 OUT_A+=			p0f.so
 OUT_A+=			random.so
