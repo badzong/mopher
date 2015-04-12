@@ -1,4 +1,4 @@
-.Dd October 30, 2014
+.Dd April 10, 2015
 .Dt MOPHERD.CONF 5
 .Os @PACKAGE_STRING@
 .Sh NAME
@@ -246,20 +246,19 @@ that require some configuration.
 See
 .Xr mopherd.acl 5
 for additional information on usage and behaviour.
-(default values are enclosed in parentheses)
-.Ss ClamAV Virus Scanner
+.Ss ClamAV Resolver
 .Em clamav
 submits messages to clamd and maps the evaluation results to
 .Xr mopherd.acl 5
 symbols.
 .Pp
 The following directives control the general behaviour of
-.Em clamav
+.Em clamav :
 .Bl -tag -width 4n
 .It Sy clamav_socket Pq Qq unix:/var/run/clamav/clamd.ctl
 Socket used by
 .Xr mopherd 8
-to scan incoming messages for viruses.
+to check incoming messages for malware.
 .El
 .Ss Relay and Penpal Counter
 .Em counter
@@ -282,8 +281,7 @@ table[counter_penpal] = {
 .Ed
 .Pp
 The following directives control the general behaviour of
-.Em counter
-(default values are enclosed in parentheses):
+.Em counter :
 .Bl -tag -width 4n
 .It Sy counter_expire_low Pq 7d
 Default maximal lifetime of a counter item with a value less than
@@ -313,40 +311,39 @@ dnsbl[list_bar] = whitelist.bar.net
 .Pp
 where the name of the index is the name of the symbol exported to
 .Xr mopherd.acl 5 .
-.Ed
-.Pp
-.Ss GeoIP geolocation database
+.Ss GeoIP Location Resolver
 .Em geoip
-can lookup IPv4 and IPv6 addresses in MaxMinds geoiplite database and return the Country Code as
-.Xr mopherd.acl 5
-symbol.
-.Pp
-The following directives control the general behaviour of
-.Em geoip
-.Bl -tag -width 4n
-.It Sy geoip_database Pq Qq /var/local/lib/geoip/GeoIP.dat
-Path to GeoIPLite IPv4 database file.
-.It Sy geoipv6_database Pq Qq /var/local/lib/geoip/GeoIPv6.dat
-Path to GeoIPLite IPv6 database file.
-.El
-.Pp
-The geoip module is disabled by default. Enable with:
-.Bd -literal -offset indent
-modules[geoip] = 1
-.Ed
-.Ss P0f passive OS fingerprinting
-.Em p0f
-submits messages to a p0f version 3 server process and maps the evaluation results to
+queries Maxmind's GeoLite databases and maps the resulting country names
+and codes to
 .Xr mopherd.acl 5
 symbols.
 .Pp
 The following directives control the general behaviour of
+.Em geoip :
+.Bl -tag -width 4n
+.It Sy geoip_database Pq Qq /var/local/lib/geoip/GeoIP.dat
+Path to GeoLite IPv4 database file.
+.It Sy geoipv6_database Pq Qq /var/local/lib/geoip/GeoIPv6.dat
+Path to GeoLite IPv6 database file.
+.El
+.\".Pp
+.\".Em geoip
+.\"is disabled by default.
+.\" FIXME: related section is missing
+.Ss P0f Fingerprint Resolver
 .Em p0f
+submits addresses to a p0f version 3 server process and maps the
+evaluation results to
+.Xr mopherd.acl 5
+symbols.
+.Pp
+The following directives control the general behaviour of
+.Em p0f :
 .Bl -tag -width 4n
 .It Sy p0f_socket Pq Qq unix:/var/run/p0f/p0f.sock
 Socket used by
 .Xr mopherd 8
-to request OS fingerprint.
+to request OS fingerprints.
 .El
 .Ss SpamAssassin Resolver
 .Em spamd
