@@ -714,7 +714,7 @@ String containing message headers.
 .It Sy headers_size Pq int, eoh*
 Size of message headers in bytes.
 .\"
-.It Sy helo Pq ?, helo*
+.It Sy helo Pq string, helo*
 HELO identification as stated by origin.
 .\"
 .It Sy hostaddr Pq addr, any
