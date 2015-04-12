@@ -64,16 +64,26 @@ in order to get an overview of the basic language and its expressions.
 .Pp
 The following list describes mopher's module features:
 .Bl -tag -width Ds
+.It Sy Local: Clam AntiVirus
+Support for clamd queries.
+.It Sy Local: MaxMind GeoIP
+Support for MaxMind GeoLite queries.
+.It Sy Local: Passive OS Fingerprinting
+Support for p0f queries.
 .It Sy Local: SpamAssassin
-Support for spamd-queries.
+Support for spamd queries.
 .It Sy Network: Black- and Whitelists
-Support for DNSBL-queries.
+Support for DNSBL queries.
 .It Sy Network: Sender Policy Framework
-Support for SPF-queries.
+Support for SPF queries.
 .It Sy Backend: Berkeley DB
 Support for legacy BDB storage.
 .It Sy Backend: MySQL
 Support for MySQL storage.
+.It Sy Backend: PostgreSQL
+Support for PostgreSQL storage.
+.It Sy Backend: SQLite3
+Support for SQLite3 storage.
 .El
 .Pp
 .Em Note :
