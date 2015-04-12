@@ -63,24 +63,23 @@ DESCRIPTION
 
      The following list describes mopher's module features:
 
-     Local: ClamAV
-             Support for ClamAV virus scanning through clamd.
+     Local: Clam AntiVirus
+             Support for clamd queries.
 
-     Local: GeoIP
-             Support for source address country detection and filtering using
-             MaxMinds GeoIPLite database.
+     Local: MaxMind GeoIP
+             Support for MaxMind GeoLite queries.
 
-     Local: P0f
-             Support for passive OS fingerprinting through p0f.
+     Local: Passive OS Fingerprinting
+             Support for p0f queries.
 
      Local: SpamAssassin
-             Support for spamd-queries.
+             Support for spamd queries.
 
      Network: Black- and Whitelists
-             Support for DNSBL-queries.
+             Support for DNSBL queries.
 
      Network: Sender Policy Framework
-             Support for SPF-queries.
+             Support for SPF queries.
 
      Backend: Berkeley DB
              Support for legacy BDB storage.
