@@ -622,6 +622,7 @@ milter_envfrom(SMFICTX * ctx, char **argv)
 		log_error("milter_envfrom: util_strdomain failed");
 		goto exit;
 	}
+        util_tolower(domain);
 
 	if (vtable_setv(mp->mp_table,
 	    VT_STRING, "envfrom", argv[0], VF_KEEPNAME | VF_COPYDATA,
@@ -671,6 +672,7 @@ milter_envrcpt(SMFICTX * ctx, char **argv)
 		log_error("milter_envfrom: util_strdomain failed");
 		goto exit;
 	}
+        util_tolower(domain);
 
 	if (vtable_setv(mp->mp_table,
 	    VT_STRING, "envrcpt", argv[0], VF_KEEPNAME | VF_COPYDATA,
