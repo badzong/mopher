@@ -1,5 +1,14 @@
 Recent changes to mopher's source.
 
+Version 0.6.0
+19.05.2015
+    This release contains many new features and a variety of
+        adjustments and bugfixes.
+    Generic SQL interface with drivers for PostgreSQL, SQLite and MySQL.
+    Support for GeoLite queries (http://dev.maxmind.com/geoip/legacy/geolite/)
+    Support for ClamAV queries (http://www.clamav.net)
+    Support for P0f v3 queries (http://lcamtuf.coredump.cx/p0f3/)
+    
 Version 0.5.3
 25.02.2015
     Fix several minor issues (i.a. #25).
