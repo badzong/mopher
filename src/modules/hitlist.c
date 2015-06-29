@@ -289,9 +289,6 @@ hitlist_lookup(milter_stage_t stage, char *name, var_t *attrs)
 		goto exit;
 	}
 
-	// Hit
-	++(*hits);
-
 	// Record never expires
 	if (hl->hl_timeout == 0)
 	{
@@ -308,12 +305,17 @@ hitlist_lookup(milter_stage_t stage, char *name, var_t *attrs)
 		*expire = time(NULL) + hl->hl_timeout;
 	}
 
-	if (dbt_db_set(&hl->hl_dbt, record))
-	{
-		log_error("hitlist_lookup: dbt_db_set failed");
+        if (hl->hl_record)
+        {
+		// Hit
+		++(*hits);
 
-		goto exit;
-	}
+		if (dbt_db_set(&hl->hl_dbt, record))
+		{
+			log_error("hitlist_lookup: dbt_db_set failed");
+			goto exit;
+		}
+        }
 
 	// Add symbol
 	if (vtable_set_new(attrs, VT_INT, name, hits, VF_COPY))
