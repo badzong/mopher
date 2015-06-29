@@ -17,14 +17,18 @@ typedef struct hitlist {
 	int		 hl_connected;
 	dbt_t		 hl_dbt;
 	ll_t		*hl_keys;
-	VAR_INT_T	 hl_record;
+	VAR_INT_T	 hl_create;
+	VAR_INT_T	 hl_update;
+	VAR_INT_T	 hl_count;
 	VAR_INT_T	 hl_timeout;
 	VAR_INT_T	 hl_extend;
+	VAR_INT_T	 hl_cleanup;
 } hitlist_t;
 	
 
 static hitlist_t *
-hitlist_create(char *name, ll_t *keys, int record, int timeout, int extend)
+hitlist_create(char *name, ll_t *keys, VAR_INT_T *create, VAR_INT_T *update,
+    VAR_INT_T *count, VAR_INT_T *timeout, VAR_INT_T *extend, VAR_INT_T *cleanup)
 {
 	hitlist_t *hl;
 
@@ -46,9 +50,18 @@ hitlist_create(char *name, ll_t *keys, int record, int timeout, int extend)
 
 	hl->hl_name = name;
 	hl->hl_keys = keys;
-	hl->hl_record = record;
-	hl->hl_timeout = timeout;
-	hl->hl_extend = extend;
+
+        // Default values go here
+	hl->hl_create  = create == NULL?  1: *create;
+	hl->hl_update  = update == NULL?  1: *update;
+	hl->hl_count   = count == NULL?   1: *count;
+	hl->hl_timeout = timeout == NULL? 0: *timeout;
+	hl->hl_extend  = extend == NULL?  1: *extend;
+	hl->hl_cleanup = cleanup == NULL? 1: *cleanup;
+
+        log_debug("hitlist_create: %s: create=%d update=%d count=%d timeout=%d "
+            "extend=%d cleanup=%d", name, hl->hl_create, hl->hl_update,
+            hl->hl_count, hl->hl_timeout, hl->hl_extend, hl->hl_cleanup);
 
 	return hl;
 }
@@ -185,6 +198,7 @@ hitlist_db_open(hitlist_t *hl, var_t *attrs)
 
 		hl->hl_dbt.dbt_scheme = schema;
 		hl->hl_dbt.dbt_validate = dbt_common_validate;
+		hl->hl_dbt.dbt_cleanup_interval = hl->hl_cleanup? 0: -1;
 	}
 
         if (dbt_register(hl->hl_name, &hl->hl_dbt))
@@ -260,7 +274,7 @@ hitlist_lookup(milter_stage_t stage, char *name, var_t *attrs)
 	if (record == NULL)
 	{
 		// Add new record
-		if (hl->hl_record)
+		if (hl->hl_create)
 		{
 			log_debug("hitlist_lookup: %s add record", name);
 			record = lookup;
@@ -289,26 +303,30 @@ hitlist_lookup(milter_stage_t stage, char *name, var_t *attrs)
 		goto exit;
 	}
 
-	// Record never expires
-	if (hl->hl_timeout == 0)
-	{
-		*expire = INT_MAX;
-	}
-	// Record is extended every time a match is found
-	else if (hl->hl_extend)
-	{
-		*expire = time(NULL) + hl->hl_timeout;
-	}
-	// Record expires after a fixed timeout
-	else if (hl->hl_timeout && *expire == 0)
-	{
-		*expire = time(NULL) + hl->hl_timeout;
-	}
-
-        if (hl->hl_record)
-        {
-		// Hit
+	// Count
+       	if (hl->hl_count)
+       	{
 		++(*hits);
+       	}
+
+        if (hl->hl_update)
+        {
+
+		// Record never expires
+		if (hl->hl_timeout == 0)
+		{
+			*expire = INT_MAX;
+		}
+		// Record is extended every time a match is found
+		else if (hl->hl_extend)
+		{
+			*expire = time(NULL) + hl->hl_timeout;
+		}
+		// Record expires after a fixed timeout
+		else if (hl->hl_timeout && *expire == 0)
+		{
+			*expire = time(NULL) + hl->hl_timeout;
+		}
 
 		if (dbt_db_set(&hl->hl_dbt, record))
 		{
@@ -351,9 +369,12 @@ hitlist_register(char *name)
 {
 	hitlist_t *hl;
 	ll_t *keys;
-	VAR_INT_T *record;
+	VAR_INT_T *create;
+	VAR_INT_T *update;
+	VAR_INT_T *count;
 	VAR_INT_T *timeout;
 	VAR_INT_T *extend;
+	VAR_INT_T *cleanup;
 
 	if (name == NULL)
 	{
@@ -361,9 +382,12 @@ hitlist_register(char *name)
 	}
 
 	keys = cf_get_value(VT_LIST, HITLIST_NAME, name, "keys", NULL);
-	record = cf_get_value(VT_INT, HITLIST_NAME, name, "record", NULL);
+	create = cf_get_value(VT_INT, HITLIST_NAME, name, "create", NULL);
+	update = cf_get_value(VT_INT, HITLIST_NAME, name, "update", NULL);
+	count = cf_get_value(VT_INT, HITLIST_NAME, name, "count", NULL);
 	timeout = cf_get_value(VT_INT, HITLIST_NAME, name, "timeout", NULL);
 	extend = cf_get_value(VT_INT, HITLIST_NAME, name, "extend", NULL);
+	cleanup = cf_get_value(VT_INT, HITLIST_NAME, name, "cleanup", NULL);
 
 	if (keys == NULL)
 	{
@@ -375,7 +399,7 @@ hitlist_register(char *name)
 		log_die(EX_CONFIG, "hitlist_register: %s: keys is empty", name);
 	}
 
-	hl = hitlist_create(name, keys, *record, *timeout, *extend);
+	hl = hitlist_create(name, keys, create, update, count, timeout, extend, cleanup);
 	if (hl == NULL)
 	{
 		log_die(EX_SOFTWARE, "hitlist_register: hl_create failed");
