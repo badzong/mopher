@@ -9,6 +9,9 @@
 #define HITLIST_NAME "hitlist"
 #define BUFLEN 1024
 
+#define VALUE_SUFFIX "_value"
+#define EXPIRE_SUFFIX "_expire"
+
 static sht_t *hitlists;
 
 typedef struct hitlist {
@@ -23,12 +26,13 @@ typedef struct hitlist {
 	VAR_INT_T	 hl_timeout;
 	VAR_INT_T	 hl_extend;
 	VAR_INT_T	 hl_cleanup;
+        char	   *hl_sum;
 } hitlist_t;
 	
 
 static hitlist_t *
 hitlist_create(char *name, ll_t *keys, VAR_INT_T *create, VAR_INT_T *update,
-    VAR_INT_T *count, VAR_INT_T *timeout, VAR_INT_T *extend, VAR_INT_T *cleanup)
+    VAR_INT_T *count, VAR_INT_T *timeout, VAR_INT_T *extend, VAR_INT_T *cleanup, char *sum)
 {
 	hitlist_t *hl;
 
@@ -50,6 +54,7 @@ hitlist_create(char *name, ll_t *keys, VAR_INT_T *create, VAR_INT_T *update,
 
 	hl->hl_name = name;
 	hl->hl_keys = keys;
+	hl->hl_sum = sum;
 
         // Default values go here
 	hl->hl_create  = create == NULL?  1: *create;
@@ -60,8 +65,9 @@ hitlist_create(char *name, ll_t *keys, VAR_INT_T *create, VAR_INT_T *update,
 	hl->hl_cleanup = cleanup == NULL? 1: *cleanup;
 
         log_debug("hitlist_create: %s: create=%d update=%d count=%d timeout=%d "
-            "extend=%d cleanup=%d", name, hl->hl_create, hl->hl_update,
-            hl->hl_count, hl->hl_timeout, hl->hl_extend, hl->hl_cleanup);
+        	"extend=%d cleanup=%d%s%s", name, hl->hl_create, hl->hl_update,
+        	hl->hl_count, hl->hl_timeout, hl->hl_extend, hl->hl_cleanup,
+		sum? " sum=": "", sum? sum: "");
 
 	return hl;
 }
@@ -132,8 +138,8 @@ hitlist_record(hitlist_t *hl, var_t *attrs, int load_data)
 		}
 	}
 
-	// Add hits
-	if (snprintf(buffer, sizeof buffer, "%s_hits", hl->hl_name) >=
+	// Add value
+	if (snprintf(buffer, sizeof buffer, "%s%s", hl->hl_name, VALUE_SUFFIX) >=
 	    sizeof buffer)
 	{
 		log_error("hitlist_schema: buffer exhausted");
@@ -148,7 +154,7 @@ hitlist_record(hitlist_t *hl, var_t *attrs, int load_data)
 	}
 
 	// Add expire
-	if (snprintf(buffer, sizeof buffer, "%s_expire", hl->hl_name) >=
+	if (snprintf(buffer, sizeof buffer, "%s%s", hl->hl_name, EXPIRE_SUFFIX) >=
 	    sizeof buffer)
 	{
 		log_error("hitlist_schema: buffer exhausted");
@@ -229,8 +235,9 @@ hitlist_lookup(milter_stage_t stage, char *name, var_t *attrs)
 	hitlist_t *hl;
 	var_t *lookup = NULL;
 	var_t *record = NULL;
-	VAR_INT_T *hits;
+	VAR_INT_T *value;
 	VAR_INT_T *expire;
+	var_t *addition;
 	int success = -1;
 
 	hl = sht_lookup(hitlists, name);
@@ -294,9 +301,9 @@ hitlist_lookup(milter_stage_t stage, char *name, var_t *attrs)
 		log_debug("hitlist_lookup: %s record found", name);
 	}
 
-	hits = vlist_record_get_combine_key(record, name, "_hits", NULL);
-	expire = vlist_record_get_combine_key(record, name, "_expire", NULL);
-	if (hits == NULL || expire == NULL)
+	value = vlist_record_get_combine_key(record, name, VALUE_SUFFIX, NULL);
+	expire = vlist_record_get_combine_key(record, name, EXPIRE_SUFFIX, NULL);
+	if (value == NULL || expire == NULL)
 	{
 		log_error("hitlist_lookup: vlist_record_get_combine_keys"
 			" failed");
@@ -306,8 +313,27 @@ hitlist_lookup(milter_stage_t stage, char *name, var_t *attrs)
 	// Count
        	if (hl->hl_count)
        	{
-		++(*hits);
+		++(*value);
        	}
+
+	// Sum
+        else if (hl->hl_sum)
+        {
+		addition = vtable_lookup(attrs, hl->hl_sum);
+		if (addition == NULL)
+		{
+			log_error("hitlist: sum field %s is undefined", hl->hl_sum);
+			goto exit;
+		}
+
+		if (addition->v_type != VT_INT)
+		{
+			log_error("hitlist: sum field %s must be integer", hl->hl_sum);
+			goto exit;
+		}
+
+		*value += *(VAR_INT_T *) addition->v_data;
+        }
 
         if (hl->hl_update)
         {
@@ -336,7 +362,7 @@ hitlist_lookup(milter_stage_t stage, char *name, var_t *attrs)
         }
 
 	// Add symbol
-	if (vtable_set_new(attrs, VT_INT, name, hits, VF_COPY))
+	if (vtable_set_new(attrs, VT_INT, name, value, VF_COPY))
 	{
 		log_error("hitlist_lookup: vtable_set_new failed");
 
@@ -375,6 +401,7 @@ hitlist_register(char *name)
 	VAR_INT_T *timeout;
 	VAR_INT_T *extend;
 	VAR_INT_T *cleanup;
+        char *sum = NULL;
 
 	if (name == NULL)
 	{
@@ -388,6 +415,7 @@ hitlist_register(char *name)
 	timeout = cf_get_value(VT_INT, HITLIST_NAME, name, "timeout", NULL);
 	extend = cf_get_value(VT_INT, HITLIST_NAME, name, "extend", NULL);
 	cleanup = cf_get_value(VT_INT, HITLIST_NAME, name, "cleanup", NULL);
+	sum = cf_get_value(VT_STRING, HITLIST_NAME, name, "sum", NULL);
 
 	if (keys == NULL)
 	{
@@ -399,7 +427,8 @@ hitlist_register(char *name)
 		log_die(EX_CONFIG, "hitlist_register: %s: keys is empty", name);
 	}
 
-	hl = hitlist_create(name, keys, create, update, count, timeout, extend, cleanup);
+	hl = hitlist_create(name, keys, create, update, count, timeout, extend,
+	   cleanup, sum);
 	if (hl == NULL)
 	{
 		log_die(EX_SOFTWARE, "hitlist_register: hl_create failed");
