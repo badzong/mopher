@@ -24,6 +24,7 @@
 
 static sht_t *dbt_drivers;
 static sht_t *dbt_tables;
+static var_t *dbt_default_database;
 static int dbt_threads_running;
 
 static int		dbt_janitor_running;
@@ -423,9 +424,16 @@ dbt_register(char *name, dbt_t *dbt)
 	 */
 	config = cf_get(VT_TABLE, "table", config_key, NULL);
 	if (config == NULL) {
-		log_error("dbt_register: missing database configuration for"
-			" \"%s\"", name);
-		return -1;
+		if (dbt_default_database != NULL)
+		{
+			config = dbt_default_database;
+		}
+		else
+		{
+			log_error("dbt_register: missing database configuration for"
+				" \"%s\" and default_database is not set", name);
+			return -1;
+		}
 	}
 
 	/*
@@ -940,6 +948,14 @@ dbt_init(int start_threads)
 	dbt_tables = sht_create(DBT_BUCKETS, (sht_delete_t) dbt_close);
 	if (dbt_tables == NULL) {
 		log_die(EX_SOFTWARE, "dbt_init: ht_init failed");
+	}
+
+	/*
+	 * Load database defaults
+	 */
+	dbt_default_database = cf_get(VT_TABLE, "default_database", NULL);
+	if (dbt_default_database == NULL) {
+		log_debug("dbt_init: no default_database found");
 	}
 
 	/*
