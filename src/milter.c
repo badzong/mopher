@@ -60,9 +60,9 @@ static milter_symbol_t milter_symbols[] = {
 	{ "message_id", MS_OFF_EOH },
 	{ "queue_id", MS_OFF_DATA },
 	{ "subject", MS_OFF_EOH },
-	{ "body", MS_EOM },
-	{ "body_size", MS_EOM },
-	{ "message_size", MS_EOM },
+	{ "body", MS_OFF_EOM },
+	{ "body_size", MS_OFF_EOM },
+	{ "message_size", MS_OFF_EOM },
 	{ NULL, 0 }
 };
 
