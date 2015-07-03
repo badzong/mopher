@@ -127,6 +127,7 @@ void
 geoip_fini(void)
 {
 	GeoIP_delete(geoip_handle);
+	GeoIP_delete(geoip6_handle);
 
 	return;
 }
