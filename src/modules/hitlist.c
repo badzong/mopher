@@ -26,13 +26,17 @@ typedef struct hitlist {
 	VAR_INT_T	 hl_timeout;
 	VAR_INT_T	 hl_extend;
 	VAR_INT_T	 hl_cleanup;
-        char	   *hl_sum;
+        char		*hl_sum;
+        char		*hl_table;
+        char		 hl_value_field[DBT_FIELD_MAX + 1];
+        char		 hl_expire_field[DBT_FIELD_MAX + 1];
 } hitlist_t;
 	
 
 static hitlist_t *
 hitlist_create(char *name, ll_t *keys, VAR_INT_T *create, VAR_INT_T *update,
-    VAR_INT_T *count, VAR_INT_T *timeout, VAR_INT_T *extend, VAR_INT_T *cleanup, char *sum)
+    VAR_INT_T *count, VAR_INT_T *timeout, VAR_INT_T *extend,
+    VAR_INT_T *cleanup, char *sum, char *table, char *value_field, char *expire_field)
 {
 	hitlist_t *hl;
 
@@ -55,6 +59,7 @@ hitlist_create(char *name, ll_t *keys, VAR_INT_T *create, VAR_INT_T *update,
 	hl->hl_name = name;
 	hl->hl_keys = keys;
 	hl->hl_sum = sum;
+	hl->hl_table = table;
 
         // Default values go here
 	hl->hl_create  = create == NULL?  1: *create;
@@ -63,6 +68,30 @@ hitlist_create(char *name, ll_t *keys, VAR_INT_T *create, VAR_INT_T *update,
 	hl->hl_timeout = timeout == NULL? 0: *timeout;
 	hl->hl_extend  = extend == NULL?  1: *extend;
 	hl->hl_cleanup = cleanup == NULL? 1: *cleanup;
+
+	// Default value field name
+	if (value_field == NULL)
+	{
+		snprintf(hl->hl_value_field, DBT_FIELD_MAX, "%s%s", name, VALUE_SUFFIX);
+	}
+	else
+	{
+		// hl->hl_value_field is always \0 terminated because hl is memset to 0 and
+		// length is DBT_FIELD_MAX + 1.
+		strncpy(hl->hl_value_field, value_field, DBT_FIELD_MAX);
+	}
+
+	// Default expire field name
+	if (expire_field == NULL)
+	{
+		snprintf(hl->hl_expire_field, DBT_FIELD_MAX, "%s%s", name, EXPIRE_SUFFIX);
+	}
+	else
+	{
+		// hl->hl_expire_field is always \0 terminated because hl is memset to 0 and
+		// length is DBT_FIELD_MAX + 1.
+		strncpy(hl->hl_expire_field, expire_field, DBT_FIELD_MAX);
+	}
 
         log_debug("hitlist_create: %s: create=%d update=%d count=%d timeout=%d "
         	"extend=%d cleanup=%d%s%s", name, hl->hl_create, hl->hl_update,
@@ -79,11 +108,13 @@ hitlist_record(hitlist_t *hl, var_t *attrs, int load_data)
 	var_t *key;
 	char *keystr;
 	var_t *v;
-	char buffer[BUFLEN];
 	var_t *schema = NULL;
 	VAR_INT_T zero = 0;
+	char *name;
 
-	schema = vlist_create(hl->hl_name, VF_KEEPNAME);
+	name = hl->hl_table? hl->hl_table: hl->hl_name;
+
+	schema = vlist_create(name, VF_KEEPNAME);
 	if (schema == NULL)
 	{
 		log_error("hitlist_schema: vlist_create failed");
@@ -139,32 +170,19 @@ hitlist_record(hitlist_t *hl, var_t *attrs, int load_data)
 	}
 
 	// Add value
-	if (snprintf(buffer, sizeof buffer, "%s%s", hl->hl_name, VALUE_SUFFIX) >=
-	    sizeof buffer)
+	if (vlist_append_new(schema, VT_INT, hl->hl_value_field,
+	    load_data? &zero: NULL, VF_COPY))
 	{
-		log_error("hitlist_schema: buffer exhausted");
-		goto error;
-	}
-	if (vlist_append_new(schema, VT_INT, buffer, load_data? &zero: NULL,
-		VF_COPY))
-	{
-		log_error("hitlist_schema: %s: vlist_append_new failed",
-			hl->hl_name);
+		log_error("hitlist_schema: %s: vlist_append_new failed for %s",
+			hl->hl_name, hl->hl_value_field);
 		goto error;
 	}
 
-	// Add expire
-	if (snprintf(buffer, sizeof buffer, "%s%s", hl->hl_name, EXPIRE_SUFFIX) >=
-	    sizeof buffer)
+	if (vlist_append_new(schema, VT_INT, hl->hl_expire_field,
+	    load_data? &zero: NULL, VF_COPY))
 	{
-		log_error("hitlist_schema: buffer exhausted");
-		goto error;
-	}
-	if (vlist_append_new(schema, VT_INT, buffer, load_data? &zero: NULL,
-		VF_COPY))
-	{
-		log_error("hitlist_schema: %s: vlist_append_new failed",
-			hl->hl_name);
+		log_error("hitlist_schema: %s: vlist_append_new failed for %s",
+			hl->hl_name, hl->hl_expire_field);
 		goto error;
 	}
 
@@ -205,6 +223,11 @@ hitlist_db_open(hitlist_t *hl, var_t *attrs)
 		hl->hl_dbt.dbt_scheme = schema;
 		hl->hl_dbt.dbt_validate = dbt_common_validate;
 		hl->hl_dbt.dbt_cleanup_interval = hl->hl_cleanup? 0: -1;
+
+		if (strlen(hl->hl_expire_field))
+		{
+			strncpy(hl->hl_dbt.dbt_expire_field, hl->hl_expire_field, DBT_FIELD_MAX);
+		}
 	}
 
         if (dbt_register(hl->hl_name, &hl->hl_dbt))
@@ -301,12 +324,11 @@ hitlist_lookup(milter_stage_t stage, char *name, var_t *attrs)
 		log_debug("hitlist_lookup: %s record found", name);
 	}
 
-	value = vlist_record_get_combine_key(record, name, VALUE_SUFFIX, NULL);
-	expire = vlist_record_get_combine_key(record, name, EXPIRE_SUFFIX, NULL);
+	value = vlist_record_get(record, hl->hl_value_field);
+	expire = vlist_record_get(record, hl->hl_expire_field);
 	if (value == NULL || expire == NULL)
 	{
-		log_error("hitlist_lookup: vlist_record_get_combine_keys"
-			" failed");
+		log_error("hitlist_lookup: vlist_record_get failed");
 		goto exit;
 	}
 
@@ -401,7 +423,10 @@ hitlist_register(char *name)
 	VAR_INT_T *timeout;
 	VAR_INT_T *extend;
 	VAR_INT_T *cleanup;
-        char *sum = NULL;
+        char *sum;
+        char *table;
+	char *value_field;
+	char *expire_field;
 
 	if (name == NULL)
 	{
@@ -416,6 +441,9 @@ hitlist_register(char *name)
 	extend = cf_get_value(VT_INT, HITLIST_NAME, name, "extend", NULL);
 	cleanup = cf_get_value(VT_INT, HITLIST_NAME, name, "cleanup", NULL);
 	sum = cf_get_value(VT_STRING, HITLIST_NAME, name, "sum", NULL);
+	table = cf_get_value(VT_STRING, HITLIST_NAME, name, "table", NULL);
+	value_field = cf_get_value(VT_STRING, HITLIST_NAME, name, "value_field", NULL);
+	expire_field = cf_get_value(VT_STRING, HITLIST_NAME, name, "expire_field", NULL);
 
 	if (keys == NULL)
 	{
@@ -428,7 +456,7 @@ hitlist_register(char *name)
 	}
 
 	hl = hitlist_create(name, keys, create, update, count, timeout, extend,
-	   cleanup, sum);
+	   cleanup, sum, table, value_field, expire_field);
 	if (hl == NULL)
 	{
 		log_die(EX_SOFTWARE, "hitlist_register: hl_create failed");

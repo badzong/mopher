@@ -825,7 +825,7 @@ sql_db_walk(dbt_t *dbt, dbt_db_callback_t callback)
 	sql_t *sql = &dbt->dbt_driver->dd_sql;
 	var_t *scheme = dbt->dbt_scheme;
 
-	if (sql_select_all(sql, conn, query, sizeof query, dbt->dbt_table, scheme))
+	if (sql_select_all(sql, conn, query, sizeof query, dbt->dbt_name, scheme))
 	{
 		log_error("sql_db_walk: sql_cleanup failed");
 		goto error;
@@ -879,7 +879,7 @@ sql_db_cleanup(dbt_t *dbt)
 	sql_t *sql = &dbt->dbt_driver->dd_sql;
 
 	// Prepare query string
-	if (sql_cleanup(sql, conn, query, sizeof query, dbt->dbt_table))
+	if (sql_cleanup(sql, conn, query, sizeof query, dbt->dbt_name))
 	{
 		log_error("sql_db_cleanup: sql_cleanup failed");
 		return -1;

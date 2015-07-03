@@ -116,12 +116,12 @@ pgsql_open(dbt_t *dbt)
 	conn = PQconnectdb(conninfo);
 	if (PQstatus(conn) != CONNECTION_OK)
 	{
-		log_error("pgsql_open: %s: %s", dbt->dbt_table,
+		log_error("pgsql_open: %s: %s", dbt->dbt_name,
 			PQerrorMessage(conn));
 		goto error;
 	}
 
-	log_debug("pgsql_open: %s: connection ok", dbt->dbt_table);
+	log_debug("pgsql_open: %s: connection ok", dbt->dbt_name);
 
 	dbt->dbt_handle = conn;
 

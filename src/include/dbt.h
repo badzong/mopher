@@ -8,6 +8,7 @@
 
 
 #define DBT_LOCK	1<<0
+#define DBT_FIELD_MAX   256
 
 typedef int (*dbt_db_open_t)(void *dbt);
 typedef void (*dbt_db_close_t)(void *dbt);
@@ -42,12 +43,12 @@ typedef struct dbt {
 	char			 *dbt_user;
 	char			 *dbt_pass;
 	char			 *dbt_database;
-	char			 *dbt_table;
 	var_t			 *dbt_scheme;
 	int			  dbt_cleanup_interval;
 	int			  dbt_cleanup_schedule;
 	int			  dbt_cleanup_deleted;
 	int			(*dbt_validate)(struct dbt *, var_t *);
+	char			  dbt_expire_field[DBT_FIELD_MAX + 1];
 	char			 *dbt_drivername;
 	dbt_driver_t		 *dbt_driver;
 	void			 *dbt_handle;

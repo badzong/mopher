@@ -13,7 +13,8 @@
 
 #define DBT_BUCKETS 64
 #define BUFLEN 8192
-#define KEYLEN 128
+#define FIELD_MAXLEN 256
+#define EXPIRE_SUFFIX "_expire"
 
 #define DBT_STRESS_ROUNDS 100
 
@@ -445,7 +446,7 @@ dbt_register(char *name, dbt_t *dbt)
 	    "path", &dbt->dbt_path, "host", &dbt->dbt_host,
 	    "port", &dbt->dbt_port, "user", &dbt->dbt_user,
 	    "pass", &dbt->dbt_pass, "database", &dbt->dbt_database,
-	    "table", &dbt->dbt_table, NULL) == -1)
+	    NULL) == -1)
 	{
 		log_error("dbt_register: vtable_dereference failed");
 		return -1;
@@ -464,16 +465,18 @@ dbt_register(char *name, dbt_t *dbt)
 	/*
 	 * Add some defaults
 	 */
-	if (dbt->dbt_table == NULL) {
-		dbt->dbt_table = name;
-	}
-
 	if (dbt->dbt_database == NULL) {
 		dbt->dbt_database = BINNAME;
 	}
 
 	if (dbt->dbt_cleanup_interval == 0) {
 		dbt->dbt_cleanup_interval = cf_dbt_cleanup_interval;
+	}
+
+	if (strlen(dbt->dbt_expire_field) == 0)
+	{
+		snprintf(dbt->dbt_expire_field, DBT_FIELD_MAX, "%s%s", dbt->dbt_name,
+			EXPIRE_SUFFIX);
 	}
 
 	/*
@@ -506,24 +509,12 @@ dbt_register(char *name, dbt_t *dbt)
 int
 dbt_common_validate(dbt_t *dbt, var_t *record)
 {
-	char expire_key[KEYLEN];
 	VAR_INT_T *expire = NULL;
-
-	/*
-	 * created key example: greylist_created
-	 */
-	if (snprintf(expire_key, sizeof expire_key, "%s_expire",
-	    dbt->dbt_name) >= sizeof expire_key)
-	{
-		log_error("dbt_common_validate: buffer exhausted");
-		return -1;
-	}
 
 	/*
 	 * Lookup expiry in record.
 	 */
-	expire = vlist_record_get(record, expire_key);
-
+	expire = vlist_record_get(record, dbt->dbt_expire_field);
 	if (expire == NULL)
 	{
 		log_die(EX_SOFTWARE, "dbt_common_vaildate: table \"%s\" must "
