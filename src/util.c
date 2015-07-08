@@ -1041,6 +1041,11 @@ util_stripped_filename(char *buffer, int size, char *path)
 void
 util_tolower(char *p)
 {
+	if (p == NULL)
+	{
+		return;
+	}
+
 	for (; *p; ++p)
 	{
 		// Convert to lowercase

@@ -29,6 +29,15 @@ string_strcmp(int argc, void **argv)
 
 
 static var_t *
+string_tolower(int argc, void **argv)
+{
+	util_tolower((char *) argv[0]);
+
+	return var_create(VT_STRING, NULL, argv[0], VF_COPYDATA | VF_EXP_FREE);
+}
+
+
+static var_t *
 string_mailaddr(int argc, void **argv)
 {
 	char buffer[BUFLEN];
@@ -48,6 +57,8 @@ string_init(void)
 {
 	acl_function_register("strlen", AF_SIMPLE,
 	    (acl_function_callback_t) string_strlen, VT_STRING, 0);
+	acl_function_register("lower", AF_SIMPLE,
+	    (acl_function_callback_t) string_tolower, VT_STRING, 0);
 	acl_function_register("strcmp", AF_SIMPLE,
 	    (acl_function_callback_t) string_strcmp, VT_STRING, VT_STRING, 0);
 	acl_function_register("mailaddr", AF_SIMPLE,
