@@ -264,6 +264,23 @@ util_addrtostr(struct sockaddr_storage *ss)
 }
 
 int
+util_addr_ipv6(struct sockaddr_storage *ss)
+{
+	struct sockaddr_in *sin = (struct sockaddr_in *) ss;
+
+	if (sin == NULL)
+	{
+		return 0;
+	}
+
+	if (ss->ss_family == AF_INET6) {
+		return 1;
+	}
+
+	return 0;
+}
+
+int
 util_addrtoint(struct sockaddr_storage *ss)
 {
 	struct sockaddr_in *sin;

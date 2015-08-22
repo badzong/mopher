@@ -23,6 +23,7 @@ int util_strmail(char *buffer, int size, const char *src);
 int util_strdomain(char *buffer, int size, const char *src);
 struct sockaddr_storage* util_strtoaddr(const char *str);
 char * util_addrtostr(struct sockaddr_storage *ss);
+int util_addr_ipv6(struct sockaddr_storage *ss);
 int util_addrtoint(struct sockaddr_storage *ss);
 void util_addr_prefix(struct sockaddr_storage *ss, int prefix);
 int util_file_exists(char *path);

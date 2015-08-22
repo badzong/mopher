@@ -42,6 +42,7 @@ static milter_symbol_t milter_symbols[] = {
 	{ "received", MS_ANY },
 	{ "hostaddr", MS_ANY },
 	{ "hostaddr_str", MS_ANY },
+	{ "ipv6", MS_ANY },
 	{ "hostname", MS_ANY },
 	{ "origin", MS_ANY },
 	{ "helo", MS_OFF_HELO },
@@ -455,6 +456,7 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 {
 	milter_priv_t *mp = NULL;
 	VAR_INT_T now;
+	VAR_INT_T ipv6 = 0;
 	struct sockaddr_storage *ha_clean = NULL;
 	char *hostaddr_str;
 	char origin[256];
@@ -490,6 +492,8 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 			log_error("milter_connect: util_hostaddr failed");
 			goto exit;
 		}
+
+		ipv6 = util_addr_ipv6((struct sockaddr_storage *) hostaddr);
 	}
 
 	hostaddr_str = util_addrtostr(ha_clean);
@@ -510,6 +514,7 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 	    VT_INT, "id", &id, VF_KEEPNAME | VF_COPYDATA,
 	    VT_INT, "received", &now, VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "hostname", hostname, VF_KEEPNAME | VF_COPYDATA,
+	    VT_INT, "ipv6", &ipv6, VF_KEEPNAME | VF_COPYDATA,
 	    VT_ADDR, "hostaddr", ha_clean, VF_KEEPNAME,
 	    VT_STRING, "hostaddr_str", hostaddr_str, VF_KEEPNAME,
 	    VT_STRING, "origin", origin,
