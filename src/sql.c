@@ -582,7 +582,7 @@ static int
 sql_db_exec_only(sql_t *sql, void *conn, char *stmt)
 {
 	int tuples, affected;
-	void *result;
+	void *result = NULL;
 	int r = -1;
 
 	if (sql->sql_exec(conn, &result, stmt, &tuples, &affected))

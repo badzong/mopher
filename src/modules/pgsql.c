@@ -42,6 +42,7 @@ error:
 	if (*result != NULL)
 	{
 		PQclear(*result);
+		*result = NULL;
 	}
 
 	return -1;
