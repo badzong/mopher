@@ -160,6 +160,13 @@ hitlist_record(hitlist_t *hl, var_t *attrs, int load_data)
 			goto error;
 		}
 
+		if (load_data && v->v_data == NULL)
+		{
+			log_error("hitlist_scheme: %s: key %s is NULL",
+				hl->hl_name, keystr);
+			goto error;
+		}
+
 		if (vlist_append_new(schema, v->v_type, keystr,
 			load_data? v->v_data: NULL, VF_COPY | VF_KEY))
 		{
@@ -291,7 +298,12 @@ hitlist_lookup(milter_stage_t stage, char *name, var_t *attrs)
 	lookup = hitlist_record(hl, attrs, 1);
 	if (lookup == NULL)
 	{
+		// Happens if a key is not set or NULL
 		log_error("hitlist_lookup: hitlist_record failed");
+		vtable_set_null(attrs, name, VF_COPYNAME);
+
+		// Failing would lead to acl termination
+		success = 0;
 		goto exit;
 	}
 
