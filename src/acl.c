@@ -945,7 +945,7 @@ exit:
 	if (matched)
 	{
 		log_message(LOG_ERR, mailspec, "match: stage=%s rule=%d "
-			"filename=%s line=%d reply=%s", stagename, *rule, filename, *line, response);
+			"file=%s line=%d reply=%s", stagename, *rule, filename, *line, response);
 	}
 
 	if (vtable_setv(mailspec,
