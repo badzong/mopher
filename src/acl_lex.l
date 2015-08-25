@@ -3,6 +3,7 @@
 %option nounput
 %option noinput
 
+include		include
 define		define
 continue	continue
 reject		reject
@@ -60,6 +61,8 @@ macro		\{[^}]+\}
 
 comment		#.*$
 
+%x incl
+
 %{
 
 #include "mopher.h"
@@ -67,9 +70,13 @@ comment		#.*$
 
 #define acl_error parser_error
 
+YY_BUFFER_STATE acl_include_stack[ACL_INCLUDE_DEPTH];
+
 %}
 
 %%
+
+{include}	BEGIN(incl);
 
 {define}	return DEFINE;
 {continue}	return CONTINUE;
@@ -126,5 +133,33 @@ comment		#.*$
 \n		parser_line();
 
 .		parser_error("unknown token '%s'", acl_text);
+
+<incl>[ \t]*	/* eat the whitespace */
+<incl>[^ \t\n]+	{ /* got the include file name */
+	acl_include_stack[parser_stack_ptr] = YY_CURRENT_BUFFER;
+	parser_stack(yytext);
+
+	yyin = fopen(yytext, "r");
+	if (! yyin)
+	{
+		parser_error("Failed to open %s: %s", yytext, strerror(errno));
+	}
+     
+	yy_switch_to_buffer(yy_create_buffer(yyin, YY_BUF_SIZE));
+     
+	BEGIN(INITIAL);
+}
+     
+<<EOF>> {
+	if (parser_pop() < 0)
+	{
+		yyterminate();
+	}
+	else
+	{
+		yy_delete_buffer(YY_CURRENT_BUFFER);
+		yy_switch_to_buffer(acl_include_stack[parser_stack_ptr]);
+	}
+}
 
 %%

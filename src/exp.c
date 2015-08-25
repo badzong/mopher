@@ -145,7 +145,7 @@ exp_symbol(char *symbol)
 	 */
 	if (acl_symbol_lookup(symbol) == NULL)
 	{
-		parser_error("unknown variable \"%s\"", symbol);
+		parser_error("unknown symbol \"%s\"", symbol);
 	}
 		
 	return exp_create(EX_SYMBOL, symbol);

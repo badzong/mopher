@@ -2,21 +2,78 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <libgen.h>
 
 #include <mopher.h>
 
 #define BUFLEN 1024
 
-int parser_linenumber;
-static char *parser_filename;
+static int parser_linenumber[ACL_INCLUDE_DEPTH];
+static char *parser_filename[ACL_INCLUDE_DEPTH];
+
+// Increased to 0 after first call to parser_stack() in parser()
+int parser_stack_ptr = -1;
 
 
 void
 parser_line(void)
 {
-	++parser_linenumber;
+	++parser_linenumber[parser_stack_ptr];
 
 	return;
+}
+
+void
+parser_stack(char *path)
+{
+	char *copy;
+	char *filename;
+
+	if (parser_stack_ptr >= ACL_INCLUDE_DEPTH - 1)
+	{
+		log_die(EX_CONFIG, "Too many include levels in %s on line %d\n",
+			parser_filename[parser_stack_ptr], parser_linenumber[parser_stack_ptr]);
+		return;
+	}
+
+	copy = strdup(path);
+	if (copy == NULL)
+	{
+		log_die(EX_OSERR, "strdup failed");
+	}
+
+	filename = strdup(basename(copy));
+	if (filename == NULL)
+	{
+		log_die(EX_OSERR, "strdup failed");
+	}
+
+	free(copy);
+
+	++parser_stack_ptr;
+	parser_filename[parser_stack_ptr] = filename;
+	parser_linenumber[parser_stack_ptr] = 1;
+
+	return;
+}
+
+int
+parser_pop(void)
+{
+	free(parser_filename[parser_stack_ptr]);
+	return --parser_stack_ptr;
+}
+
+int
+parser_get_line()
+{
+	return parser_linenumber[parser_stack_ptr];
+}
+
+char *
+parser_get_filename()
+{
+	return parser_filename[parser_stack_ptr];
 }
 
 void
@@ -29,8 +86,8 @@ parser_error(const char *fmt, ...)
 	vsnprintf(buffer, sizeof buffer, fmt, ap);
 	va_end(ap);
 
-	log_die(EX_CONFIG, "%s in \"%s\" on line %d\n", buffer,
-	    parser_filename, parser_linenumber);
+	log_die(EX_CONFIG, "%s in \"%s\" on line %d\n", buffer, parser_get_filename(),
+		parser_get_line());
 
 	return;
 }
@@ -108,8 +165,7 @@ parser(char *path, FILE ** input, int (*parser_callback) (void))
 		return -1;
 	}
 
-	parser_linenumber = 1;
-	parser_filename = path;
+	parser_stack(path);
 
 	if (parser_callback()) {
 		log_error("parser: supplied parser callback failed");
@@ -120,3 +176,5 @@ parser(char *path, FILE ** input, int (*parser_callback) (void))
 
 	return 0;
 }
+
+

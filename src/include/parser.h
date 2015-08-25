@@ -4,14 +4,16 @@
 #include <sys/types.h>
 #include <stdio.h>
 
-extern int parser_linenumber;
+extern int parser_stack_ptr;
 
 /*
  * Prototypes
  */
 
-void parser_init(char *filename);
+void parser_stack(char *filename);
 void parser_line(void);
+int parser_get_line(void);
+char *parser_get_filename(void);
 void parser_error(const char *fmt, ...);
 int parser_tok_int(int r, long *i, char *token);
 int parser_tok_float(int r, double *d, char *token);

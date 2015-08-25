@@ -69,6 +69,7 @@ static char *acl_match_symbols[] = {
 	"acl_matched",
 	"acl_stage_matched",
 	"acl_rule",
+	"acl_filename",
 	"acl_line",
 	"acl_response",
 	NULL
@@ -157,7 +158,8 @@ acl_action_create(acl_action_type_t type, void *data)
 	aa->aa_data = data;
 
 	// HACK: Read line number from parser_linenumber
-	aa->aa_line = parser_linenumber;
+	aa->aa_filename = parser_get_filename();
+	aa->aa_line = parser_get_line();
 
 	return aa;
 }
@@ -910,7 +912,8 @@ acl_update_callback(acl_update_t callback)
 
 void
 acl_match(var_t *mailspec, VAR_INT_T matched, VAR_INT_T stage,
-    char *stagename, VAR_INT_T *rule, VAR_INT_T *line, char *response)
+    char *stagename, VAR_INT_T *rule, char *filename, VAR_INT_T *line,
+    char *response)
 {
 	VAR_INT_T *acl_matched;
 	VAR_INT_T *stage_matched;
@@ -942,13 +945,14 @@ exit:
 	if (matched)
 	{
 		log_message(LOG_ERR, mailspec, "match: stage=%s rule=%d "
-			"line=%d reply=%s", stagename, *rule, *line, response);
+			"filename=%s line=%d reply=%s", stagename, *rule, filename, *line, response);
 	}
 
 	if (vtable_setv(mailspec,
 	    VT_INT, "acl_matched", &matched, VF_KEEPNAME | VF_COPYDATA,
 	    VT_INT, "acl_stage_matched", &stage, VF_KEEPNAME | VF_COPYDATA,
 	    VT_INT, "acl_rule", rule, VF_KEEPNAME | VF_COPYDATA,
+	    VT_STRING, "acl_filename", filename, VF_KEEP,
 	    VT_INT, "acl_line", line, VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "acl_response", response, VF_KEEP,
 	    VT_NULL))
@@ -1223,8 +1227,8 @@ acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 
 		if (response == ACL_ERROR)
 		{
-			log_error("acl: rule number %d in table \"%s\" on "
-				"line %d failed", i, stagename, aa->aa_line);
+			log_error("acl: %s: rule number %d in table \"%s\" on "
+				"line %d failed", aa->aa_filename, i, stagename, aa->aa_line);
 			return ACL_ERROR;
 		}
 
@@ -1240,7 +1244,7 @@ acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 			}
 		}
 
-		acl_match(mailspec, 1, stage, stagename, &i, &aa->aa_line,
+		acl_match(mailspec, 1, stage, stagename, &i, aa->aa_filename, &aa->aa_line,
 			acl_stati[response]);
 		acl_update(stage, response, mailspec);
 
