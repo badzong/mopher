@@ -7,9 +7,12 @@
 #include <mopher.h>
 
 #define BUFLEN 1024
+#define MAX_INCLUDE 256
 
 static int parser_linenumber[ACL_INCLUDE_DEPTH];
 static char *parser_filename[ACL_INCLUDE_DEPTH];
+static char *parser_filename_buffer[MAX_INCLUDE];
+static int parser_filename_index;
 
 // Increased to 0 after first call to parser_stack() in parser()
 int parser_stack_ptr = -1;
@@ -33,19 +36,27 @@ parser_stack(char *path)
 	{
 		log_die(EX_CONFIG, "Too many include levels in %s on line %d\n",
 			parser_filename[parser_stack_ptr], parser_linenumber[parser_stack_ptr]);
-		return;
 	}
 
+	// Need a copy here, because basename may modify path.
 	copy = strdup(path);
 	if (copy == NULL)
 	{
 		log_die(EX_OSERR, "strdup failed");
 	}
 
+	// Copy again, because filename points somewehre into copy. Appended to
+	// parser_filename_buffer and free'd in parser_clear().
 	filename = strdup(basename(copy));
 	if (filename == NULL)
 	{
 		log_die(EX_OSERR, "strdup failed");
+	}
+
+	parser_filename_buffer[parser_filename_index++] = filename;
+	if (parser_filename_index >= MAX_INCLUDE)
+	{
+		log_die(EX_CONFIG, "Too many includes\n");
 	}
 
 	free(copy);
@@ -60,7 +71,9 @@ parser_stack(char *path)
 int
 parser_pop(void)
 {
-	free(parser_filename[parser_stack_ptr]);
+	parser_filename[parser_stack_ptr] = NULL;
+	parser_linenumber[parser_stack_ptr] = 0;
+
 	return --parser_stack_ptr;
 }
 
@@ -73,6 +86,12 @@ parser_get_line()
 char *
 parser_get_filename()
 {
+	// Happens after Flex has terminated and Bison is evaluating the last rule.
+	if (parser_stack_ptr < 0)
+	{
+		return parser_filename_buffer[0];
+	}
+
 	return parser_filename[parser_stack_ptr];
 }
 
@@ -177,4 +196,13 @@ parser(char *path, FILE ** input, int (*parser_callback) (void))
 	return 0;
 }
 
+void
+parser_clear(void)
+{
+	for(;parser_filename_index >=0; --parser_filename_index)
+	{
+		free(parser_filename_buffer[parser_filename_index]);
+	}
 
+	return;
+}

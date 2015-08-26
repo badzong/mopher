@@ -11,6 +11,7 @@ extern int parser_stack_ptr;
  */
 
 void parser_stack(char *filename);
+int parser_pop(void);
 void parser_line(void);
 int parser_get_line(void);
 char *parser_get_filename(void);
@@ -21,4 +22,5 @@ int parser_tok_addr(int r, struct sockaddr_storage **ss, char *token);
 int parser_tok_encstr(int r, char **str, char *token);
 int parser_tok_str(int r, char **str, char *token);
 int parser(char *path, FILE ** input, int (*parser_callback) (void));
+void parser_clear(void);
 #endif /* _PARSER_H_ */

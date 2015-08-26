@@ -157,7 +157,7 @@ acl_action_create(acl_action_type_t type, void *data)
 	aa->aa_type = type;
 	aa->aa_data = data;
 
-	// HACK: Read line number from parser_linenumber
+	// HACK: Read line number and filename directly from parser.
 	aa->aa_filename = parser_get_filename();
 	aa->aa_line = parser_get_line();
 
@@ -1339,6 +1339,12 @@ acl_clear(void)
 	 * Free expressions
 	 */
 	exp_clear();
+
+	/*
+	 * Free parser filename buffers
+	 */
+	parser_clear();
+
 
 	if (acl_tables)
 	{
