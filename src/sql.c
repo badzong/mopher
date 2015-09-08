@@ -463,10 +463,9 @@ sql_delete(sql_t *sql, void *conn, char *buffer, int size, char *tablename, var_
 }
 
 static int
-sql_cleanup(sql_t *sql, void *conn, char *buffer, int size, char *tablename)
+sql_cleanup(sql_t *sql, void *conn, char *buffer, int size, char *tablename, char *expire_raw)
 {
 	char table[BUFLEN];
-	char expire_raw[BUFLEN];
 	char expire[BUFLEN];
 	int n;
 	unsigned long now = time(NULL);
@@ -474,14 +473,6 @@ sql_cleanup(sql_t *sql, void *conn, char *buffer, int size, char *tablename)
 	if (sql->sql_esc_identifier(conn, table, sizeof table, tablename))
 	{
 		log_error("sql_cleanup: escape table failed");
-		return -1;
-	}
-
-	n = snprintf(expire_raw, sizeof expire_raw, "%s%s", tablename,
-		SQL_EXPIRE);
-	if (n >= sizeof expire_raw)
-	{
-		log_error("sql_cleanup: buffer exhausted");
 		return -1;
 	}
 
@@ -827,14 +818,14 @@ sql_db_walk(dbt_t *dbt, dbt_db_callback_t callback)
 
 	if (sql_select_all(sql, conn, query, sizeof query, dbt->dbt_name, scheme))
 	{
-		log_error("sql_db_walk: sql_cleanup failed");
+		log_error("sql_db_walk: sql_select_all failed");
 		goto error;
 	}
 
 	// Execute query
 	if (sql->sql_exec(conn, &result, query, &tuples, &affected))
 	{
-		log_error("sql_db_cleanup: sql_exec failed");
+		log_error("sql_db_walk: sql_exec failed");
 		goto error;
 	}
 
@@ -879,7 +870,7 @@ sql_db_cleanup(dbt_t *dbt)
 	sql_t *sql = &dbt->dbt_driver->dd_sql;
 
 	// Prepare query string
-	if (sql_cleanup(sql, conn, query, sizeof query, dbt->dbt_name))
+	if (sql_cleanup(sql, conn, query, sizeof query, dbt->dbt_name, dbt->dbt_expire_field))
 	{
 		log_error("sql_db_cleanup: sql_cleanup failed");
 		return -1;

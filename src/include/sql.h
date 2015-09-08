@@ -5,8 +5,6 @@
 #define SQL_VALUES	1<<1
 #define SQL_ALL		(SQL_KEYS | SQL_VALUES)
 
-#define SQL_EXPIRE "_expire"
-
 
 /*
  * Types
