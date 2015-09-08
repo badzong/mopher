@@ -128,13 +128,13 @@ comment		#.*$
 
 {comment}	;
 [ \t]		;
-\n		parser_next_line(&acl_parser_magic);
+\n		parser_next_line(&acl_parser);
 
 .		acl_parser_error("unknown token '%s' in %s on line %d", acl_text);
 
 <incl>[ \t]*	/* eat the whitespace */
 <incl>[^ \t\n]+	{ /* got the include file name */
-	parser_stack(&acl_parser_magic, YY_CURRENT_BUFFER, yytext);
+	parser_stack(&acl_parser, YY_CURRENT_BUFFER, yytext);
 
 	yyin = fopen(yytext, "r");
 	if (!yyin)
@@ -147,14 +147,14 @@ comment		#.*$
 }
      
 <<EOF>> {
-	yy_delete_buffer(parser_current_yy_buffer(&acl_parser_magic));
-	if (parser_pop(&acl_parser_magic) == 0)
+	yy_delete_buffer(parser_current_yy_buffer(&acl_parser));
+	if (parser_pop(&acl_parser) == 0)
 	{
 		yyterminate();
 	}
 	else
 	{
-		yy_switch_to_buffer(parser_current_yy_buffer(&acl_parser_magic));
+		yy_switch_to_buffer(parser_current_yy_buffer(&acl_parser));
 	}
 }
 

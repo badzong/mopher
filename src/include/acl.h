@@ -8,8 +8,8 @@
 
 #define ACL_VARIABLES "VARIABLES"
 
-extern parser_t acl_parser_magic;
-#define acl_parser_error(...) parser_error(&acl_parser_magic, __VA_ARGS__)
+extern parser_t acl_parser;
+#define acl_parser_error(...) parser_error(&acl_parser, __VA_ARGS__)
 
 enum acl_action_type
 {
