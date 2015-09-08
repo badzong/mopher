@@ -14,10 +14,10 @@
 #include <ht.h>
 #include <sht.h>
 #include <ll.h>
+#include <parser.h>
 #include <log.h>
 #include <milter.h>
 #include <module.h>
-#include <parser.h>
 #include <sock.h>
 #include <util.h>
 #include <base64.h>

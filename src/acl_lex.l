@@ -68,9 +68,7 @@ comment		#.*$
 #include "mopher.h"
 #include "acl_yacc.h"
 
-#define acl_error parser_error
-
-YY_BUFFER_STATE acl_include_stack[ACL_INCLUDE_DEPTH];
+#define acl_error acl_parser_error
 
 %}
 
@@ -130,35 +128,33 @@ YY_BUFFER_STATE acl_include_stack[ACL_INCLUDE_DEPTH];
 
 {comment}	;
 [ \t]		;
-\n		parser_line();
+\n		parser_next_line(&acl_parser_magic);
 
-.		parser_error("unknown token '%s'", acl_text);
+.		acl_parser_error("unknown token '%s' in %s on line %d", acl_text);
 
 <incl>[ \t]*	/* eat the whitespace */
 <incl>[^ \t\n]+	{ /* got the include file name */
-	acl_include_stack[parser_stack_ptr] = YY_CURRENT_BUFFER;
-	parser_stack(yytext);
+	parser_stack(&acl_parser_magic, YY_CURRENT_BUFFER, yytext);
 
 	yyin = fopen(yytext, "r");
-	if (! yyin)
+	if (!yyin)
 	{
-		parser_error("Failed to open %s: %s", yytext, strerror(errno));
+		acl_parser_error("Failed to open %s: %s", yytext, strerror(errno));
 	}
-     
+
 	yy_switch_to_buffer(yy_create_buffer(yyin, YY_BUF_SIZE));
-     
 	BEGIN(INITIAL);
 }
      
 <<EOF>> {
-	if (parser_pop() < 0)
+	yy_delete_buffer(parser_current_yy_buffer(&acl_parser_magic));
+	if (parser_pop(&acl_parser_magic) == 0)
 	{
 		yyterminate();
 	}
 	else
 	{
-		yy_delete_buffer(YY_CURRENT_BUFFER);
-		yy_switch_to_buffer(acl_include_stack[parser_stack_ptr]);
+		yy_switch_to_buffer(parser_current_yy_buffer(&acl_parser_magic));
 	}
 }
 

@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include "mopher.h"
 
-#define acl_error parser_error
+#define acl_error acl_parser_error
 
 int acl_lex(void);
 

@@ -4,9 +4,12 @@
 #include <exp.h>
 #include <ll.h>
 #include <milter.h>
+#include <parser.h>
 
 #define ACL_VARIABLES "VARIABLES"
-#define ACL_INCLUDE_DEPTH 10
+
+extern parser_t acl_parser_magic;
+#define acl_parser_error(...) parser_error(&acl_parser_magic, __VA_ARGS__)
 
 enum acl_action_type
 {

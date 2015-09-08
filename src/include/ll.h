@@ -44,6 +44,7 @@ void ll_test(int n);
  */
 #define LL_SIZE(ll)	((ll)->ll_size)
 #define LL_HEAD(ll)	((ll)->ll_head->lle_data)
+#define LL_TAIL(ll)	((ll)->ll_tail->lle_data)
 #define LL_INSERT	ll_insert_tail
 #define	LL_ENQUEUE	ll_insert_tail
 #define LL_DEQUEUE	ll_remove_head

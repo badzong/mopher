@@ -11,6 +11,7 @@
 
 extern FILE *acl_in;
 extern int acl_parse(void);
+parser_t acl_parser_magic;
 
 static sht_t *acl_tables;
 static sht_t *acl_symbols;
@@ -158,8 +159,8 @@ acl_action_create(acl_action_type_t type, void *data)
 	aa->aa_data = data;
 
 	// HACK: Read line number and filename directly from parser.
-	aa->aa_filename = parser_get_filename();
-	aa->aa_line = parser_get_line();
+	aa->aa_filename = parser_current_filename(&acl_parser_magic);
+	aa->aa_line = parser_current_line(&acl_parser_magic);
 
 	return aa;
 }
@@ -1323,10 +1324,7 @@ acl_read(void)
 	/*
 	 * run parser
 	 */
-	if(parser(mopherd_acl, &acl_in, acl_parse))
-	{
-		log_die(EX_SOFTWARE, "acl_read: parser failed");
-	}
+	parser(&acl_parser_magic, mopherd_acl, &acl_in, acl_parse);
 
 	return;
 }
@@ -1343,7 +1341,7 @@ acl_clear(void)
 	/*
 	 * Free parser filename buffers
 	 */
-	parser_clear();
+	parser_clear(&acl_parser_magic);
 
 
 	if (acl_tables)

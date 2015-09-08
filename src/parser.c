@@ -7,96 +7,154 @@
 #include <mopher.h>
 
 #define BUFLEN 1024
-#define MAX_INCLUDE 256
 
-static int parser_linenumber[ACL_INCLUDE_DEPTH];
-static char *parser_filename[ACL_INCLUDE_DEPTH];
-static char *parser_filename_buffer[MAX_INCLUDE];
-static int parser_filename_index;
-
-// Increased to 0 after first call to parser_stack() in parser()
-int parser_stack_ptr = -1;
-
-
-void
-parser_line(void)
+static parser_file_t *
+parser_file_create(char *path)
 {
-	++parser_linenumber[parser_stack_ptr];
+	parser_file_t *pf;
+
+	pf = (parser_file_t *) malloc(sizeof(parser_file_t));
+	if (pf == NULL)
+	{
+		log_sys_die(EX_OSERR, "parser_file: malloc");
+	}
+	
+	memset(pf, 0, sizeof(parser_file_t));
+	strncpy(pf->pf_path, path, PARSER_PATHLEN);
+	pf->pf_path[PARSER_PATHLEN - 1] = 0;
+
+	pf->pf_filename = strrchr(pf->pf_path, '/');
+	if (pf->pf_filename == NULL)
+	{
+		pf->pf_filename = pf->pf_path;
+	}
+	// Remove leading /
+	else
+	{
+		++pf->pf_filename;
+	}
+
+	return pf;
+}
+
+static void
+parser_init(parser_t *p)
+{
+	ll_init(&p->p_stack);
+	ll_init(&p->p_files);
 
 	return;
 }
 
 void
-parser_stack(char *path)
+parser_clear(parser_t *p)
 {
-	char *copy;
-	char *filename;
+	ll_clear(&p->p_files, free);
 
-	if (parser_stack_ptr >= ACL_INCLUDE_DEPTH - 1)
+	return;
+}
+
+
+void
+parser_stack(parser_t *p, void *yy_buffer, char *path)
+{
+	parser_file_t *pf_current;
+	parser_file_t *pf_new;
+
+	// Save buffer to current file
+	pf_current = parser_current_file(p);
+	if (pf_current)
 	{
-		log_die(EX_CONFIG, "Too many include levels in %s on line %d\n",
-			parser_filename[parser_stack_ptr], parser_linenumber[parser_stack_ptr]);
+		pf_current->pf_yy_buffer = yy_buffer;
 	}
 
-	// Need a copy here, because basename may modify path.
-	copy = strdup(path);
-	if (copy == NULL)
+	if (p->p_stack.ll_size > PARSER_MAXSTACK)
 	{
-		log_die(EX_OSERR, "strdup failed");
+		log_die(EX_SOFTWARE, "parser_stack: %s: exceeded maximum include stack size %d",
+			path, PARSER_MAXSTACK);
 	}
 
-	// Copy again, because filename points somewehre into copy. Appended to
-	// parser_filename_buffer and free'd in parser_clear().
-	filename = strdup(basename(copy));
-	if (filename == NULL)
+	pf_new = parser_file_create(path);
+	if (pf_new == NULL)
 	{
-		log_die(EX_OSERR, "strdup failed");
+		log_die(EX_SOFTWARE, "parser_stack: parser_file create failed");
 	}
 
-	parser_filename_buffer[parser_filename_index++] = filename;
-	if (parser_filename_index >= MAX_INCLUDE)
+	if (LL_PUSH(&p->p_files, pf_new) == -1 || LL_PUSH(&p->p_stack, pf_new) == -1)
 	{
-		log_die(EX_CONFIG, "Too many includes\n");
+		log_die(EX_SOFTWARE, "parser_stack: LL_PUSH failed");
 	}
-
-	free(copy);
-
-	++parser_stack_ptr;
-	parser_filename[parser_stack_ptr] = filename;
-	parser_linenumber[parser_stack_ptr] = 1;
 
 	return;
 }
 
 int
-parser_pop(void)
+parser_pop(parser_t *p)
 {
-	parser_filename[parser_stack_ptr] = NULL;
-	parser_linenumber[parser_stack_ptr] = 0;
+	LL_POP(&p->p_stack);
 
-	return --parser_stack_ptr;
+	return p->p_stack.ll_size;
+}
+
+parser_file_t *
+parser_current_file(parser_t *p)
+{
+	// The stack is not empty
+	if (p->p_stack.ll_size > 0)
+	{
+		return LL_HEAD(&p->p_stack);
+	}
+
+	// Last file has been popped so the stack ist empty.
+	if (p->p_files.ll_size > 0)
+	{
+		return LL_TAIL(&p->p_files);
+	}
+
+	// Initializing stack and files are empty
+	return NULL;
+}
+
+void
+parser_next_line(parser_t *p)
+{
+	parser_file_t *pf = parser_current_file(p);
+	++pf->pf_line;
+
+	return;
 }
 
 int
-parser_get_line()
+parser_current_line(parser_t *p)
 {
-	return parser_linenumber[parser_stack_ptr];
+	parser_file_t *pf = parser_current_file(p);
+	return pf->pf_line;
 }
 
 char *
-parser_get_filename()
+parser_current_filename(parser_t *p)
 {
-	// Happens after Flex has terminated and Bison is evaluating the last rule.
-	if (parser_stack_ptr < 0)
-	{
-		return parser_filename_buffer[0];
-	}
+	parser_file_t *pf = parser_current_file(p);
+	return pf->pf_filename;
+}
 
-	return parser_filename[parser_stack_ptr];
+char *
+parser_current_path(parser_t *p)
+{
+	parser_file_t *pf = parser_current_file(p);
+	return pf->pf_path;
+}
+
+
+void *
+parser_current_yy_buffer(parser_t *p)
+{
+	parser_file_t *pf = parser_current_file(p);
+	return pf->pf_yy_buffer;
 }
 
 void
-parser_error(const char *fmt, ...)
+parser_error(parser_t *p, const char *fmt, ...)
 {
 	va_list ap;
 	char buffer[BUFLEN];
@@ -105,8 +163,8 @@ parser_error(const char *fmt, ...)
 	vsnprintf(buffer, sizeof buffer, fmt, ap);
 	va_end(ap);
 
-	log_die(EX_CONFIG, "%s in \"%s\" on line %d\n", buffer, parser_get_filename(),
-		parser_get_line());
+	log_die(EX_CONFIG, "%s in \"%s\" on line %d\n", buffer, parser_current_path(p),
+		parser_current_line(p));
 
 	return;
 }
@@ -164,45 +222,35 @@ parser_tok_str(int r, char **str, char *token)
 	return r;
 }
 
-int
-parser(char *path, FILE ** input, int (*parser_callback) (void))
+void
+parser(parser_t *p, char *path, FILE ** input, int (*parser_callback) (void))
 {
 	struct stat fs;
 
-	if (stat(path, &fs) == -1) {
-		log_sys_error("%s", path);
-		return -1;
+	if (stat(path, &fs) == -1)
+	{
+		log_sys_die(EX_CONFIG, "%s", path);
 	}
 
-	if (fs.st_size == 0) {
-		log_notice("parser: '%s' is empty", path);
-		return -1;
+	if (fs.st_size == 0)
+	{
+		log_die(EX_CONFIG, "parser: '%s' is empty", path);
 	}
 
-	if ((*input = fopen(path, "r")) == NULL) {
-		log_sys_error("parser: fopen '%s'", path);
-		return -1;
+	if ((*input = fopen(path, "r")) == NULL)
+	{
+		log_sys_die(EX_CONFIG, "parser: fopen '%s'", path);
 	}
 
-	parser_stack(path);
+	parser_init(p);
+	parser_stack(p, NULL, path);
 
-	if (parser_callback()) {
-		log_error("parser: supplied parser callback failed");
-		return -1;
+	if (parser_callback())
+	{
+		log_die(EX_SOFTWARE, "parser: supplied parser callback failed");
 	}
 
 	fclose(*input);
-
-	return 0;
-}
-
-void
-parser_clear(void)
-{
-	for(;parser_filename_index >=0; --parser_filename_index)
-	{
-		free(parser_filename_buffer[parser_filename_index]);
-	}
 
 	return;
 }

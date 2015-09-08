@@ -145,7 +145,7 @@ exp_symbol(char *symbol)
 	 */
 	if (acl_symbol_lookup(symbol) == NULL)
 	{
-		parser_error("unknown symbol \"%s\"", symbol);
+		acl_parser_error("unknown symbol \"%s\"", symbol);
 	}
 		
 	return exp_create(EX_SYMBOL, symbol);
@@ -218,7 +218,7 @@ exp_operation(int operator, exp_t *op1, exp_t *op2)
 
 	if (operator == '=' && op1->ex_type != EX_VARIABLE)
 	{
-		parser_error("bad use of '=' operator");
+		acl_parser_error("bad use of '=' operator");
 	}
 
 	return exp_create(EX_OPERATION, eo);
@@ -232,7 +232,7 @@ exp_function(char *id, exp_t *args)
 
 	if (acl_function_lookup(id) == NULL)
 	{
-		parser_error("unknown function \"%s\"", id);
+		acl_parser_error("unknown function \"%s\"", id);
 	}
 		
 	ef = (exp_function_t *) malloc(sizeof (exp_function_t));

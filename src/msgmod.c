@@ -27,7 +27,7 @@ msgmod_get_target(char *id)
 		}
 	}
 
-	parser_error("bad keyword: %s", id);
+	acl_parser_error("bad keyword: %s", id);
 
 	return -1;
 }
@@ -92,7 +92,7 @@ msgmod_create(msgmod_mod_t mod, msgmod_target_t target, ...)
 	mm->mm_callback = msgmod_get_callback(mod, target);
 	if (mm->mm_callback == NULL)
 	{
-		parser_error("syntax error (msgmod callback)");
+		acl_parser_error("syntax error (msgmod callback)");
 
 		// Not reached.
 		return NULL;
