@@ -1324,7 +1324,7 @@ acl_read(void)
 	/*
 	 * run parser
 	 */
-	parser(&acl_parser, mopherd_acl, &acl_in, acl_parse);
+	parser(&acl_parser, mopherd_acl, 1, &acl_in, acl_parse);
 
 	return;
 }

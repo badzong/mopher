@@ -163,8 +163,8 @@ parser_error(parser_t *p, const char *fmt, ...)
 	vsnprintf(buffer, sizeof buffer, fmt, ap);
 	va_end(ap);
 
-	log_die(EX_CONFIG, "%s in \"%s\" on line %d\n", buffer, parser_current_path(p),
-		parser_current_line(p));
+	log_die(EX_CONFIG, "%s on line %d: %s\n", parser_current_path(p),
+		parser_current_line(p), buffer);
 
 	return;
 }
@@ -223,23 +223,26 @@ parser_tok_str(int r, char **str, char *token)
 }
 
 void
-parser(parser_t *p, char *path, FILE ** input, int (*parser_callback) (void))
+parser(parser_t *p, char *path, int open_file, FILE **input, int (*parser_callback) (void))
 {
 	struct stat fs;
 
-	if (stat(path, &fs) == -1)
+	if (open_file)
 	{
-		log_sys_die(EX_CONFIG, "%s", path);
-	}
+		if (stat(path, &fs) == -1)
+		{
+			log_sys_die(EX_CONFIG, "%s", path);
+		}
 
-	if (fs.st_size == 0)
-	{
-		log_die(EX_CONFIG, "parser: '%s' is empty", path);
-	}
+		if (fs.st_size == 0)
+		{
+			log_die(EX_CONFIG, "parser: '%s' is empty", path);
+		}
 
-	if ((*input = fopen(path, "r")) == NULL)
-	{
-		log_sys_die(EX_CONFIG, "parser: fopen '%s'", path);
+		if ((*input = fopen(path, "r")) == NULL)
+		{
+			log_sys_die(EX_CONFIG, "parser: fopen '%s'", path);
+		}
 	}
 
 	parser_init(p);
@@ -250,7 +253,10 @@ parser(parser_t *p, char *path, FILE ** input, int (*parser_callback) (void))
 		log_die(EX_SOFTWARE, "parser: supplied parser callback failed");
 	}
 
-	fclose(*input);
+	if (open_file)
+	{
+		fclose(*input);
+	}
 
 	return;
 }

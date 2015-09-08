@@ -134,14 +134,13 @@ comment		#.*$
 
 <incl>[ \t]*	/* eat the whitespace */
 <incl>[^ \t\n]+	{ /* got the include file name */
-	parser_stack(&acl_parser, YY_CURRENT_BUFFER, yytext);
-
 	yyin = fopen(yytext, "r");
 	if (!yyin)
 	{
 		acl_parser_error("Failed to open %s: %s", yytext, strerror(errno));
 	}
 
+	parser_stack(&acl_parser, YY_CURRENT_BUFFER, yytext);
 	yy_switch_to_buffer(yy_create_buffer(yyin, YY_BUF_SIZE));
 	BEGIN(INITIAL);
 }

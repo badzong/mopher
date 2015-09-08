@@ -25,9 +25,8 @@ static var_t *cf_config;
 /*
  * Yacc Parser
  */
+extern FILE *cf_in;
 extern int cf_parse(void);
-
-int cf_line;
 
 /*
  * Default Configuration cf_defaults.conf is compiled in.
@@ -35,14 +34,10 @@ int cf_line;
 extern char _binary_cf_defaults_conf_start;
 extern char _binary_cf_defaults_conf_end;
 
-static char *cf_file_start;
-static char *cf_file_end;
-static char *cf_file_pos;
-
 /*
- * Configuration file buffer
+ * Parser stucture for parser()
  */
-static char *cf_file_buffer;
+parser_t cf_parser;
 
 /*
  * Extern configuration symbols
@@ -211,82 +206,35 @@ cf_load_symbols(void)
 	return;
 }
 
-void
-cf_run_parser(void)
-{
-	cf_line = 1;
-	cf_parse();
-
-	return;
-}
-
-int
-cf_yyinput(char *buffer, int size)
-{
-	int n, avail;
-
-	if(cf_file_pos == NULL) {
-		cf_file_pos = cf_file_start;
-	}
-
-	avail = cf_file_end - cf_file_pos;
-	n = avail >= size ? size : avail;
-
-	memcpy(buffer, cf_file_pos, n);
-
-	cf_file_pos += n;
-
-	return n;
-}
-
 static void
 cf_load_defaults(void)
 {
+	char *buffer = &_binary_cf_defaults_conf_start;
+	size_t size = &_binary_cf_defaults_conf_end - buffer;
+
+	cf_in = fmemopen(buffer, size, "r");
+	if (cf_in == NULL)
+	{
+		log_sys_die(EX_OSERR, "cf_load_defaults: fmemopen failed");
+	}
+
 	log_debug("cf_init: load default configuration");
 
-	cf_file_start = &_binary_cf_defaults_conf_start;
-	cf_file_end = &_binary_cf_defaults_conf_end;
-	cf_file_pos = NULL;
+	parser(&cf_parser, "BUILT-IN CONFIGURATION", 0, &cf_in, cf_parse);
+	parser_clear(&cf_parser);
 
-	cf_run_parser();
+	fclose(cf_in);
+
+	return;
 }
 
 
 static void
 cf_load_file(char *file)
 {
-	int exists, size;
+	parser(&cf_parser, file, 1, &cf_in, cf_parse);
+	parser_clear(&cf_parser);
 
-	exists = util_file_exists(file);
-	if (exists == -1) {
-		log_die(EX_CONFIG, "cf_load_file: util_file_exists failed");
-	}
-
-	if (exists == 0) {
-		log_warning("%s does not exist. Using defaults.", file);
-		return;
-	}
-
-	log_info("cf_load_file: loading configiration file \"%s\"", file);
-
-	size = util_file(file, &cf_file_buffer);
-	if (size == -1) {
-		log_die(EX_CONFIG, "cf_load_file: util_file failed");
-	}
-
-	if(size == 0) {
-		log_warning("cf_load_file: \"%s\" is empty. Using defaults",
-			file);
-		return;
-	}
-
-	cf_file_pos = cf_file_start = cf_file_buffer;
-	cf_file_end = cf_file_start + size;
-
-	cf_run_parser();
-
-	free(cf_file_buffer);
-	
 	return;
 }
 
@@ -330,7 +278,6 @@ cf_init(void)
 	{
 		log_die(EX_CONFIG, "cf_init: vtable_create failed");
 	}
-
 
 	//var_dump(cf_config, buffer, sizeof(buffer));
 	//printf(buffer);

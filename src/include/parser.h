@@ -39,6 +39,6 @@ int parser_tok_float(int r, double *d, char *token);
 int parser_tok_addr(int r, struct sockaddr_storage **ss, char *token);
 int parser_tok_encstr(int r, char **str, char *token);
 int parser_tok_str(int r, char **str, char *token);
-void parser(parser_t *p, char *path, FILE ** input, int (*parser_callback) (void));
+void parser(parser_t *p, char *path, int open_file, FILE ** input, int (*parser_callback) (void));
 
 #endif /* _PARSER_H_ */

@@ -3,6 +3,10 @@
 
 #include <ll.h>
 #include <var.h>
+#include <parser.h>
+
+extern parser_t cf_parser;
+#define cf_parser_error(...) parser_error(&cf_parser, __VA_ARGS__)
 
 typedef struct cf_symbol {
 	char		*cs_name;

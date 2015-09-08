@@ -3,6 +3,7 @@
 %option nounput
 %option noinput
 
+include		include
 id		[a-zA-Z][a-zA-Z0-9_-]+
 integer		[+-]?[0-9]+
 float		[+-]?[0-9]+\.[0-9]+
@@ -13,6 +14,8 @@ tt		[,=(){}\[\]]
 
 comment		#.*$
 
+%x incl
+
 %{
 
 #include <stdio.h>
@@ -20,22 +23,14 @@ comment		#.*$
 #include <arpa/inet.h>
 
 #include "mopher.h"
-
 #include "cf_yacc.h"
 
-#undef YY_INPUT
-#define YY_INPUT(b, r, n) (r = cf_yyinput(b, n))
-
-extern int cf_line;
-
-void
-cf_error(const char *s)
-{
-	log_die(EX_CONFIG, "%s on line %d\n", s, cf_line);
-}
+#define cf_error(...) parser_error(&cf_parser, __VA_ARGS__)
 
 %}
 %%
+
+{include}	BEGIN(incl);
 
 {integer}	{
 			VAR_INT_T i;
@@ -111,10 +106,33 @@ cf_error(const char *s)
 {tt}		return yytext[0];
 {comment}	;
 [ \t]		;
-\n		++cf_line;
+\n		parser_next_line(&cf_parser);
 
-.		{
-			log_die(EX_CONFIG, "unknown token '%s' on line %d\n",
-			    yytext, cf_line);
-		}
+.		cf_parser_error("unknown token '%s' in %s on line %d", yytext);
+
+<incl>[ \t]*	/* eat the whitespace */
+<incl>[^ \t\n]+	{ /* got the include file name */
+	yyin = fopen(yytext, "r");
+	if (!yyin)
+	{
+		cf_parser_error("Failed to open %s: %s", yytext, strerror(errno));
+	}
+
+	parser_stack(&cf_parser, YY_CURRENT_BUFFER, yytext);
+	yy_switch_to_buffer(yy_create_buffer(yyin, YY_BUF_SIZE));
+	BEGIN(INITIAL);
+}
+     
+<<EOF>> {
+	yy_delete_buffer(parser_current_yy_buffer(&cf_parser));
+	if (parser_pop(&cf_parser) == 0)
+	{
+		yyterminate();
+	}
+	else
+	{
+		yy_switch_to_buffer(parser_current_yy_buffer(&cf_parser));
+	}
+}
+
 %%

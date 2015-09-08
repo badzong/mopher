@@ -5,9 +5,8 @@
 
 #include "mopher.h"
 
-extern int cf_line;
-int cf_lex(void);
-int cf_error(char *);
+#define cf_error cf_parser_error
+
 extern var_t *cf_config;
 
 %}
