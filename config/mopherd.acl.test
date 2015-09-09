@@ -1,181 +1,140 @@
-define STR "test string"
-define STRLEN strlen(STR)
-define INTEGER 1001
-define FLOAT 10.01
-define MATH FLOAT * 100 / INTEGER
-define LIST ("foo", "bar", "foobar")
+define TEST_STR "test string"
+define TEST_STRLEN strlen(TEST_STR)
+define TEST_INTEGER 1001
+define TEST_FLOAT 10.01
+define TEST_MATH TEST_FLOAT * 100 / TEST_INTEGER
+define TEST_LIST ("foo", "bar", "foobar")
 
 # Variables
-connect set $var1 = 1.7
-connect set $list = (1, 2, 3, 4, 5)
+init set $test_var1 = 1.7
+init set $test_list = (1, 2, 3, 4, 5)
 
-connect $var1 != 1.7                                  log "VAR ERROR 1"
-connect $var2 = $var1 * 5 / 0.5 != 17.0               log "VAR ERROR 2"
-connect $var2 != 17.0                                 log "VAR ERROR 3"
+init $test_var1 != 1.7                             log "VAR ERROR 1"
+init $test_var2 = $test_var1 * 5 / 0.5 != 17.0     log "VAR ERROR 2"
+init $test_var2 != 17.0                            log "VAR ERROR 3"
 
 # Functions
-connect size("test") != 5                             log "FUNC ERROR 1"
-connect strlen("test") != 4                           log "FUNC ERROR 2"
-connect strcmp("test string", STR) != 0               log "FUNC ERROR 3"
-connect strlen("foo") * size("bar") != 12             log "FUNC ERROR 4"
+init size("test") != 5                             log "FUNC ERROR 1"
+init strlen("test") != 4                           log "FUNC ERROR 2"
+init strcmp("test string", TEST_STR) != 0          log "FUNC ERROR 3"
+init strlen("foo") * size("bar") != 12             log "FUNC ERROR 4"
+init TEST_STRLEN != 11                             log "FUNC ERROR 5"
 
 # Types
-connect 1.5 * 2 != 3                                  log "TYPE ERROR 1"
-connect 2 * 1.5 != 3                                  log "TYPE ERROR 2"
-connect cast(INT, 9.0) * cast(INT, 0.9) != 0	      log "TYPE ERROR 3"
+init 1.5 * 2 != 3                                  log "TYPE ERROR 1"
+init 2 * 1.5 != 3                                  log "TYPE ERROR 2"
+init cast(INT, 9.0) * cast(INT, 0.9) != 0          log "TYPE ERROR 3"
 
 # Strings
-connect "foo" + 1 != "foo1"                           log "STRING ERROR 1"
-connect "foo" + 1.0 != "foo1.00"                      log "STRING ERROR 2"
-connect "foo" + 127.0.0.1 != "foo127.0.0.1"           log "STRING ERROR 3"
+init "foo" + 1 != "foo1"                           log "STRING ERROR 1"
+init "foo" + 1.0 != "foo1.00"                      log "STRING ERROR 2"
+init "foo" + 127.0.0.1 != "foo127.0.0.1"           log "STRING ERROR 3"
 
 # NULL
-connect (null() == null) != 1                         log "NULL ERROR 1"
-connect (null() + 1 == null) != 1                     log "NULL ERROR 2"
-connect (5 * null() == null) != 1                     log "NULL ERROR 3"
-connect (null() > null() == null) != 1                log "NULL ERROR 4"
-connect (10.9 >= null() == null) != 1                 log "NULL ERROR 5"
-connect (1 > 0 || null() > 0) != 1                    log "NULL ERROR 6"
+init (null() == null) != 1                         log "NULL ERROR 1"
+init (null() + 1 == null) != 1                     log "NULL ERROR 2"
+init (5 * null() == null) != 1                     log "NULL ERROR 3"
+init (null() > null() == null) != 1                log "NULL ERROR 4"
+init (10.9 >= null() == null) != 1                 log "NULL ERROR 5"
+init (1 > 0 || null() > 0) != 1                    log "NULL ERROR 6"
 
 # Operators
-connect ((10 + 10) / 20) != 1                         log "OP ERROR 1"
-connect ((30 * 20 / 100 + 4) / 2) != 5                log "OP ERROR 2"
-connect (1.5 * 10 / 5 + 1.0 * 10.0 - 13.5 + 2) != 1.5 log "OP ERROR 3"
-connect 1 * 0.1 * 0.001 * 1000 / 2 != 0.05            log "OP ERROR 4"
-connect ((MATH + 5) / 6) != 1                         log "OP ERROR 5"
-connect (INTEGER / FLOAT / 100) != 1                  log "OP ERROR 6"
-connect ((3 > 4) == 0) != 1                           log "OP ERROR 7"
-connect ((1 < 2) == (1 > 0)) != 1                     log "OP ERROR 8"
-connect (3.9 >= 4 <= 1) != 1                          log "OP ERROR 9"
+init ((10 + 10) / 20) != 1                         log "OP ERROR 1"
+init ((30 * 20 / 100 + 4) / 2) != 5                log "OP ERROR 2"
+init (1.5 * 10 / 5 + 1.0 * 10.0 - 13.5 + 2) != 1.5 log "OP ERROR 3"
+init 1 * 0.1 * 0.001 * 1000 / 2 != 0.05            log "OP ERROR 4"
+init ((TEST_MATH + 5) / 6) != 1                    log "OP ERROR 5"
+init (TEST_INTEGER / TEST_FLOAT / 100) != 1        log "OP ERROR 6"
+init ((3 > 4) == 0) != 1                           log "OP ERROR 7"
+init ((1 < 2) == (1 > 0)) != 1                     log "OP ERROR 8"
+init (3.9 >= 4 <= 1) != 1                          log "OP ERROR 9"
 
 # Address prefix calculation
-connect 127.0.0.1/31 != 127.0.0.0                     log "ADDR PREFIX ERROR 1"
-connect 192.168.1.100/24 != 192.168.1.0               log "ADDR PREFIX ERROR 2"
-connect 10.0.155.114/29 != 10.0.155.112               log "ADDR PREFIX ERROR 3"
-connect 75.10.20.30/4 != 64.0.0.0                     log "ADDR PREFIX ERROR 4"
-connect 2001:1234::ab:cd:ef/64 != 2001:1234::         log "ADDR PREFIX ERROR 5"
-connect 2001:1:2:ffff::1/63 != 2001:1:2:fffe::        log "ADDR PREFIX ERROR 6"
-connect 2001:1:2:ffff::1/62 != 2001:1:2:fffc::        log "ADDR PREFIX ERROR 7"
-connect 2001:1:2:ffff::1/61 != 2001:1:2:fff8::        log "ADDR PREFIX ERROR 8"
-connect 2001:1:2:ffff::1/60 != 2001:1:2:fff0::        log "ADDR PREFIX ERROR 9"
-connect 2001:1:2:ffff::1/59 != 2001:1:2:ffe0::        log "ADDR PREFIX ERROR 10"
-connect 2001:1:2:ffff::1/58 != 2001:1:2:ffc0::        log "ADDR PREFIX ERROR 11"
-connect 2001:1:2:ffff::1/57 != 2001:1:2:ff80::        log "ADDR PREFIX ERROR 12"
-connect 2001:1:2:ffff::1/56 != 2001:1:2:ff00::        log "ADDR PREFIX ERROR 13"
+init 127.0.0.1/31 != 127.0.0.0                     log "ADDR PREFIX ERROR 1"
+init 192.168.1.100/24 != 192.168.1.0               log "ADDR PREFIX ERROR 2"
+init 10.0.155.114/29 != 10.0.155.112               log "ADDR PREFIX ERROR 3"
+init 75.10.20.30/4 != 64.0.0.0                     log "ADDR PREFIX ERROR 4"
+init 2001:1234::ab:cd:ef/64 != 2001:1234::         log "ADDR PREFIX ERROR 5"
+init 2001:1:2:ffff::1/63 != 2001:1:2:fffe::        log "ADDR PREFIX ERROR 6"
+init 2001:1:2:ffff::1/62 != 2001:1:2:fffc::        log "ADDR PREFIX ERROR 7"
+init 2001:1:2:ffff::1/61 != 2001:1:2:fff8::        log "ADDR PREFIX ERROR 8"
+init 2001:1:2:ffff::1/60 != 2001:1:2:fff0::        log "ADDR PREFIX ERROR 9"
+init 2001:1:2:ffff::1/59 != 2001:1:2:ffe0::        log "ADDR PREFIX ERROR 10"
+init 2001:1:2:ffff::1/58 != 2001:1:2:ffc0::        log "ADDR PREFIX ERROR 11"
+init 2001:1:2:ffff::1/57 != 2001:1:2:ff80::        log "ADDR PREFIX ERROR 12"
+init 2001:1:2:ffff::1/56 != 2001:1:2:ff00::        log "ADDR PREFIX ERROR 13"
 
 # Logic
-connect (1 && 1) != 1                                 log "LOGIC ERROR 1"
-connect (1 && 0) != 0                                 log "LOGIC ERROR 2"
-connect (0 && 1) != 0                                 log "LOGIC ERROR 3"
-connect (0 && 0) != 0                                 log "LOGIC ERROR 4"
-connect (0 && null()) != 0                            log "LOGIC ERROR 5"
-connect (null() && 0) != 0                            log "LOGIC ERROR 6"
-connect (1 || 1) != 1                                 log "LOGIC ERROR 7"
-connect (1 || 0) != 1                                 log "LOGIC ERROR 8"
-connect (0 || 1) != 1                                 log "LOGIC ERROR 9"
-connect (0 || 0) != 0                                 log "LOGIC ERROR 10"
-connect (1 || null()) != 1                            log "LOGIC ERROR 11"
-connect (null() || 1) != 1                            log "LOGIC ERROR 12"
-connect !1 != 0                                       log "LOGIC ERROR 13"
-connect !0 != 1                                       log "LOGIC ERROR 14"
-connect ((!null()) == null) != 1                      log "LOGIC ERROR 15"
+init (1 && 1) != 1                                 log "LOGIC ERROR 1"
+init (1 && 0) != 0                                 log "LOGIC ERROR 2"
+init (0 && 1) != 0                                 log "LOGIC ERROR 3"
+init (0 && 0) != 0                                 log "LOGIC ERROR 4"
+init (0 && null()) != 0                            log "LOGIC ERROR 5"
+init (null() && 0) != 0                            log "LOGIC ERROR 6"
+init (1 || 1) != 1                                 log "LOGIC ERROR 7"
+init (1 || 0) != 1                                 log "LOGIC ERROR 8"
+init (0 || 1) != 1                                 log "LOGIC ERROR 9"
+init (0 || 0) != 0                                 log "LOGIC ERROR 10"
+init (1 || null()) != 1                            log "LOGIC ERROR 11"
+init (null() || 1) != 1                            log "LOGIC ERROR 12"
+init !1 != 0                                       log "LOGIC ERROR 13"
+init !0 != 1                                       log "LOGIC ERROR 14"
+init ((!null()) == null) != 1                      log "LOGIC ERROR 15"
 
 # Regex
-connect "FOOBAR 99" ~ "^FOO.*99$" != 1                log "REGEX ERROR 1"
-connect "FOOBAR 99" ~ "^foo.*99$" != 1                log "REGEX ERROR 2"
-connect "FOOBAR 99" ~ "^fOo.*99$" != 0                log "REGEX ERROR 3"
-connect "FOOBAR 99" ~ "^bar.*99$" != 0                log "REGEX ERROR 4"
-connect hostaddr ~ "^" + hostaddr_str + "$" == 0      log "REGEX_ERROR 5"
-connect hostaddr ~ "^X?" + hostaddr_str + "$" == 0    log "REGEX_ERROR 6"
-connect "FOOBAR 99" !~ "^FOO.*99$" != 0               log "REGEX ERROR 7"
-connect "FOOBAR 99" !~ "^foo.*99$" != 0               log "REGEX ERROR 8"
-connect "FOOBAR 99" !~ "^bar.*99$" != 1               log "REGEX ERROR 9"
+init "FOOBAR 99" ~ "^FOO.*99$" != 1                log "REGEX ERROR 1"
+init "FOOBAR 99" ~ "^foo.*99$" != 1                log "REGEX ERROR 2"
+init "FOOBAR 99" ~ "^fOo.*99$" != 0                log "REGEX ERROR 3"
+init "FOOBAR 99" ~ "^bar.*99$" != 0                log "REGEX ERROR 4"
+init "FOOBAR 99" !~ "^FOO.*99$" != 0               log "REGEX ERROR 5"
+init "FOOBAR 99" !~ "^foo.*99$" != 0               log "REGEX ERROR 6"
+init "FOOBAR 99" !~ "^bar.*99$" != 1               log "REGEX ERROR 7"
 
 # In
-connect "foo" in ("bar", "f" + "oo", "foobar") != 1   log "IN ERROR 1"
-connect 127.0.0.1 in (10.0.0.1, ::1, 127.0.0.1) != 1  log "IN ERROR 2"
-connect 13.37 in (18, 1.1, 127, 13.37) != 1           log "IN ERROR 3"
-connect 1.1 in (18, 5.5/5, 127, 13.37) != 1           log "IN ERROR 4"
-connect 1 + 0.1 in (18, 11*0.1, 127, 13.37) != 1      log "IN ERROR 4"
-connect "barfoo" in ("foo", "bar", "foobar") != 0     log "IN ERROR 5"
-connect "foo" in LIST != 1                            log "IN ERROR 6"
-connect 3 in $list != 1                               log "IN ERROR 7"
+init "foo" in ("bar", "f" + "oo", "foobar") != 1   log "IN ERROR 1"
+init 127.0.0.1 in (10.0.0.1, ::1, 127.0.0.1) != 1  log "IN ERROR 2"
+init 13.37 in (18, 1.1, 127, 13.37) != 1           log "IN ERROR 3"
+init 1.1 in (18, 5.5/5, 127, 13.37) != 1           log "IN ERROR 4"
+init 1 + 0.1 in (18, 11*0.1, 127, 13.37) != 1      log "IN ERROR 4"
+init "barfoo" in ("foo", "bar", "foobar") != 0     log "IN ERROR 5"
+init "foo" in TEST_LIST != 1                       log "IN ERROR 6"
+init 3 in $test_list != 1                          log "IN ERROR 7"
 
 # Operator precedence
-connect (2 + 8 / 2) != 6                              log "PRECEDENCE ERROR 1"
-connect (2 * 2 + 8 / 2) != 8                          log "PRECEDENCE ERROR 2"
-connect (1 - 2 * 2 + 8 / 2 - 1) != 0                  log "PRECEDENCE ERROR 3"
-connect (1 * 1 < 2 + 2 && 5 / 5 <= 3 / 3) != 1        log "PRECEDENCE ERROR 4"
-connect (1 - 0 || 0 * 0 && 2 / 2) != 1                log "PRECEDENCE ERROR 5"
-connect (!0 && 1 > 0 && 1 == 1 && 0 != 1) != 1        log "PRECEDENCE ERROR 6"
-connect (!1 || 1 < 0 || 0 == 1 || 1 != 1) != 0        log "PRECEDENCE ERROR 7"
-connect (0 == 0 && 0 < 1 && 0 != 1) != 1              log "PRECEDENCE ERROR 8"
-connect (5 * null() == null + null() == null) != 1    log "PRECEDENCE ERROR 9"
-connect "FOO" + "BAR" + 99 ~ "^FOO.*99$" != 1         log "PRECEDENCE ERROR 10"
-connect "FOO" + "99" ~ "^F" + ".*9$" ~ "" + "1" != 1  log "PRECEDENCE ERROR 11"
-
-# Symbols
-connect !isset id                                     log "SYM ERROR 1"
-connect !isset stage                                  log "SYM ERROR 2"
-connect !isset stagename                              log "SYM ERROR 3"
-connect !isset received                               log "SYM ERROR 4"
-connect !isset hostaddr                               log "SYM ERROR 5"
-connect !isset hostaddr_str                           log "SYM ERROR 6"
-connect !isset hostname                               log "SYM ERROR 7"
-helo    !isset helo                                   log "SYM ERROR 8"
-envfrom !isset envfrom                                log "SYM ERROR 9"
-envrcpt !isset envrcpt                                log "SYM ERROR 10"
-data    !isset recipients                             log "SYM ERROR 11"
-data    !isset recipient_list                         log "SYM ERROR 12"
-header  !isset header_name                            log "SYM ERROR 13"
-header  !isset header_value                           log "SYM ERROR 14"
-eoh     !isset headers                                log "SYM ERROR 15"
-eoh     !isset headers_size                           log "SYM ERROR 16"
-eom     !isset body_size                              log "SYM ERROR 17"
-eom     !isset message_size                           log "SYM ERROR 18"
-eom     !isset queue_id                               log "SYM ERROR 19"
+init (2 + 8 / 2) != 6                              log "PRECEDENCE ERROR 1"
+init (2 * 2 + 8 / 2) != 8                          log "PRECEDENCE ERROR 2"
+init (1 - 2 * 2 + 8 / 2 - 1) != 0                  log "PRECEDENCE ERROR 3"
+init (1 * 1 < 2 + 2 && 5 / 5 <= 3 / 3) != 1        log "PRECEDENCE ERROR 4"
+init (1 - 0 || 0 * 0 && 2 / 2) != 1                log "PRECEDENCE ERROR 5"
+init (!0 && 1 > 0 && 1 == 1 && 0 != 1) != 1        log "PRECEDENCE ERROR 6"
+init (!1 || 1 < 0 || 0 == 1 || 1 != 1) != 0        log "PRECEDENCE ERROR 7"
+init (0 == 0 && 0 < 1 && 0 != 1) != 1              log "PRECEDENCE ERROR 8"
+init (5 * null() == null + null() == null) != 1    log "PRECEDENCE ERROR 9"
+init "FOO" + "BAR" + 99 ~ "^FOO.*99$" != 1         log "PRECEDENCE ERROR 10"
+init "FOO" + "99" ~ "^F" + ".*9$" ~ "" + "1" != 1  log "PRECEDENCE ERROR 11"
 
 # Macros
-connect strlen({j}) == 0                              log "MACRO ERROR 1"
-connect strlen({v}) == 0                              log "MACRO ERROR 2"
-connect strlen({daemon_name}) == 0                    log "MACRO ERROR 3"
+connect strlen({j}) == 0                           log "MACRO ERROR 1"
+connect strlen({v}) == 0                           log "MACRO ERROR 2"
+connect strlen({daemon_name}) == 0                 log "MACRO ERROR 3"
 
-# Base64
-connect base64("foobar") != "Zm9vYmFy"                log "BASE64 ERROR 1"
-connect base64(127.0.0.1) != "MTI3LjAuMC4x"           log "BASE64 ERROR 2"
-connect base64(5) != "NQ=="                           log "BASE64 ERROR 3"
-connect base64_decode("Zm9vYmFy") != "foobar"         log "BASE64 ERROR 4"
-connect base64_decode("MTI3LjAuMC4x") != "127.0.0.1"  log "BASE64 ERROR 5"
-connect base64_decode("NQ==") != "5"                  log "BASE64 ERROR 6"
-
-# Tarpitting
-connect random() % 10 == 0                            tarpit 1s
-
-# Greylisting
-envrcpt envfrom_addr ~ "_[0-9]@debian.local"          greylist delay 1s  attempts 3 deadline 10 visa 3
-envrcpt envfrom_addr ~ "_1[0-9]@debian.local"         greylist delay 2s  attempts 3 deadline 11 visa 3
-envrcpt envfrom_addr ~ "_2[0-9]@debian.local"         greylist delay 3s  attempts 3 deadline 12 visa 3
-envrcpt envfrom_addr ~ "_3[0-9]@debian.local"         greylist delay 4s  attempts 3 deadline 13 visa 3
-envrcpt envfrom_addr ~ "_4[0-9]@debian.local"         greylist delay 5s  attempts 3 deadline 14 visa 3
-envrcpt envfrom_addr ~ "_5[0-9]@debian.local"         greylist delay 6s  attempts 3 deadline 15 visa 3
-envrcpt envfrom_addr ~ "_6[0-9]@debian.local"         greylist delay 7s  attempts 3 deadline 16 visa 3
-envrcpt envfrom_addr ~ "_7[0-9]@debian.local"         greylist delay 8s  attempts 3 deadline 17 visa 3
-envrcpt envfrom_addr ~ "_8[0-9]@debian.local"         greylist delay 9s  attempts 3 deadline 18 visa 3
-envrcpt envfrom_addr ~ "_9[0-9]@debian.local"         greylist delay 10s attempts 3 deadline 19 visa 3
-envrcpt envfrom_addr ~ "_10[0-9]@debian.local"        greylist delay 11s attempts 3 deadline 20 visa 3
-
-# Message modification
-eom random() % 10 == 0                                add header "X-Test" value "test: " + hostaddr
-eom random() % 10 == 0                                change header "Subject" value "mail from: " + hostaddr
-eom random() % 10 == 0                                insert header "X-Test" value "test: " + hostaddr
-eom random() % 10 == 0                                delete header "Subject"
-eom random() % 10 == 0                                change from "test@debian.local"
-eom random() % 10 == 0                                add rcpt "root@debian.local"
-eom random() % 10 == 0                                delete rcpt "manuel@debian.local"
-eom random() % 10 == 0                                change body "mopher"
-
-# Call spamd
-eom spamd_score == null                               log "SPAMD ERROR"
-
-# Call CLAMAV
-eom clamav_clean == null                              log "CLAMAV ERROR"
+# Symbols
+connect !isset id                                  log "SYM ERROR 1"
+connect !isset stage                               log "SYM ERROR 2"
+connect !isset stagename                           log "SYM ERROR 3"
+connect !isset received                            log "SYM ERROR 4"
+connect !isset hostaddr                            log "SYM ERROR 5"
+connect !isset hostaddr_str                        log "SYM ERROR 6"
+connect !isset hostname                            log "SYM ERROR 7"
+helo    !isset helo                                log "SYM ERROR 8"
+envfrom !isset envfrom                             log "SYM ERROR 9"
+envrcpt !isset envrcpt                             log "SYM ERROR 10"
+data    !isset recipients                          log "SYM ERROR 11"
+data    !isset recipient_list                      log "SYM ERROR 12"
+header  !isset header_name                         log "SYM ERROR 13"
+header  !isset header_value                        log "SYM ERROR 14"
+eoh     !isset headers                             log "SYM ERROR 15"
+eoh     !isset headers_size                        log "SYM ERROR 16"
+eom     !isset body_size                           log "SYM ERROR 17"
+eom     !isset message_size                        log "SYM ERROR 18"
+eom     !isset queue_id                            log "SYM ERROR 19"
