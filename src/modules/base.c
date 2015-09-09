@@ -82,17 +82,20 @@ cast(int argc, ll_t *args)
 
 	if (argc != 2)
 	{
-		goto error;
+		log_error("cast: bad argument count: usage cast(TYPE, expression)");
+		return NULL;
 	}
 
 	if (type == NULL || var == NULL)
 	{
-		goto error;
+		log_error("cast: argument is NULL: usage cast(TYPE, expression)");
+		return NULL;
 	}
 
 	if (type->v_type != VT_INT)
 	{
-		goto error;
+		log_error("cast: bad TYPE: usage cast(TYPE, expression)");
+		return NULL;
 	}
 
 	vt = type->v_data;
@@ -105,12 +108,6 @@ cast(int argc, ll_t *args)
 	}
 
 	return copy;
-
-
-error:
-
-	log_error("cast: bad arguments: usage cast(TYPE, expression)");
-	return NULL;
 }
 
 static var_t *
