@@ -19,16 +19,16 @@ static sht_t *acl_symbols;
 static ll_t *acl_update_callbacks;
 
 static acl_handler_stage_t acl_action_handlers[] = {
-    { NULL,		NULL,		MS_ANY },		/* ACL_NULL 	*/ 
-    { NULL,		NULL,		MS_ANY },		/* ACL_NONE 	*/
-    { NULL,		NULL,		MS_ANY },		/* ACL_CONTINUE	*/
+    { NULL,		NULL,		MS_ANY | MS_INIT},	/* ACL_NULL 	*/ 
+    { NULL,		NULL,		MS_ANY | MS_INIT},	/* ACL_NONE 	*/
+    { NULL,		NULL,		MS_ANY | MS_INIT},	/* ACL_CONTINUE	*/
     { NULL,		NULL,		MS_ANY },		/* ACL_REJECT	*/
     { NULL,		NULL,		MS_ANY },		/* ACL_DISCARD	*/
     { NULL,		NULL,		MS_ANY },		/* ACL_ACCEPT	*/
     { NULL,		NULL,		MS_ANY },		/* ACL_TEMPFAIL	*/
-    { acl_jump,		free,		MS_ANY },		/* ACL_JUMP	*/
-    { acl_set,		NULL,		MS_ANY },		/* ACL_SET	*/
-    { acl_log,		free,		MS_ANY },		/* ACL_LOG	*/
+    { acl_jump,		free,		MS_ANY | MS_INIT},	/* ACL_JUMP	*/
+    { acl_set,		NULL,		MS_ANY | MS_INIT},	/* ACL_SET	*/
+    { acl_log,		free,		MS_ANY | MS_INIT},	/* ACL_LOG	*/
     { greylist,		free,		MS_OFF_ENVRCPT },	/* ACL_GREYLIST	*/
     { tarpit,		NULL,		MS_ANY },		/* ACL_TARPIT	*/
     { msgmod,		msgmod_delete,	MS_EOM },		/* ACL_MOD	*/

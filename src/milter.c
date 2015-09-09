@@ -14,6 +14,7 @@
 
 #include <mopher.h>
 
+#define MSN_INIT	"init"
 #define MSN_CONNECT	"connect"
 #define MSN_UNKNOWN	"unknown"
 #define MSN_HELO	"helo"
@@ -35,11 +36,11 @@
 static milter_symbol_t milter_symbols[] = {
 	{ "milter_ctx", MS_ANY },
 	{ "action", MS_OFF_CONNECT },
-	{ "id", MS_ANY },
+	{ "id", MS_ANY | MS_INIT},
 	{ "stage", MS_ANY },
 	{ "stagename", MS_ANY }, 
 	{ "unknown_command", MS_UNKNOWN },
-	{ "received", MS_ANY },
+	{ "received", MS_ANY | MS_INIT},
 	{ "hostaddr", MS_ANY },
 	{ "hostaddr_str", MS_ANY },
 	{ "ipv6", MS_ANY },
@@ -340,7 +341,7 @@ milter_common_init(SMFICTX *ctx, VAR_INT_T stage, char *stagename)
 	milter_priv_t *mp = NULL;
 	char *queue_id;
 
-	if (stage == MS_CONNECT)
+	if (stage == MS_INIT)
 	{
 		mp = milter_priv_create();
 	}
@@ -359,7 +360,7 @@ milter_common_init(SMFICTX *ctx, VAR_INT_T stage, char *stagename)
 	/*
 	 * Call smfi_setpriv on connect
 	 */
-	if (stage == MS_CONNECT)
+	if (stage == MS_INIT)
 	{
 		smfi_setpriv(ctx, mp);
 	}
@@ -451,33 +452,73 @@ milter_common_fini(SMFICTX *ctx, milter_priv_t *mp, milter_stage_t stage)
 	return;
 }
 
+static int
+milter_init_stage(SMFICTX *ctx)
+{
+	milter_priv_t *mp = NULL;
+	VAR_INT_T now;
+	VAR_INT_T id;
+
+	mp = milter_common_init(ctx, MS_INIT, MSN_INIT);
+	if (mp == NULL)
+	{
+		log_error("milter_init_stage: milter_common_init failed");
+		return -1;
+	}
+
+	if ((id = milter_get_id()) == -1)
+	{
+		log_error("milter_init_stage: milter_get_id failed");
+		return -1;
+	}
+
+	if ((now = (VAR_INT_T) time(NULL)) == -1) {
+		log_sys_error("milter_init_stage: time");
+		return -1;
+	}
+
+	if (vtable_setv(mp->mp_table,
+	    VT_INT, "id", &id, VF_KEEPNAME | VF_COPYDATA,
+	    VT_INT, "received", &now, VF_KEEPNAME | VF_COPYDATA,
+	    VT_NULL))
+	{
+		log_error("milter_init_stage: vtable_setv failed");
+		return -1;
+	}
+
+	/*
+ 	 *  Set empty acl_* symbols
+ 	 */
+	acl_match(mp->mp_table, 0, MS_NULL, NULL, NULL, NULL, NULL, NULL);
+
+	/*
+	 *  MS_INIT 
+	 */
+	milter_acl(MS_INIT, MSN_INIT, mp);
+
+	return 0;
+}
+
 static sfsistat
 milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 {
 	milter_priv_t *mp = NULL;
-	VAR_INT_T now;
 	VAR_INT_T ipv6 = 0;
 	struct sockaddr_storage *ha_clean = NULL;
 	char *hostaddr_str;
 	char origin[256];
-	VAR_INT_T id;
 	sfsistat stat = SMFIS_TEMPFAIL;
+
+	if (milter_init_stage(ctx))
+	{
+		log_error("milter_connect: milter_init_stage failed");
+		goto exit;
+	}
 
 	mp = milter_common_init(ctx, MS_CONNECT, MSN_CONNECT);
 	if (mp == NULL)
 	{
 		log_error("milter_connect: milter_common_init failed");
-		goto exit;
-	}
-
-	if ((id = milter_get_id()) == -1)
-	{
-		log_error("milter_connect: milter_get_id failed");
-		goto exit;
-	}
-
-	if ((now = (VAR_INT_T) time(NULL)) == -1) {
-		log_sys_error("milter_connect: time");
 		goto exit;
 	}
 
@@ -511,8 +552,6 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 
 
 	if (vtable_setv(mp->mp_table,
-	    VT_INT, "id", &id, VF_KEEPNAME | VF_COPYDATA,
-	    VT_INT, "received", &now, VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "hostname", hostname, VF_KEEPNAME | VF_COPYDATA,
 	    VT_INT, "ipv6", &ipv6, VF_KEEPNAME | VF_COPYDATA,
 	    VT_ADDR, "hostaddr", ha_clean, VF_KEEPNAME,
@@ -524,11 +563,6 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 		log_error("milter_connect: vtable_setv failed");
 		goto exit;
 	}
-
-	/*
- 	 *  Set empty acl_* symbols
- 	 */
-	acl_match(mp->mp_table, 0, MS_NULL, NULL, NULL, NULL, NULL, NULL);
 
 	log_message(LOG_ERR, mp->mp_table, "host=%s addr=%s", hostname,
 	    hostaddr_str);
