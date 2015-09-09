@@ -366,7 +366,7 @@ acl_constant_register(var_type_t type, char *name, void *data, int flags)
 		    "failed");
 	}
 
-	as = acl_symbol_create(AS_CONSTANT, name, MS_ANY, v, AS_NONE);
+	as = acl_symbol_create(AS_CONSTANT, name, MS_ANY | MS_INIT, v, AS_NONE);
 	acl_symbol_insert(name, as);
 	
 	log_debug("acl_constant_register: \"%s\" registered", name);
