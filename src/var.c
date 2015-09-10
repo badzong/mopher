@@ -139,7 +139,7 @@ var_copy_list_or_table(var_type_t type, void *src)
 	while ((vo = (is_table ? ht_next(ht, &ht_pos) : ll_next(ll, &ll_pos))))
 	{
 		if ((vc = var_create(vo->v_type, vo->v_name, vo->v_data,
-			VF_COPYNAME | VF_COPYDATA))
+			vo->v_flags | VF_COPY))
 			== NULL) {
 			log_warning("var_list_copy: var_create failed");
 			goto error;

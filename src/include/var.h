@@ -28,6 +28,11 @@
  */
 #define VF_EXP_FREE	1<<6
 
+/*
+ * VF_SQL_UPDATE is used in SQL databases to avoid race conditions
+ */
+#define VF_SQL_SAFE_UPDATE	1<<7
+
 
 #define VF_KEEP		VF_KEEPNAME | VF_KEEPDATA
 #define VF_COPY		VF_COPYNAME | VF_COPYDATA

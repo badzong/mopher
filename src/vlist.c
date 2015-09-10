@@ -240,7 +240,7 @@ error:
 }
 
 
-void *
+var_t *
 vlist_record_lookup(var_t *record, char *key)
 {
 	ll_t *list = record->v_data;

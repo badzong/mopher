@@ -213,8 +213,17 @@ sql_key_value(sql_t *sql, void *conn, char *buffer, int size, int types, char *j
 			}
 		}
 
-		n += snprintf(buffer + n, size - n, "%s%s=%s",
-			n? join: "", column, value);
+		if (v->v_flags & VF_SQL_SAFE_UPDATE)
+		{
+			n += snprintf(buffer + n, size - n, "%s%s=%s+%s",
+				n? join: "", column, column, value);
+		}
+		else
+		{
+			n += snprintf(buffer + n, size - n, "%s%s=%s",
+				n? join: "", column, value);
+		}
+
 		if (n >= size)
 		{
 			log_error("sql_key_value: buffer exhausted");
@@ -416,7 +425,7 @@ sql_update(sql_t *sql, void *conn, char *buffer, int size, char *tablename, var_
 		return -1;
 	}
 
-	if (sql_key_value(sql, conn, where, sizeof where, 1, " AND ", record) == -1)
+	if (sql_key_value(sql, conn, where, sizeof where, SQL_KEYS, " AND ", record) == -1)
 	{
 		log_error("sql_update: sql_key_value failed");
 		return -1;
@@ -446,7 +455,7 @@ sql_delete(sql_t *sql, void *conn, char *buffer, int size, char *tablename, var_
 		return -1;
 	}
 
-	if (sql_key_value(sql, conn, where, sizeof where, 1, " AND ", record) == -1)
+	if (sql_key_value(sql, conn, where, sizeof where, SQL_KEYS, " AND ", record) == -1)
 	{
 		log_error("sql_delete: sql_key_value failed");
 		return -1;

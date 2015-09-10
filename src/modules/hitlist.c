@@ -260,6 +260,54 @@ exit:
 }
 
 static int
+hitlist_sql_safe_update(hitlist_t *hl, var_t *record, char *value_field,
+    VAR_INT_T value_diff, char *expire_field, VAR_INT_T expire_diff)
+{
+	var_t *record_copy = NULL;
+	var_t *field;
+	int status = -1;
+
+	record_copy = VAR_COPY(record);
+	if (record_copy == NULL)
+	{
+		log_error("hitlist_sql_safe_update: var_copy failed");
+		goto exit;
+	}
+
+	field = vlist_record_lookup(record_copy, value_field);
+	if (field == NULL)
+	{
+		log_error("hitlist_sql_safe_update: vlist_get for %s failed", value_field);
+		goto exit;
+	}
+	* (VAR_INT_T *) field->v_data = value_diff;
+	field->v_flags |= VF_SQL_SAFE_UPDATE;
+
+	field = vlist_record_lookup(record_copy, expire_field);
+	if (field == NULL)
+	{
+		log_error("hitlist_sql_safe_update: vlist_get for %s failed", expire_field);
+		goto exit;
+	}
+	* (VAR_INT_T *) field->v_data = expire_diff;
+	field->v_flags |= VF_SQL_SAFE_UPDATE;
+
+	status = dbt_db_set(&hl->hl_dbt, record_copy);
+	if (status)
+	{
+		log_error("hitlist_sql_safe_update: dbt_db_set failed");
+	}
+
+exit:
+	if (record_copy)
+	{
+		var_delete(record_copy);
+	}
+
+	return status;
+}
+
+static int
 hitlist_lookup(milter_stage_t stage, char *name, var_t *attrs)
 {
 	hitlist_t *hl;
@@ -269,6 +317,11 @@ hitlist_lookup(milter_stage_t stage, char *name, var_t *attrs)
 	VAR_INT_T *expire;
 	var_t *addition;
 	int success = -1;
+
+	// Used for SQL_SAFE_UPDATE
+	VAR_INT_T value_diff = 0;
+	VAR_INT_T expire_diff = 0;
+	int update_record = 0;
 
 	hl = sht_lookup(hitlists, name);
 	if (hl == NULL)
@@ -333,6 +386,7 @@ hitlist_lookup(milter_stage_t stage, char *name, var_t *attrs)
 	}
 	else
 	{
+		update_record = 1;
 		log_debug("hitlist_lookup: %s record found", name);
 	}
 
@@ -348,6 +402,7 @@ hitlist_lookup(milter_stage_t stage, char *name, var_t *attrs)
        	if (hl->hl_count)
        	{
 		++(*value);
+		value_diff = 1;
        	}
 
 	// Sum
@@ -367,6 +422,7 @@ hitlist_lookup(milter_stage_t stage, char *name, var_t *attrs)
 		}
 
 		*value += *(VAR_INT_T *) addition->v_data;
+		value_diff = *(VAR_INT_T *) addition->v_data;
         }
 
         if (hl->hl_update)
@@ -376,22 +432,38 @@ hitlist_lookup(milter_stage_t stage, char *name, var_t *attrs)
 		if (hl->hl_timeout == 0)
 		{
 			*expire = INT_MAX;
+			expire_diff = 0;
 		}
 		// Record is extended every time a match is found
 		else if (hl->hl_extend)
 		{
 			*expire = time(NULL) + hl->hl_timeout;
+			expire_diff = hl->hl_timeout;
 		}
 		// Record expires after a fixed timeout
 		else if (hl->hl_timeout && *expire == 0)
 		{
 			*expire = time(NULL) + hl->hl_timeout;
+			expire_diff = hl->hl_timeout;
 		}
 
-		if (dbt_db_set(&hl->hl_dbt, record))
+		// SQL_SAFE_UPDATE
+		if(update_record && hl->hl_dbt.dbt_driver->dd_use_sql)
 		{
-			log_error("hitlist_lookup: dbt_db_set failed");
-			goto exit;
+			if (hitlist_sql_safe_update(hl, record, hl->hl_value_field, value_diff,
+				hl->hl_expire_field, expire_diff))
+			{
+				log_error("hitlist_lookup: hitlist_sql_safe_update failed");
+				goto exit;
+			}
+		}
+		else
+		{
+			if (dbt_db_set(&hl->hl_dbt, record))
+			{
+				log_error("hitlist_lookup: dbt_db_set failed");
+				goto exit;
+			}
 		}
         }
 
