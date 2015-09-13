@@ -42,6 +42,7 @@ parser_t cf_parser;
 /*
  * Extern configuration symbols
  */
+VAR_INT_T	 cf_syslog_facility;
 char		*cf_workdir_path;
 char		*cf_mopherd_group;
 char		*cf_mopherd_user;
@@ -73,6 +74,7 @@ VAR_INT_T	 cf_connect_retries;
  * Symbol table
  */
 static cf_symbol_t cf_symbols[] = {
+	{ "syslog_facility", &cf_syslog_facility },
 	{ "workdir_path", &cf_workdir_path },
 	{ "mopherd_group", &cf_mopherd_group },
 	{ "mopherd_user", &cf_mopherd_user },
@@ -102,6 +104,70 @@ static cf_symbol_t cf_symbols[] = {
 	{ NULL, NULL }
 };
 
+/*
+ * Constants
+ */
+static VAR_INT_T cf_log_facility_auth     = LOG_AUTH;
+static VAR_INT_T cf_log_facility_authpriv = LOG_AUTHPRIV;
+static VAR_INT_T cf_log_facility_cron     = LOG_CRON;
+static VAR_INT_T cf_log_facility_daemon   = LOG_DAEMON;
+static VAR_INT_T cf_log_facility_ftp      = LOG_FTP;
+static VAR_INT_T cf_log_facility_kern     = LOG_KERN;
+static VAR_INT_T cf_log_facility_local0   = LOG_LOCAL0;
+static VAR_INT_T cf_log_facility_local1   = LOG_LOCAL1;
+static VAR_INT_T cf_log_facility_local2   = LOG_LOCAL2;
+static VAR_INT_T cf_log_facility_local3   = LOG_LOCAL3;
+static VAR_INT_T cf_log_facility_local4   = LOG_LOCAL4;
+static VAR_INT_T cf_log_facility_local5   = LOG_LOCAL5;
+static VAR_INT_T cf_log_facility_local6   = LOG_LOCAL6;
+static VAR_INT_T cf_log_facility_local7   = LOG_LOCAL7;
+static VAR_INT_T cf_log_facility_lpr      = LOG_LPR;
+static VAR_INT_T cf_log_facility_mail     = LOG_MAIL;
+static VAR_INT_T cf_log_facility_news     = LOG_NEWS;
+static VAR_INT_T cf_log_facility_syslog   = LOG_SYSLOG;
+static VAR_INT_T cf_log_facility_user     = LOG_USER;
+static VAR_INT_T cf_log_facility_uucp     = LOG_UUCP;
+static VAR_INT_T cf_log_level_emerg       = LOG_EMERG;
+static VAR_INT_T cf_log_level_alert       = LOG_ALERT;
+static VAR_INT_T cf_log_level_crit        = LOG_CRIT;
+static VAR_INT_T cf_log_level_err         = LOG_ERR;
+static VAR_INT_T cf_log_level_warning     = LOG_WARNING;
+static VAR_INT_T cf_log_level_notice      = LOG_NOTICE;
+static VAR_INT_T cf_log_level_info        = LOG_INFO;
+static VAR_INT_T cf_log_level_debug       = LOG_DEBUG;
+
+static cf_constant_t cf_constants[] = {
+	{ VT_INT, "LOG_AUTH",     &cf_log_facility_auth },
+	{ VT_INT, "LOG_AUTHPRIV", &cf_log_facility_authpriv },
+	{ VT_INT, "LOG_CRON",     &cf_log_facility_cron },
+	{ VT_INT, "LOG_DAEMON",   &cf_log_facility_daemon },
+	{ VT_INT, "LOG_FTP",      &cf_log_facility_ftp },
+	{ VT_INT, "LOG_KERN",     &cf_log_facility_kern },
+	{ VT_INT, "LOG_LOCAL0",   &cf_log_facility_local0 },
+	{ VT_INT, "LOG_LOCAL1",   &cf_log_facility_local1 },
+	{ VT_INT, "LOG_LOCAL2",   &cf_log_facility_local2 },
+	{ VT_INT, "LOG_LOCAL3",   &cf_log_facility_local3 },
+	{ VT_INT, "LOG_LOCAL4",   &cf_log_facility_local4 },
+	{ VT_INT, "LOG_LOCAL5",   &cf_log_facility_local5 },
+	{ VT_INT, "LOG_LOCAL6",   &cf_log_facility_local6 },
+	{ VT_INT, "LOG_LOCAL7",   &cf_log_facility_local7 },
+	{ VT_INT, "LOG_LPR",      &cf_log_facility_lpr },
+	{ VT_INT, "LOG_MAIL",     &cf_log_facility_mail },
+	{ VT_INT, "LOG_NEWS",     &cf_log_facility_news },
+	{ VT_INT, "LOG_SYSLOG",   &cf_log_facility_syslog },
+	{ VT_INT, "LOG_USER",     &cf_log_facility_user },
+	{ VT_INT, "LOG_UUCP",     &cf_log_facility_uucp },
+
+	{ VT_INT, "LOG_EMERG",    &cf_log_level_emerg },
+	{ VT_INT, "LOG_ALERT",    &cf_log_level_alert },
+	{ VT_INT, "LOG_CRIT",     &cf_log_level_crit },
+	{ VT_INT, "LOG_ERR",      &cf_log_level_err },
+	{ VT_INT, "LOG_WARNING",  &cf_log_level_warning },
+	{ VT_INT, "LOG_NOTICE",   &cf_log_level_notice },
+	{ VT_INT, "LOG_INFO",     &cf_log_level_info },
+	{ VT_INT, "LOG_DEBUG",    &cf_log_level_debug },
+	{ VT_NULL, NULL, NULL }
+};
 
 /*
  * Prototypes for cf_functions
@@ -114,7 +180,6 @@ static cf_function_t cf_functions[] = {
 	{ VT_STRING, "hostname", cf_setup_hostname },
 	{ VT_NULL, NULL, NULL }
 };
-
 
 static void
 cf_setup_hostname(void **data)
@@ -300,6 +365,24 @@ cf_set_new(var_type_t type, char *name, void *data, int flags)
 	}
 
 	return;
+}
+
+var_t *
+cf_constant(char *name)
+{
+	cf_constant_t *cc;
+
+	for(cc = cf_constants; cc->cc_name; ++cc)
+	{
+		if (strcmp(cc->cc_name, name) == 0)
+		{
+			return var_create(cc->cc_type, NULL, cc->cc_ptr, VF_KEEP);
+		}
+	}
+
+	parser_error(&cf_parser, "Unknown token %s", name);
+
+	return NULL;
 }
 
 

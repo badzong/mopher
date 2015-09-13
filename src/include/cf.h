@@ -8,6 +8,12 @@
 extern parser_t cf_parser;
 #define cf_parser_error(...) parser_error(&cf_parser, __VA_ARGS__)
 
+typedef struct cf_constant {
+	var_type_t	 cc_type;
+	char		*cc_name;
+	void		*cc_ptr;
+} cf_constant_t;
+
 typedef struct cf_symbol {
 	char		*cs_name;
 	void		*cs_ptr;
@@ -26,6 +32,7 @@ typedef struct cf_function {
  * Global configuration variables
  */
 
+extern VAR_INT_T	 cf_syslog_facility;
 extern char		*cf_workdir_path;
 extern char		*cf_mopherd_group;
 extern char		*cf_mopherd_user;
