@@ -67,17 +67,17 @@ value		: '{' table '}'     { $$ = $2; }
 list		: list ',' value
 		  {
 			if(vlist_append($$, $3) == -1) {
-				log_die(EX_CONFIG, "cf_lex.l: vlist_append failed");
+				log_die(EX_CONFIG, "cf_yacc.y: vlist_append failed");
 			}
 		  }
        		| value
 		  {
 			if(($$ = vlist_create(NULL, 0)) == NULL) {
-				log_die(EX_CONFIG, "cf_lex.l: vlist_create failed");
+				log_die(EX_CONFIG, "cf_yacc.y: vlist_create failed");
 			}
 
 			if(vlist_append($$, $1) == -1) {
-				log_die(EX_CONFIG, "cf_lex.l: vlist_append failed");
+				log_die(EX_CONFIG, "cf_yacc.y: vlist_append failed");
 			}
 		  }
 		;
@@ -86,18 +86,18 @@ table		: table ',' ID '=' value
 		  {
 			$5->v_name = $3;
 			if(vtable_insert($$, $5)) {
-				log_die(EX_CONFIG, "cf_lex.l: vtable_insert failed");
+				log_die(EX_CONFIG, "cf_yacc.y: vtable_insert failed");
 			}
 		  }
        		| ID '=' value
 		  {
 			if(($$ = vtable_create(NULL, 0)) == NULL) {
-				log_die(EX_CONFIG, "cf_lex.l: vtable_create failed");
+				log_die(EX_CONFIG, "cf_yacc.y: vtable_create failed");
 			}
 
 			$3->v_name = $1;
 			if(vtable_insert($$, $3)) {
-				log_die(EX_CONFIG, "cf_lex.l: vtable_insert failed");
+				log_die(EX_CONFIG, "cf_yacc.y: vtable_insert failed");
 			}
 		  }
 		;
