@@ -808,6 +808,7 @@ acl_log(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 	var_t *v = NULL;
 	char buffer[ACL_LOGLEN];
 	VAR_INT_T level;
+	char *message;
 
 	/*
 	 * Evaluate log level
@@ -840,20 +841,21 @@ acl_log(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 		return ACL_ERROR;
 	}
 
-	if (v->v_type != VT_STRING)
+	if (v->v_type == VT_STRING)
+	{
+		message = v->v_data;
+	}
+	else
 	{
 		if (var_dump_data(v, buffer, sizeof buffer) == -1)
 		{
 			log_error("acl_log: var_dump_data failed");
 			goto error;
 		}
+		message = buffer;
+	}
 
-		log_log(level, 0, buffer);
-	}
-	else
-	{
-		log_log(level, 0, v->v_data);
-	}
+	log_message(level, mailspec, "%s", message);
 
 	exp_free(v);
 
