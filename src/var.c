@@ -1241,6 +1241,11 @@ var_cast_copy(var_type_t type, var_t *v)
 		return VAR_COPY(v);
 	}
 
+	if (v->v_data == NULL)
+	{
+		return var_create(type, v->v_name, NULL, VF_COPYNAME);
+	}
+
 	switch (type)
 	{
 	case VT_INT:	return var_as_int(v);
