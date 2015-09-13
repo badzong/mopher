@@ -8,6 +8,7 @@
 #define cf_error cf_parser_error
 
 extern var_t *cf_config;
+int cf_lex(void);
 
 %}
 
