@@ -96,4 +96,4 @@ $(OUT_D): $(OUT_C)
 .c.o:
 	@CC@ -c $(CFLAGS) $(CFLAGS.$@) $< -o $@
 .conf.o:
-	@LD@ -r -b binary -o $@ $> $^
+	@LD@ -r -b binary -o $@ $<
