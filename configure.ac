@@ -12,12 +12,6 @@ AC_PROG_LEX
 AC_PROG_MAKE_SET
 
 
-AC_PATH_PROG([OBJCOPY], [objcopy])
-if test -z "$OBJCOPY"
-then
-  AC_MSG_ERROR([objcopy not found. Make sure you have GNU binutils installed.])
-fi
-
 # check for install
 AC_PATH_PROG([INSTALL], [install])
 if test -z "$INSTALL"

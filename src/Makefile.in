@@ -97,5 +97,3 @@ $(OUT_D): $(OUT_C)
 	@CC@ -c $(CFLAGS) $(CFLAGS.$@) $< -o $@
 .conf.o:
 	@LD@ -r -b binary -o $@ $> $^
-	@OBJCOPY@ --rename-section \
-		.data=.rodata,alloc,load,readonly,data,contents $@ $@
