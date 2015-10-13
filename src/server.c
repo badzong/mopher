@@ -463,6 +463,8 @@ server_request(int sock)
 		return 0;
 	}
 
+	log_error("server: %s", cmd_buffer);
+
 	r = server_exec_cmd(sock, cmd_buffer);
 	if (r == -1)
 	{
@@ -574,7 +576,7 @@ server_main(void *arg)
 			client_addr = util_addrtostr(&caddr);
 			if (client_addr)
 			{
-				log_error("server_main: new client connection from %s", client_addr);
+				log_error("server: new client connection from %s", client_addr);
 				free(client_addr);
 			}
 			else
