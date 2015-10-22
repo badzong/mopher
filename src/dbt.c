@@ -149,6 +149,10 @@ dbt_db_get(dbt_t *dbt, var_t *record, var_t **result)
 	}
 
 	r = dbt->dbt_driver->dd_get(dbt, record, result);
+	if (r < 0 && cf_dbt_fatal_errors)
+	{
+		log_die(EX_SOFTWARE, "fatal database error");
+	}
 
 	dbt_unlock(dbt);
 
@@ -172,6 +176,10 @@ dbt_db_set(dbt_t *dbt, var_t *record)
 	}
 
 	r = dbt->dbt_driver->dd_set(dbt, record);
+	if (r < 0 && cf_dbt_fatal_errors)
+	{
+		log_die(EX_SOFTWARE, "fatal database error");
+	}
 
 	dbt_unlock(dbt);
 
@@ -190,6 +198,10 @@ dbt_db_del(dbt_t *dbt, var_t *record)
 	}
 
 	r = dbt->dbt_driver->dd_del(dbt, record);
+	if (r < 0 && cf_dbt_fatal_errors)
+	{
+		log_die(EX_SOFTWARE, "fatal database error");
+	}
 
 	dbt_unlock(dbt);
 
@@ -209,6 +221,10 @@ dbt_db_walk(dbt_t *dbt, dbt_db_callback_t callback)
 	}
 	
 	r = dbt->dbt_driver->dd_walk(dbt, callback);
+	if (r < 0 && cf_dbt_fatal_errors)
+	{
+		log_die(EX_SOFTWARE, "fatal database error");
+	}
 
 	dbt_unlock(dbt);
 
@@ -254,6 +270,10 @@ dbt_db_cleanup(dbt_t *dbt)
 	}
 
 	r = sql_db_cleanup(dbt);
+	if (r < 0 && cf_dbt_fatal_errors)
+	{
+		log_die(EX_SOFTWARE, "fatal database error");
+	}
 
 	dbt_unlock(dbt);
 
@@ -868,7 +888,7 @@ dbt_open_database(dbt_t *dbt)
 	/*
 	 * Open database
 	 */
-	log_error("connect database table: %s (%s)", dbt->dbt_name, dbt->dbt_drivername);
+	log_debug("dbt_open_database: open table %s (%s)", dbt->dbt_name, dbt->dbt_drivername);
 
 	if (dbt->dbt_driver->dd_open(dbt))
 	{

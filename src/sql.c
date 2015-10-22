@@ -487,7 +487,7 @@ sql_cleanup(sql_t *sql, void *conn, char *buffer, int size, char *tablename, cha
 
 	if (sql->sql_esc_identifier(conn, expire, sizeof expire, expire_raw))
 	{
-		log_error("sql_cleanup: escape table failed");
+		log_error("sql_cleanup: escape expire failed");
 		return -1;
 	}
 	

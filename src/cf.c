@@ -56,6 +56,7 @@ VAR_INT_T	 cf_milter_socket_permissions;
 VAR_INT_T	 cf_milter_wait;
 VAR_INT_T	 cf_acl_log_level;
 VAR_INT_T	 cf_dbt_cleanup_interval;
+VAR_INT_T        cf_dbt_fatal_errors;
 char		*cf_hostname;
 VAR_INT_T	 cf_client_retry_interval;
 char		*cf_control_socket;
@@ -88,6 +89,7 @@ static cf_symbol_t cf_symbols[] = {
 	{ "milter_socket_permissions", &cf_milter_socket_permissions },
 	{ "milter_wait", &cf_milter_wait },
 	{ "cleanup_interval", &cf_dbt_cleanup_interval },
+	{ "fatal_database_errors", &cf_dbt_fatal_errors },
 	{ "hostname", &cf_hostname },
 	{ "client_retry_interval", &cf_client_retry_interval },
 	{ "control_socket", &cf_control_socket },

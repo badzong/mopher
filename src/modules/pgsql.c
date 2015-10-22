@@ -153,14 +153,14 @@ pgsql_esc_identifier(PGconn *conn, char *buffer, int size, char *str)
 	esc = PQescapeIdentifier(conn, str, strlen(str));
 	if (esc == NULL)
 	{
-		log_error("pgsql_escape_identifier: PQescapeIdentifier failed");
+		log_error("pgsql_escape_identifier: PQescapeIdentifier for '%s' failed", str);
 		goto exit;
 	}
 
 	len = strlen(esc);
 	if (len >= size)
 	{
-		log_error("pgsql_escape_identifier: PQescapeIdentifier failed");
+		log_error("pgsql_escape_identifier: PQescapeIdentifier for '%s' failed: buffer exhausted", str);
 		goto exit;
 	}
 
