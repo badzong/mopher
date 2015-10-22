@@ -217,6 +217,8 @@ hitlist_db_open(hitlist_t *hl, var_t *attrs)
 		goto exit;
 	}
 
+	log_debug("hitlist_db_open: open database %s", hl->hl_name);
+
 	// Need schema
 	if (hl->hl_dbt.dbt_scheme == NULL)
 	{

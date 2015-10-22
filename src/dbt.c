@@ -868,8 +868,7 @@ dbt_open_database(dbt_t *dbt)
 	/*
 	 * Open database
 	 */
-	log_debug("dbt_open_database: open \"%s\" using \"%s\"", dbt->dbt_name,
-	    dbt->dbt_drivername);
+	log_error("connect database table: %s (%s)", dbt->dbt_name, dbt->dbt_drivername);
 
 	if (dbt->dbt_driver->dd_open(dbt))
 	{
