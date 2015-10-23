@@ -97,10 +97,10 @@ milter_get_id(char *id, int len)
 		return -1;
 	}
 
-	sec = tv.tv_sec << 36;				// 32 bits << 36 -> first 4 bits dropped
-	usec = (tv.tv_usec & 0xfffff) << 16;		// 20 bits << 16
-	random = rand_r(&milter_random_seed) & 0xffff;  // 16 bits of random
-	x = sec + usec + random;
+	sec = tv.tv_sec << 34;				// 32 bits << 34 -> first 2 bits dropped, 30 bits remain
+	usec = (tv.tv_usec & 0xfffff) << 14;		// 20 bits << 14
+	random = rand_r(&milter_random_seed) & 0x3fff;  // 14 bits of random
+	x = sec | usec | random;
 
 	memset(id, 0, len);
 	for (i = 0; x > 0; ++i)
