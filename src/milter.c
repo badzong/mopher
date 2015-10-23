@@ -11,6 +11,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <time.h>
+#include <sys/time.h>
 
 #include <mopher.h>
 
@@ -29,6 +30,7 @@
 #define MSN_CLOSE	"close"
 
 #define MAILADDRLEN 512
+#define IDLEN 12
 
 /*
  * Symbols without callback
@@ -70,51 +72,50 @@ static milter_symbol_t milter_symbols[] = {
 
 
 /*
- * Milter state database
+ * Milter ID
  */
-static dbt_t milter_state_dbt;
-static var_t *milter_state_record;
-static var_t *milter_state_scheme;
-static VAR_INT_T milter_state_version = 1; // State database scheme version
-
-/*
- * Saved id
- */
-static VAR_INT_T milter_id_int;
-static VAR_INT_T *milter_id;
-static pthread_mutex_t milter_id_mutex = PTHREAD_MUTEX_INITIALIZER;
-
+static unsigned int milter_random_seed;
+static const char milter_alpha62[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 int milter_running = 1;
 
 
-static VAR_INT_T
-milter_get_id(void)
+static int
+milter_get_id(char *id, int len)
 {
-	VAR_INT_T r = -1;
+	struct timeval tv;
+	VAR_INT_T usec;
+	VAR_INT_T sec;
+	VAR_INT_T random;
+	unsigned long long x;
+	int i;
 
-	if (pthread_mutex_lock(&milter_id_mutex))
+
+	if (gettimeofday(&tv, NULL))
 	{
-		log_sys_error("milter_get_id: pthread_mutex_lock");
+		log_error("milter_get_id: gettimeofday failed");
 		return -1;
 	}
 
-	r = ++(*milter_id);
+	sec = tv.tv_sec << 36;				// 32 bits << 36 -> first 4 bits dropped
+	usec = (tv.tv_usec & 0xfffff) << 16;		// 20 bits << 16
+	random = rand_r(&milter_random_seed) & 0xffff;  // 16 bits of random
+	x = sec + usec + random;
 
-	/*
-	 * That's a serious problem. Keep running for stability.
-	 */
-	if (dbt_db_set(&milter_state_dbt, milter_state_record))
+	memset(id, 0, len);
+	for (i = 0; x > 0; ++i)
 	{
-		log_warning("milter_get_id: dbt_db_set failed");
+		if (i >= len)
+		{
+			log_error("milter_get_id: gettimeofday failed");
+			return -1;
+
+		}
+		id[i] = milter_alpha62[x % 62];
+		x /= 62;
 	}
 
-	if (pthread_mutex_unlock(&milter_id_mutex))
-	{
-		log_sys_error("milter_get_id: pthread_mutex_unlock");
-	}
-
-	return r;
+	return 0;
 }
 
 
@@ -457,7 +458,7 @@ milter_init_stage(SMFICTX *ctx)
 {
 	milter_priv_t *mp = NULL;
 	VAR_INT_T now;
-	VAR_INT_T id;
+	char id[IDLEN];
 
 	mp = milter_common_init(ctx, MS_INIT, MSN_INIT);
 	if (mp == NULL)
@@ -466,7 +467,7 @@ milter_init_stage(SMFICTX *ctx)
 		return -1;
 	}
 
-	if ((id = milter_get_id()) == -1)
+	if (milter_get_id(id, sizeof id))
 	{
 		log_error("milter_init_stage: milter_get_id failed");
 		return -1;
@@ -478,7 +479,7 @@ milter_init_stage(SMFICTX *ctx)
 	}
 
 	if (vtable_setv(mp->mp_table,
-	    VT_INT, "id", &id, VF_KEEPNAME | VF_COPYDATA,
+	    VT_STRING, "id", id, VF_KEEPNAME | VF_COPYDATA,
 	    VT_INT, "received", &now, VF_KEEPNAME | VF_COPYDATA,
 	    VT_NULL))
 	{
@@ -1063,98 +1064,26 @@ milter_load_symbols(void)
 
 
 void
-milter_db_init(void)
-{
-	/*
-	 * milter_id database
-	 */
-	milter_state_scheme = vlist_scheme("state",
-		"version",	VT_INT,		VF_KEEPNAME | VF_KEY,
-		"id",		VT_INT,		VF_KEEPNAME,
-		NULL);
-	if (milter_state_scheme == NULL)
-	{
-		log_die(EX_SOFTWARE, "milter_db_init: vlist_scheme failed");
-	}
-
-	milter_state_dbt.dbt_scheme = milter_state_scheme;
-	milter_state_dbt.dbt_cleanup_interval = -1;
-
-	if (dbt_register("state", &milter_state_dbt))
-	{
-		log_die(EX_SOFTWARE, "milter_db_init: dbt_register failed");
-	}
-
-	return;
-}
-
-void
-milter_id_init(void)
-{
-	var_t *lookup;
-
-	/*
-	 * Lookup state record
-	 */
-	lookup = vlist_record(milter_state_scheme, &milter_state_version, NULL);
-	if (lookup == NULL)
-	{
-		log_die(EX_SOFTWARE, "milter_db_init: vlist_record failed");
-	}
-
-	if (dbt_db_get(&milter_state_dbt, lookup, &milter_state_record))
-	{
-		log_die(EX_SOFTWARE, "milter_db_init: dbt_db_get failed");
-	}
-
-	var_delete(lookup);
-
-	/*
-	 * State record exists
-	 */
-	if (milter_state_record)
-	{
-		milter_id = vlist_record_get(milter_state_record, "id");
-		if (milter_id == NULL)
-		{
-			log_die(EX_SOFTWARE, "milter_db_init: "
-			    "vlist_record_get failed");
-		}
-
-		return;
-	}
-
-	/*
-	 * Create new record
-	 */
-	milter_id = &milter_id_int;
-	milter_state_record = vlist_record(milter_state_scheme,
-		&milter_state_version, milter_id);
-	if (milter_state_record == NULL)
-	{
-		log_die(EX_SOFTWARE, "milter_db_init: vlist_record failed");
-	}
-
-	if (dbt_db_set(&milter_state_dbt, milter_state_record))
-	{
-		log_die(EX_SOFTWARE, "milter_db_init: dbt_db_set failed");
-	}
-
-	return;
-}
-
-
-void
 milter_init(void)
 {
 	int runs_as_nobody;
 	int runs_as_nogroup;
+	struct timeval tv;
 
 	/*
 	 * Load configuration
 	 */
 	cf_init();
 
+
+	/*
+	 * Random seed for milter_id
+	 */
+	if (gettimeofday(&tv, NULL))
+	{
+		log_die(EX_OSERR, "milter_init: gettimeofday failed");
+	}
+	milter_random_seed = tv.tv_usec;
 
 	/*
 	 * Drop privileges
@@ -1208,11 +1137,9 @@ milter_init(void)
 	module_init(1, NULL);
 	regdom_init();
 	milter_load_symbols();
-	milter_db_init();
 
 	acl_read();
 	dbt_open_databases();
-	milter_id_init();
 
 	return;
 }
@@ -1226,14 +1153,6 @@ milter_clear(void)
 	dbt_clear();
 	module_clear();
 	cf_clear();
-
-	/*
-	 * Free milter_state_record
-	 */
-	if (milter_state_record)
-	{
-		var_delete(milter_state_record);
-	}
 
 	return;
 }

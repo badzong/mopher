@@ -32,6 +32,7 @@ typedef struct cf_function {
  * Global configuration variables
  */
 
+extern VAR_INT_T	 cf_random_milter_id;
 extern VAR_INT_T	 cf_syslog_facility;
 extern char		*cf_workdir_path;
 extern char		*cf_mopherd_group;

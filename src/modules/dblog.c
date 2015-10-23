@@ -96,7 +96,7 @@ dblog_init(void)
 	var_t *scheme;
 
 	scheme = vlist_scheme("dblog",
-		"id",			VT_INT,		VF_KEEPNAME | VF_KEY,
+		"id",			VT_STRING,	VF_KEEPNAME | VF_KEY,
 		"received",		VT_INT,		VF_KEEPNAME,
 		"hostaddr_str",		VT_STRING,	VF_KEEPNAME,
 		"hostname",		VT_STRING,	VF_KEEPNAME,

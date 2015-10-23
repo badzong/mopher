@@ -120,7 +120,7 @@ void
 log_message(int type, var_t *mailspec, char *f, ...)
 {
 	va_list ap;
-	VAR_INT_T *id;
+	char *id;
 	char *stage;
 	char message[BUFLEN];
 
@@ -134,7 +134,7 @@ log_message(int type, var_t *mailspec, char *f, ...)
 
 	if (strlen(f) == 0)
 	{
-		log_log(type, 0, "%lu: %s", *id, stage);
+		log_log(type, 0, "%s: %s", id, stage);
 		return;
 	}
 
@@ -148,7 +148,7 @@ log_message(int type, var_t *mailspec, char *f, ...)
 
 	va_end(ap);
 
-	log_log(type, 0, "%lu: %s: %s", *id, stage, message);
+	log_log(type, 0, "%s: %s: %s", id, stage, message);
 
 	return;
 }
