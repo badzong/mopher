@@ -201,7 +201,7 @@ p0f_query(milter_stage_t stage, char *name, var_t *attrs)
 		goto exit;
 		
 	case P0F_STATUS_NOMATCH:
-		log_debug("p0f_query: no matching host in p0f cache");
+		log_error("p0f_query: no matching host in p0f cache");
 		rcode = 0;
 		goto exit;
 
