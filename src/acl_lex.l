@@ -130,7 +130,7 @@ comment		#.*$
 [ \t]		;
 \n		parser_next_line(&acl_parser);
 
-.		acl_parser_error("unknown token '%s' in %s on line %d", acl_text);
+.		acl_parser_error("unknown token '%s' in %s on line %d", acl_text, parser_current_file(&acl_parser), parser_current_line(&acl_parser));
 
 <incl>[ \t]*	/* eat the whitespace */
 <incl>[^ \t\n]+	{ /* got the include file name */

@@ -108,7 +108,7 @@ comment		#.*$
 [ \t]		;
 \n		parser_next_line(&cf_parser);
 
-.		cf_parser_error("unknown token '%s' in %s on line %d", yytext);
+.		cf_parser_error("unknown token '%s' in %s on line %d", yytext, parser_current_file(&acl_parser), parser_current_line(&acl_parser));
 
 <incl>[ \t]*	/* eat the whitespace */
 <incl>[^ \t\n]+	{ /* got the include file name */
