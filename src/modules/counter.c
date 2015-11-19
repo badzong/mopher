@@ -14,6 +14,7 @@
 typedef int (*counter_add_t)(dbt_t *dbt, var_t *mailspec);
 
 static dbt_t counter_relay;
+static dbt_t counter_origin;
 static dbt_t counter_penpal;
 
 
@@ -22,9 +23,12 @@ counter_lookup(milter_stage_t stage, char *name, var_t *mailspec)
 {
 	dbt_t *dbt;
 	VAR_INT_T *recipients;
-	char prefix[] = "counter_penpal";
+	int lookup_penpal, lookup_origin;
 
 	log_message(LOG_DEBUG, mailspec, "counter_lookup: %s", name);
+
+	lookup_penpal = strcmp(name, "counter_penpal") == 0;
+	lookup_origin = strcmp(name, "counter_origin") == 0;
 
 	/*
 	 * hostaddr_str is not set. See milter_connect for details.
@@ -43,7 +47,7 @@ counter_lookup(milter_stage_t stage, char *name, var_t *mailspec)
 		return 0;
 	}
 
-	if (strncmp(name, prefix, sizeof prefix - 1) == 0)
+	if (lookup_penpal)
 	{
 		dbt = &counter_penpal;
 
@@ -77,6 +81,10 @@ counter_lookup(milter_stage_t stage, char *name, var_t *mailspec)
 			return -1;
 		}
 	}
+	else if (lookup_origin)
+	{
+		dbt = &counter_origin;
+	}
 	else
 	{
 		dbt = &counter_relay;
@@ -96,14 +104,14 @@ load:
 
 
 static int
-counter_add_relay(dbt_t *dbt, var_t *mailspec)
+counter_add_relay_or_origin(char *key_symbol, dbt_t *dbt, var_t *mailspec)
 {
 	var_t *record;
-	char *hostaddr_str;
+	char *key;
 	VAR_INT_T *received;
 	VAR_INT_T created, updated, expire, count;
 
-	if (vtable_dereference(mailspec, "hostaddr_str", &hostaddr_str, "received",
+	if (vtable_dereference(mailspec, key_symbol, &key, "received",
 		&received, NULL) != 2)
 	{
 		log_error("counter_add_penpal: vtable_dereference failed");
@@ -115,8 +123,8 @@ counter_add_relay(dbt_t *dbt, var_t *mailspec)
 	expire  = *received + cf_counter_expire_low;
 	count   = 1;
 
-	record = vlist_record(dbt->dbt_scheme, hostaddr_str, &created, &updated,
-	    &expire, &count);
+	record = vlist_record(dbt->dbt_scheme, key, &created, &updated,
+		&expire, &count);
 
 
 	if (record == NULL) {
@@ -136,6 +144,20 @@ counter_add_relay(dbt_t *dbt, var_t *mailspec)
 	var_delete(record);
 	
 	return 0;
+}
+
+
+static int
+counter_add_relay(dbt_t *dbt, var_t *mailspec)
+{
+	return counter_add_relay_or_origin("hostaddr_str", dbt, mailspec);
+}
+
+
+static int
+counter_add_origin(dbt_t *dbt, var_t *mailspec)
+{
+	return counter_add_relay_or_origin("origin", dbt, mailspec);
 }
 
 
@@ -318,9 +340,16 @@ counter_update(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 		return 0;
 	}
 
-	count = counter_update_record(&counter_relay, "counter_relay", mailspec,
-	    counter_add_relay);
+	count = counter_update_record(&counter_relay, "counter_relay",
+	    mailspec, counter_add_relay);
+	if (count == -1)
+	{
+		log_error("counter_update: counter_update_record failed");
+		return -1;
+	}
 
+	count = counter_update_record(&counter_origin, "counter_origin",
+	    mailspec, counter_add_origin);
 	if (count == -1)
 	{
 		log_error("counter_update: counter_update_record failed");
@@ -329,7 +358,6 @@ counter_update(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 
 	count = counter_update_record(&counter_penpal, "counter_penpal", mailspec,
 	    counter_add_penpal);
-
 	if (count == -1)
 	{
 		log_error("counter_update: counter_update_record failed");
@@ -344,6 +372,7 @@ int
 counter_init(void)
 {
 	var_t *relay_scheme;
+	var_t *origin_scheme;
 	var_t *penpal_scheme;
 
 	relay_scheme = vlist_scheme("counter_relay",
@@ -352,6 +381,14 @@ counter_init(void)
 		"counter_relay_updated",	VT_INT,		VF_KEEPNAME,
 		"counter_relay_expire",		VT_INT,		VF_KEEPNAME,
 		"counter_relay",		VT_INT,		VF_KEEPNAME,
+		NULL);
+
+	origin_scheme = vlist_scheme("counter_origin",
+		"origin",			VT_STRING,	VF_KEEPNAME | VF_KEY,
+		"counter_origin_created",	VT_INT,		VF_KEEPNAME,
+		"counter_origin_updated",	VT_INT,		VF_KEEPNAME,
+		"counter_origin_expire",	VT_INT,		VF_KEEPNAME,
+		"counter_origin",		VT_INT,		VF_KEEPNAME,
 		NULL);
 
 	penpal_scheme = vlist_scheme("counter_penpal",
@@ -364,7 +401,7 @@ counter_init(void)
 		"counter_penpal",		VT_INT,		VF_KEEPNAME,
 		NULL);
 
-	if (relay_scheme == NULL || penpal_scheme == NULL)
+	if (relay_scheme == NULL || origin_scheme == NULL || penpal_scheme == NULL)
 	{
 		log_die(EX_SOFTWARE, "counter_init: vlist_scheme failed");
 	}
@@ -372,6 +409,13 @@ counter_init(void)
 	counter_relay.dbt_scheme			= relay_scheme;
 	counter_relay.dbt_validate			= dbt_common_validate;
 	if (dbt_register("counter_relay", &counter_relay))
+	{
+		log_die(EX_SOFTWARE, "counter_init: dbt_register failed");
+	}
+
+	counter_origin.dbt_scheme			= origin_scheme;
+	counter_origin.dbt_validate			= dbt_common_validate;
+	if (dbt_register("counter_origin", &counter_origin))
 	{
 		log_die(EX_SOFTWARE, "counter_init: dbt_register failed");
 	}
@@ -384,6 +428,7 @@ counter_init(void)
 	}
 
 	acl_symbol_register("counter_relay", MS_ANY, counter_lookup, AS_CACHE);
+	acl_symbol_register("counter_origin", MS_ANY, counter_lookup, AS_CACHE);
 
 	/*
 	 * counter penpal is not cached due to abiguity in multi recipient
