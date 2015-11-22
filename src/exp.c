@@ -676,13 +676,51 @@ exp_compare(int op, var_t *left, var_t *right)
 	return NULL;
 }
 
-var_t *
-exp_bool(int op, var_t *left, var_t *right)
+static var_t *
+exp_bool_left(int op, var_t *left)
+{
+	int left_true;
+
+	left_true = var_true(left);
+
+	// left is false in AND operation
+	if (op == AND && !left_true)
+	{
+		return &exp_false;
+	}
+
+	// left is true in OR operation
+	if (op == OR && left_true)
+	{
+		return &exp_true;
+	}
+
+	return NULL;
+}
+
+static var_t *
+exp_bool(var_t *mailspec, int op, var_t *left, exp_t *right_exp)
 {
 	void *l, *r;
 	int known_value, left_true, right_true, result;
+	var_t *right = NULL;
+	var_t *shortcut = NULL;
 
 	l = left == NULL? NULL: left->v_data;
+	
+	// Left side is known. Try to evaluate without the righthand operand
+	if (l != NULL)
+	{
+		// Evaluation successful
+		shortcut = exp_bool_left(op, left);
+		if (shortcut != NULL)
+		{
+			return shortcut;
+		}
+
+		right = exp_eval(right_exp, mailspec);
+	}
+
 	r = right == NULL? NULL: right->v_data;
 
 	// Both sides are unknown
@@ -1151,11 +1189,10 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 		return exp_isset(mailspec, eo->eo_operand[0]);
 	}
 
+	/*
+ 	 * Always load left operand
+ 	 */
 	left = exp_eval(eo->eo_operand[0], mailspec);
-	if (eo->eo_operand[1])
-	{
-		right = exp_eval(eo->eo_operand[1], mailspec);
-	}
 
 	/*
 	 * ! operator
@@ -1174,15 +1211,26 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 		goto exit;
 	}
 
+	/*
+	 * Do not load unneccessary symbols in boolean operations
+	 */
+	if (eo->eo_operator == AND || eo->eo_operator == OR)
+	{
+		result = exp_bool(mailspec, eo->eo_operator, left,
+			eo->eo_operand[1]);
+		goto exit;
+	}
+
+	/*
+ 	 * Evaluate right operand
+ 	 */
+	if (eo->eo_operand[1])
+	{
+		right = exp_eval(eo->eo_operand[1], mailspec);
+	}
 
 	switch(eo->eo_operator)
 	{
-	// Boolean operator
-	case AND:
-	case OR:
-		result = exp_bool(eo->eo_operator, left, right);
-		goto exit;
-
 	// Comparator
 	case '<':
 	case '>':
