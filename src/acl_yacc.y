@@ -48,6 +48,7 @@ int acl_lex(void);
 %left IS_NULL
 %left AND OR
 %left EQ NE LE GE '<' '>' IN '~' NR
+%right '?' ':'
 %right '='
 %left '+' '-'
 %left '*' '/' '%'
@@ -155,6 +156,7 @@ exp		: '(' exp ')'		{ $$ = exp_parentheses($2); }
 		| IS_SET symbol		{ $$ = exp_operation(IS_SET, $2, NULL); }
 		| exp '~' exp		{ $$ = exp_operation('~', $1, $3); }
 		| exp NR exp		{ $$ = exp_operation(NR, $1, $3); }
+		| exp '?' exp ':' exp	{ $$ = exp_ternary_cond($1, $3, $5); }
 		| variable
 		| constant
 		| symbol

@@ -14,6 +14,7 @@ enum exp_type
 	EX_FUNCTION,
 	EX_VARIABLE,
 	EX_OPERATION,
+	EX_TERNARY_COND,
 	EX_MACRO
 };
 typedef enum exp_type exp_type_t;
@@ -40,6 +41,14 @@ struct exp_function
 };
 typedef struct exp_function exp_function_t;
 
+struct exp_ternary_condition
+{
+	exp_t	*etc_condition;
+	exp_t	*etc_true;
+	exp_t	*etc_false;
+};
+typedef struct exp_ternary_condition exp_ternary_condition_t;
+
 
 extern var_t exp_empty;
 extern var_t exp_true;
@@ -63,6 +72,7 @@ exp_t * exp_list(exp_t *list, exp_t *exp);
 exp_t * exp_constant(var_type_t type, void *data, int flags);
 exp_t * exp_operation(int operator, exp_t *op1, exp_t *op2);
 exp_t * exp_function(char *id, exp_t *args);
+exp_t * exp_ternary_cond(exp_t *condition, exp_t *cond_true, exp_t *cond_false);
 void exp_free_list(ll_t *list);
 void exp_free(var_t *v);
 var_t * exp_math_int(int op, var_t *left, var_t *right);

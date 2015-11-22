@@ -58,6 +58,7 @@ exp_delete(exp_t *exp)
 	case EX_SYMBOL:
 	case EX_VARIABLE:
 	case EX_OPERATION:
+	case EX_TERNARY_COND:
 	case EX_MACRO:
 		free(exp->ex_data);
 		break;
@@ -209,7 +210,7 @@ exp_operation(int operator, exp_t *op1, exp_t *op2)
 	eo = (exp_operation_t *) malloc(sizeof (exp_operation_t));
 	if (eo == NULL)
 	{
-		log_sys_die(EX_OSERR, "exp_operation_create: malloc");
+		log_sys_die(EX_OSERR, "exp_operation: malloc");
 	}
 
 	eo->eo_operator = operator;
@@ -222,6 +223,26 @@ exp_operation(int operator, exp_t *op1, exp_t *op2)
 	}
 
 	return exp_create(EX_OPERATION, eo);
+}
+
+
+exp_t *
+exp_ternary_cond(exp_t *condition, exp_t *cond_true, exp_t *cond_false)
+{
+	exp_ternary_condition_t *etc;
+
+	etc = (exp_ternary_condition_t *)
+	    malloc(sizeof (exp_ternary_condition_t));
+	if (etc == NULL)
+	{
+		log_sys_die(EX_OSERR, "exp_ternary_cond: malloc");
+	}
+
+	etc->etc_condition = condition;
+	etc->etc_true = cond_true;
+	etc->etc_false = cond_false;
+
+	return exp_create(EX_TERNARY_COND, etc);
 }
 
 
@@ -1351,6 +1372,19 @@ exit:
 	return result;
 }
 
+static var_t *
+exp_eval_ternary_condition(exp_t *exp, var_t *mailspec)
+{
+	exp_ternary_condition_t *etc = exp->ex_data;
+
+	if (exp_is_true(etc->etc_condition, mailspec))
+	{
+		return exp_eval(etc->etc_true, mailspec);
+	}
+
+	return exp_eval(etc->etc_false, mailspec);
+}
+
 var_t *
 exp_eval(exp_t *exp, var_t *mailspec)
 {
@@ -1370,6 +1404,7 @@ exp_eval(exp_t *exp, var_t *mailspec)
 	case EX_OPERATION:	return exp_eval_operation(exp, mailspec);
 	case EX_VARIABLE:	return exp_eval_variable(exp, mailspec);
 	case EX_MACRO:		return exp_eval_macro(exp, mailspec);
+	case EX_TERNARY_COND:	return exp_eval_ternary_condition(exp, mailspec);
 
 	default:
 		log_error("exp_eval: bad type");

@@ -49,6 +49,14 @@ init ((3 > 4) == 0) != 1                           log "OP ERROR 7"
 init ((1 < 2) == (1 > 0)) != 1                     log "OP ERROR 8"
 init (3.9 >= 4 <= 1) != 1                          log "OP ERROR 9"
 
+# IPv6
+init ::  != 0:0:0:0:0:0:0:0                         log "IPV6 ERROR 1"
+init ::  != 0000:0000:0000:0000:0000:0000:0000:0000 log "IPV6 ERROR 2"
+init ::  != 0:0:0:0::                               log "IPV6 ERROR 3"
+init ::1 != 0:0:0:0:0:0:0:1                         log "IPV6 ERROR 4"
+init ::1 != 0000:0000:0000:0000:0000:0000:0000:0001 log "IPV6 ERROR 5"
+init ::1 != 0:0:0:0::1                              log "IPV6 ERROR 6"
+
 # Address prefix calculation
 init 127.0.0.1/31 != 127.0.0.0                     log "ADDR PREFIX ERROR 1"
 init 192.168.1.100/24 != 192.168.1.0               log "ADDR PREFIX ERROR 2"
@@ -112,6 +120,11 @@ init (0 == 0 && 0 < 1 && 0 != 1) != 1              log "PRECEDENCE ERROR 8"
 init (5 * null() == null + null() == null) != 1    log "PRECEDENCE ERROR 9"
 init "FOO" + "BAR" + 99 ~ "^FOO.*99$" != 1         log "PRECEDENCE ERROR 10"
 init "FOO" + "99" ~ "^F" + ".*9$" ~ "" + "1" != 1  log "PRECEDENCE ERROR 11"
+
+# Ternary conditions
+init 1 ? 0: 1 != 0                               log "TERNARY CONDITION ERROR 1"
+init 0 ? 0: 1 != 1                               log "TERNARY CONDITION ERROR 2"
+init null() ? 0: 1 != 1                          log "TERNARY CONDITION ERROR 3"
 
 # Macros
 connect strlen({j}) == 0                           log "MACRO ERROR 1"
