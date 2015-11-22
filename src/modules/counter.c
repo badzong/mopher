@@ -332,11 +332,21 @@ counter_update(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 	}
 
 	/*
-	 * Action needs to be ACCEPT in any stage or CONTINUE at EOM
+	 * Action needs to be ACCEPT in any stage or CONTINUE or NONE at EOM
 	 */
-	if (!(*action == ACL_ACCEPT ||
-	    (*laststage == MS_EOM && *action == ACL_CONTINUE)))
+	switch(*action)
 	{
+	case ACL_ACCEPT:
+		break;
+
+	case ACL_CONTINUE:
+	case ACL_NONE:
+		if (*laststage == MS_EOM)
+		{
+			break;
+		}
+
+	default:
 		return 0;
 	}
 

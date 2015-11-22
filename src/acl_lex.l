@@ -26,6 +26,7 @@ change		change
 index		index
 esmtp		esmtp
 jump		jump
+call		call
 delete		delete
 reply		reply
 xcode		xcode
@@ -105,6 +106,7 @@ comment		#.*$
 {index}		return INDEX;
 {esmtp}		return ESMTP;
 {jump}		return JUMP;
+{call}		return CALL;
 {delete}	return DELETE;
 {reply}		return REPLY;
 {xcode}		return XCODE;

@@ -22,6 +22,7 @@ enum acl_action_type
 	ACL_ACCEPT,
 	ACL_TEMPFAIL,
 	ACL_JUMP,
+	ACL_CALL,
 	ACL_SET,
 	ACL_LOG,
 	ACL_GREYLIST,
@@ -168,8 +169,10 @@ acl_log_t * acl_log_create(exp_t *message);
 acl_log_t * acl_log_level(acl_log_t *al, exp_t *level);
 acl_action_type_t acl_log(milter_stage_t stage, char *stagename, var_t *mailspec, void *data);
 acl_action_type_t acl_jump(milter_stage_t stage, char *stagename, var_t *mailspec, void *data);
+acl_action_type_t acl_call(milter_stage_t stage, char *stagename, var_t *mailspec, void *data);
 acl_action_type_t acl_set(milter_stage_t stage, char *stagename, var_t *mailspec, void *data);
 void acl_match(var_t *mailspec, VAR_INT_T matched, VAR_INT_T stage, char *stagename, VAR_INT_T *rule, char *filename, VAR_INT_T *line, char *response);
+void acl_update(milter_stage_t stage, acl_action_type_t action, var_t *mailspec);
 void acl_update_callback(acl_update_t callback);
 acl_action_type_t acl(milter_stage_t stage, char *stagename, var_t *mailspec);
 void acl_init(void);

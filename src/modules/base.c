@@ -164,10 +164,16 @@ mopher_header(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 	}
 
 	/*
-	 * Action needs to be ACCEPT or CONTINUE
+	 * Action needs to be ACCEPT, CONTINUE or NONE
 	 */
-	if (*action != ACL_ACCEPT && *action != ACL_CONTINUE)
+	switch (*action)
 	{
+	case ACL_ACCEPT:
+	case ACL_CONTINUE:
+	case ACL_NONE:
+		break;
+
+	default:
 		return 0;
 	}
 

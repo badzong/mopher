@@ -27,6 +27,7 @@ static acl_handler_stage_t acl_action_handlers[] = {
     { NULL,		NULL,		MS_ANY },		/* ACL_ACCEPT	*/
     { NULL,		NULL,		MS_ANY },		/* ACL_TEMPFAIL	*/
     { acl_jump,		free,		MS_ANY | MS_INIT},	/* ACL_JUMP	*/
+    { acl_call,		free,		MS_ANY | MS_INIT},	/* ACL_CALL	*/
     { acl_set,		NULL,		MS_ANY | MS_INIT},	/* ACL_SET	*/
     { acl_log,		free,		MS_ANY | MS_INIT},	/* ACL_LOG	*/
     { greylist,		free,		MS_OFF_ENVRCPT },	/* ACL_GREYLIST	*/
@@ -877,7 +878,25 @@ acl_action_type_t
 acl_jump(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 {
 	char *table = data;
+	acl_action_type_t aa;
 	log_debug("acl_jump: jump to \"%s\"", table);
+
+	aa = acl(stage, table, mailspec);
+
+	if(aa == ACL_NONE)
+	{
+		return ACL_CONTINUE;
+	}
+
+	return aa;
+}
+
+
+acl_action_type_t
+acl_call(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
+{
+	char *table = data;
+	log_debug("acl_call: call \"%s\"", table);
 
 	return acl(stage, table, mailspec);
 }
@@ -966,7 +985,7 @@ exit:
 	return;
 }
 
-static void
+void
 acl_update(milter_stage_t stage, acl_action_type_t action, var_t *mailspec)
 {
 	acl_update_t callback;
@@ -1249,7 +1268,6 @@ acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 
 		acl_match(mailspec, 1, stage, stagename, &i, aa->aa_filename, &aa->aa_line,
 			acl_stati[response]);
-		acl_update(stage, response, mailspec);
 
 		return response;
 	}
@@ -1258,12 +1276,10 @@ exit:
 	/*
 	 * No rule matched
 	 */
-	log_message(LOG_INFO, mailspec, "acl: no match in \"%s\": continue",
+	log_message(LOG_INFO, mailspec, "acl: no match in \"%s\"",
 		stagename);
 
-	acl_update(stage, ACL_CONTINUE, mailspec);
-
-	return ACL_CONTINUE;
+	return ACL_NONE;
 }
 
 void

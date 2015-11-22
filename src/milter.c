@@ -197,10 +197,20 @@ milter_acl(milter_stage_t stage, char *stagename, milter_priv_t * mp)
 	}
 
 	/*
+ 	 * Call acl_update after stage is evaluated completely
+         */
+	acl_update(stage, action, mp->mp_table);
+
+	/*
 	 * Translate acl_action_type into sfsistat
 	 */
 	switch (action)
 	{
+	case ACL_NONE:
+		log_debug("milter_acl: stage %s returns SMFIS_NONE",
+			stagename);
+		return SMFIS_CONTINUE;
+
 	case ACL_CONTINUE:
 		log_debug("milter_acl: stage %s returns SMFIS_CONTINUE",
 			stagename);

@@ -12,8 +12,8 @@ int acl_lex(void);
 %token ID INTEGER FLOAT STRING ADDR VARIABLE CONTINUE XREJECT DISCARD ACCEPT
 %token TEMPFAIL GREYLIST VISA DEADLINE DELAY ATTEMPTS TARPIT SET LOG LEVEL 
 %token EQ NE LE GE AND OR DEFINE ADD HEADER VALUE INSERT CHANGE INDEX FROM
-%token ESMTP RCPT JUMP BODY DELETE REPLY XCODE MSG IS_NULL PIPE IS_SET NR IN
-%token MACRO
+%token ESMTP RCPT JUMP CALL BODY DELETE REPLY XCODE MSG IS_NULL PIPE IS_SET NR
+%token IN MACRO
 
 %union {
 	char			 c;
@@ -31,7 +31,7 @@ int acl_lex(void);
 	msgmod_target_t		mm_t;
 }
 
-%type <str>	STRING ID VARIABLE MACRO jump
+%type <str>	STRING ID VARIABLE MACRO jump call
 %type <i>	INTEGER number
 %type <d>	FLOAT
 %type <ss>	ADDR
@@ -79,6 +79,7 @@ terminal	: CONTINUE		{ $$ = acl_action(ACL_CONTINUE, NULL); }
 		| set			{ $$ = acl_action(ACL_SET, $1); }
 		| msgmod		{ $$ = acl_action(ACL_MOD, $1); }
 		| jump			{ $$ = acl_action(ACL_JUMP, $1); }
+		| call			{ $$ = acl_action(ACL_CALL, $1); }
 		| pipe			{ $$ = acl_action(ACL_PIPE, $1); }
 		;
 
@@ -105,6 +106,7 @@ set		: SET VARIABLE '=' exp
 		;
 
 jump		: JUMP ID		{ $$ = $2; }
+call		: CALL ID		{ $$ = $2; }
 
 log		: log LEVEL exp		{ $$ = acl_log_level($1, $3); }
 		| LOG exp		{ $$ = acl_log_create($2); }
