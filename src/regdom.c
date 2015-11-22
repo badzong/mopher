@@ -178,7 +178,8 @@ void
 regdom_load_rules (char *path)
 {
 	int n, wildcard, exception;
-	char *p, *name, *saveptr;
+	char *p, *name;
+	char *saveptr = NULL;
 	char puny[BUFLEN];
 	regdom_rule_t *rule;
 

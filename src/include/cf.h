@@ -78,5 +78,6 @@ void cf_set_keylist(var_t *table, ll_t *keys, var_t *v);
 var_t * cf_get(var_type_t type, ...);
 void * cf_get_value(var_type_t type, ...);
 int cf_load_list(ll_t *list, char *key, var_type_t type);
+var_t * cf_constant(char *name);
 
 #endif /* _CF_H_ */
