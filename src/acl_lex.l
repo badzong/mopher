@@ -34,6 +34,8 @@ message		message
 pipe		pipe
 isset		isset
 in		in
+null		null
+is		is
 
 eq		==
 ne		!=
@@ -46,11 +48,6 @@ nr		!~
 op		[-+*/!()<>=,~%?:]
 multiplier	[smhdwMy]
 cbr		[{}]
-
-/*
- * Hack: is NULL operator
- */
-isnull		==[ \t]*null
 
 id		[a-zA-Z_][a-zA-Z0-9_-]*
 variable	\$[a-zA-Z][a-zA-Z0-9_-]+
@@ -114,11 +111,12 @@ comment		#.*$
 {pipe}		return PIPE;
 {isset}		return IS_SET;
 {in}		return IN;
+{null}		return IN;
+{is}		return XNULL; /* NULL */
 
 {op}		return acl_text[0];
 {multiplier}	return acl_text[0];
 {cbr}		return acl_text[0];
-{isnull}	return IS_NULL;
 
 {integer}	return parser_tok_int(INTEGER, &acl_lval.i, acl_text);
 {float}		return parser_tok_float(FLOAT, &acl_lval.d, acl_text);

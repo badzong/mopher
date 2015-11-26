@@ -13,7 +13,7 @@ int acl_lex(void);
 %token TEMPFAIL GREYLIST VISA DEADLINE DELAY ATTEMPTS TARPIT SET LOG LEVEL 
 %token EQ NE LE GE AND OR DEFINE ADD HEADER VALUE INSERT CHANGE INDEX FROM
 %token ESMTP RCPT JUMP CALL BODY DELETE REPLY XCODE MSG IS_NULL PIPE IS_SET NR
-%token IN MACRO
+%token IN MACRO IS XNULL
 
 %union {
 	char			 c;
@@ -45,7 +45,7 @@ int acl_lex(void);
 %type <mm_t>	target
 
 %left ','
-%left IS_NULL
+%left IS
 %left AND OR
 %left EQ NE LE GE '<' '>' IN '~' NR
 %right '?' ':'
@@ -74,6 +74,7 @@ terminal	: CONTINUE		{ $$ = acl_action(ACL_CONTINUE, NULL); }
 		| DISCARD		{ $$ = acl_action(ACL_DISCARD, NULL); }
 		| ACCEPT		{ $$ = acl_action(ACL_ACCEPT, NULL); }
 		| TEMPFAIL		{ $$ = acl_action(ACL_TEMPFAIL, NULL); }
+		| XNULL			{ $$ = acl_action(ACL_NONE, NULL); }
 		| greylist		{ $$ = acl_action(ACL_GREYLIST, $1); }
 		| tarpit		{ $$ = acl_action(ACL_TARPIT, $1); }
 		| log			{ $$ = acl_action(ACL_LOG, $1); }
@@ -152,7 +153,7 @@ exp		: '(' exp ')'		{ $$ = exp_parentheses($2); }
 		| exp AND exp		{ $$ = exp_operation(AND, $1, $3); }
 		| exp OR exp		{ $$ = exp_operation(OR, $1, $3); }
 		| exp IN exp		{ $$ = exp_operation(IN, $1, $3); }
-		| exp IS_NULL		{ $$ = exp_operation(IS_NULL, $1, NULL); }
+		| exp IS XNULL		{ $$ = exp_operation(IS_NULL, $1, NULL); }
 		| IS_SET symbol		{ $$ = exp_operation(IS_SET, $2, NULL); }
 		| exp '~' exp		{ $$ = exp_operation('~', $1, $3); }
 		| exp NR exp		{ $$ = exp_operation(NR, $1, $3); }
