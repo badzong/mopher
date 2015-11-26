@@ -13,7 +13,7 @@ int acl_lex(void);
 %token TEMPFAIL GREYLIST VISA DEADLINE DELAY ATTEMPTS TARPIT SET LOG LEVEL 
 %token EQ NE LE GE AND OR DEFINE ADD HEADER VALUE INSERT CHANGE INDEX FROM
 %token ESMTP RCPT JUMP CALL BODY DELETE REPLY XCODE MSG IS_NULL PIPE IS_SET NR
-%token IN MACRO IS XNULL
+%token IN MACRO IS XNULL XRETURN
 
 %union {
 	char			 c;
@@ -75,6 +75,7 @@ terminal	: CONTINUE		{ $$ = acl_action(ACL_CONTINUE, NULL); }
 		| ACCEPT		{ $$ = acl_action(ACL_ACCEPT, NULL); }
 		| TEMPFAIL		{ $$ = acl_action(ACL_TEMPFAIL, NULL); }
 		| XNULL			{ $$ = acl_action(ACL_NONE, NULL); }
+		| XRETURN		{ $$ = acl_action(ACL_RETURN, NULL); }
 		| greylist		{ $$ = acl_action(ACL_GREYLIST, $1); }
 		| tarpit		{ $$ = acl_action(ACL_TARPIT, $1); }
 		| log			{ $$ = acl_action(ACL_LOG, $1); }

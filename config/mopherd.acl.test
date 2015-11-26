@@ -5,6 +5,17 @@ define TEST_FLOAT 10.01
 define TEST_MATH TEST_FLOAT * 100 / TEST_INTEGER
 define TEST_LIST ("foo", "bar", "foobar")
 
+# Detect early init abort
+init set $init_abort = 1
+
+# Call/Return
+init_test  set $test_init = 0
+init_test  return
+init_test  set $test_init = 1
+init       set $test_init = 1
+init       call test_init
+init $test_init                                    log "CALL/RETURN ERROR"
+
 # Variables
 init set $test_var1 = 1.7
 init set $test_list = (1, 2, 3, 4, 5)
@@ -122,9 +133,13 @@ init "FOO" + "BAR" + 99 ~ "^FOO.*99$" != 1         log "PRECEDENCE ERROR 10"
 init "FOO" + "99" ~ "^F" + ".*9$" ~ "" + "1" != 1  log "PRECEDENCE ERROR 11"
 
 # Ternary conditions
-init 1 ? 0: 1 != 0                               log "TERNARY CONDITION ERROR 1"
-init 0 ? 0: 1 != 1                               log "TERNARY CONDITION ERROR 2"
-init null() ? 0: 1 != 1                          log "TERNARY CONDITION ERROR 3"
+init 1 ? 0: 1 != 0                                 log "TERNARY CONDITION ERROR 1"
+init 0 ? 0: 1 != 1                                 log "TERNARY CONDITION ERROR 2"
+init null() ? 0: 1 != 1                            log "TERNARY CONDITION ERROR 3"
+
+# Detect early init abort
+init set $init_abort = 0
+connect $init_abort                                log "INIT ABORT ERROR"
 
 # Macros
 connect strlen({j}) == 0                           log "MACRO ERROR 1"

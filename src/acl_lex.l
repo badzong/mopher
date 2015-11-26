@@ -36,6 +36,7 @@ isset		isset
 in		in
 null		null
 is		is
+return          return
 
 eq		==
 ne		!=
@@ -111,8 +112,9 @@ comment		#.*$
 {pipe}		return PIPE;
 {isset}		return IS_SET;
 {in}		return IN;
-{null}		return IN;
-{is}		return XNULL; /* NULL */
+{is}		return IS;
+{null}		return XNULL;   /* NULL */
+{return}	return XRETURN; /* RETURN */
 
 {op}		return acl_text[0];
 {multiplier}	return acl_text[0];

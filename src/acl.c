@@ -21,6 +21,7 @@ static ll_t *acl_update_callbacks;
 static acl_handler_stage_t acl_action_handlers[] = {
     { NULL,		NULL,		MS_ANY | MS_INIT},	/* ACL_NULL 	*/ 
     { NULL,		NULL,		MS_ANY | MS_INIT},	/* ACL_NONE 	*/
+    { NULL,		NULL,		MS_ANY | MS_INIT},	/* ACL_RETURN 	*/
     { NULL,		NULL,		MS_ANY | MS_INIT},	/* ACL_CONTINUE	*/
     { NULL,		NULL,		MS_ANY },		/* ACL_REJECT	*/
     { NULL,		NULL,		MS_ANY },		/* ACL_DISCARD	*/
@@ -1242,16 +1243,21 @@ acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 			response = aa->aa_type;
 		}
 
-		if (response == ACL_NONE)
+		switch(response)
 		{
+		case ACL_NONE:
 			continue;
-		}
 
-		if (response == ACL_ERROR)
-		{
+		case ACL_RETURN:
+			return ACL_NONE;
+
+		case ACL_ERROR:
 			log_error("acl: %s: rule number %d in table \"%s\" on "
 				"line %d failed", aa->aa_filename, i, stagename, aa->aa_line);
 			return ACL_ERROR;
+
+		default:
+			break;
 		}
 
 		/*

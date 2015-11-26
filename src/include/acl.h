@@ -16,6 +16,7 @@ enum acl_action_type
 	ACL_ERROR	= -1,
 	ACL_NULL	=  0,
 	ACL_NONE,
+	ACL_RETURN,
 	ACL_CONTINUE,
 	ACL_REJECT,
 	ACL_DISCARD,
