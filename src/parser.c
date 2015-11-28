@@ -34,6 +34,8 @@ parser_file_create(char *path)
 		++pf->pf_filename;
 	}
 
+	pf->pf_line = 1;
+
 	return pf;
 }
 

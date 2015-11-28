@@ -13,7 +13,7 @@ init_test  set $test_init = 0
 init_test  return
 init_test  set $test_init = 1
 init       set $test_init = 1
-init       call test_init
+init       call init_test
 init $test_init                                    log "CALL/RETURN ERROR"
 
 # Variables
@@ -42,12 +42,12 @@ init "foo" + 1.0 != "foo1.00"                      log "STRING ERROR 2"
 init "foo" + 127.0.0.1 != "foo127.0.0.1"           log "STRING ERROR 3"
 
 # NULL
-init (null() == null) != 1                         log "NULL ERROR 1"
-init (null() + 1 == null) != 1                     log "NULL ERROR 2"
-init (5 * null() == null) != 1                     log "NULL ERROR 3"
-init (null() > null() == null) != 1                log "NULL ERROR 4"
-init (10.9 >= null() == null) != 1                 log "NULL ERROR 5"
-init (1 > 0 || null() > 0) != 1                    log "NULL ERROR 6"
+init (nil() is null) != 1                         log "NULL ERROR 1"
+init (nil() + 1 is null) != 1                     log "NULL ERROR 2"
+init (5 * nil() is null) != 1                     log "NULL ERROR 3"
+init (nil() > nil() is null) != 1                log "NULL ERROR 4"
+init (10.9 >= nil() is null) != 1                 log "NULL ERROR 5"
+init (1 > 0 || nil() > 0) != 1                    log "NULL ERROR 6"
 
 # Operators
 init ((10 + 10) / 20) != 1                         log "OP ERROR 1"
@@ -88,17 +88,17 @@ init (1 && 1) != 1                                 log "LOGIC ERROR 1"
 init (1 && 0) != 0                                 log "LOGIC ERROR 2"
 init (0 && 1) != 0                                 log "LOGIC ERROR 3"
 init (0 && 0) != 0                                 log "LOGIC ERROR 4"
-init (0 && null()) != 0                            log "LOGIC ERROR 5"
-init (null() && 0) != 0                            log "LOGIC ERROR 6"
+init (0 && nil()) != 0                            log "LOGIC ERROR 5"
+init (nil() && 0) != 0                            log "LOGIC ERROR 6"
 init (1 || 1) != 1                                 log "LOGIC ERROR 7"
 init (1 || 0) != 1                                 log "LOGIC ERROR 8"
 init (0 || 1) != 1                                 log "LOGIC ERROR 9"
 init (0 || 0) != 0                                 log "LOGIC ERROR 10"
-init (1 || null()) != 1                            log "LOGIC ERROR 11"
-init (null() || 1) != 1                            log "LOGIC ERROR 12"
+init (1 || nil()) != 1                            log "LOGIC ERROR 11"
+init (nil() || 1) != 1                            log "LOGIC ERROR 12"
 init !1 != 0                                       log "LOGIC ERROR 13"
 init !0 != 1                                       log "LOGIC ERROR 14"
-init ((!null()) == null) != 1                      log "LOGIC ERROR 15"
+init ((!nil()) is null) != 1                      log "LOGIC ERROR 15"
 
 # Regex
 init "FOOBAR 99" ~ "^FOO.*99$" != 1                log "REGEX ERROR 1"
@@ -128,14 +128,14 @@ init (1 - 0 || 0 * 0 && 2 / 2) != 1                log "PRECEDENCE ERROR 5"
 init (!0 && 1 > 0 && 1 == 1 && 0 != 1) != 1        log "PRECEDENCE ERROR 6"
 init (!1 || 1 < 0 || 0 == 1 || 1 != 1) != 0        log "PRECEDENCE ERROR 7"
 init (0 == 0 && 0 < 1 && 0 != 1) != 1              log "PRECEDENCE ERROR 8"
-init (5 * null() == null + null() == null) != 1    log "PRECEDENCE ERROR 9"
+init (5 * nil() is null + nil() is null) != 1    log "PRECEDENCE ERROR 9"
 init "FOO" + "BAR" + 99 ~ "^FOO.*99$" != 1         log "PRECEDENCE ERROR 10"
 init "FOO" + "99" ~ "^F" + ".*9$" ~ "" + "1" != 1  log "PRECEDENCE ERROR 11"
 
 # Ternary conditions
 init 1 ? 0: 1 != 0                                 log "TERNARY CONDITION ERROR 1"
 init 0 ? 0: 1 != 1                                 log "TERNARY CONDITION ERROR 2"
-init null() ? 0: 1 != 1                            log "TERNARY CONDITION ERROR 3"
+init nil() ? 0: 1 != 1                            log "TERNARY CONDITION ERROR 3"
 
 # Detect early init abort
 init set $init_abort = 0

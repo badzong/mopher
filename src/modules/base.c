@@ -111,7 +111,7 @@ cast(int argc, ll_t *args)
 }
 
 static var_t *
-null(int argc, ll_t *args)
+nil(int argc, ll_t *args)
 {
 	return EXP_EMPTY;
 }
@@ -249,8 +249,8 @@ base_init(void)
 	    (acl_function_callback_t) size);
 	acl_function_register("cast", AF_COMPLEX,
 	    (acl_function_callback_t) cast);
-	acl_function_register("null", AF_COMPLEX,
-	    (acl_function_callback_t) null);
+	acl_function_register("nil", AF_COMPLEX,
+	    (acl_function_callback_t) nil);
 
 	/*
 	 * Constants

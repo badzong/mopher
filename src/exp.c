@@ -101,7 +101,8 @@ exp_define(char *name, exp_t *exp)
 {
 	if (sht_insert(exp_defs, name, exp))
 	{
-		log_die(EX_SOFTWARE, "exp_define: sht_insert failed");
+		log_debug("exp_define: sht_insert failed");
+		log_die(EX_SOFTWARE, "Multiple definition of %s", name);
 	}
 
 	free(name);
