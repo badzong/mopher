@@ -763,7 +763,7 @@ exp_bool(var_t *mailspec, int op, exp_t *left_exp, exp_t *right_exp)
 	}
 
 	// Short-Circuit Operator (like Perl)
-	if (op == OR && right_known && right_true && !left_true)
+	if (op == OR && !left_true)
 	{
 		return right;
 	}

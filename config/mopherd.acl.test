@@ -117,6 +117,9 @@ init (0 || nil() || ::1 || fail()) != ::1          log "SHORT-CIRCUIT LOGIC ERRO
 init (0 && fail()) != 0                            log "SHORT-CIRCUIT LOGIC ERROR 7"
 init (1 || 0 && 1 || fail()) != 1                  log "SHORT-CIRCUIT LOGIC ERROR 8"
 init (0 || 0 && 1 && fail()) != 0                  log "SHORT-CIRCUIT LOGIC ERROR 9"
+init (0 || "") != ""                               log "SHORT-CIRCUIT LOGIC ERROR 10"
+init (nil() || "" || 0.0.0.0) != 0.0.0.0           log "SHORT-CIRCUIT LOGIC ERROR 11"
+init (0 || "" || ::) != ::                         log "SHORT-CIRCUIT LOGIC ERROR 12"
 
 # Regex
 init "FOOBAR 99" ~ "^FOO.*99$" != 1                log "REGEX ERROR 1"
