@@ -700,11 +700,12 @@ exp_compare(int op, var_t *left, var_t *right)
 
 
 static var_t *
-exp_bool(var_t *mailspec, int op, var_t *left, exp_t *right_exp)
+exp_bool(var_t *mailspec, int op, exp_t *left_exp, exp_t *right_exp)
 {
 	int known_value, left_known, right_known, result;
 	int left_true = 0;
 	int right_true = 0;
+	var_t *left = NULL;
 	var_t *right = NULL;
 
 	if (op != OR && op != AND)
@@ -713,35 +714,38 @@ exp_bool(var_t *mailspec, int op, var_t *left, exp_t *right_exp)
 		return NULL;
 	}
 
+	if (left_exp == NULL || right_exp == NULL)
+	{
+		log_error("exp_bool: operand is NULL");
+		return NULL;
+	}
+
+	// Evaluate left operand
+	left = exp_eval(left_exp, mailspec);
 	if (left == NULL)
 	{
-		log_error("exp_bool: left operand is NULL");
+		log_error("exp_bool: exp_eval for lefthand operator failed");
 		return NULL;
 	}
 
-	if (right_exp == NULL)
-	{
-		log_error("exp_bool: right expression is NULL");
-		return NULL;
-	}
-
-	// Left side is known. Try to evaluate without the righthand operand
 	left_known = left->v_data != NULL;
 	if (left_known)
 	{
 		left_true = var_true(left);
+	}
+	
+	// Short-Circuit Operator (like Perl)
+	if (op == OR && left_known && left_true)
+	{
+		return left;
+	}
 
-		// left is false in AND operation
-		if (op == AND && !left_true)
-		{
-			return &exp_false;
-		}
+	exp_free(left);
 
-		// left is true in OR operation
-		if (op == OR && left_true)
-		{
-			return &exp_true;
-		}
+	// AND operation with left value known and false.
+	if (op == AND && left_known && !left_true)
+	{
+		return &exp_false;
 	}
 
 	// Evaluate right operand
@@ -758,6 +762,12 @@ exp_bool(var_t *mailspec, int op, var_t *left, exp_t *right_exp)
 		right_true = var_true(right);
 	}
 
+	// Short-Circuit Operator (like Perl)
+	if (op == OR && right_known && right_true && !left_true)
+	{
+		return right;
+	}
+
 	exp_free(right);
 
 	// Both sides are unknown
@@ -771,14 +781,16 @@ exp_bool(var_t *mailspec, int op, var_t *left, exp_t *right_exp)
 	{
 		known_value = left_known ? left_true: right_true;
 
-		// 3-Value-Logic
 		if (op == AND && !known_value)
 		{
 			return &exp_false;
 		}
-		else if (op == OR && known_value)
+
+		// This case should be handled by the shortcut logic above!
+		if (op == OR && known_value)
 		{
-			return &exp_true;
+			log_error("exp_bool: logic error");
+			return NULL;
 		}
 
 		return &exp_empty;
@@ -1203,7 +1215,17 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 	}
 
 	/*
- 	 * Always load left operand
+	 * Do not load unneccessary symbols in boolean operations
+	 */
+	if (eo->eo_operator == AND || eo->eo_operator == OR)
+	{
+		result = exp_bool(mailspec, eo->eo_operator, eo->eo_operand[0],
+			eo->eo_operand[1]);
+		goto exit;
+	}
+
+	/*
+ 	 * Load left operand
  	 */
 	left = exp_eval(eo->eo_operand[0], mailspec);
 
@@ -1221,16 +1243,6 @@ exp_eval_operation(exp_t *exp, var_t *mailspec)
 	if (eo->eo_operator == IS_NULL)
 	{
 		result = exp_is_null(left);
-		goto exit;
-	}
-
-	/*
-	 * Do not load unneccessary symbols in boolean operations
-	 */
-	if (eo->eo_operator == AND || eo->eo_operator == OR)
-	{
-		result = exp_bool(mailspec, eo->eo_operator, left,
-			eo->eo_operand[1]);
 		goto exit;
 	}
 
@@ -1368,8 +1380,20 @@ static var_t *
 exp_eval_ternary_condition(exp_t *exp, var_t *mailspec)
 {
 	exp_ternary_condition_t *etc = exp->ex_data;
+	var_t *v = NULL;
+	int result;
 
-	if (exp_is_true(etc->etc_condition, mailspec))
+	v = exp_eval(etc->etc_condition, mailspec);
+	if (v == NULL)
+	{
+		log_error("exp_eval_ternary_condition: evaluation failed");
+		return NULL;
+	}
+
+	result = var_true(v);
+	exp_free(v);
+
+	if (result)
 	{
 		return exp_eval(etc->etc_true, mailspec);
 	}
@@ -1418,7 +1442,6 @@ exp_is_true(exp_t *exp, var_t *mailspec)
 	}
 
 	v = exp_eval(exp, mailspec);
-
 	if (v == NULL)
 	{
 		log_notice("exp_is_true: evaluation failed");

@@ -116,6 +116,12 @@ nil(int argc, ll_t *args)
 	return EXP_EMPTY;
 }
 
+static var_t *
+fail(int argc, ll_t *args)
+{
+	return NULL;
+}
+
 static int
 mopher_header(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 {
@@ -251,6 +257,8 @@ base_init(void)
 	    (acl_function_callback_t) cast);
 	acl_function_register("nil", AF_COMPLEX,
 	    (acl_function_callback_t) nil);
+	acl_function_register("fail", AF_COMPLEX,
+	    (acl_function_callback_t) fail);
 
 	/*
 	 * Constants
