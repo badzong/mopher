@@ -33,6 +33,7 @@ typedef struct cf_function {
  */
 
 extern VAR_INT_T	 cf_random_milter_id;
+extern VAR_INT_T	 cf_hashtable_buckets;
 extern VAR_INT_T	 cf_syslog_facility;
 extern char		*cf_workdir_path;
 extern char		*cf_mopherd_group;

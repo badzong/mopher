@@ -1,4 +1,3 @@
-#include <config.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -10,7 +9,8 @@
 
 #include "cf_yacc.h"
 
-#define BUCKETS 256
+// Default hashtable size (var.c) before config is initialized
+#define BUCKETS 128
 
 /*
  * Configuration file path
@@ -43,6 +43,7 @@ parser_t cf_parser;
  * Extern configuration symbols
  */
 VAR_INT_T	 cf_random_milter_id;
+VAR_INT_T	 cf_hashtable_buckets = BUCKETS;
 VAR_INT_T	 cf_syslog_facility;
 char		*cf_workdir_path;
 char		*cf_mopherd_group;
@@ -77,6 +78,7 @@ VAR_INT_T	 cf_connect_retries;
  */
 static cf_symbol_t cf_symbols[] = {
 	{ "random_milter_id", &cf_random_milter_id },
+	{ "hashtable_buckets", &cf_hashtable_buckets },
 	{ "syslog_facility", &cf_syslog_facility },
 	{ "workdir_path", &cf_workdir_path },
 	{ "mopherd_group", &cf_mopherd_group },

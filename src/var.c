@@ -14,7 +14,6 @@
 
 #include <mopher.h>
 
-#define BUCKETS 256
 #define BUFLEN 1024
 #define STDOUT_BUFLEN 1024 * 64
 #define COMPRESS_FIELD_LIMIT sizeof (unsigned long long) * 8
@@ -232,8 +231,9 @@ var_data_create(var_type_t type)
 		break;
 
 	case VT_TABLE:
-		p = (void *) ht_create(BUCKETS, (ht_hash_t) var_hash,
-			(ht_match_t) var_match, (ht_delete_t) var_delete);
+		p = (void *) ht_create(cf_hashtable_buckets,
+			(ht_hash_t) var_hash, (ht_match_t) var_match,
+			(ht_delete_t) var_delete);
 		break;
 
 	case VT_INT:
