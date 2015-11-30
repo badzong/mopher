@@ -698,114 +698,105 @@ exp_compare(int op, var_t *left, var_t *right)
 	return NULL;
 }
 
-static var_t *
-exp_bool_left(int op, var_t *left)
-{
-	int left_true;
-
-	left_true = var_true(left);
-
-	// left is false in AND operation
-	if (op == AND && !left_true)
-	{
-		return &exp_false;
-	}
-
-	// left is true in OR operation
-	if (op == OR && left_true)
-	{
-		return &exp_true;
-	}
-
-	return NULL;
-}
 
 static var_t *
 exp_bool(var_t *mailspec, int op, var_t *left, exp_t *right_exp)
 {
-	void *l, *r;
-	int known_value, left_true, right_true, result;
+	int known_value, left_known, right_known, result;
+	int left_true = 0;
+	int right_true = 0;
 	var_t *right = NULL;
-	var_t *shortcut = NULL;
 
-	l = left == NULL? NULL: left->v_data;
-	
-	// Left side is known. Try to evaluate without the righthand operand
-	if (l != NULL)
+	if (op != OR && op != AND)
 	{
-		// Evaluation successful
-		shortcut = exp_bool_left(op, left);
-		if (shortcut != NULL)
-		{
-			return shortcut;
-		}
-
-		right = exp_eval(right_exp, mailspec);
+		log_error("exp_bool: bad operation");
+		return NULL;
 	}
 
-	r = right == NULL? NULL: right->v_data;
+	if (left == NULL)
+	{
+		log_error("exp_bool: left operand is NULL");
+		return NULL;
+	}
+
+	if (right_exp == NULL)
+	{
+		log_error("exp_bool: right expression is NULL");
+		return NULL;
+	}
+
+	// Left side is known. Try to evaluate without the righthand operand
+	left_known = left->v_data != NULL;
+	if (left_known)
+	{
+		left_true = var_true(left);
+
+		// left is false in AND operation
+		if (op == AND && !left_true)
+		{
+			return &exp_false;
+		}
+
+		// left is true in OR operation
+		if (op == OR && left_true)
+		{
+			return &exp_true;
+		}
+	}
+
+	// Evaluate right operand
+	right = exp_eval(right_exp, mailspec);
+	if (right == NULL)
+	{
+		log_error("exp_bool: exp_eval for righthand operator failed");
+		return NULL;
+	}
+
+	right_known = right->v_data != NULL;
+	if (right_known)
+	{
+		right_true = var_true(right);
+	}
+
+	exp_free(right);
 
 	// Both sides are unknown
-	if (l == NULL && r == NULL)
+	if (!left_known && !right_known)
 	{
 		return &exp_empty;
 	}
 
 	// One side is unknown
-	if (l == NULL || r == NULL)
+	if (!left_known || !right_known)
 	{
-		if (l == NULL)
-		{
-			known_value = var_true(right);
-		}
-		else
-		{
-			known_value = var_true(left);
-		}
+		known_value = left_known ? left_true: right_true;
 
 		// 3-Value-Logic
-		switch (op)
+		if (op == AND && !known_value)
 		{
-		case AND:
-			if (!known_value)
-			{
-				return &exp_false;
-			}
-			break;
-		case OR:
-			if (known_value)
-			{
-				return &exp_true;
-			}
-			break;
-		default:
-			log_error("exp_bool: bad operation");
-			return NULL;
+			return &exp_false;
+		}
+		else if (op == OR && known_value)
+		{
+			return &exp_true;
 		}
 
 		return &exp_empty;
 	}
 
 	// Both sides are known
-	left_true = var_true(left);
-	right_true = var_true(right);
-
-	switch (op)
+	if (op == AND)
 	{
-	case AND:
 		result = left_true && right_true;
-		break;
-	case OR:
+	}
+	else
+	{
 		result = left_true || right_true;
-		break;
-	default:
-		log_error("exp_bool: bad operation");
-		return NULL;
 	}
 
 	if (result)
 	{
-		return &exp_true;
+		return  &exp_true;
 	}
 
 	return &exp_false;
