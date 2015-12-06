@@ -368,7 +368,8 @@ msgmod_delete(void *data)
 
 
 acl_action_type_t
-msgmod(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
+msgmod(milter_stage_t stage, char *stagename, var_t *mailspec, void *data,
+	int depth)
 {
 	msgmod_t *mm = data;
 	void *ctx;

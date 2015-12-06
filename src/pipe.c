@@ -66,7 +66,8 @@ pipe_exec(char *dest, char *message, int size)
 
 
 acl_action_type_t
-pipe_action(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
+pipe_action(milter_stage_t stage, char *stagename, var_t *mailspec, void *data,
+	int depth)
 {
 	exp_t *exp = data;
 	var_t *v;

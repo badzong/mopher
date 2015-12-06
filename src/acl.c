@@ -7,6 +7,7 @@
 
 #define ACL_BUCKETS 256
 #define ACL_LOGLEN 1024
+#define MAX_RECURSION 64
 
 
 extern FILE *acl_in;
@@ -806,7 +807,8 @@ acl_log_level(acl_log_t *al, exp_t *level)
 
 
 acl_action_type_t
-acl_log(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
+acl_log(milter_stage_t stage, char *stagename, var_t *mailspec, void *data,
+	int depth)
 {
 	acl_log_t *al = data;
 	var_t *v = NULL;
@@ -878,13 +880,14 @@ error:
 
 
 acl_action_type_t
-acl_jump(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
+acl_jump(milter_stage_t stage, char *stagename, var_t *mailspec, void *data,
+	int depth)
 {
 	char *table = data;
 	acl_action_type_t aa;
 	log_debug("acl_jump: jump to \"%s\"", table);
 
-	aa = acl(stage, table, mailspec);
+	aa = acl(stage, table, mailspec, depth);
 
 	if(aa == ACL_NONE)
 	{
@@ -896,17 +899,19 @@ acl_jump(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
 
 
 acl_action_type_t
-acl_call(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
+acl_call(milter_stage_t stage, char *stagename, var_t *mailspec, void *data,
+	int depth)
 {
 	char *table = data;
 	log_debug("acl_call: call \"%s\"", table);
 
-	return acl(stage, table, mailspec);
+	return acl(stage, table, mailspec, depth);
 }
 
 
 acl_action_type_t
-acl_set(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
+acl_set(milter_stage_t stage, char *stagename, var_t *mailspec, void *data,
+	int depth)
 {
 	exp_t *exp = data;
 	var_t *v;
@@ -1177,7 +1182,7 @@ error:
 }
 
 acl_action_type_t
-acl(milter_stage_t stage, char *stagename, var_t *mailspec)
+acl(milter_stage_t stage, char *stagename, var_t *mailspec, int depth)
 {
 	ll_t *rules;
 	ll_entry_t *pos;
@@ -1188,6 +1193,17 @@ acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 	VAR_INT_T i;
 
 	log_debug("acl: stage \"%s\"", stagename);
+
+	/*
+         * Recursion depth
+	 */
+	if (++depth >= MAX_RECURSION)
+	{
+		log_message(LOG_ERR, mailspec,
+			"acl: error: recursion limit %d reached", depth);
+		return ACL_ERROR;
+	}
+
 
 	/*
 	 * Lookup table
@@ -1217,9 +1233,11 @@ acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 		default:	break;
 		}
 
-		log_debug("acl: rule %d in \"%s\" matched", i, stagename);
-
 		aa = ar->ar_action;
+
+		log_message(LOG_NOTICE, mailspec, "acl: %s: rule number %d in "
+			"table \"%s\" on line %d matched", aa->aa_filename, i,
+			stagename, aa->aa_line);
 
 		/*
 		 * Check if action is allowed at this stage
@@ -1238,7 +1256,7 @@ acl(milter_stage_t stage, char *stagename, var_t *mailspec)
 		if (action_handler)
 		{
 			response = action_handler(stage, stagename, mailspec,
-			    ar->ar_action->aa_data);
+			    ar->ar_action->aa_data, depth);
 		}
 		else
 		{

@@ -660,7 +660,8 @@ error:
 
 
 acl_action_type_t
-greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
+greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data,
+	int depth)
 {
 	greylist_t *gl = data;
 	char *origin;

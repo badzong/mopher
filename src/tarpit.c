@@ -6,7 +6,8 @@
 #define TARPIT_SYMBOL "tarpit_delayed"
 
 acl_action_type_t
-tarpit(milter_stage_t stage, char *stagename, var_t *mailspec, void *data)
+tarpit(milter_stage_t stage, char *stagename, var_t *mailspec, void *data,
+	int depth)
 {
 	exp_t *exp = data;
 	VAR_INT_T delay;

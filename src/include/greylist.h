@@ -43,7 +43,7 @@ greylist_t * greylist_visa(greylist_t *gl, exp_t *visa);
 greylist_t * greylist_create(void);
 void greylist_delete(greylist_t *gl);
 void greylist_init(void);
-acl_action_type_t greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data);
+acl_action_type_t greylist(milter_stage_t stage, char *stagename, var_t *mailspec, void *data, int depth);
 int greylist_pass(char *source, char *envfrom, char *envrcpt);
 int greylist_dump_record(dbt_t *dbt, var_t *record);
 int greylist_dump(char **dump);

@@ -188,7 +188,7 @@ milter_acl(milter_stage_t stage, char *stagename, milter_priv_t * mp)
 {
 	VAR_INT_T action;
 
-	action = acl(stage, stagename, mp->mp_table);
+	action = acl(stage, stagename, mp->mp_table, 0);
 	if (vtable_setv(mp->mp_table, VT_INT, "action", &action,
 	    VF_KEEPNAME | VF_COPYDATA, VT_NULL))
 	{
