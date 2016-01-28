@@ -7,7 +7,7 @@
 
 #define ACL_BUCKETS 256
 #define ACL_LOGLEN 1024
-#define MAX_RECURSION 64
+#define MAX_RECURSION 256
 
 
 extern FILE *acl_in;

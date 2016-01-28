@@ -73,6 +73,7 @@ VAR_INT_T	 cf_mopher_header;
 char		*cf_mopher_header_name;
 VAR_INT_T	 cf_connect_timeout;
 VAR_INT_T	 cf_connect_retries;
+VAR_INT_T	 cf_watchdog_stage_timeout;
 
 /*
  * Symbol table
@@ -108,6 +109,7 @@ static cf_symbol_t cf_symbols[] = {
 	{ "mopher_header_name", &cf_mopher_header_name },
 	{ "connect_timeout", &cf_connect_timeout },
 	{ "connect_retries", &cf_connect_retries },
+	{ "watchdog_stage_timeout", &cf_watchdog_stage_timeout },
 	{ NULL, NULL }
 };
 

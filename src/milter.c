@@ -401,6 +401,14 @@ milter_common_init(SMFICTX *ctx, VAR_INT_T stage, char *stagename)
 	}
 
 	/*
+	 * Call stage watchdog to log stale connections
+	 */
+	if (cf_watchdog_stage_timeout)
+	{
+		watchdog(mp->mp_table, stagename);
+	}
+
+	/*
 	 * Try to lookup queue_id if neccessary.
 	 */
 	if (vtable_lookup(mp->mp_table, "queue_id"))
@@ -1048,6 +1056,14 @@ milter_close(SMFICTX * ctx)
 	milter_acl(MS_CLOSE, MSN_CLOSE, mp);
 
 	log_message(LOG_ERR, mp->mp_table, "");
+
+	/*
+	 * Remove connection from watchdog list
+	 */
+	if (cf_watchdog_stage_timeout)
+	{
+		watchdog_close(mp->mp_table);
+	}
 
 exit:
 	milter_common_fini(ctx, mp, MS_CLOSE);

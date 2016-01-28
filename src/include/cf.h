@@ -64,6 +64,7 @@ extern VAR_INT_T	 cf_mopher_header;
 extern char		*cf_mopher_header_name;
 extern VAR_INT_T	 cf_connect_timeout;
 extern VAR_INT_T	 cf_connect_retries;
+extern VAR_INT_T	 cf_watchdog_stage_timeout;
 
 /*
  * Prototypes

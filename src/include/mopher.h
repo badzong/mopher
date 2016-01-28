@@ -35,5 +35,6 @@
 #include <regdom.h>
 #include <sql.h>
 #include <test.h>
+#include <watchdog.h>
 
 #endif /* _MOPHER_H */

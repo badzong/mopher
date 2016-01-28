@@ -721,6 +721,14 @@ dbt_janitor(void *arg)
 			return NULL;
 		}
 
+		/*
+ 		 * Call watchdog to log stale connections
+		 */
+		if (cf_watchdog_stage_timeout)
+		{
+			watchdog_check();
+		}
+
 		now = ts.tv_sec;
 
 		// Clear log message
