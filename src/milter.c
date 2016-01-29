@@ -30,7 +30,7 @@
 #define MSN_CLOSE	"close"
 
 #define MAILADDRLEN 512
-#define IDLEN 12
+#define IDLEN 17
 
 /*
  * Symbols without callback
@@ -84,12 +84,14 @@ static int
 milter_get_id(char *id, int len)
 {
 	struct timeval tv;
-	VAR_INT_T usec;
-	VAR_INT_T sec;
-	VAR_INT_T random;
 	unsigned long long x;
-	int i;
+	int i = 0;
 
+	if (len < IDLEN || len < 17)
+	{
+		log_error("milter_get_id: buffer exhausted");
+		return -1;
+	}
 
 	if (gettimeofday(&tv, NULL))
 	{
@@ -97,20 +99,22 @@ milter_get_id(char *id, int len)
 		return -1;
 	}
 
-	sec = tv.tv_sec << 34;				// 32 bits << 34 -> first 2 bits dropped, 30 bits remain
-	usec = (tv.tv_usec & 0xfffff) << 14;		// 20 bits << 14
-	random = rand_r(&milter_random_seed) & 0x3fff;  // 14 bits of random
-	x = sec | usec | random;
-
 	memset(id, 0, len);
-	for (i = 0; x > 0; ++i)
-	{
-		if (i >= len)
-		{
-			log_error("milter_get_id: gettimeofday failed");
-			return -1;
 
-		}
+	/*
+	 * The id uses 62 different characters and is 16 characters long. We
+	 * therefore need slightly more than 95 bits.
+	 */
+	x = rand_r(&milter_random_seed); // 5 random chars
+	for (; i < 5; ++i)
+	{
+		id[i] = milter_alpha62[x % 62];
+		x /= 62;
+	}
+
+	x = tv.tv_sec << 32 | tv.tv_usec; // 11 chars from timestamp
+	for (; i < 16; ++i)
+	{
 		id[i] = milter_alpha62[x % 62];
 		x /= 62;
 	}
