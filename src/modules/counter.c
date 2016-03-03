@@ -104,17 +104,17 @@ load:
 
 
 static int
-counter_add_relay_or_origin(char *key_symbol, dbt_t *dbt, var_t *mailspec)
+counter_add_relay(dbt_t *dbt, var_t *mailspec)
 {
 	var_t *record;
-	char *key;
+	char *hostaddr;
 	VAR_INT_T *received;
 	VAR_INT_T created, updated, expire, count;
 
-	if (vtable_dereference(mailspec, key_symbol, &key, "received",
+	if (vtable_dereference(mailspec, "hostaddr_str", &hostaddr, "received",
 		&received, NULL) != 2)
 	{
-		log_error("counter_add_penpal: vtable_dereference failed");
+		log_error("counter_add_relay: vtable_dereference failed");
 		return -1;
 	}
 
@@ -123,18 +123,18 @@ counter_add_relay_or_origin(char *key_symbol, dbt_t *dbt, var_t *mailspec)
 	expire  = *received + cf_counter_expire_low;
 	count   = 1;
 
-	record = vlist_record(dbt->dbt_scheme, key, &created, &updated,
+	record = vlist_record(dbt->dbt_scheme, hostaddr, &created, &updated,
 		&expire, &count);
 
 
 	if (record == NULL) {
-		log_warning("counter_add_penpal: vlist_record failed");
+		log_warning("counter_add_relay: vlist_record failed");
 		return -1;
 	}
 
 	if (dbt_db_set(dbt, record))
 	{
-		log_error("counter_add_penpal: dbt_db_set failed");
+		log_error("counter_add_relay: dbt_db_set failed");
 		var_delete(record);
 		return -1;
 	}
@@ -148,16 +148,47 @@ counter_add_relay_or_origin(char *key_symbol, dbt_t *dbt, var_t *mailspec)
 
 
 static int
-counter_add_relay(dbt_t *dbt, var_t *mailspec)
-{
-	return counter_add_relay_or_origin("hostaddr_str", dbt, mailspec);
-}
-
-
-static int
 counter_add_origin(dbt_t *dbt, var_t *mailspec)
 {
-	return counter_add_relay_or_origin("origin", dbt, mailspec);
+	var_t *record;
+	char *origin;
+	char *domain;
+	VAR_INT_T *received;
+	VAR_INT_T created, updated, expire, count;
+
+	if (vtable_dereference(mailspec, "origin", &origin, "envfrom_domain",
+		&domain, "received", &received, NULL) != 3)
+	{
+		log_error("counter_add_origin: vtable_dereference failed");
+		return -1;
+	}
+
+	created = *received;
+	updated = *received;
+	expire  = *received + cf_counter_expire_low;
+	count   = 1;
+
+	record = vlist_record(dbt->dbt_scheme, origin, domain, &created,
+		&updated, &expire, &count);
+
+
+	if (record == NULL) {
+		log_warning("counter_add_origin: vlist_record failed");
+		return -1;
+	}
+
+	if (dbt_db_set(dbt, record))
+	{
+		log_error("counter_add_origin: dbt_db_set failed");
+		var_delete(record);
+		return -1;
+	}
+
+	log_debug("counter_add_origin: record saved");
+
+	var_delete(record);
+	
+	return 0;
 }
 
 
@@ -395,6 +426,7 @@ counter_init(void)
 
 	origin_scheme = vlist_scheme("counter_origin",
 		"origin",			VT_STRING,	VF_KEEPNAME | VF_KEY,
+		"envfrom_domain",		VT_STRING,	VF_KEEPNAME | VF_KEY,
 		"counter_origin_created",	VT_INT,		VF_KEEPNAME,
 		"counter_origin_updated",	VT_INT,		VF_KEEPNAME,
 		"counter_origin_expire",	VT_INT,		VF_KEEPNAME,
@@ -438,7 +470,7 @@ counter_init(void)
 	}
 
 	acl_symbol_register("counter_relay", MS_ANY, counter_lookup, AS_CACHE);
-	acl_symbol_register("counter_origin", MS_ANY, counter_lookup, AS_CACHE);
+	acl_symbol_register("counter_origin", MS_OFF_ENVFROM, counter_lookup, AS_CACHE);
 
 	/*
 	 * counter penpal is not cached due to abiguity in multi recipient
