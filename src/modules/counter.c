@@ -358,7 +358,7 @@ counter_update(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 {
 	int count;
 	VAR_INT_T *action;
-	VAR_INT_T *laststage;
+	VAR_INT_T *eom_complete;
 
 	if (stage != MS_CLOSE)
 	{
@@ -375,7 +375,7 @@ counter_update(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 	}
 
 	if (vtable_dereference(mailspec, "action", &action,
-	    "laststage", &laststage, NULL) != 2)
+	    "eom_complete", &eom_complete, NULL) != 2)
 	{
 		log_error("counter_update: vtable_dereference failed");
 		return -1;
@@ -387,16 +387,14 @@ counter_update(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 	switch(*action)
 	{
 	case ACL_ACCEPT:
-		break;
-
 	case ACL_CONTINUE:
 	case ACL_NONE:
-		if (*laststage == MS_EOM)
-		{
-			break;
-		}
-
+		break;
 	default:
+		return 0;
+	}
+	if (*action != ACL_ACCEPT && *eom_complete == 0)
+	{
 		return 0;
 	}
 
