@@ -41,12 +41,13 @@ typedef enum milter_stage {
 } milter_stage_t;
 
 typedef struct milter_priv {
-    var_t   *mp_table;
-    int      mp_recipients;
-    char    *mp_header;
-    int      mp_headerlen;
-    char    *mp_body;
-    int      mp_bodylen;
+    var_t     *mp_table;
+    VAR_INT_T  mp_recipients;
+    char      *mp_header;
+    VAR_INT_T  mp_headerlen;
+    char      *mp_body;
+    VAR_INT_T  mp_bodylen;
+    VAR_INT_T  mp_eom_complete;
 } milter_priv_t;
 
 typedef struct milter_macro {

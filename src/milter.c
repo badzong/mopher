@@ -67,6 +67,7 @@ static milter_symbol_t milter_symbols[] = {
 	{ "body", MS_OFF_EOM },
 	{ "body_size", MS_OFF_EOM },
 	{ "message_size", MS_OFF_EOM },
+	{ "eom_complete", MS_ANY },
 	{ NULL, 0 }
 };
 
@@ -211,34 +212,31 @@ milter_acl(milter_stage_t stage, char *stagename, milter_priv_t * mp)
 	switch (action)
 	{
 	case ACL_NONE:
-		log_debug("milter_acl: stage %s returns SMFIS_NONE",
-			stagename);
-		return SMFIS_CONTINUE;
-
 	case ACL_CONTINUE:
-		log_debug("milter_acl: stage %s returns SMFIS_CONTINUE",
-			stagename);
+                if (mp->mp_eom_complete && stage == MS_EOM)
+		{
+			log_message(LOG_ERR, mp->mp_table, "message accepted");
+		}
 		return SMFIS_CONTINUE;
 
 	case ACL_REJECT:
-		log_debug("milter_acl: stage %s returns SMFIS_REJECT",
-			stagename);
+		log_message(LOG_ERR, mp->mp_table, "message rejected");
 		return SMFIS_REJECT;
 
 	case ACL_DISCARD:
-		log_debug("milter_acl: stage %s returns SMFIS_DISCARD",
-			stagename);
+		log_message(LOG_ERR, mp->mp_table, "message discarded");
 		return SMFIS_DISCARD;
 
 	case ACL_ACCEPT:
-		log_debug("milter_acl: stage %s returns SMFIS_ACCEPT",
-			stagename);
+		log_message(LOG_ERR, mp->mp_table, "message accepted");
 		return SMFIS_ACCEPT;
 
 	case ACL_TEMPFAIL:
+		log_message(LOG_ERR, mp->mp_table, "message temporary failed");
+		return SMFIS_TEMPFAIL;
+
 	case ACL_GREYLIST:
-		log_debug("milter_acl: stage %s returns SMFIS_TEMPFAIL",
-			stagename);
+		log_message(LOG_ERR, mp->mp_table, "message greylisted");
 		return SMFIS_TEMPFAIL;
 
 	case ACL_ERROR:
@@ -249,6 +247,8 @@ milter_acl(milter_stage_t stage, char *stagename, milter_priv_t * mp)
 		log_error("milter_acl: acl returned bad action type in %s "
 		    "stage", stagename);
 	}
+
+	log_message(LOG_ERR, mp->mp_table, "acl error: tempfail");
 
 	return SMFIS_TEMPFAIL;
 }
@@ -527,6 +527,7 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 {
 	milter_priv_t *mp = NULL;
 	VAR_INT_T ipv6 = 0;
+        VAR_INT_T eom_complete = 0;
 	struct sockaddr_storage *ha_clean = NULL;
 	char *hostaddr_str;
 	char origin[256];
@@ -579,8 +580,8 @@ milter_connect(SMFICTX *ctx, char *hostname, _SOCK_ADDR * hostaddr)
 	    VT_INT, "ipv6", &ipv6, VF_KEEPNAME | VF_COPYDATA,
 	    VT_ADDR, "hostaddr", ha_clean, VF_KEEPNAME,
 	    VT_STRING, "hostaddr_str", hostaddr_str, VF_KEEPNAME,
-	    VT_STRING, "origin", origin,
-		VF_KEEPNAME | VF_COPYDATA,
+	    VT_STRING, "origin", origin, VF_KEEPNAME | VF_COPYDATA,
+            VT_INT, "eom_complete", &eom_complete, VF_KEEPNAME | VF_COPYDATA,
 	    VT_NULL))
 	{
 		log_error("milter_connect: vtable_setv failed");
@@ -986,6 +987,11 @@ milter_eom(SMFICTX * ctx)
 	}
 
 	/*
+         * EOM complete flag
+         */
+        mp->mp_eom_complete = 1;
+
+	/*
 	 * header + \r\n + body
 	 */
 	message_size = mp->mp_bodylen + mp->mp_headerlen + 2;
@@ -996,7 +1002,8 @@ milter_eom(SMFICTX * ctx)
 	    VT_INT, "message_size", &message_size,
 		VF_KEEPNAME | VF_COPYDATA,
 	    VT_STRING, "body", mp->mp_body, VF_KEEP,
-	    VT_NULL))
+	    VT_INT, "eom_complete", &mp->mp_eom_complete,
+		VF_KEEPNAME | VF_COPYDATA, VT_NULL))
 	{
 		log_error("milter_eom: vtable_setv failed");
 		goto exit;
