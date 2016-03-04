@@ -191,10 +191,12 @@ milter_macro_lookup(milter_stage_t stage, char *macro, var_t *attrs)
 static sfsistat
 milter_acl(milter_stage_t stage, char *stagename, milter_priv_t * mp)
 {
-	VAR_INT_T action;
+	acl_action_type_t action;
+        VAR_INT_T action_int;
 
 	action = acl(stage, stagename, mp->mp_table, 0);
-	if (vtable_setv(mp->mp_table, VT_INT, "action", &action,
+        action_int = action;
+	if (vtable_setv(mp->mp_table, VT_INT, "action", &action_int,
 	    VF_KEEPNAME | VF_COPYDATA, VT_NULL))
 	{
 		log_error("milter_acl: vtable_setv failed");

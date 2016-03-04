@@ -354,13 +354,23 @@ error:
 
 
 static int
-counter_update(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
+counter_update(milter_stage_t stage, acl_action_type_t action, var_t *mailspec)
 {
 	int count;
-	VAR_INT_T *action;
-	VAR_INT_T *eom_complete;
 
-	if (stage != MS_CLOSE)
+	/*
+	 * Action needs to be ACCEPT in any stage or CONTINUE or NONE at EOM
+	 */
+	switch(action)
+	{
+	case ACL_ACCEPT:
+	case ACL_CONTINUE:
+	case ACL_NONE:
+		break;
+	default:
+		return 0;
+	}
+	if (action != ACL_ACCEPT && stage != MS_EOM)
 	{
 		return 0;
 	}
@@ -371,30 +381,6 @@ counter_update(milter_stage_t stage, acl_action_type_t at, var_t *mailspec)
 	if (vtable_is_null(mailspec, "hostaddr_str"))
 	{
 		log_debug("counter_update: hostaddr_str is NULL");
-		return 0;
-	}
-
-	if (vtable_dereference(mailspec, "action", &action,
-	    "eom_complete", &eom_complete, NULL) != 2)
-	{
-		log_error("counter_update: vtable_dereference failed");
-		return -1;
-	}
-
-	/*
-	 * Action needs to be ACCEPT in any stage or CONTINUE or NONE at EOM
-	 */
-	switch(*action)
-	{
-	case ACL_ACCEPT:
-	case ACL_CONTINUE:
-	case ACL_NONE:
-		break;
-	default:
-		return 0;
-	}
-	if (*action != ACL_ACCEPT && *eom_complete == 0)
-	{
 		return 0;
 	}
 
