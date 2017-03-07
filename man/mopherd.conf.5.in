@@ -138,7 +138,8 @@ Path to loadable mopher modules.
 .Xr mopherd 8
 will load all available modules in
 .Em module_path
-during startup.
+during startup
+.Pq see Sx MODULE CONFIGURATION .
 .It Sy mopherd_user Pq Qq mopher
 User ID of
 .Xr mopherd 8
@@ -240,6 +241,15 @@ symbols and functions that are made available to
 .Xr mopherd 8
 during its evaluation of
 .Xr mopherd.acl 5 .
+.Pp
+.Xr mopherd 8
+will load any module m in
+.Em module_path
+if
+.Em modules[m]
+is either unset or set to 1 and it will skip m if
+.Em modules[m]
+is set to 0.
 .Pp
 The following list only describes configuration directives for modules
 that require some configuration.
