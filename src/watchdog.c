@@ -6,6 +6,7 @@
 typedef struct watchdog {
 	char   *wd_id;
 	char   *wd_stage;
+	char   *wd_hostaddr;
 	time_t  wd_received;
 	time_t  wd_instage;
 } watchdog_t;
@@ -14,7 +15,7 @@ static pthread_mutex_t watchdog_mutex = PTHREAD_MUTEX_INITIALIZER;
 static sht_t watchdog_table;
 
 static watchdog_t *
-watchdog_create(char *id, char *stage)
+watchdog_create(char *id, char *stage, char *hostaddr)
 {
 	watchdog_t *wd;
 
@@ -27,6 +28,7 @@ watchdog_create(char *id, char *stage)
 
 	wd->wd_id = id;
 	wd->wd_stage = stage;
+	wd->wd_hostaddr = hostaddr;
 	wd->wd_instage = wd->wd_received = time(NULL);
 
 	return wd;
@@ -51,7 +53,7 @@ void
 watchdog(var_t *table, char *stage)
 {
 	watchdog_t *wd;
-	char *id;
+	char *id, *hostaddr;
 
 	if (pthread_mutex_lock(&watchdog_mutex))
 	{
@@ -61,9 +63,10 @@ watchdog(var_t *table, char *stage)
 
 	watchdog_init();
 
-	// In init id is not set. No problem.
+	// In init id and hostaddr are not set. No problem.
 	id = vtable_get(table, "id");
-	if (id == NULL)
+	hostaddr = vtable_get(table, "hostaddr_str");
+	if (id == NULL || hostaddr == NULL)
 	{
 		goto exit;
 	}
@@ -73,7 +76,7 @@ watchdog(var_t *table, char *stage)
 	wd = sht_lookup(&watchdog_table, id);
 	if (wd == NULL)
 	{
-		wd = watchdog_create(id, stage);
+		wd = watchdog_create(id, stage, hostaddr);
 		if (wd == NULL)
 		{
 			log_error("watchdog: watchdog_create failed");
@@ -128,8 +131,8 @@ watchdog_check(void)
 			continue;
 		}
 
-		log_error("%s: %s: slow connection: age=%d %s=%d",
-			wd->wd_id, wd->wd_stage, diff, wd->wd_stage,
+		log_error("%s: %s: %s: slow connection: age=%d %s=%d",
+			wd->wd_id, wd->wd_stage, wd->wd_hostaddr, diff, wd->wd_stage,
 			now - wd->wd_instage);
 	}
 
