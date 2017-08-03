@@ -681,6 +681,46 @@ exit:
 	return r;
 }
 
+// sql_db_duplicate_key_hack was introduced to prevent fatal database errors in
+// case of primary key race conditions.
+static pthread_mutex_t	key_hack_mutex = PTHREAD_MUTEX_INITIALIZER;
+static int key_hack_failed = 0;
+
+// FIXME: Include header
+int sql_db_set(dbt_t *dbt, var_t *record);
+
+static int
+sql_db_duplicate_key_hack(dbt_t *dbt, var_t *record)
+{
+	int status = -1;
+
+	if (pthread_mutex_lock(&key_hack_mutex)) {
+		log_error("sql_db_duplicate_key_hack: pthread_mutex_lock failed");
+		return -1;
+        }
+
+	if (key_hack_failed) {
+		log_error("sql_db_duplicate_key_hack: key_hack_failed is already set");
+		goto error;
+	}
+
+	status = sql_db_set(dbt, record);
+
+	if (status) {
+		key_hack_failed = 1;
+	}
+	else {
+		log_error("sql_db_duplicate_key_hack: fatal database error prevented");
+	}
+
+error:
+	if (pthread_mutex_unlock(&key_hack_mutex)) {
+		log_error("sql_db_duplicate_key_hack: pthread_mutex_unlock failed");
+        }
+
+	return status;
+}
+
 int
 sql_db_set(dbt_t *dbt, var_t *record)
 {
@@ -716,7 +756,7 @@ sql_db_set(dbt_t *dbt, var_t *record)
 	affected = sql_db_exec_only(sql, conn, query);
 	if (affected == -1)
 	{
-		log_error("sql_db_set: sql_db_exec_only failed");
+		log_error("sql_db_set: sql_db_exec_only for update failed");
 		goto rollback;
 	}
 
@@ -737,7 +777,14 @@ sql_db_set(dbt_t *dbt, var_t *record)
 	affected = sql_db_exec_only(sql, conn, query);
 	if (affected == -1)
 	{
-		log_error("sql_db_set: sql_db_exec_only failed");
+		log_error("sql_db_set: sql_db_exec_only for insert failed");
+
+		// Try duplicate key hack if database errors are fatal
+		if (cf_dbt_fatal_errors) {
+			sql_db_exec_only(sql, conn, "ROLLBACK");
+			return sql_db_duplicate_key_hack(dbt, record);
+		}
+
 		goto rollback;
 	}
 
