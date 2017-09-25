@@ -169,6 +169,38 @@ then
 fi
 
 
+# Check for MongoDB support
+AC_ARG_WITH([mongodb], AS_HELP_STRING([--with-mongodb], [build with MongoDB support]))
+AC_CHECK_LIB([mongoc], [mongoc_init], [have_mongoc="yes"], [have_mongoc="no"])
+AC_CHECK_LIB([bson], [bson_init], [have_bson="yes"], [have_bson="no"])
+AC_CHECK_HEADERS([mongoc.h], [have_mongoc_h=yes], [have_mongoc_h=no])
+AC_CHECK_HEADERS([bson.h], [have_bson_h=yes], [have_bson_h=no])
+
+if test "$have_mongoc" = "yes" -a   \
+	"$have_bson" = "yes" -a     \
+	"$have_mongoc_h" = "yes" -a \
+	"$have_bson_h" = "yes"
+then
+  have_mongodb=yes
+else
+  have_mongodb=no
+fi
+
+AS_IF(
+  [test -z "$with_mongodb"], [with_mongodb="$have_mongodb"],
+  [test "$with_mongodb" = "yes" -a "$have_mongodb" = "no"],
+    AC_MSG_FAILURE([libmongoc or libbson failed (--without-mongodb to disable)])
+)
+
+if test "$with_mongodb" = "yes"
+then
+  MOD_DB_MONGODB="mongodb.so"
+  AC_SUBST([MOD_DB_MONGODB])
+  AC_DEFINE([WITH_MOD_MONGODB])
+  MOD_LIBS="$MOD_LIBS -lmongoc -lbson"
+fi
+
+
 # Check for spf2 support
 AC_ARG_WITH([spf2], AS_HELP_STRING([--with-spf2], [build with SPF support (libspf2)]))
 AC_CHECK_LIB([spf2], [SPF_request_new], [have_spf2="yes"], [have_spf2="no"])

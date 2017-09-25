@@ -28,8 +28,10 @@ src/modules/random.so
 src/modules/spamd.so
 src/modules/string.so
 src/modules/spf.so
+src/modules/bdb.so
+src/modules/sakila.so
 src/modules/pgsql.so
-src/modules/geoip.so
+src/modules/mongodb.so
 src/acl_lex.c
 src/acl_yacc.c
 src/cf_lex.c
@@ -71,6 +73,7 @@ src/vlist.o
 src/vp.o
 src/vtable.o
 src/sql.o
+src/watchdog.o
 src/mopherctl
 src/mopherd
 man/mopher.7
