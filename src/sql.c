@@ -916,7 +916,7 @@ error:
 }
 
 int
-sql_db_cleanup(dbt_t *dbt)
+sql_db_expire(dbt_t *dbt)
 {
 	char query[BUFLEN];
 	void *result = NULL;

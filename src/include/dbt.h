@@ -10,6 +10,8 @@
 #define DBT_LOCK	1<<0
 #define DBT_FIELD_MAX   256
 
+typedef void (*dbt_db_init_t)(void);
+typedef void (*dbt_db_cleanup_t)(void);
 typedef int (*dbt_db_open_t)(void *dbt);
 typedef void (*dbt_db_close_t)(void *dbt);
 typedef int (*dbt_db_sync_t)(void *dbt);
@@ -18,16 +20,19 @@ typedef int (*dbt_db_walk_t)(void *dbt, dbt_db_callback_t callback);
 typedef int (*dbt_db_get_t)(void *dbt, var_t *record, var_t **result);
 typedef int (*dbt_db_set_t)(void *dbt, var_t *record);
 typedef int (*dbt_db_del_t)(void *dbt, var_t *record);
-typedef int (*dbt_db_sql_cleanup_t)(void *dbt);
+typedef int (*dbt_db_expire_t)(void *dbt);
 
 typedef struct dbt_driver {
 	char			*dd_name;
+	dbt_db_init_t		 dd_init;
+	dbt_db_cleanup_t	 dd_cleanup;
 	dbt_db_open_t		 dd_open;
 	dbt_db_close_t		 dd_close;
 	dbt_db_set_t		 dd_set;
 	dbt_db_get_t		 dd_get;
 	dbt_db_del_t		 dd_del;
 	dbt_db_walk_t		 dd_walk;
+	dbt_db_expire_t	 	 dd_expire;
 	dbt_db_sync_t	 	 dd_sync;
 	int			 dd_flags;
 	int			 dd_use_sql;
@@ -90,6 +95,7 @@ int dbt_test_bdb_init(void);
 int dbt_test_lite_init(void);
 int dbt_test_pgsql_init(void);
 int dbt_test_mysql_init(void);
+int dbt_test_mongodb_init(void);
 void dbt_test_stage1(int n);
 void dbt_test_stage2(int n);
 void dbt_test_clear(void);

@@ -46,7 +46,7 @@ int sql_db_get(void *dbt, var_t *record, var_t **result);
 int sql_db_set(void *dbt, var_t *record);
 int sql_db_del(void *dbt, var_t *record);
 int sql_db_walk(void *dbt, dbt_db_callback_t callback);
-int sql_db_cleanup(void *dbt);
+int sql_db_expire(void *dbt);
 
 void
 dbt_driver_register(dbt_driver_t *dd)
@@ -57,6 +57,12 @@ dbt_driver_register(dbt_driver_t *dd)
 		dd->dd_set = sql_db_set;
 		dd->dd_del = sql_db_del;
 		dd->dd_walk = sql_db_walk;
+		dd->dd_expire = sql_db_expire;
+	}
+
+	if (dd->dd_init)
+	{
+		dd->dd_init();
 	}
 
 	if((sht_insert(dbt_drivers, dd->dd_name, dd)) == -1)
@@ -254,7 +260,7 @@ dbt_db_sync(dbt_t *dbt)
 }
 
 int
-dbt_db_cleanup(dbt_t *dbt)
+dbt_db_expire(dbt_t *dbt)
 {
 	int r;
 
@@ -263,13 +269,13 @@ dbt_db_cleanup(dbt_t *dbt)
 		return -1;
 	}
 
-	if (!dbt->dbt_driver->dd_use_sql)
+	if (dbt->dbt_driver->dd_expire == NULL)
 	{
-		log_die(EX_SOFTWARE, "dbt_db_cleanup: can only be called for"
-			" SQL drivers");
+		log_die(EX_SOFTWARE, "dbt_expire: driver %s doesn't support expire",
+			dbt->dbt_driver->dd_name);
 	}
 
-	r = sql_db_cleanup(dbt);
+	r = dbt->dbt_driver->dd_expire(dbt);
 	if (r < 0 && cf_dbt_fatal_errors)
 	{
 		log_die(EX_SOFTWARE, "fatal database error");
@@ -555,15 +561,14 @@ dbt_common_validate(dbt_t *dbt, var_t *record)
 
 
 static int
-dbt_janitor_cleanup_sql(dbt_t *dbt)
+dbt_janitor_cleanup_expire(dbt_t *dbt)
 {
 	int deleted;
 
-	deleted = dbt_db_cleanup(dbt);
-
+	deleted = dbt_db_expire(dbt);
 	if (deleted == -1)
 	{
-		log_error("dbt_janitor_cleanup_sql: dbt_db_cleanup failed");
+		log_error("dbt_janitor_cleanup_exipre: dbt_db_cleanup failed");
 	}
 
 	return deleted;
@@ -637,9 +642,9 @@ dbt_janitor_cleanup(time_t now, dbt_t *dbt)
 	/*
 	 * Check if driver supports SQL
 	 */
-	if (dbt->dbt_driver->dd_use_sql)
+	if (dbt->dbt_driver->dd_expire)
 	{
-		deleted = dbt_janitor_cleanup_sql(dbt);
+		deleted = dbt_janitor_cleanup_expire(dbt);
 	}
 
 	/*
@@ -667,12 +672,13 @@ dbt_janitor_cleanup(time_t now, dbt_t *dbt)
 	else
 	{
 		log_error("dbt_janitor_cleanup: can't cleanup database \"%s\":"
-		    " Driver supports neither SQL nor walking", dbt->dbt_name);
+		    " bad driver \"%s\": dd_expire and dd_walk unset", dbt->dbt_name,
+		    dbt->dbt_driver->dd_name);
 		return -1;
 	}
 
 	/*
-	 * dbt_janitor_cleanup_sql or dbt_janitor_cleanup_walk should have
+	 * dbt_janitor_cleanup_expire or dbt_janitor_cleanup_walk should have
 	 * logged already
 	 */
 	if (deleted == -1)
@@ -948,6 +954,15 @@ dbt_open_databases(void)
 	return;
 }
 
+static void
+dbt_driver_cleanup(dbt_driver_t *dd) {
+	if(dd->dd_cleanup)
+	{
+		dd->dd_cleanup();
+	}
+	
+	return;
+}
 
 void
 dbt_init(int start_threads)
@@ -955,7 +970,7 @@ dbt_init(int start_threads)
 	/*
 	 * Initialize driver table
 	 */
-	dbt_drivers = sht_create(DBT_BUCKETS, NULL);
+	dbt_drivers = sht_create(DBT_BUCKETS, (sht_delete_t) dbt_driver_cleanup);
 	if(dbt_drivers == NULL) {
 		log_die(EX_SOFTWARE, "dbt_init: sht_create failed");
 	}
@@ -1031,14 +1046,14 @@ dbt_clear()
 		util_thread_join(dbt_janitor_thread);
 	}
 
-	if (dbt_drivers)
-	{
-		sht_delete(dbt_drivers);
-	}
-
 	if (dbt_tables)
 	{
 		sht_delete(dbt_tables);
+	}
+
+	if (dbt_drivers)
+	{
+		sht_delete(dbt_drivers);
 	}
 
 	return;
@@ -1463,6 +1478,12 @@ int
 dbt_test_mysql_init(void)
 {
 	return dbt_test_init("test_mysql", "sakila.so", 1);
+}
+
+int
+dbt_test_mongodb_init(void)
+{
+	return dbt_test_init("test_mongodb", "mongodb.so", 1);
 }
 
 #endif

@@ -287,10 +287,13 @@ module_delete(module_t *mod)
 		mod->mod_fini();
 	}
 
+// Do not unload shared libraries in DEBUG mode
+#ifndef DEBUG
 	if (mod->mod_handle)
 	{
 		dlclose(mod->mod_handle);
 	}
+#endif
 
 	free(mod->mod_path);
 	free(mod);

@@ -419,6 +419,10 @@ var_scan_data(var_type_t type, char *str)
 	struct sockaddr_storage *ss;
 	blob_t *b;
 
+	if (strcmp(str, "null") == 0) {
+		return NULL;
+	}
+
 	switch (type)
 	{
 	case VT_STRING:
@@ -905,7 +909,7 @@ var_dump_data(var_t * v, char *buffer, int size)
 	void *p;
 
 	if(v->v_data == NULL) {
-		return snprintf(buffer, size, "(null)");
+		return snprintf(buffer, size, "null");
 	}
 
 	switch (v->v_type) {
